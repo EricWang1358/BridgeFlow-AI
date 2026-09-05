@@ -1,7 +1,13 @@
 # 10 — Proposal (3-week hackathon build)
 
-> **需按 [`13-golden-standard.md`](13-golden-standard.md) 重排。** 本计划基于自建前端与自建编排，
-> 两者均已被 dsh 基座架构取代。
+> **已按 [`13-golden-standard.md`](13-golden-standard.md) 重排，落在里程碑与看板上。**
+> 本文保留原始的范围与工作量估算；**实现顺序以里程碑为准**：
+> [第一周](../../milestones/1) 架构归位与信任边界 · [第二周](../../milestones/2) 编排、记忆与人在环 ·
+> [第三周](../../milestones/3) 可观测、eval 与演示。
+>
+> 与本文原始排期的差别：`docs/13` 第六节测出 rubric 第 2/3/5/7 项不达标的**根因是同一个**——
+> dsh 被放在了错误的位置。所以第一周从「数据基础」改成「架构归位」，修根因一次修五项，
+> 优先级高于按 PRD 补功能。自建前端与自建编排均已废弃。
 
 > Renumbered from "07" — that slot holds the business PRD ([`07-prd-v0.1.md`](07-prd-v0.1.md)).
 > Revised against measured results and the judging rubric; the review that drove the changes
@@ -16,10 +22,15 @@ finance / marketing) into one aligned Master Table, with risk warnings and dynam
   runtime as a subprocess over JSON-RPC on stdio, with one typed tool per data operation
   (see [`06-deepseek-harness.md`](06-deepseek-harness.md)); the plain orchestrator stays as
   fallback, and `LLM_PROVIDER=mock` keeps the whole pipeline runnable offline.
-- Starting point: the scaffold already runs the pipeline end-to-end and dsh is verified live
-  (3.6s runtime boot, 0.7s turn). Integration is de-risked. **Throughput is not** — a full
-  pipeline pass measured 627s on 21 rows, which is what moving metric computation into tools
-  is for (week 2).
+- Starting point: the scaffold runs the pipeline end-to-end and dsh is verified live (0.6s
+  runtime boot in WSL, 0.6s for a tool-free turn). Integration is de-risked.
+- **The throughput note in the original plan was wrong and has been corrected.** It blamed
+  627s on 21 rows on whole tables being pasted into prompts, and scheduled tool-isation in
+  week 2 as the cure. Measurement (#25) showed the prompts are ~590 characters: the time goes
+  on dsh running a dozen `bash` steps over the repository per call, because an agent runtime
+  was being used as a completion provider. Taking the resolver off it cut one adjudication
+  from 12–212s and ~7,100 tokens of tool output to 3.6s and 707 tokens. The evaluator has not
+  been moved yet, which is what week 1 is for.
 
 ---
 
@@ -28,6 +39,19 @@ finance / marketing) into one aligned Master Table, with risk warnings and dynam
 The scope is staged so that **each week produces a usable decision or increment**, and every
 week ends demoable with an explicit sign-off. Sign-offs are the human checkpoints: nothing
 advances to the next stage unattended.
+
+> **以下三个 Week 小节是原始排期，范围与工作量估算仍然有效，但顺序已被重排。**
+> 对照关系：
+>
+> | 原始 | 现在 | 为什么动 |
+> | --- | --- | --- |
+> | W1 数据基础 + Sanitizer + 信任边界 | **W1 保留信任边界，其余下沉** | 信任边界是 rubric 第 5 项，且已知有真实漏洞；数据契约冻结（#14）留在 W1，Sanitizer 的功能补齐（#1/#16）推到 W3 |
+> | W2 Resolver + Evaluator + typed tools | **typed tools 与研判层上提到 W1**（#27 #13） | 它们是 rubric 第 2/3/5/7 项的共同根因。修根因一次修五项，优先级高于按 PRD 补功能 |
+> | W2 映射确认与跨月记忆 | **W2 不变**（#29 #30 #39） | 依赖 OA 字段字典（#32），本来就是 W2 |
+> | W3 报价 + eval + 演示 | **W3 不变**（#28 #31 #41 …） | 收尾不动 |
+> | — | **W2 新增：workflow 取代 Orchestrator**（#38） | 原计划没有这条，但它是 rubric 第 2 项的正面回答 |
+>
+> 逐条 issue 见三个里程碑。
 
 ### Week 1 — "Mess in, clean out": data foundation, Data Sanitizer, input trust boundary
 
@@ -95,8 +119,9 @@ fixed; the judgement inside each stage is where the model earns its place.
 
 **Engineering:** Python 3.12 / FastAPI / pandas behind typed dsh tools; the operator UI is
 dsh web customised through Client plugins rather than a self-built app. A pluggable LLM provider layer with a
-deterministic mock default keeps the demo and CI offline and stable; Docker gives identical
-local and AWS Linux behaviour. Human-in-the-loop gates sit exactly where the risk is: critical
+deterministic mock default keeps rehearsal reproducible — though mock output is placeholder
+text, so it is a fallback, not what gets demoed. Deployment is deliberately unconfigured: no
+Dockerfiles, no CI, until the target is settled. Human-in-the-loop gates sit exactly where the risk is: critical
 fields never auto-filled, low-confidence mappings never auto-published, quotes never auto-sent
 — and, because those gates protect against model error rather than hostile input, the input
 trust boundary in week 1 covers what they cannot.
