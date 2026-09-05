@@ -1,5 +1,8 @@
 # 02 — Architecture
 
+> **部分内容已过时。** 语义对齐一节仍描述已废弃的字符串相似度候选生成；
+> 整体架构以 [`13-golden-standard.md`](13-golden-standard.md) 为准。
+
 ## Pipeline
 
 ```

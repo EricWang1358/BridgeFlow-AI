@@ -1,5 +1,8 @@
 # 10 — Proposal (3-week hackathon build)
 
+> **需按 [`13-golden-standard.md`](13-golden-standard.md) 重排。** 本计划基于自建前端与自建编排，
+> 两者均已被 dsh 基座架构取代。
+
 > Renumbered from "07" — that slot holds the business PRD ([`07-prd-v0.1.md`](07-prd-v0.1.md)).
 > Revised against measured results and the judging rubric; the review that drove the changes
 > is [`11-proposal-review.md`](11-proposal-review.md).

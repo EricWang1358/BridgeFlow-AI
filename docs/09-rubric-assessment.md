@@ -1,5 +1,8 @@
 # 09 — 评审 Rubric 自评与优先级重排
 
+> **第 4 项的评价已修正**：原写「设计强、实现弱」，实为机制存在、体验不存在。
+> 最新逐条比对见 [`13-golden-standard.md`](13-golden-standard.md) 第六节。
+
 评审标准共 7 项（Show Me Your Agents Hackathon, NUS ISS）。本文逐条自评，并据此重排优先级。
 
 ## 最重要的一点

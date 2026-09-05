@@ -1,5 +1,8 @@
 # 06 — DeepSeek Harness (`dsh`) 作为 Agent 运行时
 
+> **本文的「第一层 / 第二层」框架已被推翻。** dsh 不是 provider 层的成员，而是基座本身。
+> 事实与 API 部分仍然有效；架构结论以 [`13-golden-standard.md`](13-golden-standard.md) 为准。
+
 > **本文已更正。** 初版依据 README 摘要判断 dsh 是 "TypeScript-first"，据此设计了
 > "TS 插件 + HTTP 调 Python 后端" 的双层结构。**那个判断是错的**——官方提供 Python SDK，
 > Python 可以直接驱动 dsh 运行时，不需要那层 HTTP 转接。以下为核对源码与 PyPI 后的事实。
