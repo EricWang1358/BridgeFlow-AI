@@ -7,7 +7,7 @@ one, and the evaluator looked concurrent because it called `asyncio.gather`.
 from __future__ import annotations
 
 from bridgeflow.llm import get_provider
-from bridgeflow.llm.base import Message, Response
+from bridgeflow.llm.base import Response
 
 
 class _Counter:
