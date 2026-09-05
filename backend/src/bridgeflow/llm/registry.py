@@ -23,6 +23,10 @@ def get_provider(agent: str = "") -> LLMProvider:
         from bridgeflow.llm.providers.anthropic import AnthropicProvider
 
         return AnthropicProvider()
+    if name == "dsh":
+        from bridgeflow.llm.providers.dsh import DshProvider
+
+        return DshProvider()
     if name == "deepseek":
         from bridgeflow.llm.providers.deepseek import DeepSeekProvider
 

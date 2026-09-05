@@ -18,6 +18,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.7", "mypy>=1.13"]
 anthropic = ["anthropic>=0.40"]
+# Pinned exactly: every published dsh release is a prerelease and the project
+# states breaking changes are expected. Bump deliberately, not by range.
+dsh = ["deepseek-harness-sdk==0.1.2rc1"]
 
 [build-system]
 requires = ["hatchling"]

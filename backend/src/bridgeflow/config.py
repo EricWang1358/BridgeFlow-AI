@@ -30,6 +30,16 @@ class Settings(BaseSettings):
     openclaw_base_url: str = ""
     openclaw_model: str = ""
 
+    # DeepSeek Harness (dsh) — the agent runtime. dsh_home is mandatory: the SDK
+    # never falls back to ~/.dsh, so there is no safe default to invent here.
+    dsh_home: str = ""
+    dsh_profile: str = "sdk"
+    dsh_provider: str = "deepseek-official"
+    dsh_model: str = "deepseek-v4-flash"
+    dsh_reasoning_effort: str = ""
+    dsh_max_tokens: int = 0
+    dsh_cwd: str = ""
+
     resolver_confidence_threshold: float = 0.75
 
     def provider_for(self, agent: str) -> str:
