@@ -127,6 +127,13 @@ responses — no API key, no network — so the demo always works offline.
   backend runs unchanged on Linux.
 - The Dockerfiles build from the repo root as context; `docker compose` sets that up.
 
+## Requirements baseline
+
+The business requirements live in [`docs/07-prd-v0.1.md`](docs/07-prd-v0.1.md) (PRD v0.1).
+[`docs/08-prd-traceability.md`](docs/08-prd-traceability.md) maps every FR to its current
+state in this codebase — roughly 25% covered, concentrated in the agent pipeline rather
+than in the auditability the PRD actually centres on. Read it before picking up work.
+
 ## Status
 
 Early hackathon scaffold. Track work on the
