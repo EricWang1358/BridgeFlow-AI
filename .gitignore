@@ -17,15 +17,26 @@ build/
 
 # Env & secrets
 .env
-.env.local
+.env.*
+!.env.example
 *.key
+*.pem
+
+# dsh runtime homes — must live outside the repo, but ignore them if anyone
+# points DSH_HOME inside it by mistake.
+.dsh*/
 
 # Data (keep samples, ignore real uploads)
 data/uploads/
 data/outputs/
+# Real OA master data — only the example is tracked.
+data/mappings/field-dictionary.yaml
 *.xlsx
 *.xls
 !data/samples/*.csv
+
+# Logs
+*.log
 
 # OS / editor
 .DS_Store

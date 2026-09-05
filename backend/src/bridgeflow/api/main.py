@@ -15,7 +15,7 @@ from bridgeflow.schemas import Department, PipelineResult, QuoteRecommendation, 
 app = FastAPI(title="BridgeFlow AI", version=__version__)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=settings.cors_origin_list,
     allow_methods=["*"],
     allow_headers=["*"],
 )

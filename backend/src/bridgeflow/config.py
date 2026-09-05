@@ -8,6 +8,12 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # Bind address and allowed origins differ per environment (WSL, EC2, CI),
+    # so they are configuration rather than constants. Comma-separated origins.
+    api_host: str = "127.0.0.1"
+    api_port: int = 8000
+    cors_origins: str = "http://localhost:3000"
+
     llm_provider: str = "mock"
 
     # Per-agent overrides. Empty means "use llm_provider".
@@ -46,6 +52,10 @@ class Settings(BaseSettings):
     field_dictionary_path: str = "data/mappings/field-dictionary.yaml"
 
     resolver_confidence_threshold: float = 0.75
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     def provider_for(self, agent: str) -> str:
         """Provider name for one agent, falling back to the global default."""
