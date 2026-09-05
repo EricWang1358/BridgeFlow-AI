@@ -85,7 +85,8 @@ model for cleaning and a strong one for evaluation.
 
 ## Frontend
 
-Next.js + TypeScript. Three screens:
+**Superseded.** The UI is dsh web customised through Client plugins, not a
+self-built app — see `13-golden-standard.md`. The three surfaces it must cover:
 1. **Upload & Sanitize** — drop files, see the correction log, resolve quarantined rows.
 2. **Master Table & Risks** — the aligned table, filterable by period, with role-tagged
    findings down the side.

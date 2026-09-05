@@ -93,8 +93,8 @@ missing capability. Financial figures have to be auditable, reproducible and att
 approver cannot sign off on a number that two runs would derive differently. The stages are
 fixed; the judgement inside each stage is where the model earns its place.
 
-**Engineering:** Python 3.12 / FastAPI / pandas; Next.js + TypeScript frontend (Upload &
-Sanitize, Master Table & Risks, Quote Simulator). A pluggable LLM provider layer with a
+**Engineering:** Python 3.12 / FastAPI / pandas behind typed dsh tools; the operator UI is
+dsh web customised through Client plugins rather than a self-built app. A pluggable LLM provider layer with a
 deterministic mock default keeps the demo and CI offline and stable; Docker gives identical
 local and AWS Linux behaviour. Human-in-the-loop gates sit exactly where the risk is: critical
 fields never auto-filled, low-confidence mappings never auto-published, quotes never auto-sent

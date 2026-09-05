@@ -26,13 +26,14 @@ in brackets.
 
 | Model/Tool | Role in the proposal | Operating Constraint |
 | --- | --- | --- |
-| DeepSeek Harness `dsh` 0.1.2rc1 | Agent runtime. The Python SDK drives the bundled CLI as a subprocess over JSON-RPC on stdio (measured: 3.6s boot, 0.7s turn) | **Every published release is a prerelease and the project states breaking changes are expected** → pinned to `==0.1.2rc1`, never a range. A single runtime cannot interleave turns, so concurrent calls are serialised behind a lock |
+| DeepSeek Harness `dsh` 0.1.2rc1 | Agent runtime. The Python SDK drives the bundled CLI as a subprocess over JSON-RPC on stdio (measured on Linux: 0.5s boot, 0.7s turn) | **Every published release is a prerelease and the project states breaking changes are expected** → pinned to `==0.1.2rc1`, never a range. A single runtime cannot interleave turns, so concurrent calls are serialised behind a lock |
 | `deepseek-v4-flash` (provider `deepseek-official`) | The judgement layer for all four agents: adjudicating mappings, writing findings and quote rationale | **Interprets and judges; never computes.** Input must pass the trust boundary first. Returns free text with no schema parameter, so structured output is validated locally — an unparseable reply raises rather than degrading to an empty result |
 | Mock provider (built in, deterministic) | Default backend for CI and rehearsal; runs the whole pipeline offline | No network, no key. All 19 tests pass in this mode, so the demo does not bet on connectivity |
 | pandas 2.2 | Cleaning, metric aggregation, Master Table assembly | Deterministic; results never pass through a model. Anything a rule can compute is not given to the model |
 | rapidfuzz 3.10 | **Only** merges aliases of the same entity (`SKU-A1` / `sku-a1` / `SKU A1`) | **Never used to discover links between different entities.** Measured cross-department similarity is 0–35.3 (SKU-A1 × RM-Alu-6061 = 35.3), below any usable threshold; a test locks this constraint in place |
 | Purpose-built typed tools (week 2) | Read table, aggregate metric, look up field dictionary, compute capacity load and unit cost | All schema-typed. The model reaches data only through tools, never raw rows |
-| FastAPI / Next.js / Docker | Service, UI, and identical local/AWS behaviour | No authentication; internal and demo use only, never exposed publicly |
+| FastAPI (Python) | Backend service exposing the domain tools | No authentication; internal and demo use only, never exposed publicly. Binds 127.0.0.1 unless explicitly configured otherwise |
+| dsh web + Client plugins | The operator UI, customised rather than rebuilt | Custom tool cards register into the `tool.call.toolview` slot; presenters must be pure functions of their arguments because they also run on session replay |
 
 ---
 

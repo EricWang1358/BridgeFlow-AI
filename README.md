@@ -78,54 +78,49 @@ backend/          Python 3.12 — agents, LLM provider layer, FastAPI
     schemas/      Pydantic data contracts shared across agents
     pipeline/     Orchestrator wiring agents 1→2→3→4
     api/          FastAPI app
-frontend/         TypeScript / Next.js — Master Table dashboard + quote simulator
+plugins/          TypeScript dsh plugins — tools, guards, UI cards (to be written)
 data/samples/     Deliberately messy sample CSVs for the demo
 docs/             Problem framing, architecture, data contracts, demo plan
 ```
 
+There is no `frontend/` directory. The UI is dsh web, customised through Client
+plugins rather than rebuilt — see [`docs/13-golden-standard.md`](docs/13-golden-standard.md).
+
 ## Quick start
 
-Target runtime is **Linux (AWS EC2)**. Docker is the path that behaves the same on
-Windows, WSL and the server:
+Development happens inside WSL or on Linux. Full setup, with a verification step
+for each stage: [`docs/14-wsl-setup.md`](docs/14-wsl-setup.md).
 
 ```bash
-cp backend/.env.example backend/.env
-docker compose up --build
-# backend  http://localhost:8000/health
-# frontend http://localhost:3000
-```
+source ~/Hackathon2026/.venv/bin/activate
+source ~/Hackathon2026/BridgeFlow-AI/env.sh    # DSH_* must come from the shell
 
-Running natively instead:
-
-```bash
-# Backend — Linux / WSL / macOS
 cd backend
-python3.12 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-cp .env.example .env
+pytest -q && ruff check src tests
+python ../scripts/smoke_dsh.py                 # checks the dsh runtime end to end
 uvicorn bridgeflow.api.main:app --reload
-
-# Backend — Windows PowerShell
-#   py -3.12 -m venv .venv; .venv\Scripts\Activate.ps1
-
-# Frontend
-cd frontend
-npm install
-npm run dev
 ```
 
-Run the tests with `pytest` from `backend/`.
+`DSH_*` and `DEEPSEEK_BASE_URL` belong in `env.sh`, never in `backend/.env` — dsh
+scans that file and refuses bootstrap and network variables read from it, because a
+checked-in file must not be able to decide where code loads from or where traffic
+goes.
 
 The default `LLM_PROVIDER=mock` runs the whole pipeline with deterministic canned
-responses — no API key, no network — so the demo always works offline.
+responses — no API key, no network — so tests and rehearsal never depend on
+connectivity. Its output is placeholder text, so it is not what you demo.
 
-### Cross-platform notes
+### Portability
 
-- `.gitattributes` normalises everything to LF, so files authored on Windows don't
-  arrive on the EC2 box with CRLF.
-- No `os.path` string joining, no drive letters, no Windows-only dependencies — the
-  backend runs unchanged on Linux.
-- The Dockerfiles build from the repo root as context; `docker compose` sets that up.
+- `.gitattributes` normalises everything to LF, so files authored on Windows do not
+  arrive on a Linux box with CRLF.
+- Bind address, port and CORS origins are settings, defaulting to `127.0.0.1` —
+  nothing is exposed unless asked for explicitly.
+- No absolute paths, drive letters or Windows-only dependencies in tracked source.
+
+Deployment is not configured: no Dockerfiles, no CI. The target is undecided, and
+adding either before that is settled was a mistake this repository already made
+once.
 
 ## Requirements baseline
 

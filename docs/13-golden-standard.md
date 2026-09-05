@@ -30,7 +30,8 @@ Windows 浏览器开 `localhost:<port>` 即可。反代只在需要固定域名 
 
 ### Q2 — 客户前端先不做，先用 dsh 做实验？
 
-**采纳。** 自建 Next.js 前端（`frontend/`）应删除——它是范围蔓延，且与"复用 dsh web 深度定制"冲突。
+**采纳，已执行。** 自建 Next.js 前端（`frontend/`）已删除——它是范围蔓延，且与"复用 dsh web 深度定制"冲突。
+同批删除的还有 Dockerfile、docker-compose、CI workflow：部署目标未定，先加是错的。
 
 定制入口已确认：Client 插件把工具的 wire name 注册进 **`tool.call.toolview` 键槽**，
 从 `ToolCallBlock` 的参数、内容、错误、元数据派生组件 props。

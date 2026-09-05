@@ -1,8 +1,10 @@
 # 05 — Roadmap
 
+> **已被取代。** 排期见 [`10-proposal.md`](10-proposal.md)，架构见 [`13-golden-standard.md`](13-golden-standard.md)。
+
 ## M0 — Skeleton (day 1)
 Repo, schemas, provider layer, mock provider, FastAPI health + upload endpoint,
-frontend shell. Pipeline runs end-to-end on mock data and returns a hardcoded MasterTable.
+Pipeline runs end-to-end on mock data and returns a hardcoded MasterTable.
 
 ## M1 — Sanitizer real (day 1–2)
 Rule engine + LLM fallback, correction log, quarantine. Sample messy CSVs authored.
