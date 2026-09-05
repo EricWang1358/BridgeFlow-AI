@@ -1,7 +1,8 @@
 # 02 — Architecture
 
-> **部分内容已过时。** 语义对齐一节仍描述已废弃的字符串相似度候选生成；
-> 整体架构以 [`13-golden-standard.md`](13-golden-standard.md) 为准。
+> **参考文档。** 描述的是各 Agent 的输入输出契约，这部分仍然成立。
+> 关于 dsh 在架构里的位置，以 [`13-golden-standard.md`](13-golden-standard.md) 为准；
+> 实测数字以 [`00-status.md`](00-status.md) 为准，本文不复写数字。
 
 ## Pipeline
 
@@ -34,10 +35,14 @@ through `bridgeflow.llm.get_provider()`.
 - **In:** all `CleanTable`s for a period.
 - **Out:** an `EntityGraph` linking `SKU ↔ RawMaterial ↔ GLAccount ↔ CapacityUnit`, plus a
   normalised time axis (weekly procurement and daily production both roll up to month).
-- **Method:** blocking + fuzzy string match to generate candidates, LLM to adjudicate with
-  a confidence score and a short justification. Links below the confidence threshold become
-  `UnresolvedLink`s that the user confirms once — the confirmation is persisted as a
-  mapping rule, so month 2 needs far less human input than month 1.
+- **Method:** candidates come from declarations and from what the rows put together, in
+  descending order of trust — the OA field dictionary first, then co-occurrence within a
+  row, then model adjudication of whatever is left. **Never from how identifiers are
+  spelled**: `SKU-A1` and the material it consumes share no characters (measured similarity
+  35.3), so string matching produced zero links (issue #24). Similarity is used only to
+  merge aliases of one entity, and a test locks that down. Links below the confidence
+  threshold become `UnresolvedLink`s that the user confirms once — the confirmation is
+  persisted as a mapping rule, so month 2 needs far less human input than month 1.
 - **This is the moat.** Everything else is downstream of getting these joins right.
 
 ### 3. Multi-Role Evaluator Agent (core)

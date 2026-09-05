@@ -91,7 +91,7 @@ Docker、compose、AWS 章节、CI、自建 Next.js 前端都是**未经要求�
 评审考的是 Agent 工程能力。PRD 剩余的大部分缺口（批次版本、XLSX 导出、
 RBAC、季度年度表、币种归一）**不计分**，已关闭。
 
-当前 7 项 rubric **仅第 1 项达标**。第 2/3/4/5/7 项不达标的根因是同一个：
+当前计分见 [`docs/00-status.md`](docs/00-status.md) 第五节。不达标各项的根因是同一个：
 dsh 位置错误，其原生的编排、工具、审批、护栏、多代理能力全部闲置。
 **修正架构一次性修正五项**——优先级高于按 PRD 补功能。
 
@@ -120,42 +120,27 @@ source ~/Hackathon2026/.venv/bin/activate
 source ~/Hackathon2026/BridgeFlow-AI/env.sh
 
 cd backend && ruff check src tests
-pytest -q                               # ⚠️ 约 10 分钟，且**真的调用 API 计费**
+pytest -q                               # ⚠️ 慢，且**真的调用 API 计费**
 python ../scripts/smoke_dsh.py          # 同样会计费，别随手跑
 ```
 
 `.env.example` 里 `LLM_PROVIDER=mock` 仍是默认值，但**本机 `.env` 不是**：
 `LLM_PROVIDER=dsh` + `LLM_PROVIDER_RESOLVER=deepseek`。所以本机跑测试会花钱。
-跑之前想清楚值不值，跑完把花销告诉用户。
+跑之前想清楚值不值，跑完把花销告诉用户。耗时数字见
+[`docs/00-status.md`](docs/00-status.md)。
 
 ---
 
-## 已知缺陷（不要当成能用的东西）
+## 本文只管硬约束
 
-- **`evaluator.py` 把单元格内容原样拼进提示词** —— 真实注入漏洞，未修。
-  且它还在 dsh 上，而 `sdk-minimal` 的 bash **没有目录约束**：
-  注入的落点不是提示词，是你的文件系统。见 #26
-- **全套测试约 10 分钟** —— 原因**不是**数据量或提示词大小（曾经这么记，是错的）。
-  是 evaluator 仍跑在 dsh 上，每次调用都启动一轮带 bash 的完整 agent 循环。见 #25
-- **mock provider 输出是 `mock-justification-<hash>`** —— 能过测试，不可展示
-- **只有 2025-11 一个月样本，共 22 行** —— 无法验证"跨月记忆"，也无法测规模
-- **`quarantine` 是黑洞** —— 只写不读，没有出口
-- **`/analyze` 同步返回、无进度无取消** —— 真实使用下不可用
-- **21 个测试里只有 `test_resolver.py` 打真实模型** —— 其余仍在 mock 下跑，
-  验证代码不崩，不验证判断质量
+其余各归其位，**不在这里复述**——重复的内容一旦过期，就是三处互相矛盾的事实：
 
----
-
-## 文档索引
-
-| | |
+| 你要找 | 去哪 |
 | --- | --- |
-| `docs/13` | **架构权威**：决策、错误记录、官方能力边界、rubric 比对 |
-| `docs/14` | WSL 环境搭建 |
-| `docs/07` | 业务方 PRD（需求基线） |
-| `docs/09` | rubric 自评（第 4 项评价已被 13 修正） |
-| `docs/10/11` | 三周计划与复核（需按 13 重排） |
-| `docs/12` | 提交表单内容 |
-| `docs/02/06` | 部分内容已过时，顶部有标注 |
+| 当前进度、已知缺陷、下一步、待验证问题 | [`HANDOFF.md`](HANDOFF.md) |
+| 任何一个实测数字 | [`docs/00-status.md`](docs/00-status.md)，**唯一来源** |
+| 架构决策与官方能力边界 | [`docs/13-golden-standard.md`](docs/13-golden-standard.md) |
+| 插件形态的设计结论 | [`docs/15-plugin-design.md`](docs/15-plugin-design.md) |
+| 该读哪篇文档 | [`docs/README.md`](docs/README.md) |
 
 Issue 与看板：https://github.com/users/EricWang1358/projects/1

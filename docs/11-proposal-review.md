@@ -81,12 +81,12 @@ declared, not inferred"**，并把"拿到字段字典"列为 Week 2 的**前置�
 
 > "scaffold already runs the pipeline end-to-end on mock data — timeline de-risked"
 
-前半句是真的。但同一条 pipeline 在真实 provider 上：**21 行数据跑了 627.6 秒**。
+前半句是真的。但同一条 pipeline 在真实 provider 上慢得多——数字见 [`00-status.md`](00-status.md) §4。
 
-PRD 目标是 20 万行 / 10 分钟。现在是 21 行 / 10.5 分钟。
+PRD 目标是 20 万行 / 10 分钟。当前规模差着好几个数量级（见 [`00-status.md`](00-status.md)）。
 
 骨架跑通 ≠ 时间线去风险。建议改成 **"scaffold runs end-to-end, which de-risks
-integration; throughput is a known open item (measured 627s on 21 rows) and is addressed
+integration; throughput is a known open item (numbers in `00-status.md`) and is addressed
 by moving metric computation into tools"**。诚实描述反而更可信——而且这正好是
 Week 2 要做 tool 化的理由。
 
@@ -111,7 +111,7 @@ PM 侧有 9 人天余量。建议要么把部分 PM 天转成开发支持，要�
   PRD FR 09，目前**完全未实现**（采购按周、生产按日、财务按月）。它是独立工作量，
   不在 15 人天的细分里，容易被漏掉。
 - **Week 1 deliverable "Typed schemas"** 已经完成了（`bridgeflow.schemas` 全套已在
-  main 上，19 个测试通过）。可以改成"freeze + extend"，把省下的时间给注入防御。
+  main 上，测试通过）。可以改成"freeze + extend"，把省下的时间给注入防御。
 - **"每周有明确 sign-off"** 是这份 proposal 写得最好的地方之一，rubric 第 4 项
   （escalation checkpoints）可以直接引用它。演示时值得点出来。
 

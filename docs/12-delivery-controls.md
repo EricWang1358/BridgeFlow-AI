@@ -24,28 +24,33 @@ in brackets.
 
 ## AI MODELS & TOOLS
 
-| Model/Tool | Role in the proposal | Operating Constraint |
-| --- | --- | --- |
-| DeepSeek Harness `dsh` 0.1.2rc1 | Agent runtime. The Python SDK drives the bundled CLI as a subprocess over JSON-RPC on stdio (measured on Linux: 0.5s boot, 0.7s turn) | **Every published release is a prerelease and the project states breaking changes are expected** → pinned to `==0.1.2rc1`, never a range. A single runtime cannot interleave turns, so concurrent calls are serialised behind a lock |
-| `deepseek-v4-flash` (provider `deepseek-official`) | The judgement layer for all four agents: adjudicating mappings, writing findings and quote rationale | **Interprets and judges; never computes.** Input must pass the trust boundary first. Returns free text with no schema parameter, so structured output is validated locally — an unparseable reply raises rather than degrading to an empty result |
-| Mock provider (built in, deterministic) | Default backend for CI and rehearsal; runs the whole pipeline offline | No network, no key. All 19 tests pass in this mode, so the demo does not bet on connectivity |
-| pandas 2.2 | Cleaning, metric aggregation, Master Table assembly | Deterministic; results never pass through a model. Anything a rule can compute is not given to the model |
-| rapidfuzz 3.10 | **Only** merges aliases of the same entity (`SKU-A1` / `sku-a1` / `SKU A1`) | **Never used to discover links between different entities.** Measured cross-department similarity is 0–35.3 (SKU-A1 × RM-Alu-6061 = 35.3), below any usable threshold; a test locks this constraint in place |
-| Purpose-built typed tools (week 2) | Read table, aggregate metric, look up field dictionary, compute capacity load and unit cost | All schema-typed. The model reaches data only through tools, never raw rows |
-| FastAPI (Python) | Backend service exposing the domain tools | No authentication; internal and demo use only, never exposed publicly. Binds 127.0.0.1 unless explicitly configured otherwise |
-| dsh web + Client plugins | The operator UI, customised rather than rebuilt | Custom tool cards register into the `tool.call.toolview` slot; presenters must be pure functions of their arguments because they also run on session replay |
+> **The Status column is load-bearing.** This form describes the target system; several
+> rows are commitments, not descriptions. A judge may ask to see any row demonstrated.
+> Status meanings: **Built** = in `main` with tests · **Partial** = exists but does not
+> meet the description · **Committed** = not written yet.
+
+| Model/Tool | Role in the proposal | Status | Operating Constraint |
+| --- | --- | --- | --- |
+| DeepSeek Harness `dsh` 0.1.2rc1 | Agent runtime. The Python SDK drives the bundled CLI as a subprocess over JSON-RPC on stdio (timings in [`00-status.md`](00-status.md) §6) | **Partial** — wired, but still used as a completion provider in places rather than as the base (#25, #38) | **Every published release is a prerelease and the project states breaking changes are expected** → pinned to `==0.1.2rc1`, never a range. A single runtime cannot interleave turns, so concurrent calls are serialised behind a lock |
+| `deepseek-v4-flash` (provider `deepseek-official`) | The judgement layer for all four agents: adjudicating mappings, writing findings and quote rationale | **Partial** — "interprets, never computes" is the target; the evaluator still computes (#13) | **Interprets and judges; never computes.** Input must pass the trust boundary first. Returns free text with no schema parameter, so structured output is validated locally — an unparseable reply raises rather than degrading to an empty result |
+| Mock provider (built in, deterministic) | Default backend for CI and rehearsal; runs the whole pipeline offline | **Built** — but its output is placeholder text, so it is a fallback, not the rehearsal target | No network, no key. The suite runs in this mode, so the demo does not bet on connectivity (counts: `00-status.md`) |
+| pandas 2.2 | Cleaning, metric aggregation, Master Table assembly | **Partial** — cleaning and assembly yes; metric aggregation is still the model's job (#13) | Deterministic; results never pass through a model. Anything a rule can compute is not given to the model |
+| rapidfuzz 3.10 | **Only** merges aliases of the same entity (`SKU-A1` / `sku-a1` / `SKU A1`) | **Built** — locked by test | **Never used to discover links between different entities.** Measured cross-department similarity is 0–35.3 (SKU-A1 × RM-Alu-6061 = 35.3), below any usable threshold; a test locks this constraint in place |
+| Purpose-built typed tools | Read table, aggregate metric, look up field dictionary, compute capacity load and unit cost | **Committed** — zero tools exist today (#27) | All schema-typed. The model reaches data only through tools, never raw rows |
+| FastAPI (Python) | Backend service exposing the domain tools | **Partial** — `/analyze` is synchronous with no progress or cancel; results live in a module-level dict (#12) | No authentication; internal and demo use only, never exposed publicly. Binds 127.0.0.1 unless explicitly configured otherwise |
+| dsh web + Client plugins | The operator UI, customised rather than rebuilt | **Committed** — `plugins/` does not exist; no UI at all today (#40) | Custom tool cards register into the `tool.call.toolview` slot; presenters must be pure functions of their arguments because they also run on session replay |
 
 ---
 
 ## AGENT / WORKFLOW ROLES
 
-| Role | Responsibility | Input | Output | Escalate when |
-| --- | --- | --- | --- | --- |
-| **Data Sanitizer** | Repair formats, types, duplicates and shifted columns; log every change with original value, new value, rule, confidence and reason | Raw departmental CSV / XLSX | `CleanTable` + `CorrectionLog` + quarantined rows | A critical field (amount / customer / SKU / approval) is missing → **never filled in**; the row is quarantined and downstream results are marked incomplete |
-| **Semantic Resolver** | Build cross-department entity mappings from three sources in descending order of trust: OA dictionary declarations → row co-occurrence → model adjudication of the residue | `CleanTable` ×4 + field dictionary | `EntityGraph` (links + unresolved) | Confidence < 0.75 → human queue, never auto-published. `consumes` / `books_to` are empty because no sheet contains both sides → escalate to the master-data owner for a dictionary entry |
-| **Multi-Role Evaluator** | Four concurrent role analyses: production, finance, procurement, marketing | `EntityGraph` + metrics computed by tools | `Finding[]` (evidence enforced by schema) + `Tension[]` | Two roles reach opposing conclusions about the same entity → emitted as a Tension **for a human to settle; the system never reconciles it automatically** |
-| **SOP & Flow Engine** | Assemble the monthly Master Table, risk report and approval cards | `Finding` + `CleanTable` | `MasterTable` + `RiskReport` + `ApprovalCard` | A critical-severity finding appears → an approval card is raised with an owning department and a deadline |
-| **Dynamic Quote Simulator** | Simulate price and payment terms across material cost × capacity × customer AR history | Enquiry + Master Table + Findings | Price band (floor computed deterministically) + payment-term options + sensitivities | Cost, capacity or FX basis is missing → **formal submission refused**, draft allowed. Never sent externally under any condition |
+| Role | Responsibility | Status | Input | Output | Escalate when |
+| --- | --- | --- | --- | --- | --- |
+| **Data Sanitizer** | Repair formats, types, duplicates and shifted columns; log every change with original value, new value, rule, confidence and reason | **Partial** — duplicates and shifted columns not detected (#16); no XLSX robustness (#47) | Raw departmental CSV / XLSX | `CleanTable` + `CorrectionLog` + quarantined rows | A critical field (amount / customer / SKU / approval) is missing → **never filled in**; the row is quarantined and downstream results are marked incomplete |
+| **Semantic Resolver** | Build cross-department entity mappings from three sources in descending order of trust: OA dictionary declarations → row co-occurrence → model adjudication of the residue | **Built** — the three-source order works; confirmations are not persisted across months (#29) | `CleanTable` ×4 + field dictionary | `EntityGraph` (links + unresolved) | Confidence < 0.75 → human queue, never auto-published. `consumes` / `books_to` are empty because no sheet contains both sides → escalate to the master-data owner for a dictionary entry |
+| **Multi-Role Evaluator** | Four concurrent role analyses: production, finance, procurement, marketing | **Partial** — roles run, but metrics are not tool-computed and cell content reaches the prompt raw (#13, #26) | `EntityGraph` + metrics computed by tools | `Finding[]` (evidence enforced by schema) + `Tension[]` | Two roles reach opposing conclusions about the same entity → emitted as a Tension **for a human to settle; the system never reconciles it automatically** |
+| **SOP & Flow Engine** | Assemble the monthly Master Table, risk report and approval cards | **Partial** — the join key is guessed and silently falls back to the first column (#44); no approval cards | `Finding` + `CleanTable` | `MasterTable` + `RiskReport` + `ApprovalCard` | A critical-severity finding appears → an approval card is raised with an owning department and a deadline |
+| **Dynamic Quote Simulator** | Simulate price and payment terms across material cost × capacity × customer AR history | **Committed** — the floor is asserted by the model, not computed (#7) | Enquiry + Master Table + Findings | Price band (floor computed deterministically) + payment-term options + sensitivities | Cost, capacity or FX basis is missing → **formal submission refused**, draft allowed. Never sent externally under any condition |
 
 ---
 
@@ -63,7 +68,7 @@ The only external dependency is model access, via the dsh subprocess to the Deep
    (`LLM_PROVIDER=mock`, or a direct API provider). No agent code changes: `Orchestrator` is a
    plain async method carrying no framework dependency, and that seam exists for this reason.
 2. **Model or network unavailable** → the deterministic mock provider replays the whole
-   pipeline offline; all 19 tests still pass. **Rehearsal runs in this mode by default**, so the
+   pipeline offline and the suite still passes. **Rehearsal runs in this mode by default**, so the
    demo does not depend on connectivity.
 3. **All automation fails** → the intermediate artefacts are human-readable by design:
    `CorrectionLog`, `EntityGraph` and the Master Table are all tables. The business continues
@@ -76,12 +81,12 @@ The only external dependency is model access, via the dsh subprocess to the Deep
 
 | Metric | Baseline | Target | How measured | Review period |
 | --- | --- | --- | --- | --- |
-| End-to-end pipeline duration | **627.6s for 21 rows** (measured on dsh + deepseek-v4-flash) | < 60s on the same sample set | Time `Orchestrator.run()` | Weekly |
+| End-to-end pipeline duration | see [`00-status.md`](00-status.md) §4 — the single source for every measured number | < 60s on the same sample set | Time `Orchestrator.run()` | Weekly |
 | Semantic mappings produced | **4 accepted + 2 unresolved**; `consumes` and `books_to` both zero (measured) | All four relation types non-empty | Count pipeline output | End of week 2 |
 | Conclusion traceability | **100%** (schema rejects any finding without evidence) | Hold at 100% | Spot-check findings back to the source file row | Weekly |
 | Prompt-injection block rate | **0% — no defence exists today** (known defect) | 100% of adversarial cases blocked and logged | Eval suite in CI | Every commit |
 | Golden-path eval pass rate | **None — no eval suite yet** | 100% | Eval suite in CI | Every commit |
-| Correction-log completeness | **100%** (48 corrections, each with rule and confidence; measured) | Hold at 100% | `CorrectionLog` entries vs actual changes | Weekly |
+| Correction-log completeness | **100%** — every correction carries a rule and a confidence; counts in [`00-status.md`](00-status.md) §2 | Hold at 100% | `CorrectionLog` entries vs actual changes | Weekly |
 | Cross-month confirmation effort | **No data** — cross-month mapping memory not built yet | Month 2 confirmations < 30% of month 1 | Compare two consecutive monthly runs | Week 3 |
 | Manual monthly reconciliation time | ⚠️ **Baseline needed from the business** | 50% below baseline | Timed comparison against current process | Post-delivery |
 
