@@ -102,7 +102,9 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
                 return numeric
 
         as_date = pd.to_datetime(series, errors="coerce", format="mixed")
-        if as_date.notna().mean() > 0.8:
+        present = series.notna() & (series.astype(str).str.strip() != "")
+        dated = as_date[present]
+        if not dated.empty and dated.notna().mean() > 0.8:
             for idx, (before, after) in enumerate(zip(series, as_date, strict=False)):
                 if pd.notna(after) and str(before) != after.strftime("%Y-%m-%d"):
                     fixes.append(
@@ -141,7 +143,12 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
             .str.replace(r"[,\s]", "", regex=True)
         )
         as_number = pd.to_numeric(stripped, errors="coerce")
-        if as_number.notna().mean() <= 0.8:
+        # Blanks are absences, not parse failures. Counting them against the ratio
+        # meant one deliberately empty cell in four left the whole column as text —
+        # and every figure computed from it was then refused as unreadable.
+        present = series.notna() & (series.astype(str).str.strip() != "")
+        readable = as_number[present]
+        if readable.empty or readable.notna().mean() <= 0.8:
             return None
         for idx, (before, after) in enumerate(zip(series, as_number, strict=False)):
             if pd.notna(after) and str(before) != str(after):

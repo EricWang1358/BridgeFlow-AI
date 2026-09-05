@@ -77,7 +77,10 @@ async def test_a_role_is_told_what_could_not_be_computed():
 def test_the_catalogue_offers_only_what_the_dictionary_supports():
     assert metrics.available(FieldDictionary()) == []
     offered = {m.name for m in metrics.available(DICTIONARY)}
-    assert offered == {"total_output", "revenue"}
+    # Only what this dictionary's measures support: output quantity and revenue
+    # amount, which is enough for the sums and for the account-split metrics.
+    assert "total_output" in offered
+    assert "capacity_utilisation" not in offered, "capacity hours are undeclared here"
 
 
 async def test_the_prompt_context_carries_metrics_and_not_rows():

@@ -19,7 +19,7 @@ what is missing is the screen.
 | 2 | Drop all four in. Correction log streams in. | 1, 6 | 🟡 Pipeline yes, **no upload UI** | Run the sanitizer at the terminal and show `CorrectionLog` |
 | 3 | Resolver shows the entity graph. Presenter confirms a low-confidence link in one click. "It learns this once." | 4 | ❌ **No confirmation UI, and confirmations are not persisted** (#29, #40) | Show `unresolved` in the JSON and say the queue exists at the type level only |
 | 4 | Master Table appears. One aligned table from four files. | 2 | 🟡 Built, **no screen**; and the join key is guessed (#44) | Print the table; do not claim the join is safe |
-| 5 | Four role panels. Finance: margin negative. Procurement: Alu-6061 +18%. Production: Line 2 at 94%. Marketing: Acme is Tier C. **The tension is the punchline.** | 3, 6 | ❌ **The numbers are computed by the model, not by rules** (#13) — a judge asking "where did 18% come from?" gets no answer | Do not present this beat as evidence-backed until #13 lands |
+| 5 | Four role panels. Finance: margin negative. Procurement: Alu-6061 +18%. Production: Line 2 at 94%. Marketing: Acme is Tier C. **The tension is the punchline.** | 3, 6 | 🟡 Margin and the price change are computed by rule and cite their cells (#13, #65). **Still missing: line utilisation needs a declared capacity ceiling, and customer tiering has no rule at all.** No screen either (#40) | Show the metric tool output at the terminal; do not claim the two missing figures |
 | 6 | Quote Simulator → floor / target / stretch + 45-day terms instead of 90. | 4 | ❌ Price bands are asserted by the model, not computed (#7) | Cut the beat rather than assert a number we cannot derive |
 | 7 | Close on the HMW slide. | 1 | ✅ | — |
 
