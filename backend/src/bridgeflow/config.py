@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Relative settings paths are anchored here, so they mean the same thing whether
+# the process starts in backend/ or at the repository root.
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 class Settings(BaseSettings):
@@ -45,6 +51,10 @@ class Settings(BaseSettings):
     dsh_reasoning_effort: str = ""
     dsh_max_tokens: int = 0
     dsh_cwd: str = ""
+    # Patch layers applied after every bundle layer, comma-separated paths relative
+    # to the repository root. Defaults to the layer that takes the shells away —
+    # see dsh/no-shell.patch.yml for the measurement that justifies it.
+    dsh_patches: str = "dsh/no-shell.patch.yml"
 
     # Cross-department mappings come from the OA field dictionary, not from
     # guessing. Empty means "not exported yet" — the resolver then falls back to
@@ -56,6 +66,17 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def dsh_patch_paths(self) -> list[str]:
+        """Absolute paths of the patch layers, dropping any that do not exist.
+
+        A missing patch would otherwise fail the runtime at boot for everyone who
+        set a path we no longer ship.
+        """
+        paths = (p.strip() for p in self.dsh_patches.split(","))
+        resolved = (REPO_ROOT / p if not Path(p).is_absolute() else Path(p) for p in paths if p)
+        return [str(p) for p in resolved if p.is_file()]
 
     def provider_for(self, agent: str) -> str:
         """Provider name for one agent, falling back to the global default."""

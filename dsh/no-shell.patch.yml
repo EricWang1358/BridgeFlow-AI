@@ -1,0 +1,41 @@
+# Take the shells and the editor away from the runtime.
+#
+# WHY
+# ---
+# Untrusted spreadsheet cell content reaches the model (semantic_resolver passes
+# row_support derived from it; evaluator splices cells in raw). The sdk-minimal
+# bundle hands that model a bash with no directory confinement, so the sink for a
+# planted instruction is a shell in the developer's checkout, not a wrong answer.
+#
+# Sandboxing does not close this. SandboxMode governs filesystem *writes* only —
+# read-only denies writes and says nothing about reads, and network and process
+# visibility are outside its vocabulary (docs/13 §7.2). Permission presets do not
+# help either: they bundle sandbox mode and approval policy, and decide nothing
+# about which tools exist (§7.1).
+#
+# Taking the tools away does close it. Measured on one adjudication:
+#
+#            without this patch        with it
+#   tools    3-12 bash calls           0
+#   input    ~7,100 tokens of files    0
+#   time     12-212s                   5.9s
+#   verdict  0.99, copied out of       0.20, reasoned from the prompt,
+#            test_resolver.py          and correct to be unsure
+#
+# The model was reading the test file to answer the question. Removing the shell
+# removed the contamination as well as the cost.
+#
+# HOW
+# ---
+# A patch layer is applied after every bundle layer, so this needs no fork of dsh
+# and no rebuilt profile — see CLAUDE.md, "不 fork dsh".
+#
+# NOTE: `disabled: true` only overrides entries whose base config already declares
+# `disabled`. str-replace-editor does not, so it is listed here but not yet
+# actually disabled — tracked in #37.
+- id: persistent-bash
+  disabled: true
+- id: persistent-pwsh
+  disabled: true
+- id: str-replace-editor
+  disabled: true
