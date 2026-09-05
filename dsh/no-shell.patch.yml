@@ -30,12 +30,27 @@
 # A patch layer is applied after every bundle layer, so this needs no fork of dsh
 # and no rebuilt profile — see CLAUDE.md, "不 fork dsh".
 #
-# NOTE: `disabled: true` only overrides entries whose base config already declares
-# `disabled`. str-replace-editor does not, so it is listed here but not yet
-# actually disabled — tracked in #37.
+# A wrong package name is not silently ignored, but it is easy to scroll past: the
+# runtime prints `patch: name mismatch for "<id>" ... skipping` and carries on with
+# the tool still enabled. Read the boot output rather than assuming the patch took.
+#
+# A patch entry must be complete enough to read as an override rather than a
+# fragment: `disabled: true` alone silently does nothing on an entry whose base
+# config does not already declare `disabled`, which is why str-replace-editor
+# survived the first version of this file. Carrying `name` and `config` makes the
+# override take. Verify with:
+#
+#   dsh --profile sdk-minimal --patch dsh/no-shell.patch.yml --dump-config \
+#     | grep -A3 '^- id: str-replace-editor$'
 - id: persistent-bash
+  name: '@deepseek-ai/dsh-tool-bash-persistent'
   disabled: true
+  config: {}
 - id: persistent-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh-persistent'
   disabled: true
+  config: {}
 - id: str-replace-editor
+  name: '@deepseek-ai/dsh-tool-str-replace-editor'
   disabled: true
+  config: {}
