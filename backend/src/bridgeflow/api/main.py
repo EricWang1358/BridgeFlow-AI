@@ -7,7 +7,7 @@ import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from bridgeflow import __version__
+from bridgeflow import __version__, store
 from bridgeflow.api.tools import router as tools_router
 from bridgeflow.config import settings
 from bridgeflow.pipeline import Orchestrator
@@ -27,9 +27,7 @@ app.include_router(tools_router)
 
 orchestrator = Orchestrator()
 
-# Hackathon-scoped: one in-memory result per period. Swap for a store before any
-# real deployment — see docs/05-roadmap.md.
-_results: dict[str, PipelineResult] = {}
+
 
 
 @app.get("/health")
@@ -52,13 +50,13 @@ async def analyze(
         frames[department] = _read(await upload.read(), upload.filename or "")
 
     result = await orchestrator.run(period, frames)
-    _results[period] = result
+    store.save(result)
     return result
 
 
 @app.post("/quote", response_model=QuoteRecommendation)
 async def quote(period: str, request: QuoteRequest) -> QuoteRecommendation:
-    result = _results.get(period)
+    result = store.load(period)
     if result is None:
         raise HTTPException(404, f"no analysis for period {period} — run /analyze first")
     return await orchestrator.quote(request, result)

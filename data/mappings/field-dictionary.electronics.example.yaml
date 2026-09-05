@@ -32,3 +32,14 @@ relations:
   target: sku:ipn-0041
   relation: same_part
   note: 同一颗料的原厂料号与内部料号
+
+# 月度合并方式，见 field-dictionary.example.yaml 的说明。
+rollups:
+  output_quantity: sum
+  purchase_amount: sum
+  revenue_amount: sum
+  receivable_days: average
+  order_quantity: sum
+  quoted_price: average
+  capacity_hours: sum
+  purchase_quantity: sum

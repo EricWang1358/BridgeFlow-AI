@@ -140,6 +140,7 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
         if not vote[voting].empty and vote[voting].notna().mean() > 0.8:
             for idx, (before, after) in enumerate(zip(series, as_date, strict=False)):
                 if pd.notna(after) and str(before) != after.strftime("%Y-%m-%d"):
+                    ambiguous = _is_ambiguous_date(str(before))
                     fixes.append(
                         Correction(
                             source=_ref(payload, idx, column),
@@ -147,9 +148,21 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
                             column=column,
                             before=str(before),
                             after=after.strftime("%Y-%m-%d"),
-                            rule="date_parse",
-                            confidence=0.95,
-                            reason="mixed date formats normalised to ISO",
+                            rule="date_parse_ambiguous" if ambiguous else "date_parse",
+                            # An ambiguous date is a coin toss dressed as a fix. The
+                            # confidence says so, and the reason names the other
+                            # reading, because landing a row in the wrong month is
+                            # invisible until something aggregates by month.
+                            confidence=0.5 if ambiguous else 0.95,
+                            reason=(
+                                (
+                                    "day-first and month-first both parse this; read as "
+                                    f"{after.strftime('%d %B')}. Declare the locale — "
+                                    "a Singaporean sheet almost certainly means the other one"
+                                )
+                                if ambiguous
+                                else "mixed date formats normalised to ISO"
+                            ),
                         )
                     )
             return as_date.dt.strftime("%Y-%m-%d"), "date", fixes
@@ -311,6 +324,23 @@ def _ref(payload: SanitizerInput, row: int, column: str) -> SourceRef:
     return SourceRef(
         department=payload.department, period=payload.period, row=row, column=column
     )
+
+
+_SLASHED_DATE = re.compile(r"^\s*(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})\s*$")
+
+
+def _is_ambiguous_date(text: str) -> bool:
+    """Whether `03/11/2025` could equally be 3 November or 11 March.
+
+    Both readings parse, so nothing errors; the row simply lands in the wrong month
+    and stays there until someone aggregates and notices a March figure in a November
+    batch.
+    """
+    match = _SLASHED_DATE.match(text)
+    if not match:
+        return False
+    first, second = int(match.group(1)), int(match.group(2))
+    return 1 <= first <= 12 and 1 <= second <= 12 and first != second
 
 
 def _majority_numeric(series: pd.Series) -> bool:

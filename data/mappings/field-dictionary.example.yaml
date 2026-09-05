@@ -50,3 +50,15 @@ measures:
   finance:
     amount: revenue_amount
     ar_days: receivable_days
+
+# 各度量的月度合并方式。
+#
+# 数量求和、单价取平均、库存取期末值——**选错了会得到一个看起来合理的数字**，
+# 所以这是声明的，不是猜的。缺省是 sum。
+rollups:
+  output_quantity: sum
+  capacity_hours: sum
+  purchase_amount: sum
+  purchase_quantity: sum
+  revenue_amount: sum
+  receivable_days: average
