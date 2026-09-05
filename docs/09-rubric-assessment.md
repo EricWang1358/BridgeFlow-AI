@@ -1,7 +1,10 @@
 # 09 — 评审 Rubric 自评与优先级重排
 
-> **第 4 项的评价已修正**：原写「设计强、实现弱」，实为机制存在、体验不存在。
-> 最新逐条比对见 [`13-golden-standard.md`](13-golden-standard.md) 第六节。
+> **参考文档：为什么这样排优先级。** 逐条比对的**当前**结论以
+> [`13-golden-standard.md`](13-golden-standard.md) 第六节为准，计分状态以
+> [`00-status.md`](00-status.md) 第五节为准——本文不复写计分。
+>
+> 一处已修正：第 4 项原写「设计强、实现弱」，实为**机制存在、体验不存在**。
 
 评审标准共 7 项（Show Me Your Agents Hackathon, NUS ISS）。本文逐条自评，并据此重排优先级。
 
@@ -120,7 +123,7 @@ least-privilege 同样是零：没有认证、没有角色、API 任何人可调
 - `Link.justification`：每条映射都说得出为什么
 
 **但缺：** Agent 层面的调用追踪（哪个 Agent、什么提示词、多少 token、多久、
-重试没有）。现在 627 秒花在哪，只能靠推断。
+重试没有）。耗时花在哪，当时只能靠推断——后来量出来了，见 issue #25。
 
 **eval cases —— 完全没有。** rubric 明写 "golden-path + adversarial eval cases"，
 我们有 19 个单元测试，但那是测代码，不是测 Agent 判断质量。
@@ -167,7 +170,9 @@ least-privilege 同样是零：没有认证、没有角色、API 任何人可调
 
 2. **把数据操作暴露为带 schema 的工具**（第 3 + 7 项，兼 #13）
    读表、聚合指标、查字段字典、算产能占用。这同时让 dsh 用得 idiomatic，
-   并把 evaluator 从"塞整张表进提示词"改成"调工具取指标"，627 秒的问题一起解决。
+   并把 evaluator 从"塞整张表进提示词"改成"调工具取指标"。
+   （**注**：当时以为耗时全来自「整张表进提示词」，实测证明主因是 dsh 自发跑 bash，见 #25。
+   工具化仍然要做，但它是 rubric 第 3 项的答案，不是耗时的答案。）
 
 3. **eval 集：golden path + adversarial**（第 6 项，rubric 明写）
    golden：Acme 这单必须被判为亏损。adversarial：注入、关键字段缺失、
@@ -181,7 +186,7 @@ least-privilege 同样是零：没有认证、没有角色、API 任何人可调
    `unresolved` 映射的确认/驳回接口 + 最小 UI。让 escalation checkpoint 看得见。
 
 6. **Agent 调用追踪**（第 6 项前半）
-   每次调用记录 Agent、耗时、token、重试。演示时能说清 627 秒花在哪。
+   每次调用记录 Agent、耗时、token、重试。演示时能说清时间花在哪。
 
 ### 明确不做（PRD 有要求但 rubric 不计分）
 

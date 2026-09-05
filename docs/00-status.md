@@ -1,0 +1,121 @@
+# 00 — 实测状态
+
+> **本文是所有实测数字的唯一来源。** 其他文档一律**引用本文，不复写数字**。
+>
+> 之前每个数字被抄进三到五处，然后开始漂移：测试数量同时存在 19 和 21 两个版本，
+> 样本行数同时存在 21 和 22，修复条数 47 与 48 并存。**而且两个版本往往都不对**——
+> 实测样本是 18 行，22 是把 4 行表头也数进去了。
+>
+> 「每个数字都量过、可追溯」是这个项目对评委的核心叙事。评委抓到一处对不上，
+> 整个叙事打折。所以：**改数字只改这一处。**
+
+**最后更新：2026-09-06。** 更新时请附上复现命令。
+
+---
+
+## 一 样本数据
+
+| | 值 | 怎么量的 |
+| --- | --- | --- |
+| 部门文件数 | 4 | `data/samples/*.csv` |
+| **数据行（不含表头）** | **18** | production 6 · procurement 4 · finance 4 · marketing 4 |
+| 文件总行数（含表头） | 22 | `cat data/samples/*.csv \| wc -l` |
+| 覆盖月份 | **1**（2025-11） | 所以跨月记忆无法验证 |
+
+```bash
+for f in data/samples/*.csv; do echo "$(basename $f): $(awk 'NR>1 && $0 !~ /^,*$/' $f | wc -l)"; done
+```
+
+> ⚠️ **文档里出现的「21 行」「22 行」都是错的。** 22 数进了表头，21 来源不明。
+
+## 二 Sanitizer 产出
+
+| | 值 |
+| --- | --- |
+| 修复条数 | **48** |
+| 进入 quarantine 的行 | **0** |
+| 每条修复都带规则与置信度 | 是 |
+
+```bash
+cd backend && python - <<'PY'
+import asyncio, pandas as pd
+from pathlib import Path
+from bridgeflow.agents import DataSanitizerAgent, SanitizerInput
+S=Path("../data/samples")
+async def m():
+    a=DataSanitizerAgent(); c=q=0
+    for d in ("production","procurement","finance","marketing"):
+        t=await a.run(SanitizerInput(d,"2025-11",pd.read_csv(S/f"{d}_2025-11.csv")))
+        c+=len(t.corrections); q+=len(t.quarantine)
+    print(f"corrections={c} quarantine={q}")
+asyncio.run(m())
+PY
+```
+
+> ⚠️ **`docs/04` 的 demo 脚本说「47 fixes, 3 rows quarantined」，两个数都不对。**
+> 实际是 48 条修复、**0 行隔离**——台上那句话现在讲不出来。
+
+## 三 测试
+
+| | 值 |
+| --- | --- |
+| 测试数量 | **26** |
+| 打真实模型的 | `test_resolver.py`（9 个） |
+| 其余 | mock provider，只证明代码不崩 |
+
+复现：`cd backend && pytest -q`（⚠️ **真实计费**）
+
+## 四 耗时与 token
+
+一次映射裁决（同一个问题，三种配置）：
+
+| 配置 | 耗时 | 工具调用 | 灌回模型的工具输出 |
+| --- | --- | --- | --- |
+| dsh，带 bash | 12–212s | 3–12 次 | 28,431 字符 ≈ 7,100 token |
+| dsh，`dsh/no-shell.patch.yml` | **5.9s** | **0** | **0** |
+| DeepSeek 直连 | **3.6s** | — | 707 token 总计 |
+
+全套测试：
+
+| 时点 | 结果 |
+| --- | --- |
+| resolver 在 dsh 上 | 739.6s，3 failed / 16 passed |
+| resolver 改直连（PR #34） | 587.0s，21 passed |
+| 加 no-shell 补丁（PR #50） | **447.8s，26 passed** |
+
+补丁省下的 139 秒全部来自 evaluator——它不再跑 bash 了，但仍然整表进提示词（#13）。
+
+> ⚠️ **文档里的「627 秒」是历史值，且当时的归因是错的**——它被记成「整表塞进提示词所致」，
+> 实际是 dsh 每次调用自发跑十几步 bash。见 `docs/13` §7.2 与 issue #25。
+
+## 五 rubric 计分
+
+| # | 项 | 状态 |
+| --- | --- | --- |
+| 1 | Goal & Scope | ✅ |
+| 2 | Architecture & Reasoning Loop | ❌ |
+| 3 | Tool Use & Integration | ❌ |
+| 4 | Autonomy & HITL | ❌ |
+| 5 | Safety & Guardrails | ❌ |
+| 6 | Observability & Eval | ⚠️ |
+| 7 | Platform & Tooling | ❌ |
+
+**7 项中 1 项达标。** 逐条比对见 `docs/13` 第六节。
+
+## 六 dsh 事实
+
+| | 值 |
+| --- | --- |
+| 版本 | `deepseek-harness-sdk==0.1.2rc1`（锁死） |
+| 运行时启动（WSL 文件系统内） | 0.6s |
+| 运行时启动（`/mnt/d`） | 3.6s |
+| 无工具 turn | 0.6s |
+| `sdk-minimal` 的工具册 | `persistent-bash` · `persistent-pwsh` · `str-replace-editor` |
+| approval 插件 | **未加载**——所以 bash 没有闸门 |
+| 可用 model id | `deepseek-v4-flash` · `deepseek-v4-pro` · `deepseek-v4-flash-vision-exp` |
+
+工具册复现：
+
+```bash
+$RUNTIME --profile sdk-minimal --dump-config | grep '^- id:'
+```

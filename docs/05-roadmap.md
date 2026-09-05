@@ -1,26 +1,13 @@
-# 05 — Roadmap
+# 05 — Roadmap（已被取代，本文只剩重定向）
 
-> **已被取代。** 排期见 [`10-proposal.md`](10-proposal.md)，架构见 [`13-golden-standard.md`](13-golden-standard.md)。
+原来的 M0–M5 排期基于自建前端与自建编排，两者都已废弃。全文已删除，
+而不是继续挂一条横幅让读者做人肉 diff —— 旧内容在 git 历史里。
 
-## M0 — Skeleton (day 1)
-Repo, schemas, provider layer, mock provider, FastAPI health + upload endpoint,
-Pipeline runs end-to-end on mock data and returns a hardcoded MasterTable.
+现在去哪里看：
 
-## M1 — Sanitizer real (day 1–2)
-Rule engine + LLM fallback, correction log, quarantine. Sample messy CSVs authored.
-
-## M2 — Resolver real (day 2)
-Candidate generation, LLM adjudication, confidence threshold, unresolved-link UI,
-persisted mapping rules.
-
-## M3 — Evaluator real (day 2–3)
-Four role prompts, evidence enforcement, tension detection, concurrency.
-
-## M4 — SOP + Quote Simulator (day 3)
-Master Table builder, risk report, approval cards, quote simulation with price bands.
-
-## M5 — Demo polish (day 3–4)
-Frontend states, streaming progress, rehearsal on mock, fallback recording.
-
-## Deliberately deferred
-ERP connectors · multi-tenant auth · write-back · mobile layout · i18n beyond EN.
+| 你想知道 | 去哪 |
+| --- | --- |
+| 实现顺序 | [第一周](../../milestones/1) · [第二周](../../milestones/2) · [第三周](../../milestones/3) |
+| 范围与工作量估算 | [`10-proposal.md`](10-proposal.md) |
+| 架构决策 | [`13-golden-standard.md`](13-golden-standard.md) |
+| 实测数字 | [`00-status.md`](00-status.md) |

@@ -1,11 +1,15 @@
 # 06 — DeepSeek Harness (`dsh`) 作为 Agent 运行时
 
-> **本文的「第一层 / 第二层」框架已被推翻。** dsh 不是 provider 层的成员，而是基座本身。
-> 事实与 API 部分仍然有效；架构结论以 [`13-golden-standard.md`](13-golden-standard.md) 为准。
-
-> **本文已更正。** 初版依据 README 摘要判断 dsh 是 "TypeScript-first"，据此设计了
-> "TS 插件 + HTTP 调 Python 后端" 的双层结构。**那个判断是错的**——官方提供 Python SDK，
-> Python 可以直接驱动 dsh 运行时，不需要那层 HTTP 转接。以下为核对源码与 PyPI 后的事实。
+> **参考文档：dsh 的事实与 API。** 架构结论以
+> [`13-golden-standard.md`](13-golden-standard.md) 为准，实测数字以
+> [`00-status.md`](00-status.md) 为准——本文不复写数字。
+>
+> 已删除的两处错误，记在这里免得有人再走一遍：
+>
+> 1. 初版依据 README 摘要判断 dsh 是 "TypeScript-first"，据此设计了「TS 插件 + HTTP 调
+>    Python 后端」的双层结构。**错的**——官方有 Python SDK，可直接驱动运行时。
+> 2. 初版把 dsh 当成 provider 层的一员（「第一层 / 第二层」框架）。**错的**——它是基座本身，
+>    这个错误的代价见 issue #25。
 
 ## 事实基线
 
@@ -123,11 +127,11 @@ dataframe 合并）。这需要先读三份文档：
 | 运行时启动 | 3.6s |
 | 单次简单 turn | 0.7s，`finish_reason='completed'` |
 | 结构化输出 | 一次解析成功，无需重试 |
-| 整条 pipeline（21 行样本） | **627.6s** |
+| 整条 pipeline | 见 [`00-status.md`](00-status.md) §4 |
 
 握手、profile 引导、结构化输出路径都通了。**dsh 这条路可用。**
 
-但整条 pipeline 的 627 秒暴露了两个与 dsh 无关的自身缺陷，见
+但整条 pipeline 的耗时暴露了两个缺陷（当时归因为「与 dsh 无关」，**那个归因是错的**——见 issue #25），见
 [#24](https://github.com/EricWang1358/BridgeFlow-AI/issues/24)（语义对齐产出 0 条映射）和
 [#25](https://github.com/EricWang1358/BridgeFlow-AI/issues/25)（性能差四个数量级）。
 

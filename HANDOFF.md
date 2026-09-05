@@ -1,8 +1,12 @@
 # 交接说明
 
-**更新于 2026-09-06。** 这是**当前状态**的快照，会过期。长期约束在 [`CLAUDE.md`](CLAUDE.md)，
-架构权威在 [`docs/13-golden-standard.md`](docs/13-golden-standard.md)。
-**情况变化后请更新或删除本文**，不要让它变成第二份互相矛盾的事实来源。
+**更新于 2026-09-06。** 本文独占**易变状态**：当前进度、已知缺陷、下一步、待验证问题。
+
+分工（见 [`docs/README.md`](docs/README.md)）：硬约束在 [`CLAUDE.md`](CLAUDE.md)，
+架构决策在 [`docs/13-golden-standard.md`](docs/13-golden-standard.md)，
+**所有实测数字在 [`docs/00-status.md`](docs/00-status.md)——本文引用，不复写**。
+
+**情况变化后请更新本文**，但不要把内容抄回上面三处。
 
 ---
 
@@ -42,7 +46,7 @@ cd ~/Hackathon2026/BridgeFlow-AI/backend
 
 ## 上一个会话（2026-09-06）做了什么
 
-查清了「21 行数据跑 627 秒」到底是什么，结论推翻了原来的定性：
+查清了「样本数据跑几百秒」到底是什么，结论推翻了原来的定性：
 
 1. **不是性能问题，是架构问题。** 6 次调用、每次提示词 590 字符、运行时启动 0.6 秒。
    单次 turn 却要 5.3–212.5 秒。
@@ -56,9 +60,7 @@ cd ~/Hackathon2026/BridgeFlow-AI/backend
 5. **修了 #25 和 #33**（PR #34）：resolver 改走 DeepSeek 直连，解析器提取到
    `llm/json_reply.py` 共用并修掉 schema 外壳。
 
-**测试状态：`3 failed / 16 passed in 739.6s` → `21 passed in 587.0s`。**
-`test_resolver.py` 单独看是 `426.7s / 2 failed` → `207.6s / 9 passed`。
-全套仍要 587 秒，因为 evaluator 还在 dsh 上。
+**测试与耗时数字见 [`docs/00-status.md`](docs/00-status.md) §3–§4。**
 
 ---
 
@@ -141,7 +143,7 @@ cd ~/Hackathon2026/BridgeFlow-AI/backend
 1. **测试里只有 `test_resolver.py` 打真实模型。** 其余仍在 mock 下跑，而 mock 返回
    `mock-justification-<hash>`。绿色**不证明判断质量**。
 2. **`evaluator.py` 把单元格内容原样拼进提示词** —— 真实注入漏洞，未修，且它还在 dsh 上。
-3. **样本只有 2025-11 一个月共 22 行。** 无法验证跨月记忆，也无法测规模。
+3. **样本只有 2025-11 一个月。** 无法验证跨月记忆，也无法测规模（行数见 `docs/00-status.md` §1）。
 
 **仓库看起来比实际健康**，绿色的测试是这个错觉的主要来源。
 
