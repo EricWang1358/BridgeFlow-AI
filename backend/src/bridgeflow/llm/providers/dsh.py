@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-import json
-import re
 from typing import Any
 
 from pydantic import BaseModel
 
 from bridgeflow.config import settings
 from bridgeflow.llm.base import Message, Response
-
-_JSON_BLOCK = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
+from bridgeflow.llm.json_reply import parse_structured, schema_instruction
 
 
 class DshProvider:
@@ -91,7 +88,7 @@ class DshProvider:
                 f"response so far: {text[:200]!r}"
             )
 
-        parsed = _parse(text, schema) if schema is not None else None
+        parsed = parse_structured(text, schema) if schema is not None else None
         return Response(
             text=text,
             parsed=parsed,
@@ -119,31 +116,5 @@ def _build_prompt(
         parts.append(f"{label}:\n{message.content}")
 
     if schema is not None:
-        parts.append(
-            "Reply with JSON matching this schema and nothing else — no prose, "
-            "no explanation outside the JSON:\n"
-            + json.dumps(schema.model_json_schema(), ensure_ascii=False)
-        )
+        parts.append(schema_instruction(schema))
     return "\n\n".join(parts)
-
-
-def _parse(text: str, schema: type[BaseModel]) -> BaseModel:
-    """Pull the JSON object out of a free-text reply and validate it."""
-    candidate = text.strip()
-
-    fenced = _JSON_BLOCK.search(candidate)
-    if fenced:
-        candidate = fenced.group(1).strip()
-    else:
-        # Fall back to the outermost braces, in case the model wrapped the JSON
-        # in a sentence despite being told not to.
-        start, end = candidate.find("{"), candidate.rfind("}")
-        if start != -1 and end > start:
-            candidate = candidate[start : end + 1]
-
-    try:
-        return schema.model_validate_json(candidate)
-    except Exception as exc:  # surface the raw reply for debugging
-        raise ValueError(
-            f"dsh reply did not parse as {schema.__name__}: {exc}\nreply: {text[:500]!r}"
-        ) from exc
