@@ -284,9 +284,30 @@ class FieldDictionary:
             for r in (raw.get("relations") or [])
         ]
 
+        # {(department, column): measure}. Entity kinds say what a row is ABOUT;
+        # measures say what can be added up. A metric needs the second kind, and
+        # naming those columns in code would hard-code a schema still being
+        # negotiated with the customer.
+        self.measures: dict[tuple[str, str], str] = {}
+        for department, columns in (raw.get("measures") or {}).items():
+            for column, measure in columns.items():
+                self.measures[(department, column)] = measure
+
     @property
     def is_empty(self) -> bool:
-        return not self.columns and not self.relations
+        return not self.columns and not self.relations and not self.measures
+
+    def measure_for(self, department: str, column: str) -> str | None:
+        """What this column measures, or None.
+
+        There is no hint fallback here on purpose. Guessing which column holds an
+        amount is how a figure ends up in a finding with nothing behind it.
+        """
+        return self.measures.get((department, column))
+
+    def columns_measuring(self, department: str, measure: str) -> list[str]:
+        """Every column in one department declared as `measure`."""
+        return [c for (d, c), m in self.measures.items() if d == department and m == measure]
 
     def kind_for(self, department: str, column: str) -> EntityKind | None:
         declared = self.columns.get((department, column))

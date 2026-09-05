@@ -8,6 +8,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from bridgeflow import __version__
+from bridgeflow.api.tools import router as tools_router
 from bridgeflow.config import settings
 from bridgeflow.pipeline import Orchestrator
 from bridgeflow.schemas import Department, PipelineResult, QuoteRecommendation, QuoteRequest
@@ -19,6 +20,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# The dsh tools call in here for the work their TypeScript declarations describe.
+# See plugins/README.md for why the two halves live where they do.
+app.include_router(tools_router)
 
 orchestrator = Orchestrator()
 

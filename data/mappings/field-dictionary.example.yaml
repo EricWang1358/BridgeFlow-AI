@@ -32,3 +32,21 @@ relations:
     target: gl_account:4000-sales-a1
     relation: books_to
     note: 示例，非真实科目对照
+
+# 度量字段：哪一列可以被加总。
+#
+# columns 段说的是"这一行讲的是什么"（SKU、客户、原料）；measures 段说的是
+# "什么可以被算"。指标需要后者，而把列名写进 Python 就等于把客户的表结构写死——
+# 真实字段还在与公司协商中。见 CLAUDE.md 第八条硬约束。
+#
+# 注意列名是 sanitizer 归一之后的形态（snake_case），不是表头原文。
+measures:
+  production:
+    output_qty: output_quantity
+    capacity_hrs: capacity_hours
+  procurement:
+    unit_price: purchase_amount
+    qty: purchase_quantity
+  finance:
+    amount: revenue_amount
+    ar_days: receivable_days
