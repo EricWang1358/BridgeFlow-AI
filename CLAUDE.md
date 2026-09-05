@@ -23,6 +23,11 @@
 现存的 `bridgeflow/llm/providers/dsh.py` 与 `pipeline/orchestrator.py` 是这个错误的产物，
 **待重构，不是范例**。
 
+resolver 已经撤出来了（#25、PR #34）——纯判断类调用走 `deepseek` 直连。
+实测代价：同一次裁决在 dsh 上是 12–212 秒、光工具输出就 7,100 token，
+因为它会自发跑十几步 bash 把整个仓库读一遍；直连是 3.6 秒、707 token。
+**sanitizer 与 evaluator 仍在 dsh 上**，同样的账还欠着。
+
 ### 只用官方内置插件
 
 目的是消除输出错误、幻觉、子代理越权、未定义行为的来源。
@@ -97,23 +102,30 @@ dsh 位置错误，其原生的编排、工具、审批、护栏、多代理能�
 source ~/Hackathon2026/.venv/bin/activate
 source ~/Hackathon2026/BridgeFlow-AI/env.sh
 
-cd backend && pytest -q && ruff check src tests
-python ../scripts/smoke_dsh.py          # 验证 dsh 运行时
+cd backend && ruff check src tests
+pytest -q                               # ⚠️ 约 10 分钟，且**真的调用 API 计费**
+python ../scripts/smoke_dsh.py          # 同样会计费，别随手跑
 ```
 
-`LLM_PROVIDER=mock` 是默认值，整条链路可离线跑通，测试与彩排都用它。
+`.env.example` 里 `LLM_PROVIDER=mock` 仍是默认值，但**本机 `.env` 不是**：
+`LLM_PROVIDER=dsh` + `LLM_PROVIDER_RESOLVER=deepseek`。所以本机跑测试会花钱。
+跑之前想清楚值不值，跑完把花销告诉用户。
 
 ---
 
 ## 已知缺陷（不要当成能用的东西）
 
-- **`evaluator.py` 把单元格内容原样拼进提示词** —— 真实注入漏洞，未修
-- **21 行数据跑 627 秒** —— 整表塞进提示词所致，靠 tool 化解决
+- **`evaluator.py` 把单元格内容原样拼进提示词** —— 真实注入漏洞，未修。
+  且它还在 dsh 上，而 `sdk-minimal` 的 bash **没有目录约束**：
+  注入的落点不是提示词，是你的文件系统。见 #26
+- **全套测试约 10 分钟** —— 原因**不是**数据量或提示词大小（曾经这么记，是错的）。
+  是 evaluator 仍跑在 dsh 上，每次调用都启动一轮带 bash 的完整 agent 循环。见 #25
 - **mock provider 输出是 `mock-justification-<hash>`** —— 能过测试，不可展示
 - **只有 2025-11 一个月样本，共 22 行** —— 无法验证"跨月记忆"，也无法测规模
 - **`quarantine` 是黑洞** —— 只写不读，没有出口
 - **`/analyze` 同步返回、无进度无取消** —— 真实使用下不可用
-- **19 个测试全在 mock 下跑** —— 验证代码不崩，不验证判断质量
+- **21 个测试里只有 `test_resolver.py` 打真实模型** —— 其余仍在 mock 下跑，
+  验证代码不崩，不验证判断质量
 
 ---
 
