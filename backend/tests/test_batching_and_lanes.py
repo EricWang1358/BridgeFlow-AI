@@ -131,3 +131,45 @@ def test_the_same_lane_is_reused(monkeypatch):
     assert get_provider("evaluator", lane="production") is get_provider(
         "evaluator", lane="production"
     )
+
+
+async def test_an_unjudged_candidate_is_marked_not_merely_uncertain(monkeypatch):
+    """"Not judged" and "judged and weak" are different states.
+
+    A review queue that shows them as one sends the reviewer to the wrong pile.
+    """
+    import pandas as pd
+
+    from bridgeflow.agents import DataSanitizerAgent, SanitizerInput, SemanticResolverAgent
+    from bridgeflow.config import REPO_ROOT
+
+    samples = REPO_ROOT / "data" / "samples"
+    sanitizer = DataSanitizerAgent()
+    tables = [
+        await sanitizer.run(
+            SanitizerInput(d, "2025-11", pd.read_csv(samples / f"{d}_2025-11.csv"))
+        )
+        for d in ("marketing", "production")
+    ]
+
+    graph = await SemanticResolverAgent(llm=_Counter()).run(tables)
+    everything = graph.links + graph.unresolved
+
+    assert everything, "candidates were dropped"
+    assert all(link.status == "unadjudicated" for link in everything)
+    assert all("no verdict returned" in link.justification for link in everything)
+
+
+async def test_a_declared_link_says_it_was_declared():
+    """Declared links were never in doubt and must not sit in a review queue."""
+    import yaml
+
+    from bridgeflow.agents.semantic_resolver import FieldDictionary
+    from bridgeflow.config import REPO_ROOT
+
+    raw = yaml.safe_load(
+        (REPO_ROOT / "data" / "mappings" / "field-dictionary.example.yaml").read_text("utf-8")
+    )
+    dictionary = FieldDictionary(raw)
+
+    assert dictionary.relations, "the example dictionary declares relations"
