@@ -63,6 +63,10 @@ class Settings(BaseSettings):
 
     resolver_confidence_threshold: float = 0.75
 
+    # Where analysed periods are kept. A file per period rather than a process-local
+    # dict: the dict was lost on restart and wrong with more than one worker.
+    result_store_path: str = "data/outputs"
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

@@ -396,6 +396,12 @@ class FieldDictionary:
             for column, measure in columns.items():
                 self.measures[(department, column)] = measure
 
+        # {measure: sum | average | period_end}. How a measurement combines when
+        # several periods roll into one month is a property of the measurement:
+        # a quantity sums, a price averages, a stock level takes the closing value.
+        # Choosing wrong produces a plausible number, so it is declared, not guessed.
+        self.rollups: dict[str, str] = dict(raw.get("rollups") or {})
+
     @property
     def is_empty(self) -> bool:
         return not self.columns and not self.relations and not self.measures
