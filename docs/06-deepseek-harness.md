@@ -111,15 +111,26 @@ dataframe 合并）。这需要先读三份文档：
 
 以及 `dsh plugin --profile sdk add file:...` 的本地插件打包方式。
 
-### 尚未验证的部分
+### 实测结果
 
-**`DshProvider` 目前只做了导入与配置校验的验证，没有跑通一次真实 turn。** 需要
-`DSH_HOME` 和 `DEEPSEEK_API_KEY` 才能端到端测试，这两个我这边没有。JSON 提取逻辑
-有单元测试覆盖（`tests/test_dsh_provider.py`），但 JSON-RPC 握手、profile 引导、
-超时行为都还没实测过。
+已用真实凭据跑通，`profile=sdk-minimal`、`model=deepseek-v4-flash`：
 
-**下一步该做的第一件事，是拿真实凭据跑通一次 `harness.run()`。** 在此之前不要
-把任何排期建立在 dsh 之上。
+| 项 | 实测值 |
+| --- | --- |
+| 运行时启动 | 3.6s |
+| 单次简单 turn | 0.7s，`finish_reason='completed'` |
+| 结构化输出 | 一次解析成功，无需重试 |
+| 整条 pipeline（21 行样本） | **627.6s** |
+
+握手、profile 引导、结构化输出路径都通了。**dsh 这条路可用。**
+
+但整条 pipeline 的 627 秒暴露了两个与 dsh 无关的自身缺陷，见
+[#24](https://github.com/EricWang1358/BridgeFlow-AI/issues/24)（语义对齐产出 0 条映射）和
+[#25](https://github.com/EricWang1358/BridgeFlow-AI/issues/25)（性能差四个数量级）。
+
+一个 dsh 相关的注意点：`DshProvider` 用一把锁把调用串行化了，因为单个 dsh runtime
+不能交错 turn。`MultiRoleEvaluatorAgent` 四个角色的 `asyncio.gather` 因此退化为串行。
+要恢复并发需要多个 runtime 实例，或者等 #13 把这四次调用变便宜。
 
 ### 保留退路
 
