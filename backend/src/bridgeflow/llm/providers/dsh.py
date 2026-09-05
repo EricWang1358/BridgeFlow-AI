@@ -54,6 +54,12 @@ class DshProvider:
             }
             if settings.dsh_cwd:
                 kwargs["cwd"] = settings.dsh_cwd
+            # The shells come off here. Untrusted cell content reaches this model,
+            # and sdk-minimal would otherwise hand it an unconfined bash — see
+            # dsh/no-shell.patch.yml for what that cost when measured.
+            patches = settings.dsh_patch_paths
+            if patches:
+                kwargs["patches"] = tuple(patches)
             if settings.dsh_reasoning_effort:
                 kwargs["reasoning_effort"] = settings.dsh_reasoning_effort
             if settings.dsh_max_tokens:
