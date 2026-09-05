@@ -153,13 +153,22 @@ class EvidenceCell(BaseModel):
     value: str
 
 
+#: How many contributing cells a tool result may name. The PRD sizes one batch at
+#: 200,000 rows; returning a cell per row would put the table back into the context
+#: the tools exist to keep it out of — and every agent in the fan-out pays separately.
+EVIDENCE_SAMPLE = 5
+
+
 class MetricResult(BaseModel):
     metric: str
     period: str
     value: float
     unit: str
     formula: str
+    #: A bounded sample, never the whole set. See `evidence_total`.
     evidence: list[EvidenceCell] = Field(default_factory=list)
+    evidence_total: int = 0
+    evidence_truncated: bool = False
 
 
 @router.post("/aggregate-metric", response_model=MetricResult)
@@ -248,7 +257,9 @@ async def aggregate_metric(request: AggregateRequest) -> MetricResult:
         value=round(total, 4) if spec.op == "sum" else total,
         unit=spec.unit,
         formula=spec.formula,
-        evidence=evidence,
+        evidence=evidence[:EVIDENCE_SAMPLE],
+        evidence_total=len(evidence),
+        evidence_truncated=len(evidence) > EVIDENCE_SAMPLE,
     )
 
 
