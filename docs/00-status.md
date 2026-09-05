@@ -34,6 +34,7 @@ for f in data/samples/*.csv; do echo "$(basename $f): $(awk 'NR>1 && $0 !~ /^,*$
 | --- | --- |
 | 修复条数 | **48** |
 | 进入 quarantine 的行 | **0** |
+| 产量列是否被毁 | **否**（PR #53 之前：整列变成 `1970-01-01`） |
 | 每条修复都带规则与置信度 | 是 |
 
 ```bash
@@ -59,7 +60,7 @@ PY
 
 | | 值 |
 | --- | --- |
-| 测试数量 | **26** |
+| 测试数量 | **39** |
 | 打真实模型的 | `test_resolver.py`（9 个） |
 | 其余 | mock provider，只证明代码不崩 |
 
@@ -82,6 +83,12 @@ PY
 | resolver 在 dsh 上 | 739.6s，3 failed / 16 passed |
 | resolver 改直连（PR #34） | 587.0s，21 passed |
 | 加 no-shell 补丁（PR #50） | **447.8s，26 passed** |
+| 方案 B 落地（PR #53） | **419.6s，38 passed / 1 failed**，重跑即过 |
+
+**那次失败是间歇的，而且暴露了一个真缺陷**：`test_resolver.py` 的结果取决于本机有没有
+`data/mappings/field-dictionary.yaml`——那是 gitignored 的真实数据文件。
+跟「测试跟着 `.env` 走」是同一类问题：**测试结果取决于一个不在版本库里的文件**。
+新增的 `test_tool_endpoints.py` 用 fixture 显式钉住字典，resolver 测试还没有。
 
 补丁省下的 139 秒全部来自 evaluator——它不再跑 bash 了，但仍然整表进提示词（#13）。
 
