@@ -6,6 +6,8 @@
 **动手之前先读 [`docs/13-golden-standard.md`](docs/13-golden-standard.md)** ——
 它是架构决策的唯一权威，与其他文档冲突时以它为准。
 
+当前进度、待验证问题、下一步建议见 [`HANDOFF.md`](HANDOFF.md)（会过期，情况变了就更新它）。
+
 ---
 
 ## 硬性约束
