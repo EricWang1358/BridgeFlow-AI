@@ -1,0 +1,13 @@
+# Load BridgeFlow's own plugins into the runtime.
+#
+# `insert` adds a plugin row to the composed tree. Applied after every bundle layer,
+# which is what makes this work without forking dsh.
+#
+# Pair it with no-shell.patch.yml: these tools are the sanctioned way to reach the
+# data, and leaving a shell in place would make them optional.
+- insert:
+    - id: bridgeflow
+      name: '../plugins/src/index.ts'
+      config:
+        backendUrl: http://127.0.0.1:8000
+        backendTimeoutMs: 30000

@@ -90,6 +90,16 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
         """Infer a column's type and log every value that changed shape."""
         fixes: list[Correction] = []
 
+        # Numbers are tested first, and a column that is already numeric is never
+        # offered to the date parser. `pd.to_datetime` reads a bare integer as
+        # nanoseconds since the epoch, so a column of quantities — 1200, 980, 450 —
+        # parses at 100% and every value becomes 1970-01-01. That silently destroyed
+        # production output for as long as the tests only asserted column NAMES.
+        if _looks_numeric(series):
+            numeric = self._coerce_number(series, column, fixes)
+            if numeric is not None:
+                return numeric
+
         as_date = pd.to_datetime(series, errors="coerce", format="mixed")
         if as_date.notna().mean() > 0.8:
             for idx, (before, after) in enumerate(zip(series, as_date, strict=False)):
@@ -107,25 +117,43 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
                     )
             return as_date.dt.strftime("%Y-%m-%d"), "date", fixes
 
-        stripped = series.astype(str).str.replace(r"[,\s$]", "", regex=True)
-        as_number = pd.to_numeric(stripped, errors="coerce")
-        if as_number.notna().mean() > 0.8:
-            for idx, (before, after) in enumerate(zip(series, as_number, strict=False)):
-                if pd.notna(after) and str(before) != str(after):
-                    fixes.append(
-                        Correction(
-                            row=idx,
-                            column=column,
-                            before=str(before),
-                            after=float(after),
-                            rule="number_normalise",
-                            confidence=0.95,
-                            reason="stripped currency symbols and thousands separators",
-                        )
-                    )
-            return as_number, "number", fixes
+        numeric = self._coerce_number(series, column, fixes)
+        if numeric is not None:
+            return numeric
 
         return series.astype(str).str.strip(), "string", fixes
+
+    def _coerce_number(
+        self, series: pd.Series, column: str, fixes: list[Correction]
+    ) -> tuple[pd.Series, str, list[Correction]] | None:
+        """Strip currency symbols and separators, or report that this is not a number."""
+        # A currency prefix is dropped only when it precedes a number: `S$ 4,850`
+        # becomes 4850, while `Line 2` and `SKU-A1` are left alone. The currency
+        # itself is lost here, which FR 05 still owes a fix for (#17) — but losing it
+        # is better than the previous behaviour, where the whole column stayed text
+        # and every figure computed from it silently summed a subset of the rows.
+        stripped = (
+            series.astype(str)
+            .str.replace(r"^\s*[A-Za-z]{0,3}[$€£¥]\s*", "", regex=True)
+            .str.replace(r"[,\s]", "", regex=True)
+        )
+        as_number = pd.to_numeric(stripped, errors="coerce")
+        if as_number.notna().mean() <= 0.8:
+            return None
+        for idx, (before, after) in enumerate(zip(series, as_number, strict=False)):
+            if pd.notna(after) and str(before) != str(after):
+                fixes.append(
+                    Correction(
+                        row=idx,
+                        column=column,
+                        before=str(before),
+                        after=float(after),
+                        rule="number_normalise",
+                        confidence=0.95,
+                        reason="stripped currency symbols and thousands separators",
+                    )
+                )
+        return as_number, "number", fixes
 
     def _split_quarantine(
         self, frame: pd.DataFrame
@@ -143,6 +171,22 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
     def _needs_llm(self, value: Any) -> bool:
         """Hook for the LLM fallback — not yet used (see docs/05-roadmap.md, M1)."""
         return False
+
+
+def _looks_numeric(series: pd.Series) -> bool:
+    """True when the column is already numeric, or is plainly numeric text.
+
+    Used to keep `pd.to_datetime` away from quantities. Text that merely contains
+    digits — `2025-11-03`, `Nov 8 2025` — is not plainly numeric and still reaches
+    the date parser.
+    """
+    if pd.api.types.is_numeric_dtype(series):
+        return True
+    text = series.dropna().astype(str).str.strip()
+    if text.empty:
+        return False
+    plain = text.str.fullmatch(r"[-+]?[\d,]*\.?\d+")
+    return bool(plain.mean() > 0.8)
 
 
 def _is_blank(value: Any) -> bool:
