@@ -112,30 +112,55 @@ gh auth status         # 期望看到 EricWang1358，scopes 含 project
 ## 5 Clone 仓库
 
 ```bash
-mkdir -p ~/projects && cd ~/projects
+mkdir -p ~/Hackathon2026 && cd ~/Hackathon2026
 gh repo clone EricWang1358/BridgeFlow-AI
-cd ~/projects/BridgeFlow-AI
+cd ~/Hackathon2026/BridgeFlow-AI
 ```
+
+仓库是 private，所以**必须先完成第 4 节的登录**，否则会报 404 或要求输入密码。
+这是唯一的限制 —— 没有别的东西阻止 clone。
 
 **验证**
 
 ```bash
-pwd                    # 期望 /home/<你>/projects/BridgeFlow-AI，绝不能出现 /mnt
+pwd                    # 期望 /home/eric/Hackathon2026/BridgeFlow-AI，绝不能出现 /mnt
 git log --oneline -1
 ```
+
+### 目录布局
+
+```
+~/Hackathon2026/
+├── BridgeFlow-AI/          ← git 仓库，唯一的源码事实来源
+│   ├── backend/              Python 实现体
+│   ├── plugins/              TS 插件源码（后续新增）
+│   ├── scripts/ docs/ data/
+├── .venv/                  ← Python 虚拟环境，在仓库之外
+└── .dsh-bridgeflow/        ← DSH_HOME，在仓库之外
+```
+
+**`.venv` 与 `.dsh-bridgeflow` 都放在仓库外面**，这样它们不可能被误提交，
+`git status` 也永远干净。分界线是：**源码进仓库，运行时状态不进**。
 
 ---
 
 ## 6 Python 环境与依赖
 
+虚拟环境建在 `~/Hackathon2026/`（仓库外），依赖从 `backend/` 安装：
+
 ```bash
-cd ~/projects/BridgeFlow-AI/backend
+cd ~/Hackathon2026
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
+
+cd ~/Hackathon2026/BridgeFlow-AI/backend
 pip install -e ".[dev]"
 pip install --pre "deepseek-harness-sdk==0.1.2rc1"
 ```
+
+`pip install -e` 必须在 `backend/` 下执行（`pyproject.toml` 在那里），
+但装进的是 `~/Hackathon2026/.venv`。以后每开一个 shell，`source ~/Hackathon2026/.venv/bin/activate` 即可。
 
 **验证**
 
@@ -154,19 +179,19 @@ dsh 的 SDK **刻意不去发现 `~/.dsh`**，`DSH_HOME` 必填且无默认值 �
 我们指向一个项目专属目录，你 Windows 上日常使用的 dsh 完全不受影响。
 
 ```bash
-mkdir -p ~/.dsh-bridgeflow
+mkdir -p ~/Hackathon2026/.dsh-bridgeflow
 ```
 
 写项目配置（**注意 `DSH_HOME` 必须是绝对路径**）：
 
 ```bash
-cd ~/projects/BridgeFlow-AI/backend
+cd ~/Hackathon2026/BridgeFlow-AI/backend
 cp .env.example .env
 cat >> .env <<EOF
 
 # --- WSL 本机配置 ---
 LLM_PROVIDER=dsh
-DSH_HOME=$HOME/.dsh-bridgeflow
+DSH_HOME=$HOME/Hackathon2026/.dsh-bridgeflow
 DSH_PROFILE=sdk-minimal
 DSH_PROVIDER=deepseek-official
 DSH_MODEL=deepseek-v4-flash
@@ -182,7 +207,7 @@ EOF
 **验证**
 
 ```bash
-echo $HOME/.dsh-bridgeflow && ls -la ~/.dsh-bridgeflow
+echo $HOME/Hackathon2026/.dsh-bridgeflow && ls -la ~/Hackathon2026/.dsh-bridgeflow
 ```
 
 ---
@@ -190,8 +215,8 @@ echo $HOME/.dsh-bridgeflow && ls -la ~/.dsh-bridgeflow
 ## 8 冒烟测试：确认 dsh 真的跑得起来
 
 ```bash
-cd ~/projects/BridgeFlow-AI/backend
-source .venv/bin/activate
+cd ~/Hackathon2026/BridgeFlow-AI/backend
+source ~/Hackathon2026/.venv/bin/activate
 python ../scripts/smoke_dsh.py
 ```
 
@@ -213,6 +238,31 @@ python ../scripts/smoke_dsh.py
 
 ---
 
+## 8.5 插件放哪里：不 fork dsh
+
+**不需要 fork `deepseek-harness`。** dsh 支持安装本地 bundle：
+
+```bash
+dsh plugin --profile sdk-minimal add file:$HOME/Hackathon2026/BridgeFlow-AI/plugins/bridgeflow-tools
+```
+
+`file:` 形式把本地 bundle 装进 profile 的包树，所以**插件源码留在我们自己的仓库里**，
+dsh 那边只是安装目标。
+
+**什么时候才需要 fork**：要改 dsh 核心行为、而所有 seam（`ctx.tools`、`tools/pre-execute`、
+`ctx.approval`、`ctx.tools.guard()`）都覆盖不到的时候。目前的需求全在 seam 覆盖范围内。
+
+而且 dsh **所有已发布版本都是预发布、且明示会有破坏性变更** —— fork 意味着三周里
+持续处理 merge 冲突，与我们"版本固定 `==0.1.2rc1`"的决定直接矛盾。
+
+### 开发循环的一个未验证点
+
+`add file:` 是**拷贝**进 profile 包树，所以改完插件源码需要重新安装。
+是否存在 link / watch 之类的开发模式尚未查证 —— 这会影响迭代速度，
+是环境搭好后要第一批验证的事情。
+
+---
+
 ## 9 在 WSL 里安装 Claude Code 并登录
 
 目标环境就是 Linux，会话也该在这里 —— 路径、权限、工具链全部对齐。
@@ -225,7 +275,7 @@ claude --version
 首次登录：
 
 ```bash
-cd ~/projects/BridgeFlow-AI
+cd ~/Hackathon2026/BridgeFlow-AI
 claude
 ```
 
@@ -254,15 +304,15 @@ Windows 浏览器开 `localhost:<端口>` 就能访问。
 后端：
 
 ```bash
-cd ~/projects/BridgeFlow-AI/backend
-source .venv/bin/activate
+cd ~/Hackathon2026/BridgeFlow-AI/backend
+source ~/Hackathon2026/.venv/bin/activate
 uvicorn bridgeflow.api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 dsh web（端口以它自己打印的为准）：
 
 ```bash
-DSH_HOME=$HOME/.dsh-bridgeflow <运行时路径>/dsh web
+DSH_HOME=$HOME/Hackathon2026/.dsh-bridgeflow <运行时路径>/dsh web
 ```
 
 **验证 —— 先在 WSL 内确认监听地址，这是最常见的失败点**
@@ -359,7 +409,7 @@ data/mappings/field-dictionary.yaml     ← 真实 OA 主数据，只跟踪 exam
 data/uploads/  data/outputs/  *.log
 ```
 
-`DSH_HOME` 本来就应在仓库之外（`~/.dsh-bridgeflow`）。`.dsh*/` 是防呆 ——
+`DSH_HOME` 本来就应在仓库之外（`~/Hackathon2026/.dsh-bridgeflow`）。`.dsh*/` 是防呆 ——
 万一有人指错，profile、凭据、会话不会被提交。
 
 ### 11.3 绝对路径只能出现在 `.env`
@@ -375,7 +425,7 @@ data/uploads/  data/outputs/  *.log
 ### 11.5 验证：仓库里有没有环境特定的痕迹
 
 ```bash
-cd ~/projects/BridgeFlow-AI
+cd ~/Hackathon2026/BridgeFlow-AI
 git ls-files | xargs grep -ln "/home/\|/mnt/\|[A-Z]:\\\\" 2>/dev/null
 ```
 
