@@ -1,0 +1,264 @@
+# 14 — WSL (Ubuntu 22.04) 开发环境搭建
+
+目标：把仓库和 dsh 运行时完整放进 WSL 文件系统，与 Windows 上日常使用的 dsh **完全隔离**。
+
+**每一步都有验证命令。验证不过不要往下走** —— 后面的坑会难查得多。
+
+---
+
+## 0 为什么不能放在 `/mnt/d`
+
+不是"慢一点"的问题：
+
+| 问题 | 后果 |
+| --- | --- |
+| 走 9p/drvfs 协议 | git、pnpm、pip 慢一个量级 |
+| inotify 不工作 | dsh 的文件监听、任何 watch 模式**静默失效** |
+| 权限位丢失 | 全部 777，可执行位没有语义 |
+| 大小写敏感性不一致 | Linux 下能过的代码在这里行为不同 |
+
+**规则：仓库、虚拟环境、`DSH_HOME`、`node_modules` 全部放在 `~` 下，一个都不放 `/mnt`。**
+
+---
+
+## 1 系统基础
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y build-essential curl wget git ca-certificates software-properties-common
+```
+
+**验证**
+
+```bash
+lsb_release -d && ldd --version | head -1
+```
+
+期望：`Ubuntu 22.04`，glibc `2.35`。
+glibc ≥ 2.28 是 `deepseek_harness_runtime_bin` 的 `manylinux_2_28` wheel 的要求，2.35 满足。
+
+---
+
+## 2 Python 3.12
+
+Ubuntu 22.04 自带 3.10，但本项目要求 ≥3.11（代码使用 `datetime.UTC`）。用 deadsnakes 装 3.12：
+
+```bash
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt update
+sudo apt install -y python3.12 python3.12-venv python3.12-dev
+```
+
+**不要动系统默认的 `python3`** —— Ubuntu 自身依赖 3.10，改默认会弄坏系统工具。我们只在项目虚拟环境里用 3.12。
+
+**验证**
+
+```bash
+python3.12 -V          # 期望 Python 3.12.x
+python3 -V             # 期望 Python 3.10.x —— 系统默认，不该被改
+```
+
+---
+
+## 3 Node 与 pnpm
+
+Python SDK 跑 dsh **不需要** Node（运行时是打包好的可执行文件）。
+但我们要写 TS 插件，`dsh plugin add` 管理外部包时需要 pnpm。
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+sudo corepack enable
+corepack prepare pnpm@latest --activate
+```
+
+**验证**
+
+```bash
+node -v && pnpm -v     # 期望 v22.x 和 pnpm 版本号
+```
+
+---
+
+## 4 GitHub CLI 与认证
+
+仓库是 private，需要认证才能 clone。
+
+```bash
+(type -p wget >/dev/null || sudo apt install wget -y) \
+  && sudo mkdir -p -m 755 /etc/apt/keyrings \
+  && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+     | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg >/dev/null \
+  && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+     | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+  && sudo apt update && sudo apt install gh -y
+```
+
+登录（会给一个网页 code，在 Windows 浏览器里完成）：
+
+```bash
+gh auth login -s project,read:project
+```
+
+**验证**
+
+```bash
+gh auth status         # 期望看到 EricWang1358，scopes 含 project
+```
+
+---
+
+## 5 Clone 仓库
+
+```bash
+mkdir -p ~/projects && cd ~/projects
+gh repo clone EricWang1358/BridgeFlow-AI
+cd ~/projects/BridgeFlow-AI
+```
+
+**验证**
+
+```bash
+pwd                    # 期望 /home/<你>/projects/BridgeFlow-AI，绝不能出现 /mnt
+git log --oneline -1
+```
+
+---
+
+## 6 Python 环境与依赖
+
+```bash
+cd ~/projects/BridgeFlow-AI/backend
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -e ".[dev]"
+pip install --pre "deepseek-harness-sdk==0.1.2rc1"
+```
+
+**验证**
+
+```bash
+python -c "import deepseek_harness, pandas, fastapi; print('imports ok')"
+ruff check src tests && pytest -q
+```
+
+期望：`All checks passed!` 与 19 passed。
+
+---
+
+## 7 项目专属 DSH_HOME（与你日常那套隔离）
+
+dsh 的 SDK **刻意不去发现 `~/.dsh`**，`DSH_HOME` 必填且无默认值 —— 这正是为隔离设计的。
+我们指向一个项目专属目录，你 Windows 上日常使用的 dsh 完全不受影响。
+
+```bash
+mkdir -p ~/.dsh-bridgeflow
+```
+
+写项目配置（**注意 `DSH_HOME` 必须是绝对路径**）：
+
+```bash
+cd ~/projects/BridgeFlow-AI/backend
+cp .env.example .env
+cat >> .env <<EOF
+
+# --- WSL 本机配置 ---
+LLM_PROVIDER=dsh
+DSH_HOME=$HOME/.dsh-bridgeflow
+DSH_PROFILE=sdk-minimal
+DSH_PROVIDER=deepseek-official
+DSH_MODEL=deepseek-v4-flash
+DEEPSEEK_API_KEY=在这里填你的 key
+EOF
+```
+
+然后编辑 `.env` 把 key 填上。`.env` 已在 `.gitignore` 里，不会被提交。
+
+> Windows 的环境变量不会传进 WSL，`DEEPSEEK_API_KEY` 必须在这边单独配。
+> 别写进 `~/.bashrc` —— 放在项目 `.env` 里，隔离性更好。
+
+**验证**
+
+```bash
+echo $HOME/.dsh-bridgeflow && ls -la ~/.dsh-bridgeflow
+```
+
+---
+
+## 8 冒烟测试：确认 dsh 真的跑得起来
+
+```bash
+cd ~/projects/BridgeFlow-AI/backend
+source .venv/bin/activate
+python ../scripts/smoke_dsh.py
+```
+
+**期望输出**
+
+```
+--- 1. raw SDK: plain turn ---
+  started in ~4s
+  finish_reason = 'completed'
+  final_response = 'ok'
+
+--- 2. our DshProvider: structured output ---
+  parsed = Verdict(confidence=..., justification='...')
+
+=== SMOKE TEST PASSED ===
+```
+
+首次运行会初始化 profile，比后续慢。**这一步不过，后面所有 dsh 相关工作都无从谈起。**
+
+---
+
+## 9 dsh web 与从 Windows 浏览器访问
+
+```bash
+cd ~/projects/BridgeFlow-AI/backend
+source .venv/bin/activate
+export DSH_HOME=$HOME/.dsh-bridgeflow
+python -c "import deepseek_harness_runtime, pathlib, sys; print(pathlib.Path(deepseek_harness_runtime.__file__).parent)"
+```
+
+上面会打印运行时包的位置，`dsh` 可执行文件在其中。找到后：
+
+```bash
+DSH_HOME=$HOME/.dsh-bridgeflow <上面路径>/dsh web
+```
+
+WSL2 默认开启 localhostForwarding，所以 Windows 浏览器直接开它打印的 `localhost:<端口>` 即可，
+**不需要反向代理**。
+
+如果连不上，按顺序排查：
+
+1. 服务是否监听在 `0.0.0.0` 而非仅 `127.0.0.1` —— `ss -tlnp | grep <端口>`
+2. `~/.wslconfig` 里 `localhostForwarding` 是否被显式关掉
+3. Windows 防火墙
+
+> 顺带：你的 `C:\Users\Eric1\.wslconfig` 里有个无效键
+> `experimental.useWindowsDnsCache`，WSL 会警告并忽略。可以删掉，不影响功能。
+
+---
+
+## 10 常见坑
+
+| 现象 | 原因 | 处理 |
+| --- | --- | --- |
+| `pip install` 极慢 | 装在了 `/mnt/...` 下 | 确认 `pwd` 不含 `/mnt` |
+| `DSH_HOME` 报错必填 | 用了相对路径或未导出 | 必须绝对路径 |
+| 文件改动不触发重载 | inotify 跨 `/mnt` 失效 | 同上，别放 `/mnt` |
+| `python3` 是 3.10 | 系统默认，正常 | 虚拟环境里用 3.12，别改系统默认 |
+| 误用了日常 dsh 的配置 | `DSH_HOME` 没设或指错 | SDK 不会回退到 `~/.dsh`，报错即说明没设 |
+| WSL 冷启动很久 | 首次启动发行版 | `wsl -d Ubuntu-22.04 -e true` 预热 |
+
+---
+
+## 11 完成后
+
+Windows 上的 `D:\A\1NUS\1Sem\1Hackathon\BridgeFlow-AI` 与 `.dsh-home` 可以删除。
+工作树已全部推送，代码没有本地独有的部分。
+
+**建议在 WSL 里重开 Claude Code 会话** —— 目标运行环境就是 Linux，
+工具链、路径、权限全部对齐，省掉一整类跨系统问题。
