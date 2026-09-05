@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import json
-
 import httpx
 from pydantic import BaseModel
 
 from bridgeflow.llm.base import Message, Response
+from bridgeflow.llm.json_reply import parse_structured, schema_instruction
 
 
 class OpenAICompatibleProvider:
@@ -13,6 +12,12 @@ class OpenAICompatibleProvider:
 
     Several of the backends we may end up using (DeepSeek and friends) speak this
     dialect, so the shared transport lives here and subclasses only supply credentials.
+
+    Structured output is asked for in the prompt rather than through
+    `response_format: json_schema`: DeepSeek rejects that type outright
+    (`This response_format type is unavailable now`). `json_object` is accepted and
+    guarantees parseable JSON, so the schema is stated in the system message and the
+    reply is validated here.
     """
 
     name = "openai-compatible"
@@ -30,17 +35,18 @@ class OpenAICompatibleProvider:
         system: str,
         messages: list[Message],
         schema: type[BaseModel] | None = None,
+        session_id: str | None = None,
     ) -> Response:
-        body: dict[str, object] = {
-            "model": self._model,
-            "messages": [{"role": "system", "content": system}]
-            + [{"role": m.role, "content": m.content} for m in messages],
-        }
+        instructions = system.strip()
+        body: dict[str, object] = {"model": self._model}
+
         if schema is not None:
-            body["response_format"] = {
-                "type": "json_schema",
-                "json_schema": {"name": schema.__name__, "schema": schema.model_json_schema()},
-            }
+            instructions = f"{instructions}\n\n{schema_instruction(schema)}"
+            body["response_format"] = {"type": "json_object"}
+
+        body["messages"] = [{"role": "system", "content": instructions}] + [
+            {"role": m.role, "content": m.content} for m in messages
+        ]
 
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(
@@ -51,5 +57,5 @@ class OpenAICompatibleProvider:
             resp.raise_for_status()
             text = resp.json()["choices"][0]["message"]["content"]
 
-        parsed = schema.model_validate(json.loads(text)) if schema is not None else None
+        parsed = parse_structured(text, schema) if schema is not None else None
         return Response(text=text, parsed=parsed, provider=self.name, model=self._model)
