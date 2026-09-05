@@ -62,7 +62,7 @@ def test_scoping_to_an_entity_narrows_both_value_and_evidence(client):
 
 def test_an_unknown_metric_is_refused_rather_than_guessed(client):
     response = client.post(
-        "/tools/aggregate-metric", json={"metric": "gross_margin", "period": "2025-11"}
+        "/tools/aggregate-metric", json={"metric": "ebitda_per_moonbeam", "period": "2025-11"}
     )
 
     assert response.status_code == 409

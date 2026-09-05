@@ -169,6 +169,22 @@ POISON = {
 }
 
 
+#: Column names whose values are prices, in the three header vocabularies. Used only
+#: by the generator to author a cheaper prior month; nothing at runtime reads it.
+_PRICE_COLUMNS = {"Unit Price", "采购金额", "po_value"}
+
+
+def _cheaper(cell: str, column: str) -> str:
+    """Knock roughly 15% off a price so the following month shows a rise."""
+    if column not in _PRICE_COLUMNS or not cell.strip():
+        return cell
+    digits = "".join(ch for ch in cell if ch.isdigit() or ch == ".")
+    if not digits:
+        return cell
+    lowered = f"{float(digits) * 0.85:,.0f}"
+    return cell.replace(digits, lowered) if digits in cell else lowered
+
+
 def write_csv(path: Path, header: list[str], rows: list[list[str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -186,14 +202,25 @@ def shift(rows: list[list[str]], index: int) -> list[list[str]]:
 
 def main() -> None:
     for industry, departments in INDUSTRIES.items():
+        # October exists so month-on-month can be demonstrated on the development
+        # set. Without it a price-change metric can only be tested against the
+        # held-out month, which is training on the test set.
         for split, month, mutate in (
+            ("samples", "2025-10", "prior"),
             ("samples", "2025-11", None),
             ("acceptance", "2025-12", "vary"),
         ):
             base = ROOT / split / industry if split == "acceptance" else ROOT / "samples"
             for department, (header, rows) in departments.items():
                 body = [list(r) for r in rows]
-                if mutate:
+                if mutate == "prior":
+                    # A quieter month, and cheaper materials — so a price rise is
+                    # visible rather than asserted.
+                    body = [
+                        [_cheaper(c, header[i]) for i, c in enumerate(r)] for r in body[:-1]
+                    ]
+                    body = [[c.replace("2025-11", month) for c in r] for r in body]
+                elif mutate:
                     # A different month with a duplicate row and a shifted row, so the
                     # acceptance set exercises defects the development set does not.
                     body = shift(body + [list(body[0])], 1)
