@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     dsh_max_tokens: int = 0
     dsh_cwd: str = ""
 
+    # Cross-department mappings come from the OA field dictionary, not from
+    # guessing. Empty means "not exported yet" — the resolver then falls back to
+    # column-name hints so sample data still runs. See data/mappings/README.md.
+    field_dictionary_path: str = "data/mappings/field-dictionary.yaml"
+
     resolver_confidence_threshold: float = 0.75
 
     def provider_for(self, agent: str) -> str:
