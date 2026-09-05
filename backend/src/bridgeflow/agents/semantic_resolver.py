@@ -44,6 +44,18 @@ class _Adjudication(BaseModel):
     justification: str
 
 
+class _BatchVerdict(BaseModel):
+    """One candidate's verdict inside a batched adjudication."""
+
+    index: int
+    confidence: float
+    justification: str
+
+
+class _BatchAdjudication(BaseModel):
+    verdicts: list[_BatchVerdict]
+
+
 class SemanticResolverAgent(Agent[list[CleanTable], EntityGraph]):
     """Stage 2 — decide what is the same thing across four departments.
 
@@ -91,19 +103,29 @@ class SemanticResolverAgent(Agent[list[CleanTable], EntityGraph]):
         links.extend(declared)
         already = {(link.source, link.target, link.relation) for link in declared}
 
+        candidates: list[Link] = []
         for candidate in self._co_occurrence_links(payload, entities, dictionary):
             key = (candidate.source, candidate.target, candidate.relation)
             if key in already:
                 continue  # the dictionary already settled this one
             already.add(key)
+            candidates.append(candidate)
 
-            resolved = await self._adjudicate(candidate, entities)
-            bucket = (
-                links
-                if resolved.confidence >= settings.resolver_confidence_threshold
-                else unresolved
-            )
-            bucket.append(resolved)
+        # One call per relation type rather than one per candidate. Measured, the
+        # per-call latency varies by a factor of nearly three on the provider's side,
+        # so the win here is fewer calls rather than faster ones (#4).
+        by_relation: dict[str, list[Link]] = defaultdict(list)
+        for candidate in candidates:
+            by_relation[candidate.relation].append(candidate)
+
+        for group in by_relation.values():
+            for resolved in await self._adjudicate_batch(group, entities):
+                bucket = (
+                    links
+                    if resolved.confidence >= settings.resolver_confidence_threshold
+                    else unresolved
+                )
+                bucket.append(resolved)
 
         return EntityGraph(
             entities=list(entities.values()), links=links, unresolved=unresolved
@@ -231,6 +253,65 @@ class SemanticResolverAgent(Agent[list[CleanTable], EntityGraph]):
             for (source, target, relation), rows in support.items()
         ]
 
+    async def _adjudicate_batch(
+        self, group: list[Link], entities: dict[str, Entity]
+    ) -> list[Link]:
+        """Adjudicate every candidate of one relation type in a single call.
+
+        Candidates of the same relation are the same question asked repeatedly, and
+        asking it once with a list is both cheaper and more consistent — the model
+        sees the alternatives side by side instead of judging each in isolation.
+
+        A verdict that does not come back leaves its candidate unchanged rather than
+        dropping it: an unjudged link belongs in the unresolved queue for a human,
+        not in the bin.
+        """
+        if not group:
+            return []
+
+        prompt = json.dumps(
+            {
+                "relation": group[0].relation,
+                "candidates": [
+                    {
+                        "index": index,
+                        "source": {
+                            "kind": entities[link.source].kind,
+                            "labels": entities[link.source].aliases,
+                        },
+                        "target": {
+                            "kind": entities[link.target].kind,
+                            "labels": entities[link.target].aliases,
+                        },
+                        "row_support": link.justification,
+                    }
+                    for index, link in enumerate(group)
+                ],
+            },
+            ensure_ascii=False,
+        )
+        response = await self.llm.complete(
+            system=self.system_prompt + _BATCH_RULES,
+            messages=[Message(role="user", content=prompt)],
+            schema=_BatchAdjudication,
+        )
+        parsed: _BatchAdjudication | Any = response.parsed
+        if parsed is None:
+            return group
+
+        by_index = {v.index: v for v in parsed.verdicts}
+        return [
+            link.model_copy(
+                update={
+                    "confidence": by_index[index].confidence,
+                    "justification": by_index[index].justification,
+                }
+            )
+            if index in by_index
+            else link
+            for index, link in enumerate(group)
+        ]
+
     async def _adjudicate(self, link: Link, entities: dict[str, Entity]) -> Link:
         source, target = entities[link.source], entities[link.target]
         prompt = json.dumps(
@@ -256,6 +337,14 @@ class SemanticResolverAgent(Agent[list[CleanTable], EntityGraph]):
                 "justification": verdict.justification,
             }
         )
+
+
+_BATCH_RULES = (
+    "\n\nYou are given several candidates of the same relation type at once. "
+    "Return one verdict per candidate, each carrying the `index` it was given. "
+    "Judge them against each other: a candidate supported by one co-occurrence "
+    "among many stronger ones deserves less confidence than it would alone."
+)
 
 
 # --- field dictionary --------------------------------------------------------
