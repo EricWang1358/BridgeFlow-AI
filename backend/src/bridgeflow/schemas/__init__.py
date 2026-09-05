@@ -52,7 +52,37 @@ class ColumnSpec(BaseModel):
     semantic_hint: str | None = None
 
 
+class SourceRef(BaseModel):
+    """Where a value came from, precisely enough to open the file and point at it.
+
+    `docs/07` requires that any result can be traced back to the original file and
+    the specific cell, and `docs/04`'s demo rules say a judge will ask. Row and
+    column alone cannot answer that: they do not say which file, which sheet, or
+    which import batch, and a monthly process has four files a month.
+    """
+
+    #: The import batch this came from. Empty until batches exist (#12).
+    batch: str = ""
+    department: Department
+    period: str
+    #: Original filename as uploaded, so the answer names something the user has.
+    filename: str = ""
+    #: Worksheet name for XLSX; empty for CSV.
+    sheet: str = ""
+    #: 0-based index into the cleaned rows.
+    row: int
+    column: str
+
+    def cite(self) -> str:
+        """One line a person can act on."""
+        where = self.filename or f"{self.department} {self.period}"
+        sheet = f" [{self.sheet}]" if self.sheet else ""
+        return f"{where}{sheet} row {self.row} column {self.column}"
+
+
 class Correction(BaseModel):
+    #: Where the changed value lives. Optional so older logs still load.
+    source: SourceRef | None = None
     row: int
     column: str
     before: Any = None
@@ -107,6 +137,16 @@ class Evidence(BaseModel):
     metric: str
     value: float
     comparison: str | None = None
+    #: The cells this figure was computed from — a bounded sample, never the whole
+    #: set. One batch is sized at 200,000 rows (#58).
+    sources: list[SourceRef] = Field(default_factory=list)
+    #: How many cells contributed, however few are listed above.
+    source_count: int = 0
+    #: PRD chapter 16 requires a warning to state what it was compared against, the
+    #: threshold it crossed, and the impact. Absent means "not stated", not "none".
+    baseline: str | None = None
+    threshold: str | None = None
+    impact: str | None = None
 
 
 class Finding(BaseModel):

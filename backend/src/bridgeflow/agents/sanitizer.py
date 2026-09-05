@@ -7,7 +7,7 @@ from typing import Any
 import pandas as pd
 
 from bridgeflow.agents.base import Agent
-from bridgeflow.schemas import CleanTable, ColumnSpec, Correction, Department
+from bridgeflow.schemas import CleanTable, ColumnSpec, Correction, Department, SourceRef
 
 _HEADER_NOISE = re.compile(r"[^0-9a-z]+")
 
@@ -37,14 +37,14 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
         frame = payload.frame.copy()
         corrections: list[Correction] = []
 
-        frame, header_fixes = self._normalise_headers(frame)
+        frame, header_fixes = self._normalise_headers(frame, payload)
         corrections.extend(header_fixes)
 
         frame = frame.dropna(how="all").reset_index(drop=True)
 
         columns: list[ColumnSpec] = []
         for column in frame.columns:
-            series, dtype, fixes = self._coerce(frame[column], column)
+            series, dtype, fixes = self._coerce(frame[column], column, payload)
             frame[column] = series
             corrections.extend(fixes)
             columns.append(ColumnSpec(name=column, dtype=dtype))
@@ -63,7 +63,7 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
     # -- rules ---------------------------------------------------------------
 
     def _normalise_headers(
-        self, frame: pd.DataFrame
+        self, frame: pd.DataFrame, payload: SanitizerInput
     ) -> tuple[pd.DataFrame, list[Correction]]:
         fixes: list[Correction] = []
         renames: dict[Any, str] = {}
@@ -73,6 +73,7 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
                 renames[column] = clean
                 fixes.append(
                     Correction(
+                        source=_ref(payload, -1, str(column)),
                         row=-1,
                         column=str(column),
                         before=column,
@@ -85,7 +86,7 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
         return frame.rename(columns=renames), fixes
 
     def _coerce(
-        self, series: pd.Series, column: str
+        self, series: pd.Series, column: str, payload: SanitizerInput
     ) -> tuple[pd.Series, str, list[Correction]]:
         """Infer a column's type and log every value that changed shape."""
         fixes: list[Correction] = []
@@ -96,7 +97,7 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
         # parses at 100% and every value becomes 1970-01-01. That silently destroyed
         # production output for as long as the tests only asserted column NAMES.
         if _looks_numeric(series):
-            numeric = self._coerce_number(series, column, fixes)
+            numeric = self._coerce_number(series, column, fixes, payload)
             if numeric is not None:
                 return numeric
 
@@ -106,6 +107,7 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
                 if pd.notna(after) and str(before) != after.strftime("%Y-%m-%d"):
                     fixes.append(
                         Correction(
+                            source=_ref(payload, idx, column),
                             row=idx,
                             column=column,
                             before=str(before),
@@ -117,14 +119,15 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
                     )
             return as_date.dt.strftime("%Y-%m-%d"), "date", fixes
 
-        numeric = self._coerce_number(series, column, fixes)
+        numeric = self._coerce_number(series, column, fixes, payload)
         if numeric is not None:
             return numeric
 
         return series.astype(str).str.strip(), "string", fixes
 
     def _coerce_number(
-        self, series: pd.Series, column: str, fixes: list[Correction]
+        self, series: pd.Series, column: str, fixes: list[Correction],
+        payload: SanitizerInput,
     ) -> tuple[pd.Series, str, list[Correction]] | None:
         """Strip currency symbols and separators, or report that this is not a number."""
         # A currency prefix is dropped only when it precedes a number: `S$ 4,850`
@@ -144,6 +147,7 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
             if pd.notna(after) and str(before) != str(after):
                 fixes.append(
                     Correction(
+                        source=_ref(payload, idx, column),
                         row=idx,
                         column=column,
                         before=str(before),
@@ -171,6 +175,18 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
     def _needs_llm(self, value: Any) -> bool:
         """Hook for the LLM fallback — not yet used (see docs/05-roadmap.md, M1)."""
         return False
+
+
+def _ref(payload: SanitizerInput, row: int, column: str) -> SourceRef:
+    """Where a correction happened, in terms a person can open a file with.
+
+    `filename` and `sheet` stay empty until the upload path carries them (#12 owns
+    the batch). Row and column alone cannot answer "which cell" when four files
+    arrive every month, which is what `docs/07` requires and a judge will ask.
+    """
+    return SourceRef(
+        department=payload.department, period=payload.period, row=row, column=column
+    )
 
 
 def _looks_numeric(series: pd.Series) -> bool:
