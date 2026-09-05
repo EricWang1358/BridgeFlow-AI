@@ -7,6 +7,8 @@ from typing import Any
 from pydantic import BaseModel
 
 from bridgeflow.agents.base import Agent
+from bridgeflow.agents.semantic_resolver import FieldDictionary, load_field_dictionary
+from bridgeflow.config import REPO_ROOT, settings
 from bridgeflow.schemas import (
     ApprovalCard,
     CleanTable,
@@ -56,8 +58,15 @@ class SOPFlowEngine(Agent[SOPInput, SOPOutput]):
         """One wide row per entity per period, with each department's columns prefixed."""
         merged: dict[tuple[str, str], dict[str, Any]] = defaultdict(dict)
 
+        dictionary = load_field_dictionary(_dictionary_path())
+        unjoinable: list[str] = []
+
         for table in payload.tables:
-            key_column = _primary_key_column(table)
+            key_column = _primary_key_column(table, dictionary)
+            if key_column is None:
+                # No declared join key. Merging on a guess would corrupt every row.
+                unjoinable.append(table.department)
+                continue
             for row in table.rows:
                 entity = str(row.get(key_column, "")) if key_column else ""
                 bucket = merged[(table.period, entity)]
@@ -67,6 +76,9 @@ class SOPFlowEngine(Agent[SOPInput, SOPOutput]):
                     if column == key_column:
                         continue
                     bucket[f"{table.department}.{column}"] = value
+
+        if unjoinable:
+            raise UnjoinableTables(unjoinable)
 
         rows = [row for row in merged.values() if row.get("entity")]
         periods = sorted({str(r["period"]) for r in rows})
@@ -92,11 +104,50 @@ class SOPFlowEngine(Agent[SOPInput, SOPOutput]):
         ]
 
 
-def _primary_key_column(table: CleanTable) -> str | None:
-    """The column we join this department's rows on. SKU first, customer as fallback."""
-    names = [c.name for c in table.columns]
-    for hint in ("sku", "product", "item", "customer", "client"):
-        match = next((n for n in names if hint in n.lower()), None)
-        if match:
-            return match
-    return names[0] if names else None
+class UnjoinableTables(RuntimeError):
+    """No declared join key, so the Master Table is refused rather than guessed.
+
+    `CLAUDE.md`: an evidence-free conclusion is rejected, not downgraded. A table
+    joined on an arbitrary column is exactly an evidence-free conclusion wearing the
+    shape of a result.
+    """
+
+    def __init__(self, departments: list[str]) -> None:
+        self.departments = departments
+        super().__init__(
+            "No column is declared as a joinable entity for: "
+            + ", ".join(departments)
+            + ". Add it to the OA field dictionary — the Master Table is not built "
+            "from a guessed key."
+        )
+
+
+def _dictionary_path():
+    from pathlib import Path
+
+    configured = Path(settings.field_dictionary_path)
+    return configured if configured.is_absolute() else REPO_ROOT / configured
+
+
+#: Entity kinds that can serve as a join key, in the order we prefer them.
+_JOIN_KINDS: tuple[str, ...] = ("sku", "customer", "raw_material", "gl_account")
+
+
+def _primary_key_column(table: CleanTable, dictionary: FieldDictionary) -> str | None:
+    """The column this department's rows are joined on, or None.
+
+    Only a column the field dictionary declares as a joinable entity counts. The
+    previous version guessed from five English column names and, failing that,
+    returned the first column — so a sheet whose headers were in Chinese, or simply
+    named differently, was joined on whatever happened to come first. Nothing threw,
+    nothing was quarantined, nothing was logged: the Master Table came out looking
+    ordinary and was wrong throughout, and every finding downstream inherited it.
+
+    Returning None is the honest answer, and the caller refuses rather than
+    inventing a join.
+    """
+    for kind in _JOIN_KINDS:
+        for column in table.columns:
+            if dictionary.kind_for(table.department, column.name) == kind:
+                return column.name
+    return None

@@ -9,8 +9,27 @@ from pydantic import BaseModel, Field, field_validator
 
 Department = Literal["production", "procurement", "finance", "marketing"]
 Severity = Literal["info", "watch", "warning", "critical"]
-EntityKind = Literal["sku", "raw_material", "gl_account", "capacity_unit", "customer"]
-Relation = Literal["consumes", "books_to", "produced_on", "ordered_by"]
+# Entity kinds and relations are open, not a closed `Literal`.
+#
+# The customer's schema is still being negotiated; a sixth kind — a work order, a
+# batch, a project — would otherwise mean editing Python, editing schemas and editing
+# tests, when it should mean editing one YAML file (`CLAUDE.md`, eighth hard
+# constraint). Open does not mean unchecked: the resolver still rejects anything the
+# field dictionary does not declare, so the validation moved rather than disappeared.
+#
+# The names below are the ones the sample data uses. They are documentation of the
+# common case, not the permitted set.
+EntityKind = str
+Relation = str
+
+KNOWN_ENTITY_KINDS: tuple[str, ...] = (
+    "sku",
+    "raw_material",
+    "gl_account",
+    "capacity_unit",
+    "customer",
+)
+KNOWN_RELATIONS: tuple[str, ...] = ("consumes", "books_to", "produced_on", "ordered_by")
 
 
 # --- ingest -------------------------------------------------------------------
