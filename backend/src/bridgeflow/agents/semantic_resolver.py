@@ -10,6 +10,7 @@ import yaml
 from pydantic import BaseModel
 from rapidfuzz import fuzz
 
+from bridgeflow import mappings
 from bridgeflow.agents.base import Agent
 from bridgeflow.config import settings
 from bridgeflow.llm import Message
@@ -114,6 +115,12 @@ class SemanticResolverAgent(Agent[list[CleanTable], EntityGraph]):
         # One call per relation type rather than one per candidate. Measured, the
         # per-call latency varies by a factor of nearly three on the provider's side,
         # so the win here is fewer calls rather than faster ones (#4).
+        # Anything a person already settled skips the model entirely. This is the
+        # whole of "confirm once, reuse next month" (#29): month two is cheaper
+        # because it asks fewer questions, not because it asks them faster.
+        remembered, candidates = mappings.apply(candidates)
+        links.extend(remembered)
+
         by_relation: dict[str, list[Link]] = defaultdict(list)
         for candidate in candidates:
             by_relation[candidate.relation].append(candidate)
