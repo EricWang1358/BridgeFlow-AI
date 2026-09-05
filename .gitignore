@@ -21,6 +21,7 @@ build/
 !.env.example
 *.key
 *.pem
+env.sh
 
 # dsh runtime homes — must live outside the repo, but ignore them if anyone
 # points DSH_HOME inside it by mistake.

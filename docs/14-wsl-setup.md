@@ -19,6 +19,9 @@
 
 **规则：仓库、虚拟环境、`DSH_HOME`、`node_modules` 全部放在 `~` 下，一个都不放 `/mnt`。**
 
+实测差距：dsh 运行时启动在 WSL 文件系统内 **0.5s**，在 Windows 上 **3.6s** ——
+同一个运行时，七倍。
+
 ---
 
 ## 1 系统基础
@@ -182,32 +185,58 @@ dsh 的 SDK **刻意不去发现 `~/.dsh`**，`DSH_HOME` 必填且无默认值 �
 mkdir -p ~/Hackathon2026/.dsh-bridgeflow
 ```
 
-写项目配置（**注意 `DSH_HOME` 必须是绝对路径**）：
+### 关键：引导变量必须 export，不能写进 `.env`
 
-```bash
-cd ~/Hackathon2026/BridgeFlow-AI/backend
-cp .env.example .env
-cat >> .env <<EOF
+**dsh 会扫描它工作目录下的 `.env`，并拒绝从文件里读取引导类变量：**
 
-# --- WSL 本机配置 ---
-LLM_PROVIDER=dsh
-DSH_HOME=$HOME/Hackathon2026/.dsh-bridgeflow
-DSH_PROFILE=sdk-minimal
-DSH_PROVIDER=deepseek-official
-DSH_MODEL=deepseek-v4-flash
-DEEPSEEK_API_KEY=在这里填你的 key
-EOF
+```
+dsh: .../backend/.env sets "DSH_HOME", which only the launching environment
+may set (it decides how this process starts, where its code and instructions
+load from, or how it reaches the network); export DSH_HOME instead of putting
+it in a .env file
 ```
 
-然后编辑 `.env` 把 key 填上。`.env` 已在 `.gitignore` 里，不会被提交。
+被拒绝的是 `DSH_*` 与 `DEEPSEEK_BASE_URL` —— 它们决定**代码从哪里加载**和
+**网络去往哪里**。
 
-> Windows 的环境变量不会传进 WSL，`DEEPSEEK_API_KEY` 必须在这边单独配。
-> 别写进 `~/.bashrc` —— 放在项目 `.env` 里，隔离性更好。
+**这是安全边界，不是麻烦。** 如果这类变量能从项目携带的文件里读取，那么
+clone 一个恶意仓库就足以重定向运行时的代码加载路径和网络出口。
+**不要试图绕过它**（比如改 dsh 的 cwd 让它扫不到 `.env`）。
+
+> 一个空行 `DEEPSEEK_BASE_URL=` **也算"已设置"**，同样会被拒绝。
+> 必须是整行不存在，而不是留空。
+
+### 分成两个文件
+
+| 文件 | 内容 | 读取者 |
+| --- | --- | --- |
+| `env.sh`（仓库根，需 `source`） | `DSH_*`、`DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL` | 启动 shell |
+| `backend/.env` | `LLM_PROVIDER`、`API_HOST`、`CORS_ORIGINS`、阈值等应用配置 | pydantic-settings |
+
+两个都在 `.gitignore` 里。
+
+```bash
+cd ~/Hackathon2026/BridgeFlow-AI
+cp env.sh.example env.sh
+# 编辑 env.sh 填入 DEEPSEEK_API_KEY
+source env.sh
+
+cd backend
+cp .env.example .env
+echo "LLM_PROVIDER=dsh" >> .env
+```
+
+每开一个新 shell 都要重新 `source ~/Hackathon2026/BridgeFlow-AI/env.sh`。
+嫌麻烦可以加进 `~/.bashrc`，但那样就不是项目隔离了 —— 建议保持显式 source。
 
 **验证**
 
 ```bash
-echo $HOME/Hackathon2026/.dsh-bridgeflow && ls -la ~/Hackathon2026/.dsh-bridgeflow
+echo "DSH_HOME=$DSH_HOME"
+echo "KEY 长度=${#DEEPSEEK_API_KEY}"          # 不回显 key 本身
+grep -E '^(DSH_|DEEPSEEK_BASE_URL)' backend/.env && echo "❌ 上面这些要从 .env 删掉" \
+  || echo "✅ .env 里没有引导变量"
+ls -la ~/Hackathon2026/.dsh-bridgeflow
 ```
 
 ---
@@ -215,8 +244,9 @@ echo $HOME/Hackathon2026/.dsh-bridgeflow && ls -la ~/Hackathon2026/.dsh-bridgefl
 ## 8 冒烟测试：确认 dsh 真的跑得起来
 
 ```bash
-cd ~/Hackathon2026/BridgeFlow-AI/backend
 source ~/Hackathon2026/.venv/bin/activate
+source ~/Hackathon2026/BridgeFlow-AI/env.sh     # 引导变量必须来自启动环境
+cd ~/Hackathon2026/BridgeFlow-AI/backend
 python ../scripts/smoke_dsh.py
 ```
 
@@ -224,7 +254,7 @@ python ../scripts/smoke_dsh.py
 
 ```
 --- 1. raw SDK: plain turn ---
-  started in ~4s
+  started in ~0.5s
   finish_reason = 'completed'
   final_response = 'ok'
 
@@ -235,6 +265,9 @@ python ../scripts/smoke_dsh.py
 ```
 
 首次运行会初始化 profile，比后续慢。**这一步不过，后面所有 dsh 相关工作都无从谈起。**
+
+**若报 `TransportClosedError: runtime stdout closed`**，看 stderr 尾部——
+多半是某个引导变量还留在 `.env` 里。按上一节的验证命令逐个清掉。
 
 ---
 
