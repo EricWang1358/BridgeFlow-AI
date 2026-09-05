@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     # Where analysed periods are kept. A file per period rather than a process-local
     # dict: the dict was lost on restart and wrong with more than one worker.
     result_store_path: str = "data/outputs"
+    # Confirmed mappings, kept between months. A confirmation that does not survive
+    # its run means every month asks the same questions.
+    mapping_memory_path: str = "data/outputs/mappings.json"
 
     @property
     def cors_origin_list(self) -> list[str]:
