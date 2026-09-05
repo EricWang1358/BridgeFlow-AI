@@ -2,8 +2,10 @@ import type { Context } from '@deepseek-ai/cordis'
 import Schema from '@deepseek-ai/schemastery'
 
 import { DEFAULT_BACKEND, type BackendConfig } from './backend.ts'
+import * as approvalGate from './guards/approval-gate.ts'
 import * as untrustedInput from './guards/untrusted-input.ts'
 import { aggregateMetric } from './tools/aggregate-metric.ts'
+import { confirmMapping } from './tools/confirm-mapping.ts'
 import { listMetrics } from './tools/list-metrics.ts'
 import { lookupFieldDictionary } from './tools/lookup-field-dictionary.ts'
 
@@ -32,6 +34,8 @@ export function apply(ctx: Context, config: Config): void {
   ctx.tools.register(listMetrics(backend))
   ctx.tools.register(aggregateMetric(backend))
   ctx.tools.register(lookupFieldDictionary(backend))
+  ctx.tools.register(confirmMapping(backend))
 
   ctx.plugin(untrustedInput)
+  ctx.plugin(approvalGate)
 }

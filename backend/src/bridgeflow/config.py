@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     # Patch layers applied after every bundle layer, comma-separated paths relative
     # to the repository root. Defaults to the layer that takes the shells away —
     # see dsh/no-shell.patch.yml for the measurement that justifies it.
-    dsh_patches: str = "dsh/no-shell.patch.yml"
+    dsh_patches: str = "dsh/no-shell.patch.yml,dsh/approval.patch.yml,dsh/bridgeflow.patch.yml"
 
     # Cross-department mappings come from the OA field dictionary, not from
     # guessing. Empty means "not exported yet" — the resolver then falls back to
