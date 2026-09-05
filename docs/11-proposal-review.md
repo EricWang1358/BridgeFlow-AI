@@ -1,5 +1,8 @@
 # 11 — Proposal 复核
 
+> **状态：六处改动已全部应用到 [`10-proposal.md`](10-proposal.md)。**
+> 本文保留为改动理由的记录 —— 每一条都对应一个实测结果，日后有人问「为什么这么写」时可查。
+
 对照 [`10-proposal.md`](10-proposal.md) 与仓库实测结果、[`09-rubric-assessment.md`](09-rubric-assessment.md)。
 按严重程度排序。
 
