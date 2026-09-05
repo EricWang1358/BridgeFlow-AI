@@ -22,17 +22,28 @@ export interface MetricResult {
   unit: string
   /** The formula in words, so the explanation can quote it rather than invent one. */
   formula: string
-  /** Source rows, so every figure keeps a path back to a cell. */
+  /**
+   * A bounded sample of the cells that contributed — never all of them.
+   *
+   * The PRD sizes one batch at 200,000 rows. A tool that keeps rows out of the
+   * prompt and then returns one entry per summed cell has moved the leak rather
+   * than closed it, and every agent in the fan-out would pay for it separately.
+   */
   evidence: Array<{ department: string; row: number; column: string; value: string }>
+  /** How many cells were actually summed, however few are shown above. */
+  evidence_total: number
+  /** True when `evidence` is a sample. Say so; do not imply the list is complete. */
+  evidence_truncated: boolean
 }
 
 export function aggregateMetric(config: BackendConfig) {
   return defineTool({
     name: 'aggregate_metric',
     description:
-      'Compute one metric for one period by rule, and return it with the source rows ' +
-      'it was derived from. Use this instead of adding figures up yourself: your ' +
-      'arithmetic cannot be audited, and a finding without traceable evidence is rejected.',
+      'Compute one metric for one period by rule. Returns the figure, the count of ' +
+      'cells it was derived from, and a bounded SAMPLE of those cells — never the whole ' +
+      'table. Use this instead of adding figures up yourself: your arithmetic cannot be ' +
+      'audited, and a finding without traceable evidence is rejected.',
     parameters: {
       metric: {
         type: 'string',
@@ -55,6 +66,8 @@ export function aggregateMetric(config: BackendConfig) {
           value: { type: 'number', required: true },
           unit: { type: 'string', required: true },
           formula: { type: 'string', required: true },
+          evidence_total: { type: 'number', required: true },
+          evidence_truncated: { type: 'boolean', required: true },
           evidence: {
             type: 'array',
             required: true,
@@ -81,7 +94,9 @@ export function aggregateMetric(config: BackendConfig) {
             text:
               `${value.metric} for ${value.period} = ${value.value} ${value.unit}\n` +
               `computed as: ${value.formula}\n` +
-              `from ${evidence.length} source row(s): ` +
+              `from ${value.evidence_total} source cell(s)` +
+              (value.evidence_truncated ? `, ${evidence.length} shown` : '') +
+              ': ' +
               evidence.map((e) => `${e.department} row ${e.row} ${e.column}=${e.value}`).join('; '),
           },
         ]
@@ -93,7 +108,8 @@ export function aggregateMetric(config: BackendConfig) {
         value: value.value ?? 0,
         unit: value.unit ?? '',
         formula: value.formula ?? '',
-        evidenceCount: (value.evidence ?? []).length,
+        evidenceCount: value.evidence_total ?? (value.evidence ?? []).length,
+        evidence_truncated: value.evidence_truncated ?? false,
       }),
     },
     async execute(args, exec) {

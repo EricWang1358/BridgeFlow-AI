@@ -117,3 +117,21 @@ def test_an_undeclared_column_is_not_inferred(client):
 
     assert body["kind"] is None
     assert body["source"] == "undeclared"
+
+
+def test_evidence_is_a_bounded_sample_not_the_whole_table(client):
+    """The PRD sizes one batch at 200,000 rows.
+
+    Keeping rows out of the prompt and then returning one entry per summed cell
+    would move the leak into the tool result, where every agent in the fan-out pays
+    for it separately.
+    """
+    from bridgeflow.api.tools import EVIDENCE_SAMPLE
+
+    body = client.post(
+        "/tools/aggregate-metric", json={"metric": "revenue", "period": "2025-11"}
+    ).json()
+
+    assert len(body["evidence"]) <= EVIDENCE_SAMPLE
+    assert body["evidence_total"] >= len(body["evidence"])
+    assert body["evidence_truncated"] is (body["evidence_total"] > EVIDENCE_SAMPLE)
