@@ -213,52 +213,205 @@ python ../scripts/smoke_dsh.py
 
 ---
 
-## 9 dsh web 与从 Windows 浏览器访问
+## 9 在 WSL 里安装 Claude Code 并登录
+
+目标环境就是 Linux，会话也该在这里 —— 路径、权限、工具链全部对齐。
+
+```bash
+sudo npm install -g @anthropic-ai/claude-code
+claude --version
+```
+
+首次登录：
+
+```bash
+cd ~/projects/BridgeFlow-AI
+claude
+```
+
+它会打印一个登录 URL。WSL 里没有默认浏览器，两种处理方式：
+
+- **推荐**：把 URL 复制到 Windows 浏览器打开，完成后把回调 code 粘回终端
+- 或装一个转发器，让 `xdg-open` 直接调起 Windows 浏览器：
+  ```bash
+  sudo apt install -y wslu       # 提供 wslview
+  echo 'export BROWSER=wslview' >> ~/.bashrc && source ~/.bashrc
+  ```
+
+用你自己的账户登录即可。凭据存在 WSL 侧的 `~/.claude`，与 Windows 那份**互不影响**。
+
+在项目根目录启动会话，这样工作目录、git 仓库、项目配置都对得上。
+
+---
+
+## 10 端口转发：从 Windows 测试 WSL 里的服务
+
+### 10.1 默认路径（优先试这个，通常够用）
+
+WSL2 默认开启 `localhostForwarding`。只要服务监听在 **`0.0.0.0`**，
+Windows 浏览器开 `localhost:<端口>` 就能访问。
+
+后端：
 
 ```bash
 cd ~/projects/BridgeFlow-AI/backend
 source .venv/bin/activate
-export DSH_HOME=$HOME/.dsh-bridgeflow
-python -c "import deepseek_harness_runtime, pathlib, sys; print(pathlib.Path(deepseek_harness_runtime.__file__).parent)"
+uvicorn bridgeflow.api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-上面会打印运行时包的位置，`dsh` 可执行文件在其中。找到后：
+dsh web（端口以它自己打印的为准）：
 
 ```bash
-DSH_HOME=$HOME/.dsh-bridgeflow <上面路径>/dsh web
+DSH_HOME=$HOME/.dsh-bridgeflow <运行时路径>/dsh web
 ```
 
-WSL2 默认开启 localhostForwarding，所以 Windows 浏览器直接开它打印的 `localhost:<端口>` 即可，
-**不需要反向代理**。
+**验证 —— 先在 WSL 内确认监听地址，这是最常见的失败点**
 
-如果连不上，按顺序排查：
+```bash
+ss -tlnp | grep 8000
+```
 
-1. 服务是否监听在 `0.0.0.0` 而非仅 `127.0.0.1` —— `ss -tlnp | grep <端口>`
-2. `~/.wslconfig` 里 `localhostForwarding` 是否被显式关掉
-3. Windows 防火墙
+看 `Local Address`：
 
-> 顺带：你的 `C:\Users\Eric1\.wslconfig` 里有个无效键
-> `experimental.useWindowsDnsCache`，WSL 会警告并忽略。可以删掉，不影响功能。
+- `0.0.0.0:8000` 或 `*:8000` → Windows 能访问 ✅
+- `127.0.0.1:8000` → **只有 WSL 内部能访问**，Windows 连不上 ❌
+
+然后在 Windows PowerShell：
+
+```powershell
+curl.exe http://localhost:8000/health
+```
+
+期望返回 `{"status":"ok",...}`。
+
+### 10.2 兜底路径
+
+先确认 `C:\Users\<你>\.wslconfig` 没有关掉转发：
+
+```ini
+[wsl2]
+localhostForwarding=true
+```
+
+改完要 `wsl --shutdown` 才生效。
+
+仍然不通再用 portproxy。**注意：WSL2 的 IP 每次重启会变，这条要重新执行**：
+
+```powershell
+# Windows PowerShell（管理员）
+$ip = (wsl -d Ubuntu-22.04 -e hostname -I).Trim().Split()[0]
+netsh interface portproxy add v4tov4 listenport=8000 listenaddress=0.0.0.0 connectport=8000 connectaddress=$ip
+netsh interface portproxy show v4tov4
+# 清理
+# netsh interface portproxy delete v4tov4 listenport=8000 listenaddress=0.0.0.0
+```
+
+只在本机 Windows 测试的话到此为止，**不要动防火墙**。只有局域网里其他设备也要访问时才需要：
+
+```powershell
+New-NetFirewallRule -DisplayName "BridgeFlow 8000" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow
+```
+
+### 10.3 排查顺序
+
+| 现象 | 先查 |
+| --- | --- |
+| Windows `curl` 拒绝连接 | `ss -tlnp` 是不是绑在 `127.0.0.1` |
+| WSL 内 `curl` 也不通 | 服务根本没起来，看进程日志 |
+| 之前能连，现在不行 | WSL 重启过 IP 变了（用了 portproxy 才受影响） |
+| 只有别的机器连不上 | Windows 防火墙 |
 
 ---
 
-## 10 常见坑
+## 11 保证 AWS 部署不受影响
+
+WSL 是开发环境，它的痕迹不能固化进仓库。以下已处理好，**改代码时请维持**。
+
+### 11.1 地址与端口是配置，不是常量
+
+```python
+# backend/src/bridgeflow/config.py
+api_host: str = "127.0.0.1"                    # 默认不对外暴露
+api_port: int = 8000
+cors_origins: str = "http://localhost:3000"    # 逗号分隔
+```
+
+CORS 源原先硬编码为 `http://localhost:3000` —— **部署到 AWS 会直接坏**，现已改为配置项。
+
+生产环境用环境变量覆盖，不改代码：
+
+```bash
+API_HOST=0.0.0.0
+CORS_ORIGINS=https://your-domain.example
+```
+
+**默认值保持 `127.0.0.1`**：默认不暴露，要暴露必须显式声明。
+容器里绑 `0.0.0.0` 是对的（`backend/Dockerfile` 就是这样），但那是**部署层的决定**，
+不该写死进应用源码。
+
+### 11.2 `.gitignore` 覆盖的东西
+
+```
+.env  .env.*（保留 .env.example）  *.key  *.pem
+.venv/  node_modules/
+.dsh*/                                  ← dsh home 若被误放进仓库
+data/mappings/field-dictionary.yaml     ← 真实 OA 主数据，只跟踪 example
+data/uploads/  data/outputs/  *.log
+```
+
+`DSH_HOME` 本来就应在仓库之外（`~/.dsh-bridgeflow`）。`.dsh*/` 是防呆 ——
+万一有人指错，profile、凭据、会话不会被提交。
+
+### 11.3 绝对路径只能出现在 `.env`
+
+`DSH_HOME` 必须是绝对路径，但它只存在于 `.env`，而 `.env` 不进仓库。
+**任何 `/home/<用户名>/...` 都不该出现在被跟踪的文件里。**
+
+### 11.4 换行符
+
+`.gitattributes` 已设 `* text=auto eol=lf`。即使有人在 Windows 上编辑，
+进仓库的也是 LF，AWS 上不会出现 `bad interpreter: ^M`。
+
+### 11.5 验证：仓库里有没有环境特定的痕迹
+
+```bash
+cd ~/projects/BridgeFlow-AI
+git ls-files | xargs grep -ln "/home/\|/mnt/\|[A-Z]:\\\\" 2>/dev/null
+```
+
+**期望：只匹配到文档。** 若匹配到 `backend/src` 或配置文件，说明有环境特定的值被写死。
+
+`0.0.0.0` 单独查，因为它在部署文件里是合法的：
+
+```bash
+git ls-files | xargs grep -ln "0\.0\.0\.0" 2>/dev/null
+```
+
+**允许**出现在 `Dockerfile`、`.env.example`、文档里；**不允许**出现在 `backend/src/` 下。
+
+---
+
+## 12 常见坑
 
 | 现象 | 原因 | 处理 |
 | --- | --- | --- |
 | `pip install` 极慢 | 装在了 `/mnt/...` 下 | 确认 `pwd` 不含 `/mnt` |
-| `DSH_HOME` 报错必填 | 用了相对路径或未导出 | 必须绝对路径 |
+| `DSH_HOME` 报错必填 | 用了相对路径或未设置 | 必须绝对路径 |
 | 文件改动不触发重载 | inotify 跨 `/mnt` 失效 | 同上，别放 `/mnt` |
 | `python3` 是 3.10 | 系统默认，正常 | 虚拟环境里用 3.12，别改系统默认 |
 | 误用了日常 dsh 的配置 | `DSH_HOME` 没设或指错 | SDK 不会回退到 `~/.dsh`，报错即说明没设 |
 | WSL 冷启动很久 | 首次启动发行版 | `wsl -d Ubuntu-22.04 -e true` 预热 |
+| Windows 连不上服务 | 服务绑在 `127.0.0.1` | 见 10.1 |
+| `claude` 打不开浏览器 | WSL 无默认浏览器 | 复制 URL 到 Windows，或装 `wslu` |
 
 ---
 
-## 11 完成后
+## 13 完成后
 
-Windows 上的 `D:\A\1NUS\1Sem\1Hackathon\BridgeFlow-AI` 与 `.dsh-home` 可以删除。
-工作树已全部推送，代码没有本地独有的部分。
+Windows 上的 `D:\A\1NUS\1Sem\1Hackathon\BridgeFlow-AI` 与 `.dsh-home` 可以删除 ——
+工作树已全部推送，没有本地独有的代码。
 
-**建议在 WSL 里重开 Claude Code 会话** —— 目标运行环境就是 Linux，
-工具链、路径、权限全部对齐，省掉一整类跨系统问题。
+你 Windows 上日常使用的 dsh 与 Claude Code 均不受影响：
+两边的 `DSH_HOME` 和 `~/.claude` 各自独立。
+
+---
