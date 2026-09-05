@@ -18,6 +18,7 @@ is training on the test set, and this project has already watched a model read
 from __future__ import annotations
 
 import csv
+import re
 from pathlib import Path
 
 import yaml
@@ -120,8 +121,11 @@ ELECTRONICS = {
         ["mfr_pn", "bin_location", "picked_units", "handling_min", "pick_date"],
         [
             ["STM32F407VGT6", "A-12-3", "480", "95", "2025-11-06"],
-            ["STM32F407VGT6", "A-12-3", "320", "70", "06/11/2025"],
-            ["TPS54331DR", "B-04-1", "1500", "120", "2025-11-13"],
+            ["STM32F407VGT6", "A-12-3", "320", "70", "2025-11-06"],
+            # A second date format, deliberately NOT on the row the generator
+            # shifts: quarantining the shifted row must not take the only mixed
+            # date with it, or the acceptance set stops testing what it claims to.
+            ["TPS54331DR", "B-04-1", "1500", "120", "13/11/2025"],
             ["STM32F407VGT6", "A-12-3", "", "", "2025-11-20"],
             ["LM2596S-ADJ", "B-09-2", "760", "88", "2025-11-27"],
         ],
@@ -185,6 +189,23 @@ def _cheaper(cell: str, column: str) -> str:
     return cell.replace(digits, lowered) if digits in cell else lowered
 
 
+def to_month(cell: str, month: str) -> str:
+    """Rewrite a date into `month`, in whichever format the cell is written.
+
+    A plain `2025-11` replacement misses `13/11/2025` and leaves a November date
+    sitting in a December file — which then fails an acceptance check for a reason
+    that has nothing to do with the code under test.
+    """
+    year, number = month.split("-")
+    cell = cell.replace("2025-11", month)
+    cell = re.sub(r"\b(\d{2})/11/2025\b", rf"\1/{number}/{year}", cell)
+    return re.sub(r"\bNov (\d+) 2025\b", rf"{_MONTH_NAMES[number]} \1 {year}", cell)
+
+
+#: Only the months this generator authors.
+_MONTH_NAMES = {"10": "Oct", "11": "Nov", "12": "Dec"}
+
+
 def write_csv(path: Path, header: list[str], rows: list[list[str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -219,12 +240,12 @@ def main() -> None:
                     body = [
                         [_cheaper(c, header[i]) for i, c in enumerate(r)] for r in body[:-1]
                     ]
-                    body = [[c.replace("2025-11", month) for c in r] for r in body]
+                    body = [[to_month(c, month) for c in r] for r in body]
                 elif mutate:
                     # A different month with a duplicate row and a shifted row, so the
                     # acceptance set exercises defects the development set does not.
                     body = shift(body + [list(body[0])], 1)
-                    body = [[c.replace("2025-11", month) for c in r] for r in body]
+                    body = [[to_month(c, month) for c in r] for r in body]
                 name = f"{department}_{month}.csv"
                 prefix = "" if industry == "manufacturing" and split == "samples" else f"{industry}_"
                 write_csv(base / f"{prefix}{name}" if split == "samples" else base / name, header, body)
