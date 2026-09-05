@@ -10,7 +10,7 @@ import pytest
 
 from bridgeflow.agents.semantic_resolver import FieldDictionary
 from bridgeflow.agents.sop_flow import UnjoinableTables, _primary_key_column
-from bridgeflow.schemas import CleanTable, ColumnSpec, KNOWN_ENTITY_KINDS
+from bridgeflow.schemas import KNOWN_ENTITY_KINDS, CleanTable, ColumnSpec
 
 
 def _table(department: str, columns: list[str]) -> CleanTable:
