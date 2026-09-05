@@ -222,27 +222,148 @@ dsh 被放在了错误的位置，因此它原生提供的编排、工具、审�
 
 ---
 
-## 七 待验证与未读
+## 七 已读文档的结论（2026-09-06）
 
-**未读文档**（影响设计细节，不影响上述结论）：
+六份文档已读（#42）。**其中四条推翻了本文此前的假设，逐条列出。**
 
-- `docs/subsystems/plan.md` / `goal.md` —— 可能直接提供 rubric 第 2 项的 planning pattern
-- `docs/subsystems/permission-presets.md` —— least-privilege 的现成预设
-- `docs/subsystems/session-query.md` —— 追踪能力的具体查询面
-- `docs/user/develop/basic/tool.md` —— 第一个工具的有序教程，决定 TS→Python 的连接方式
-- `packages/workflow/README.md` —— 工作流的表达能力边界
-- Client 插件机制（`tool.call.toolview` 的具体注册方式）
+### 7.1 permission-presets 不控制工具册 ⚠️ 推翻假设
 
-**未验证的假设**：
+它捆的是两个**互相独立**的旋钮：`sandbox/mode` 与 `approval/policy`。
+默认表只有两项：`workspace-write`（workspace-write + ask）与
+`danger-full-access`（danger-full-access + never）。名字 `custom` 是保留字，
+是"不匹配任何预设"的派生态，不能作为切换目标。
 
-- WSL2 下 `dsh web` 的端口转发未实测
-- `sdk-minimal` 能否满足我们的工具需求（它只带 Bash + 编辑器 + 本地执行 + JSONL 会话）
-- 单个 dsh runtime 的并发模型对 subagent fan-out 的影响
-  （现已知 runtime 不能交错 turn，subagent 是否受同一限制未确认）
+它**要求** `ctx.shell` 是 confining 的执行器、并且**要求** `ctx.approval`；
+在不 confining 的 bash 执行器上组合会在插件加载期直接抛错。
+
+> **所以「用 permission preset 做一个没有 bash 的 profile」这条路不成立。**
+> 工具册由 profile 的 bundle 决定（加载了哪些插件），不由 preset 决定。
+
+### 7.2 sandbox 只管写，不管读 ⚠️ 推翻假设
+
+`SandboxMode` 的原文是 "governs filesystem effects only"：
+
+| 模式 | 含义 |
+| --- | --- |
+| `read-only` | **拒绝写**，只放行 shell 必需的 sink（如 `/dev/null`） |
+| `workspace-write` | 允许写 workspace root 与后端约定的 temp 区 |
+| `danger-full-access` | 不约束 |
+
+而且明写 **"Network and process visibility are outside this vocabulary."**
+
+> **这意味着 #25 观测到的那 12 步 bash——读 README、读源码、读测试、读 `git log`、
+> 读 `CLAUDE.md`——在 `read-only` 下会一模一样地发生。**
+> sandbox 不是信息泄漏的答案，它只挡破坏。
+
+另外 `workspaceRoot` 来自会话的不可变 cwd，且做了 filesystem 语义的规范化
+（`symlink/..` 会被解成进程真正运行的目录）。`enforcement` 是一个**上报的事实**，
+`partial` 表示后端或旧内核 ABI 只能治理一部分——需要绝对边界的调用方**不得**把
+`partial` 当成 `full`。
+
+### 7.3 `ctx.approval` 比我们写的还严格 ✅ 确认且加强
+
+- `ApprovalOutcome` 是封闭四值：`allowed-once` / `rejected` / `cancelled` / `unavailable`
+- **缺失、不认领、抛异常、不合规的 answerer 一律变成 `unavailable`，而不是打开闸门**
+- 审计事件成对：`approval/asked` + `approval/decided`，由 `ApprovalRequestId` 配对
+- policy `never` 的语义是**每次 ask 确定性返回 `rejected`**，不是"自动放行"。
+  它是 CI / 无人值守的严格立场
+- **`dsh-tool-bash` 自己就消费这个 outcome，fail closed unless `allowed-once`**
+
+> **推论（待实测）：把 approval policy 设成 `ask` 且不挂任何 answerer，
+> bash 应当被 `unavailable` 拒掉。如果成立，这是 #26 的即时缓解手段，且是零代码的。**
+> 这条必须先验证再写进方案——我们目前观测到 bash 畅通无阻，说明 `sdk-minimal`
+> 要么配了 answerer，要么 service config 的默认值不是 `ask`。
+
+### 7.4 `workflow` 不是我们要的东西 ⚠️ 推翻假设
+
+`packages/workflow` 的定位是"**模型自己写的**编排脚本，把工作 fan out 给多个 subagent"。
+而且它自己声明：**"containment, not a security boundary"**。
+
+这跟 `docs/10` 里"Why a fixed pipeline rather than a planning agent"直接冲突——
+财务数字要可审计、可复现，审批人不能签一个两次跑出不同结果的数。
+让模型现场写编排脚本，正是我们明确排除的东西。
+
+> **#38「用 dsh workflow 取代自建 Orchestrator」的前提是错的。**
+> rubric 第 2 项的正解更可能是：固定阶段仍由我们编排，
+> 但**状态与记忆落到 session 持久化**，并用官方 `subagent` 做四角色 fan-out
+> （这本来就是本文第五节的结论）。#38 需要改写。
+
+### 7.5 plan mode 是软引导，不是执行约束
+
+原文：plan mode is **soft guidance**；"Sandbox mode and approval policy enforce
+restrictions independently; neither reads or writes plan state"。
+它贡献一个 `plan:policy` 提示词段落，注册 `exit_plan_mode` 工具和 `/plan` 命令。
+
+> 不是 rubric 第 2 项的答案。别把它当护栏。
+
+### 7.6 `goal` 是事件溯源的同会话目标服务
+
+`GoalId` 是 branded id，`GoalRef` 做 compare-and-set：每次被接受的持久化变更递增 revision。
+可能是 rubric 第 2 项 state/memory 的一块，但它是**同会话**的，跨月记忆（#29）要另找机制。
+
+### 7.7 `defineTool` 的形状已确认 ✅
+
+```ts
+import { defineTool } from '@deepseek-ai/dsh-tools'
+
+export const name = 'greet-tool'
+export const inject = ['tools']
+
+export function apply(ctx: Context) {
+  ctx.tools.register(defineTool({
+    name: 'greet',
+    description: 'Greet someone by name.',
+    parameters: { name: { type: 'string', required: true, description: '...' } },
+    output: {
+      schema: { type: 'string' },
+      render: (_args, value) => [{ type: 'text', text: value }],
+    },
+    async execute(args) { return `Hello, ${args.name}!` },
+  }))
+}
+```
+
+`inject` 让 Cordis 等待工具注册表；`defineTool` 从 `parameters` 推导并校验 `args`；
+`execute` 返回 `output.schema` 声明的规范值，`output.render` 把它转成模型可见内容。
+
+> **`output.render` 就是 #40 UI 卡片的邻居。** 教程末尾指向
+> `cookbook/adding-a-tool.md`，那里才有 nested schemas、canonical values、
+> background work、policy hooks、PTC mode 和 **UI cards**——#27 与 #40 的真正参考，**尚未读**。
+
+### 7.8 插件加载方式与本文此前写的不一致 ⚠️ 待核实
+
+教程用的是：
+
+```sh
+pnpm dsh web --patch ./scratch-plugin/cordis.yml
+```
+
+而 `CLAUDE.md` 写的是 `dsh plugin --profile sdk-minimal add file:<绝对路径>`。
+两者是不是同一条路、`--patch` 是否支持 watch，**未确认**。这直接决定插件开发循环的速度。
+
+---
+
+## 八 仍未验证与未读
+
+**未读**：
+
+- `cookbook/adding-a-tool.md` —— #27 与 #40 的真正参考（UI cards 在这里）
+- `docs/subsystems/workflow.md` —— 只读了 package README
+- `docs/subsystems/session-query.md` —— 只读了纲要，追踪能力（#31）的细节未提取
+- Client 插件与 `tool.call.toolview` 的具体注册方式
+
+**待实测**（这些不能靠读文档定论）：
+
+- **把 approval policy 设成 `ask` 且不挂 answerer，bash 会不会被拒**（见 7.3，#26 的即时手段）
+- `sdk-minimal` 当前的 approval policy 默认值到底是什么——我们观测到 bash 畅通
+- 一个不加载 bash 插件的 profile 能否构造出来（7.1 说明 preset 不是入口）
+- `--patch` 是否支持 link/watch（7.8）
+- WSL2 下 `dsh web` 的端口转发
+- subagent 是否受"单 runtime 不能交错 turn"限制
 
 **与其他文档的冲突，待同步**：
 
 - `docs/02-architecture.md:34` 仍描述已废弃的字符串相似度候选生成
 - `docs/06` 的"第一层 / 第二层"框架已被本文推翻
 - `docs/09` 把 rubric 第 4 项评为"设计强、实现弱"，实为**机制存在、体验不存在**
-- `docs/10` 的三周计划基于自建前端与自建编排，需按本文重排
+- ~~`docs/10` 的三周计划基于自建前端与自建编排~~ —— 已在 PR #43 重排
