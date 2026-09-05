@@ -111,12 +111,23 @@ class Entity(BaseModel):
     aliases: list[str] = Field(default_factory=list)
 
 
+#: How a link came to be believed. "Not judged yet" and "judged and uncertain" are
+#: different states, and a human queue that shows them as one tells a reviewer to
+#: spend their attention in the wrong place.
+LinkStatus = Literal["declared", "adjudicated", "unadjudicated"]
+
+
 class Link(BaseModel):
     source: str
     target: str
     relation: Relation
     confidence: float = Field(ge=0.0, le=1.0)
     justification: str = ""
+    #: `declared` came from the OA dictionary and was never in doubt.
+    #: `adjudicated` was judged by a model — trust `confidence`.
+    #: `unadjudicated` means no verdict came back. Its confidence is the candidate's
+    #: starting value and means nothing; a reviewer must look at this first.
+    status: LinkStatus = "adjudicated"
 
 
 class EntityGraph(BaseModel):

@@ -199,6 +199,7 @@ class SemanticResolverAgent(Agent[list[CleanTable], EntityGraph]):
                         relation=relation,
                         confidence=1.0,
                         justification=note or "declared in the OA field dictionary",
+                        status="declared",
                     )
                 )
         return links
@@ -297,18 +298,31 @@ class SemanticResolverAgent(Agent[list[CleanTable], EntityGraph]):
         )
         parsed: _BatchAdjudication | Any = response.parsed
         if parsed is None:
-            return group
+            return [link.model_copy(update={"status": "unadjudicated"}) for link in group]
 
+        # A candidate with no verdict keeps its starting confidence, which means
+        # nothing — so it is marked, not silently mixed in with links the model
+        # judged and found weak. A reviewer needs to know which pile is which.
         by_index = {v.index: v for v in parsed.verdicts}
         return [
             link.model_copy(
                 update={
                     "confidence": by_index[index].confidence,
                     "justification": by_index[index].justification,
+                    "status": "adjudicated",
                 }
             )
             if index in by_index
-            else link
+            else link.model_copy(
+                update={
+                    "status": "unadjudicated",
+                    "justification": (
+                        link.justification
+                        + " — no verdict returned for this candidate; the confidence "
+                        "shown is the starting value, not a judgement"
+                    ).strip(),
+                }
+            )
             for index, link in enumerate(group)
         ]
 
