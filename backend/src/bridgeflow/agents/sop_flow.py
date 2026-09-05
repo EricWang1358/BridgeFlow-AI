@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from bridgeflow import grain
 from bridgeflow.agents.base import Agent
 from bridgeflow.agents.semantic_resolver import FieldDictionary, load_field_dictionary
 from bridgeflow.config import REPO_ROOT, settings
@@ -67,11 +68,25 @@ class SOPFlowEngine(Agent[SOPInput, SOPOutput]):
                 # No declared join key. Merging on a guess would corrupt every row.
                 unjoinable.append(table.department)
                 continue
+            date_column = next((c.name for c in table.columns if c.dtype == "date"), None)
             for row in table.rows:
                 entity = str(row.get(key_column, "")) if key_column else ""
-                bucket = merged[(table.period, entity)]
-                bucket.setdefault("period", table.period)
+                # The month comes from the row's own date, not from the batch label.
+                # A row dated 11 March inside a November upload belongs in March, and
+                # filing it under the label is how a misread date stays invisible
+                # (#18, #79). A row with no readable date keeps the batch label and
+                # is marked, rather than being invented a month for.
+                month = grain.month_of(row.get(date_column)) if date_column else None
+                bucket = merged[(month or table.period, entity)]
+                bucket.setdefault("period", month or table.period)
                 bucket.setdefault("entity", entity)
+                if month is None:
+                    bucket["period_from"] = "batch label — this row carries no readable date"
+                elif month != table.period:
+                    bucket["period_from"] = (
+                        f"row date, which puts it in {month} rather than the "
+                        f"{table.period} batch it arrived in"
+                    )
                 for column, value in row.items():
                     if column == key_column:
                         continue
