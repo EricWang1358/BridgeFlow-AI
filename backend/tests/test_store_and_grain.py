@@ -138,3 +138,48 @@ async def test_an_ambiguous_date_says_so_instead_of_choosing_quietly():
     assert ambiguous, "a coin toss was recorded as a confident fix"
     assert ambiguous[0].confidence <= 0.5
     assert "locale" in ambiguous[0].reason
+
+
+def test_rerunning_a_month_does_not_make_the_earlier_figures_unfindable(outputs):
+    """FR 11 forbids silently recomputing a published batch.
+
+    Re-running a month is allowed. Making the figures somebody signed unfindable
+    is not.
+    """
+    import time
+
+    store.save(_result("2025-11"))
+    time.sleep(1.1)  # the stamp has second resolution
+    store.save(_result("2025-11"))
+
+    stamps = store.versions("2025-11")
+
+    assert len(stamps) == 2, "the earlier run was overwritten"
+    assert store.load_version("2025-11", stamps[0]) is not None
+
+
+def test_a_period_that_was_never_run_has_no_versions(outputs):
+    assert store.versions("2099-01") == []
+
+
+async def test_a_row_is_filed_by_its_own_date_not_the_batch_label():
+    """A row dated 11 March inside a November upload belongs in March.
+
+    Filing it under the batch label is how a misread date stays invisible.
+    """
+    from bridgeflow.agents import SOPFlowEngine, SOPInput
+    from bridgeflow.schemas import EntityGraph
+
+    tables = await _tables("2025-11", ("production",))
+    output = await SOPFlowEngine().run(
+        SOPInput(
+            period="2025-11", tables=tables, graph=EntityGraph(), findings=[], tensions=[]
+        )
+    )
+
+    months = set(output.master_table.periods)
+
+    assert "2025-11" in months
+    assert any(row.get("period_from") for row in output.master_table.rows), (
+        "a row filed somewhere other than its batch must say so"
+    )

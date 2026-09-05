@@ -26,33 +26,80 @@ def _root() -> Path:
     return configured if configured.is_absolute() else REPO_ROOT / configured
 
 
-def _path(period: str) -> Path:
+def _safe(period: str) -> str:
     # Periods come from a form field, so they are not trusted as a path segment.
     safe = "".join(ch for ch in period if ch.isalnum() or ch in "-_")
     if not safe:
         raise ValueError(f"unusable period {period!r}")
-    return _root() / f"{safe}.json"
+    return safe
+
+
+def _path(period: str) -> Path:
+    """The current result for a period."""
+    return _root() / f"{_safe(period)}.json"
+
+
+def _version_path(period: str, stamp: str) -> Path:
+    """One historical run, kept so a published figure is not quietly rewritten."""
+    return _root() / "versions" / f"{_safe(period)}--{stamp}.json"
 
 
 def save(result: PipelineResult) -> Path:
-    """Write one period's result, atomically.
+    """Write one period's result, atomically, keeping what was there before.
 
     Atomically because a half-written file read by the next request is worse than a
-    missing one: it fails somewhere downstream with a schema error rather than an
-    honest "not analysed yet".
+    missing one: it fails downstream with a schema error rather than an honest "not
+    analysed yet".
+
+    Keeping the previous run because FR 11 forbids silently recomputing a published
+    batch, and an overwrite is exactly that. Re-running a month is allowed; making
+    the earlier figures unfindable is not — somebody signed those.
     """
     path = _path(result.period)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    (path.parent / "versions").mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+
     payload = result.model_dump(mode="json")
     payload["_saved_at"] = datetime.now(UTC).isoformat()
+    payload["_version"] = stamp
 
+    _write(path, payload)
+    _write(_version_path(result.period, stamp), payload)
+    return path
+
+
+def _write(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
         "w", encoding="utf-8", dir=path.parent, delete=False, suffix=".tmp"
     ) as handle:
         json.dump(payload, handle, ensure_ascii=False, indent=2)
         temporary = Path(handle.name)
     temporary.replace(path)
-    return path
+
+
+def versions(period: str) -> list[str]:
+    """Every run of one period, oldest first.
+
+    More than one means the month was recomputed. That is not itself a problem; a
+    figure that changed between runs without anyone noticing is.
+    """
+    folder = _root() / "versions"
+    if not folder.is_dir():
+        return []
+    prefix = f"{_safe(period)}--"
+    return sorted(p.stem[len(prefix):] for p in folder.glob(f"{prefix}*.json"))
+
+
+def load_version(period: str, stamp: str) -> PipelineResult | None:
+    """One historical run, so a signed figure can still be produced."""
+    path = _version_path(period, stamp)
+    if not path.is_file():
+        return None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    for key in ("_saved_at", "_version"):
+        payload.pop(key, None)
+    return PipelineResult.model_validate(payload)
 
 
 def load(period: str) -> PipelineResult | None:
@@ -61,7 +108,8 @@ def load(period: str) -> PipelineResult | None:
     if not path.is_file():
         return None
     payload = json.loads(path.read_text(encoding="utf-8"))
-    payload.pop("_saved_at", None)
+    for key in ("_saved_at", "_version"):
+        payload.pop(key, None)
     return PipelineResult.model_validate(payload)
 
 
