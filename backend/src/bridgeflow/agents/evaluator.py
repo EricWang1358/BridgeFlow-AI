@@ -5,6 +5,7 @@ import json
 
 from pydantic import BaseModel
 
+from bridgeflow import metrics
 from bridgeflow.agents.base import Agent
 from bridgeflow.llm import Message
 from bridgeflow.schemas import (
@@ -36,9 +37,14 @@ ROLE_BRIEFS: dict[Department, str] = {
 
 _SHARED_RULES = (
     "\nRules:\n"
-    "- Every claim must cite concrete evidence rows from the data you are given.\n"
+    "- You are given metrics that have already been computed by rule, each with the "
+    "formula used and a sample of the source cells. **Do not do arithmetic.** Quote "
+    "the figures as given; a number you worked out yourself cannot be audited.\n"
+    "- Every claim must cite one of those metrics as evidence.\n"
+    "- Metrics listed under `unavailable` could not be computed. Say so where it "
+    "matters; do not reason as though a missing figure is a zero or a non-issue.\n"
     "- One sentence per claim. No hedging, no 'it may be worth considering'.\n"
-    "- If the data does not support a finding for your role, return an empty list.\n"
+    "- If the metrics do not support a finding for your role, return an empty list.\n"
     "- Do not comment on other departments' concerns; another agent covers those."
 )
 
@@ -76,15 +82,23 @@ class MultiRoleEvaluatorAgent(Agent[EvaluationInput, EvaluationOutput]):
         return EvaluationOutput(findings=findings, tensions=self._find_tensions(findings))
 
     async def _evaluate_role(self, role: Department, payload: EvaluationInput) -> list[Finding]:
+        """Hand this role its metrics — never the rows they were computed from.
+
+        The previous version serialised every cleaned row into the prompt: 5.3 KB for
+        an eighteen-row sample, against a PRD that sizes one batch at 200,000. It also
+        meant the figures in a finding were the model's own arithmetic, which cannot
+        be reproduced or signed off. Rules compute; the model explains (#13, #58).
+        """
+        values, refusals = metrics.for_role(role, payload.period, payload.tables)
         context = json.dumps(
             {
                 "period": payload.period,
                 "entities": [e.model_dump() for e in payload.graph.entities],
                 "links": [link.model_dump() for link in payload.graph.links],
-                "tables": [
-                    {"department": t.department, "columns": [c.name for c in t.columns], "rows": t.rows}
-                    for t in payload.tables
-                ],
+                "metrics": [v.model_dump() for v in values],
+                # A role not told a metric is missing will reason as though it does
+                # not matter, so the refusals travel with the figures.
+                "unavailable": refusals,
             },
             ensure_ascii=False,
             default=str,
