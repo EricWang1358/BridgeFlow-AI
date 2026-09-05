@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from bridgeflow import metrics
 from bridgeflow.agents.base import Agent
-from bridgeflow.llm import Message
+from bridgeflow.llm import Message, get_provider
 from bridgeflow.schemas import (
     CleanTable,
     Department,
@@ -75,6 +75,9 @@ class MultiRoleEvaluatorAgent(Agent[EvaluationInput, EvaluationOutput]):
     slug = "evaluator"
 
     async def run(self, payload: EvaluationInput) -> EvaluationOutput:
+        # Each role gets its own lane, or `gather` is theatre: a dsh provider
+        # serialises every call sharing one, so four roles behind one provider ran
+        # strictly one after another while looking concurrent (#51).
         results = await asyncio.gather(
             *(self._evaluate_role(role, payload) for role in ROLE_BRIEFS)
         )
@@ -90,6 +93,7 @@ class MultiRoleEvaluatorAgent(Agent[EvaluationInput, EvaluationOutput]):
         be reproduced or signed off. Rules compute; the model explains (#13, #58).
         """
         values, refusals = metrics.for_role(role, payload.period, payload.tables)
+        llm = self._llm or get_provider(self.slug, lane=role)
         context = json.dumps(
             {
                 "period": payload.period,
@@ -103,7 +107,7 @@ class MultiRoleEvaluatorAgent(Agent[EvaluationInput, EvaluationOutput]):
             ensure_ascii=False,
             default=str,
         )
-        response = await self.llm.complete(
+        response = await llm.complete(
             system=ROLE_BRIEFS[role] + _SHARED_RULES,
             messages=[Message(role="user", content=context)],
             schema=_RoleFindings,

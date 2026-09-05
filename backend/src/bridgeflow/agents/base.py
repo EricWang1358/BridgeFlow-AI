@@ -19,13 +19,16 @@ class Agent(abc.ABC, Generic[In_, Out]):
     slug: str = ""
     system_prompt: str = ""
 
-    def __init__(self, llm: LLMProvider | None = None) -> None:
+    def __init__(self, llm: LLMProvider | None = None, lane: str = "") -> None:
         self._llm = llm
+        #: Callers that must run concurrently ask for separate lanes; a dsh provider
+        #: serialises everything sharing one (#51).
+        self._lane = lane
 
     @property
     def llm(self) -> LLMProvider:
         if self._llm is None:
-            self._llm = get_provider(self.slug)
+            self._llm = get_provider(self.slug, self._lane)
         return self._llm
 
     @abc.abstractmethod
