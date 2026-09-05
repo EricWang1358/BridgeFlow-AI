@@ -1,9 +1,10 @@
-# 12 — Delivery, Measurement and Controls（表单填写内容）
+# 12 — Delivery, Measurement and Controls (form content)
 
-对应提交表单「Delivery, Measurement and Controls」。可直接复制。
+Fill-in content for the "Delivery, Measurement and Controls" submission form. Copy-paste ready.
 
-**填之前请先替换的占位：** 所有写「待指定」的 Owner 需要换成真人姓名，
-以及最后一节标注的两处基线数字。除此之外的数字全部为实测值，来源在括号里注明。
+**Replace before submitting:** every Owner marked *(TBC)* needs a real name, and the two
+baselines flagged ⚠️ need real figures. Every other number is measured — the source is noted
+in brackets.
 
 ---
 
@@ -11,13 +12,13 @@
 
 | Data or Document | Source | Owner | Access Status | Privacy or Quality concern |
 | --- | --- | --- | --- | --- |
-| 四部门月度经营报表（生产 / 物资 / 财务 / 市场，CSV·XLSX） | 各部门手工导出 | 各部门数据负责人（待指定） | 未获取，当前以脱敏样本替代 | 含客户名称与金额；四份表由不同人维护，任一份都可能被篡改，因此按不可信输入处理 |
-| OA 字段字典（部门 → 列名 → 实体类型） | OA 系统导出 | 主数据负责人（待指定） | **未获取 —— Week 2 前置依赖** | 缺失时系统退回列名关键词猜测，覆盖不全 |
-| 物料清单 BOM（SKU ↔ 原材料） | ERP / 主数据 | 生产或工艺负责人（待指定） | 未获取 | 无此声明则 SKU↔原料关系无法建立（实测共现推不出，见下）；分摊比例缺失则单位成本算不出，报价 floor 无依据 |
-| 财务科目对照表（SKU ↔ GL 科目） | 财务 | 财务负责人（待指定） | 未获取 | 同上，books_to 关系依赖此表声明 |
-| 演示样本数据集 `data/samples/*.csv` | 团队自建（虚构，非真实业务数据） | 本团队 | 已在仓库 | **不得对外呈现为真实业务数字**；含刻意植入的脏数据缺陷用于演示 |
-| 污染样本数据集（注入攻击用例） | 团队自建 | 本团队 | Week 1 交付 | 仅用于安全测试，禁止混入正常演示数据集 |
-| 字段字典文件 `data/mappings/field-dictionary.yaml` | 由上述 OA 导出填写 | 主数据负责人（待指定） | 格式已定义，内容待填 | 一旦非空即完全按声明执行，未声明的列被忽略而非猜测 |
+| Four monthly departmental reports (production / procurement / finance / marketing; CSV·XLSX) | Manual export by each department | Departmental data owners *(TBC)* | Not yet obtained — de-identified samples stand in | Contains customer names and amounts. Four sheets maintained by four different people, so any one of them can be tampered with; treated as untrusted input throughout |
+| OA field dictionary (department → column → entity type) | Export from OA | Master-data owner *(TBC)* | **Not obtained — week-2 prerequisite** | Without it the resolver falls back to column-name keyword guessing, with incomplete coverage |
+| Bill of materials (SKU ↔ raw material) | ERP / master data | Production or process owner *(TBC)* | Not obtained | Nothing else declares this relationship — co-occurrence cannot infer it (measured, see below). Missing allocation ratios mean unit cost cannot be computed, leaving the quote floor unfounded |
+| Chart-of-accounts mapping (SKU ↔ GL account) | Finance | Finance owner *(TBC)* | Not obtained | Same: the `books_to` relation depends on this declaration |
+| Demo sample dataset `data/samples/*.csv` | Authored by the team (fictional, not real business data) | This team | In the repository | **Must never be presented as real business figures.** Contains deliberately planted data defects for the demo |
+| Poisoned dataset (prompt-injection cases) | Authored by the team | This team | Week 1 deliverable | Security testing only; must not be mixed into the normal demo dataset |
+| Field dictionary file `data/mappings/field-dictionary.yaml` | Filled from the OA export above | Master-data owner *(TBC)* | Format defined, content pending | Once non-empty it is followed exactly — undeclared columns are ignored rather than guessed at |
 
 ---
 
@@ -25,13 +26,13 @@
 
 | Model/Tool | Role in the proposal | Operating Constraint |
 | --- | --- | --- |
-| DeepSeek Harness `dsh` 0.1.2rc1 | Agent 运行时。Python SDK 以子进程方式驱动，走 stdio 上的 JSON-RPC（实测启动 3.6s，单次 turn 0.7s） | **全部已发布版本均为预发布，项目明示会有破坏性变更** → 版本固定为 `==0.1.2rc1`，不用范围；单个 runtime 不能交错 turn，并发调用被锁串行化 |
-| `deepseek-v4-flash`（provider `deepseek-official`） | 四个 Agent 的判断层：裁决映射、撰写研判结论与报价理由 | **只做解释与判断，不做算数**；输入前必须经过信任边界标记；返回自由文本无 schema 参数，结构化输出靠本地校验，解析失败直接抛错而非降级为空 |
-| Mock provider（内置，确定性） | CI 与彩排的默认后端，离线可跑完整条 pipeline | 无网络、无密钥；19 项测试全部在此模式下通过，演示不赌网络 |
-| pandas 2.2 | 数据清洗、指标聚合、Master Table 合并 | 确定性计算，结果不经模型。凡是能用规则算的数字一律不交给模型 |
-| rapidfuzz 3.10 | **仅**用于同一实体的别名归并（`SKU-A1` / `sku-a1` / `SKU A1`） | **禁止用于跨实体连线发现。** 实测跨部门标识符相似度 0–35.3（SKU-A1 × RM-Alu-6061 = 35.3），低于任何可用阈值；已有测试锁死此约束 |
-| 自建 typed tools（Week 2 交付） | 读表、聚合指标、查字段字典、算产能占用、算单位成本 | 全部带 schema；模型只能通过工具取数，不再接触原始行 |
-| FastAPI / Next.js / Docker | 服务、界面、部署一致性 | 无认证，仅限内网与演示环境；不对公网开放 |
+| DeepSeek Harness `dsh` 0.1.2rc1 | Agent runtime. The Python SDK drives the bundled CLI as a subprocess over JSON-RPC on stdio (measured: 3.6s boot, 0.7s turn) | **Every published release is a prerelease and the project states breaking changes are expected** → pinned to `==0.1.2rc1`, never a range. A single runtime cannot interleave turns, so concurrent calls are serialised behind a lock |
+| `deepseek-v4-flash` (provider `deepseek-official`) | The judgement layer for all four agents: adjudicating mappings, writing findings and quote rationale | **Interprets and judges; never computes.** Input must pass the trust boundary first. Returns free text with no schema parameter, so structured output is validated locally — an unparseable reply raises rather than degrading to an empty result |
+| Mock provider (built in, deterministic) | Default backend for CI and rehearsal; runs the whole pipeline offline | No network, no key. All 19 tests pass in this mode, so the demo does not bet on connectivity |
+| pandas 2.2 | Cleaning, metric aggregation, Master Table assembly | Deterministic; results never pass through a model. Anything a rule can compute is not given to the model |
+| rapidfuzz 3.10 | **Only** merges aliases of the same entity (`SKU-A1` / `sku-a1` / `SKU A1`) | **Never used to discover links between different entities.** Measured cross-department similarity is 0–35.3 (SKU-A1 × RM-Alu-6061 = 35.3), below any usable threshold; a test locks this constraint in place |
+| Purpose-built typed tools (week 2) | Read table, aggregate metric, look up field dictionary, compute capacity load and unit cost | All schema-typed. The model reaches data only through tools, never raw rows |
+| FastAPI / Next.js / Docker | Service, UI, and identical local/AWS behaviour | No authentication; internal and demo use only, never exposed publicly |
 
 ---
 
@@ -39,30 +40,34 @@
 
 | Role | Responsibility | Input | Output | Escalate when |
 | --- | --- | --- | --- | --- |
-| **Data Sanitizer** | 修复格式、类型、重复与错位；每处修改记录原值、新值、规则、置信度与理由 | 四部门原始 CSV / XLSX | `CleanTable` + `CorrectionLog` + 隔离行 | 关键字段（金额 / 客户 / SKU / 审批）缺失 → **不补全**，整行进隔离区，下游结果标记为不完整 |
-| **Semantic Resolver** | 建立跨部门实体映射。三个来源按可信度降序：OA 字段字典声明 → 行内共现 → 模型裁决残余 | `CleanTable` ×4 + 字段字典 | `EntityGraph`（links + unresolved） | 置信度 < 0.75 → 人工确认队列，不得自动发布；`consumes` / `books_to` 因无表同时含两侧而为空 → 升级给主数据负责人补字典 |
-| **Multi-Role Evaluator** | 生产 / 财务 / 物资 / 市场四角色并发研判 | `EntityGraph` + 由工具计算的指标 | `Finding[]`（schema 强制带证据）+ `Tension[]` | 两个角色对同一对象结论相反 → 输出为 Tension **交人裁决，系统不自动调和** |
-| **SOP & Flow Engine** | 汇总月度 Master Table、风险报告、审批卡片 | `Finding` + `CleanTable` | `MasterTable` + `RiskReport` + `ApprovalCard` | 出现 critical 等级 → 生成审批卡并指定责任部门与时限 |
-| **Dynamic Quote Simulator** | 联动原料成本 × 产能 × 客户账期历史试算报价 | 询价 + Master Table + Finding | 价格区间（floor 由确定性计算得出）+ 账期建议 + 敏感因素 | 缺成本 / 产能 / 汇率依据 → **拒绝正式提交**，仅允许存草稿；任何情况下不外发 |
+| **Data Sanitizer** | Repair formats, types, duplicates and shifted columns; log every change with original value, new value, rule, confidence and reason | Raw departmental CSV / XLSX | `CleanTable` + `CorrectionLog` + quarantined rows | A critical field (amount / customer / SKU / approval) is missing → **never filled in**; the row is quarantined and downstream results are marked incomplete |
+| **Semantic Resolver** | Build cross-department entity mappings from three sources in descending order of trust: OA dictionary declarations → row co-occurrence → model adjudication of the residue | `CleanTable` ×4 + field dictionary | `EntityGraph` (links + unresolved) | Confidence < 0.75 → human queue, never auto-published. `consumes` / `books_to` are empty because no sheet contains both sides → escalate to the master-data owner for a dictionary entry |
+| **Multi-Role Evaluator** | Four concurrent role analyses: production, finance, procurement, marketing | `EntityGraph` + metrics computed by tools | `Finding[]` (evidence enforced by schema) + `Tension[]` | Two roles reach opposing conclusions about the same entity → emitted as a Tension **for a human to settle; the system never reconciles it automatically** |
+| **SOP & Flow Engine** | Assemble the monthly Master Table, risk report and approval cards | `Finding` + `CleanTable` | `MasterTable` + `RiskReport` + `ApprovalCard` | A critical-severity finding appears → an approval card is raised with an owning department and a deadline |
+| **Dynamic Quote Simulator** | Simulate price and payment terms across material cost × capacity × customer AR history | Enquiry + Master Table + Findings | Price band (floor computed deterministically) + payment-term options + sensitivities | Cost, capacity or FX basis is missing → **formal submission refused**, draft allowed. Never sent externally under any condition |
 
 ---
 
 ## INTEGRATIONS AND MANUAL FALLBACK
 
-**集成范围（刻意收窄）：** 上游是人工导出的 CSV / XLSX，**不接 ERP / MES / CRM / 采购系统**。
-下游只产出页面与文件，**不回写任何业务系统**，不接入邮件、CRM 或任何客户沟通渠道——
-这是保证「报价不会被自动发出去」的结构性手段，而不是靠代码里的一个开关。
-唯一的外部依赖是模型访问，经 dsh 子进程到 DeepSeek API。
+**Integration scope is deliberately narrow.** Upstream is manually exported CSV / XLSX — **no
+ERP, MES, CRM or procurement connectors**. Downstream produces screens and files only; it
+**writes back to no business system** and connects to no email, CRM or customer channel. That
+is the structural guarantee that a quote cannot be sent automatically — not a flag in the code.
+The only external dependency is model access, via the dsh subprocess to the DeepSeek API.
 
-**三层回退，逐级降级而非全有全无：**
+**Three fallback layers, degrading in steps rather than all-or-nothing:**
 
-1. **dsh 运行时故障或破坏性变更** → 改一个环境变量（`LLM_PROVIDER=mock` 或直连 API），
-   Agent 代码零改动。`Orchestrator` 是一个不含任何框架依赖的普通 async 方法，这是刻意留的接缝。
-2. **模型或网络不可用** → mock provider 确定性离线回放，整条 pipeline 与 19 项测试仍可跑通。
-   **彩排默认在此模式进行**，演示不依赖网络。
-3. **全部自动化失败** → 系统的中间产物本身就是人可读的：`CorrectionLog`、`EntityGraph`、
-   Master Table 都是表格，业务按现行月度流程手工继续。**原始文件从不被覆盖**，
-   失败损失的是时间，不是数据。
+1. **dsh runtime fails or ships a breaking change** → change one environment variable
+   (`LLM_PROVIDER=mock`, or a direct API provider). No agent code changes: `Orchestrator` is a
+   plain async method carrying no framework dependency, and that seam exists for this reason.
+2. **Model or network unavailable** → the deterministic mock provider replays the whole
+   pipeline offline; all 19 tests still pass. **Rehearsal runs in this mode by default**, so the
+   demo does not depend on connectivity.
+3. **All automation fails** → the intermediate artefacts are human-readable by design:
+   `CorrectionLog`, `EntityGraph` and the Master Table are all tables. The business continues
+   with its existing monthly process. **Source files are never overwritten**, so a failure costs
+   time, not data.
 
 ---
 
@@ -70,17 +75,18 @@
 
 | Metric | Baseline | Target | How measured | Review period |
 | --- | --- | --- | --- | --- |
-| 端到端处理时长 | **627.6s / 21 行**（实测，dsh + deepseek-v4-flash） | < 60s / 同一样本集 | 计时 `Orchestrator.run()` | 每周 |
-| 语义映射产出条数 | **4 accepted + 2 unresolved**；`consumes` 与 `books_to` 均为 0（实测） | 四类关系全部非空 | pipeline 输出计数 | Week 2 结束 |
-| 结论可追溯率 | **100%**（`Finding` 在 schema 层拒绝无证据结论） | 维持 100% | 抽检 Finding 反向回溯到源文件行 | 每周 |
-| 注入防御拦截率 | **0%**（当前无任何防御，已知漏洞） | 100% 的 adversarial 用例被拦截并留痕 | eval 套件在 CI 中运行 | 每次提交 |
-| golden-path eval 通过率 | **无**（eval 套件尚未建立） | 100% | eval 套件在 CI 中运行 | 每次提交 |
-| 数据修复日志完整率 | **100%**（48 处修复全部带规则与置信度，实测） | 维持 100% | `CorrectionLog` 条数 vs 实际变更数 | 每周 |
-| 跨月人工确认成本 | **无数据**（跨月映射记忆尚未实现） | 第 2 月确认量 < 第 1 月的 30% | 连续两月样本对比 | Week 3 |
-| 月度整理人工耗时 | **待业务方提供现行基线** ⚠️ | 较基线降低 50% | 与业务方对照记录 | 交付后 |
+| End-to-end pipeline duration | **627.6s for 21 rows** (measured on dsh + deepseek-v4-flash) | < 60s on the same sample set | Time `Orchestrator.run()` | Weekly |
+| Semantic mappings produced | **4 accepted + 2 unresolved**; `consumes` and `books_to` both zero (measured) | All four relation types non-empty | Count pipeline output | End of week 2 |
+| Conclusion traceability | **100%** (schema rejects any finding without evidence) | Hold at 100% | Spot-check findings back to the source file row | Weekly |
+| Prompt-injection block rate | **0% — no defence exists today** (known defect) | 100% of adversarial cases blocked and logged | Eval suite in CI | Every commit |
+| Golden-path eval pass rate | **None — no eval suite yet** | 100% | Eval suite in CI | Every commit |
+| Correction-log completeness | **100%** (48 corrections, each with rule and confidence; measured) | Hold at 100% | `CorrectionLog` entries vs actual changes | Weekly |
+| Cross-month confirmation effort | **No data** — cross-month mapping memory not built yet | Month 2 confirmations < 30% of month 1 | Compare two consecutive monthly runs | Week 3 |
+| Manual monthly reconciliation time | ⚠️ **Baseline needed from the business** | 50% below baseline | Timed comparison against current process | Post-delivery |
 
-⚠️ 最后一行没有基线就无法验证。**提交前需要向业务方问到「现在每月对账实际花几个人天」**，
-否则这条指标只是口号。
+⚠️ The last row cannot be verified without a baseline. **Ask the business how many person-days
+month-end reconciliation actually takes today** before submitting — otherwise "50% reduction"
+is just a slogan.
 
 ---
 
@@ -88,37 +94,44 @@
 
 | Risk | Consequence | Preventive Control | Human Owner |
 | --- | --- | --- | --- |
-| **提示词注入**：表格单元格内容被模型当作指令 | 结论被操纵——例如把 critical 风险改标为 info，审批人据错误结论签字 | 输入信任边界：单元格内容加分隔与来源标记，指令与数据分离；输出对照被污染输入做校验；adversarial 用例进 CI | 技术负责人（待指定） |
-| **实体误合并** | 成本、订单、产能关联错误，Master Table 全表失真且不易察觉 | 置信度 < 0.75 进人工队列；映射只来自声明与行内共现，**禁止用字符串相似度连线**（已有测试锁死）；映射变更不静默重算已发布结果 | 主数据负责人（待指定） |
-| **关键字段被自动补全** | 财务与报价结果失真 | 金额 / 客户 / SKU / 审批字段禁止自动补全，整行进隔离区；下游结果标记不完整 | 数据管理员（待指定） |
-| **Agent 给出无依据的结论** | 业务无法审批，或误信错误结论 | `Finding` 在 schema 层强制 evidence 非空——无证据的结论**被拒绝而不是降级显示** | 技术负责人（待指定） |
-| **报价越权对外使用** | 对客户错误承诺价格、账期或交期 | 首版不集成任何发送渠道（结构性保证）；缺成本 / 产能依据拒绝正式提交；未审批不得标记为可对外 | 市场负责人 + 审批人（待指定） |
-| **dsh 预发布依赖中断** | 演示当天跑不起来 | 版本固定 `==0.1.2rc1`；mock provider 离线回退；**彩排在 mock 模式下进行** | 技术负责人（待指定） |
-| **OA 字段字典延期到货** | Week 2 核心功能降级，两类关系建不起来 | 已列为 Week 2 前置依赖并有 fallback（仅共现关系 + 样本 BOM 打桩）；预留 2 天开发缓冲 | PM（待指定） |
-| **演示数据被误认为真实业务数据** | 对外传播错误的经营数字 | 样本数据全部为虚构并在仓库标注；导出物标注数据版本与来源 | PM（待指定） |
+| **Prompt injection** — spreadsheet cell content read as instruction | Findings manipulated: a critical risk relabelled as info, and an approver signs off on a false conclusion | Input trust boundary: cell content delimited and provenance-marked, instructions separated from data; output validated against the tainted input; adversarial cases run in CI | Technical lead *(TBC)* |
+| **Wrong entity merge** | Cost, order and capacity joins corrupted; the whole Master Table is wrong in a way that is hard to notice | Confidence < 0.75 goes to a human queue; links come only from declarations and row co-occurrence, **never string similarity** (locked by test); mapping changes never silently recompute published results | Master-data owner *(TBC)* |
+| **Critical field auto-filled** | Finance and quote figures distorted | Amount / customer / SKU / approval fields are never auto-filled; the row is quarantined and downstream results marked incomplete | Data administrator *(TBC)* |
+| **Agent asserts a conclusion with no basis** | The business cannot approve it, or trusts something false | `Finding` enforces non-empty evidence at the schema level — an unevidenced conclusion is **rejected, not shown with a caveat** | Technical lead *(TBC)* |
+| **Quote used beyond its authority** | Wrong price, payment terms or delivery date promised to a customer | No sending channel is integrated at all (structural); formal submission refused without cost and capacity basis; nothing is marked externally usable without approval | Sales lead + approver *(TBC)* |
+| **Prerelease dsh dependency breaks** | The demo does not run on the day | Pinned to `==0.1.2rc1`; offline mock fallback; **rehearsal runs on mock** | Technical lead *(TBC)* |
+| **OA field dictionary arrives late** | Week 2 core capability degrades; two relation types cannot be built | Listed as an explicit week-2 prerequisite with a fallback (co-occurrence relations only, declared ones stubbed from sample BOM); 2 dev-days of buffer held | PM *(TBC)* |
+| **Demo data mistaken for real business data** | False operating figures circulate | All sample data is fictional and labelled as such in the repository; exports carry data version and source | PM *(TBC)* |
 
 ---
 
 ## HUMAN APPROVAL POINTS
 
-四个强制人工节点，按风险升序排列。**每一个都是「不确认就不往下走」，不是「确认后可跳过」：**
+Four mandatory checkpoints, in ascending order of risk. **Each one blocks progress until
+answered — none of them can be skipped once confirmed:**
 
-1. **数据修复确认** —— 数据管理员
-   格式类确定性转换自动执行但全部记账；**关键字段（金额 / 客户 / SKU / 审批）缺失必须人工处理**，
-   未确认时下游全部结果标记为不完整。
+1. **Data-repair confirmation** — data administrator
+   Deterministic format conversions run automatically but are all logged. **Missing critical
+   fields (amount / customer / SKU / approval) must be handled by a person**; until they are,
+   every downstream result is marked incomplete.
 
-2. **语义映射发布** —— 主数据负责人
-   置信度低于阈值的映射**不得自动发布**。人工确认一次后形成版本化规则，下月自动复用——
-   这也是「第二个月比第一个月省」的来源。映射变更会提示受影响月份，由人决定是否重算。
+2. **Mapping publication** — master-data owner
+   Mappings below the confidence threshold **cannot be auto-published**. One human confirmation
+   becomes a versioned rule reused in later months — this is where "month 2 costs less than
+   month 1" comes from. Changing a mapping flags the affected months and lets a person decide
+   whether to recompute.
 
-3. **风险结论处置** —— 对应部门负责人
-   预警可确认、驳回、指派、备注、关闭，状态变更保留操作者与时间。
-   **系统不改写原始事实**——处置的是结论的状态，不是数据。
+3. **Risk-finding disposition** — owning department head
+   Findings can be confirmed, rejected, assigned, annotated or closed, with the operator and
+   timestamp retained. **The system never rewrites the underlying facts** — disposition changes
+   the status of a conclusion, not the data.
 
-4. **报价对外使用** —— 授权审批人
-   未经审批不得标记为可对外使用。系统不自动发送、不自动承诺交期或信用额度。
+4. **External use of a quote** — authorised approver
+   Nothing is marked externally usable without approval. The system does not send, and does not
+   commit to delivery dates or credit limits.
 
-加上每周结束的 sign-off：**每周产出一个可用决策，由业务方签字确认后才进入下一周**。
+Plus a weekly sign-off: **each week produces one usable decision, and the business signs it off
+before the next week starts.**
 
-**系统绝不自动做的四件事**（这是设计红线，不是配置项）：
-不覆盖原始文件 · 不补全关键字段 · 不合并低置信度实体 · 不外发报价。
+**Four things the system will never do automatically** — design red lines, not configuration:
+overwrite a source file · fill a critical field · merge a low-confidence entity · send a quote.
