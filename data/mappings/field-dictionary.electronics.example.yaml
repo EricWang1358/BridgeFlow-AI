@@ -1,0 +1,34 @@
+# 电子分销行业的字段字典。注意 production 与 procurement 用的是
+# 同一颗料的两个不同料号，靠 relations 里的 same_part 连起来——
+# 字符相似度永远发现不了 STM32F407VGT6 与 IPN-0041 是一回事。
+columns:
+  production:
+    mfr_pn: sku
+    bin_location: capacity_unit
+  procurement:
+    internal_pn: sku
+    vendor: supplier
+  finance:
+    account_code: gl_account
+    counterparty: customer
+  marketing:
+    counterparty: customer
+    customer_pn: sku
+measures:
+  production:
+    picked_units: output_quantity
+    handling_min: capacity_hours
+  procurement:
+    po_value: purchase_amount
+    po_qty: purchase_quantity
+  finance:
+    amount_sgd: revenue_amount
+    terms_days: receivable_days
+  marketing:
+    ordered_units: order_quantity
+    unit_quote_sgd: quoted_price
+relations:
+- source: sku:stm32f407vgt6
+  target: sku:ipn-0041
+  relation: same_part
+  note: 同一颗料的原厂料号与内部料号

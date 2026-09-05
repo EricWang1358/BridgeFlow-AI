@@ -1,0 +1,5 @@
+account_code,counterparty,amount_sgd,terms_days,posted
+4100-REV/EMB,Kinetic Robotics,"142,300",30,2025-11-30
+5100-COS/EMB,Kinetic Robotics,"-118,900",,2025-11-30
+4100-REV/PWR,Delta Controls,"78,500",75,2025-11-30
+4900-RET/PWR,Delta Controls,"-6,400",,2025-11-30
