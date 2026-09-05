@@ -1,0 +1,8 @@
+# Normalise to LF in the repo. Without this, files authored on Windows arrive on the
+# AWS Linux box with CRLF and shell scripts fail with "bad interpreter: ^M".
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.xlsx binary
+*.ico binary

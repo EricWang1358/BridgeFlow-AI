@@ -1,0 +1,27 @@
+# One command to bring the whole stack up, on any Linux host:
+#   docker compose up --build
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+    env_file:
+      # Copy backend/.env.example to backend/.env first.
+      - path: backend/.env
+        required: false
+    volumes:
+      - ./data:/app/data
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8000
+    depends_on:
+      - backend

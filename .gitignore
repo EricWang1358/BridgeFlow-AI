@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+.next/
+dist/
+build/
+*.tsbuildinfo
+
+# Env & secrets
+.env
+.env.local
+*.key
+
+# Data (keep samples, ignore real uploads)
+data/uploads/
+data/outputs/
+*.xlsx
+*.xls
+!data/samples/*.csv
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

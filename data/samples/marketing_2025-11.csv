@@ -1,0 +1,5 @@
+Customer,Product,Order Qty,Quoted Price,Order Date
+Acme Pte Ltd,SKU-A1,3280,26.95,2025-11-01
+Bayfront Ltd,SKU-B7,450,102.20,2025-11-04
+Acme Pte Ltd ,sku-a1,900,26.95,2025-11-20
+Changi Works,SKU-C3,300,55.00,2025-11-22

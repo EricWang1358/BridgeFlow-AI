@@ -1,0 +1,5 @@
+GL Account,Customer,Amount,AR Days,Posting Date
+4000-Sales/A1,Acme Pte Ltd,"88,400",92,2025-11-30
+5000-COGS/A1,Acme Pte Ltd,"-91,200",,2025-11-30
+4000-Sales/B7,Bayfront Ltd,"46,000",38,2025-11-30
+5000-COGS/B7,Bayfront Ltd,"-31,500",,2025-11-30
