@@ -1,0 +1,34 @@
+# 食品冷链行业的字段字典。表头是中文——这正是「不能靠列名猜」的例证：
+# 内置的英文 hint 在这里一个都不会命中。
+columns:
+  production:
+    品项编码: sku
+    产线: capacity_unit
+    批次号: batch
+  procurement:
+    原料编码: raw_material
+    供应商: supplier
+  finance:
+    科目代码: gl_account
+    客户名称: customer
+  marketing:
+    客户名称: customer
+    订购品项: sku
+measures:
+  production:
+    产出件数: output_quantity
+    损耗率: wastage_rate
+  procurement:
+    采购金额: purchase_amount
+    采购重量kg: purchase_weight_kg
+  finance:
+    发生额: revenue_amount
+    账期天数: receivable_days
+  marketing:
+    订购箱数: order_quantity
+    报价单价: quoted_price
+relations:
+- source: sku:fg-chk-500
+  target: raw_material:raw-chk-frz
+  relation: consumes
+  note: 示例 BOM，非真实
