@@ -60,7 +60,7 @@ PY
 
 | | 值 |
 | --- | --- |
-| 测试数量 | **153** |
+| 测试数量 | **169** |
 | 打真实模型的 | `test_resolver.py`（9 个） |
 | 其余 | mock provider，只证明代码不崩 |
 
@@ -125,7 +125,7 @@ cd backend && python -m bridgeflow.eval
 | 1 | Goal & Scope | ✅ |
 | 2 | Architecture & Reasoning Loop | ❌ |
 | 3 | Tool Use & Integration | ❌ |
-| 4 | Autonomy & HITL | ❌ |
+| 4 | Autonomy & HITL | 🟡 机制成立且实测 fail-closed，界面仍缺（#30） |
 | 5 | Safety & Guardrails | ❌ |
 | 6 | Observability & Eval | ⚠️ |
 | 7 | Platform & Tooling | ❌ |

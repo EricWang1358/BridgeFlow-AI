@@ -21,11 +21,11 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from bridgeflow import metrics
+from bridgeflow import mappings, metrics
 from bridgeflow.agents import DataSanitizerAgent, SanitizerInput
 from bridgeflow.agents.semantic_resolver import load_field_dictionary
 from bridgeflow.config import REPO_ROOT
-from bridgeflow.schemas import CleanTable, Department
+from bridgeflow.schemas import CleanTable, Department, Link
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 
@@ -189,3 +189,57 @@ async def _clean_tables(period: str) -> list[CleanTable]:
     if not tables:
         raise HTTPException(status_code=409, detail=f"No sample data for period {period}.")
     return tables
+
+
+# --- confirming a mapping ----------------------------------------------------
+
+
+class ConfirmRequest(BaseModel):
+    source: str
+    target: str
+    relation: str
+    accepted: bool
+    evidence: str = ""
+    period: str = ""
+    confirmed_by: str = "unknown-agent"
+
+
+class ConfirmationResult(BaseModel):
+    source: str
+    target: str
+    relation: str
+    accepted: bool
+    confirmed_by: str
+    confirmed_at: str
+    remembered: int
+
+
+@router.post("/confirm-mapping", response_model=ConfirmationResult)
+async def confirm_mapping(request: ConfirmRequest) -> ConfirmationResult:
+    """Record one human decision about a mapping.
+
+    The only endpoint here that writes. Its caller is gated by `ctx.approval`
+    (`plugins/src/guards/approval-gate.ts`), so reaching this point means somebody
+    granted it — which is the part an auditor reads.
+    """
+    link = Link(
+        source=request.source,
+        target=request.target,
+        relation=request.relation,
+        confidence=1.0 if request.accepted else 0.0,
+        justification=request.evidence,
+    )
+    memory = mappings.confirm(
+        link, by=request.confirmed_by, accepted=request.accepted, period=request.period
+    )
+    recorded = memory.find(link)
+    assert recorded is not None  # just written
+    return ConfirmationResult(
+        source=recorded.source,
+        target=recorded.target,
+        relation=recorded.relation,
+        accepted=recorded.accepted,
+        confirmed_by=recorded.confirmed_by,
+        confirmed_at=recorded.confirmed_at,
+        remembered=len(memory.confirmations),
+    )

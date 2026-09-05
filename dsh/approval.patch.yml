@@ -1,0 +1,23 @@
+# Put a gate in front of the tools that change something.
+#
+# `sdk-minimal` does not load the approval plugin at all, which is why bash ran
+# unchallenged before `no-shell.patch.yml` removed it: there was no gate, not a gate
+# set to allow. `docs/13` §7.3 records what the seam actually promises —
+#
+#   - outcomes are closed: allowed-once / rejected / cancelled / unavailable
+#   - a missing, non-owning, throwing or non-conforming answerer resolves to
+#     `unavailable`, and callers deny on it. Absence fails closed.
+#   - `approval/asked` and `approval/decided` are logged as a pair
+#   - policy `never` means every ask resolves `rejected`, deterministically — it is
+#     the strict headless stance, not permission to proceed
+#
+# So loading this with no answerer composed is not a no-op: it is a deny-by-default.
+# That is the correct posture for an unattended run, and the reason the UI work
+# (#30) is what turns it into an actual human decision rather than a refusal.
+- insert:
+    - id: user-approval
+      name: '@deepseek-ai/dsh-user-approval'
+      config:
+        # Ask, rather than never: `never` would refuse without anyone seeing the
+        # question, which is right for CI and wrong for an operator sitting there.
+        policy: ask

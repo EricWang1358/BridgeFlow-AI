@@ -2,12 +2,13 @@
   "name": "bridgeflow-plugins",
   "private": true,
   "version": "0.0.0",
-  "description": "BridgeFlow's dsh plugins \u2014 tool shells, guards and UI slots; the bodies live in Python.",
+  "description": "BridgeFlow's dsh plugins — tool shells, guards and UI slots; the bodies live in Python.",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-user-approval": "0.1.2-rc.1",
     "@types/node": "^22.0.0",
     "typescript": "^5.6.0"
   },
