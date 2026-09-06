@@ -53,7 +53,7 @@ const POLL_SLICE_MS = 5_000
 async function post<T>(config: AnswererConfig, path: string, body: unknown, signal: AbortSignal): Promise<T> {
   const response = await fetch(`${config.baseUrl}${path}`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.BRIDGEFLOW_SERVICE_TOKEN ?? ''}` },
     body: JSON.stringify(body),
     signal,
   })
@@ -94,7 +94,7 @@ export function answerer(ctx: Context, config: AnswererConfig, details: PendingD
         try {
           const response = await fetch(
             `${config.baseUrl}/approvals/${question.id}?wait_ms=${slice}`,
-            { signal: AbortSignal.any(signals) },
+            { signal: AbortSignal.any(signals), headers: { authorization: `Bearer ${process.env.BRIDGEFLOW_SERVICE_TOKEN ?? ''}` } },
           )
           if (!response.ok) return next()
           state = (await response.json()) as Question
@@ -118,6 +118,7 @@ export function answerer(ctx: Context, config: AnswererConfig, details: PendingD
       // already failed — they would be approving something that is not there.
       await fetch(`${config.baseUrl}/approvals/${question.id}`, {
         method: 'DELETE',
+        headers: { authorization: `Bearer ${process.env.BRIDGEFLOW_SERVICE_TOKEN ?? ''}` },
         signal: AbortSignal.timeout(config.timeoutMs),
       }).catch(() => undefined)
     }

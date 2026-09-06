@@ -217,55 +217,22 @@ def test_the_console_never_interprets_what_it_is_shown(client):
 # --- the record says who allowed it -------------------------------------------
 
 
-def test_the_confirmation_names_the_person_not_only_the_agent(client, monkeypatch, tmp_path):
-    """Verified live on 2026-09-06: the mapping written after a click carried
-    `"authorised_by": "eric"` alongside the agent that ran it.
-
-    Before the join the record said `confirmed_by: live-approval-1` — the session id.
-    True, and the wrong answer to "who approved this", which is the only question the
-    record exists to answer."""
-    monkeypatch.setattr(
-        "bridgeflow.config.settings.mapping_memory_path", str(tmp_path / "mappings.json")
-    )
+def test_a_console_log_is_not_a_write_capability(client):
     question = _ask(client, call_id="call-abc")
     client.post(f"/approvals/{question['id']}/decide", json={"outcome": "allowed-once", "by": "eric"})
-
-    body = client.post(
-        "/tools/confirm-mapping",
-        json={
-            "source": "sku:sku-a1",
-            "target": "customer:acme-pte-ltd",
-            "relation": "ordered_by",
-            "accepted": True,
-            "confirmed_by": "agent-7",
-            "call_id": "call-abc",
-        },
-    ).json()
-
-    assert body["confirmed_by"] == "agent-7"
-    assert body["authorised_by"] == "eric"
+    response = client.post("/tools/confirm-mapping", json={
+        "source": "sku:sku-a1", "target": "customer:acme-pte-ltd", "relation": "ordered_by",
+        "accepted": True, "confirmed_by": "agent-7", "call_id": "call-abc",
+    })
+    assert response.status_code == 403
 
 
-def test_an_unjoinable_write_says_nothing_rather_than_something_plausible(client, monkeypatch, tmp_path):
-    """A call with no approval on file leaves the field empty. Filling it in with the
-    agent's own name would turn a missing signature into a forged one."""
-    monkeypatch.setattr(
-        "bridgeflow.config.settings.mapping_memory_path", str(tmp_path / "mappings.json")
-    )
-
-    body = client.post(
-        "/tools/confirm-mapping",
-        json={
-            "source": "sku:sku-b7",
-            "target": "customer:bayfront-ltd",
-            "relation": "ordered_by",
-            "accepted": True,
-            "confirmed_by": "agent-7",
-            "call_id": "call-never-approved",
-        },
-    ).json()
-
-    assert body["authorised_by"] == ""
+def test_an_unapproved_write_is_refused_instead_of_recording_an_empty_identity(client):
+    response = client.post("/tools/confirm-mapping", json={
+        "source": "sku:sku-b7", "target": "customer:bayfront-ltd", "relation": "ordered_by",
+        "accepted": True, "confirmed_by": "agent-7", "call_id": "call-never-approved",
+    })
+    assert response.status_code == 403
 
 
 def test_a_rejected_approval_cannot_be_joined_as_a_grant(client, monkeypatch, tmp_path):

@@ -40,6 +40,7 @@ export async function callBackend<T>(
   path: string,
   body: unknown,
   signal: AbortSignal,
+  approvalReceipt?: string,
 ): Promise<T> {
   const deadline = AbortSignal.timeout(config.timeoutMs)
   const combined = AbortSignal.any([signal, deadline])
@@ -48,7 +49,11 @@ export async function callBackend<T>(
   try {
     response = await fetch(`${config.baseUrl}${path}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${process.env.BRIDGEFLOW_SERVICE_TOKEN ?? ''}`,
+        ...(approvalReceipt ? { 'x-bridgeflow-approval': approvalReceipt } : {}),
+      },
       body: JSON.stringify(body),
       signal: combined,
     })

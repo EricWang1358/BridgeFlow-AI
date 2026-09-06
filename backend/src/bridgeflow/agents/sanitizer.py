@@ -40,7 +40,7 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
         frame, header_fixes = self._normalise_headers(frame, payload)
         corrections.extend(header_fixes)
 
-        frame = frame.dropna(how="all").reset_index(drop=True)
+        frame = frame.dropna(how="all")
 
         frame, duplicate_fixes = self._drop_duplicate_rows(frame, payload)
         corrections.extend(duplicate_fixes)
@@ -66,14 +66,19 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
             corrections.extend(fixes)
             columns.append(ColumnSpec(name=column, dtype=dtype))
 
-        rows, quarantine = self._split_quarantine(frame)
+        ambiguous = [c for c in corrections if c.rule == "date_parse_ambiguous"]
+        # Preserve the original cell for human review instead of persisting a guess.
+        for correction in ambiguous:
+            frame.at[correction.row, correction.column] = correction.before
+        blocked_rows = {c.row for c in [*shifted, *ambiguous]}
+        rows, quarantine = self._split_quarantine(frame.drop(index=list(blocked_rows), errors="ignore"))
+        threshold = max(1, len(frame.columns) // 2)
+        source_rows = [int(i) + 2 for i, row in frame.iterrows() if i not in blocked_rows
+                       and sum(not _is_blank(v) for v in row.values) >= threshold]
         # A row whose cells sit under the wrong headers is not repaired here — we
         # cannot know which way it slid — but it must not reach the Master Table
         # pretending to be sound. It is quarantined with the reason recorded.
-        shifted_rows = {c.row for c in shifted}
-        if shifted_rows:
-            quarantine.extend(rows[i] for i in sorted(shifted_rows) if i < len(rows))
-            rows = [row for i, row in enumerate(rows) if i not in shifted_rows]
+        quarantine.extend(_jsonable(frame.loc[i].to_dict()) for i in sorted(blocked_rows) if i in frame.index)
 
         return CleanTable(
             department=payload.department,
@@ -82,6 +87,8 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
             rows=rows,
             corrections=corrections,
             quarantine=quarantine,
+            source_rows=source_rows,
+            original_columns=dict(zip(frame.columns, map(str, payload.frame.columns), strict=True)),
         )
 
     # -- rules ---------------------------------------------------------------
@@ -138,7 +145,8 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
         voting = deciding.notna() & (deciding.astype(str).str.strip() != "")
         as_date = pd.to_datetime(series, errors="coerce", format="mixed")
         if not vote[voting].empty and vote[voting].notna().mean() > 0.8:
-            for idx, (before, after) in enumerate(zip(series, as_date, strict=False)):
+            for idx, before in series.items():
+                after = as_date.loc[idx]
                 if pd.notna(after) and str(before) != after.strftime("%Y-%m-%d"):
                     ambiguous = _is_ambiguous_date(str(before))
                     fixes.append(
@@ -147,7 +155,7 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
                             row=idx,
                             column=column,
                             before=str(before),
-                            after=after.strftime("%Y-%m-%d"),
+                            after=None if ambiguous else after.strftime("%Y-%m-%d"),
                             rule="date_parse_ambiguous" if ambiguous else "date_parse",
                             # An ambiguous date is a coin toss dressed as a fix. The
                             # confidence says so, and the reason names the other
@@ -156,9 +164,8 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
                             confidence=0.5 if ambiguous else 0.95,
                             reason=(
                                 (
-                                    "day-first and month-first both parse this; read as "
-                                    f"{after.strftime('%d %B')}. Declare the locale — "
-                                    "a Singaporean sheet almost certainly means the other one"
+                                    "day-first and month-first both parse this; quarantined. "
+                                    "Declare the locale or supply an unambiguous ISO date"
                                 )
                                 if ambiguous
                                 else "mixed date formats normalised to ISO"
@@ -204,7 +211,8 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
         )[voting]
         if readable.empty or readable.notna().mean() <= 0.8:
             return None
-        for idx, (before, after) in enumerate(zip(series, as_number, strict=False)):
+        for idx, before in series.items():
+            after = as_number.loc[idx]
             if pd.notna(after) and str(before) != str(after):
                 fixes.append(
                     Correction(
@@ -251,7 +259,7 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
             )
             for index in frame.index[duplicated]
         ]
-        return frame[~duplicated].reset_index(drop=True), fixes
+        return frame[~duplicated], fixes
 
     def _detect_shifted_rows(
         self, frame: pd.DataFrame, payload: SanitizerInput

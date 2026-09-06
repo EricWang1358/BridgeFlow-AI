@@ -81,23 +81,21 @@ async def test_daily_and_weekly_rows_land_on_a_monthly_axis():
 async def test_a_monthly_figure_can_be_opened_back_up():
     """An approver who cannot see the rows cannot check the total."""
     values, _ = grain.to_monthly(await _tables("2025-11"), DICTIONARY)
-    # Explicitly November: one sample row carries an ambiguous `03/11/2025`, which
-    # lands in March and is exactly the case the monthly axis exists to expose.
+    # The ambiguous row is quarantined; only unambiguous dates reach aggregation.
     output = next(v for v in values if v.measure == "output_quantity" and v.month == "2025-11")
 
     assert output.source_count > 1
     assert output.sources
 
 
-async def test_the_monthly_axis_exposes_a_row_filed_in_the_wrong_month():
-    """The ambiguous date lands in March. Before a monthly axis existed, nothing
-    in the pipeline would have shown that."""
+async def test_the_monthly_axis_excludes_undecided_dates():
+    """An ambiguous date must not invent a March period in a November batch."""
     values, _ = grain.to_monthly(await _tables("2025-11"), DICTIONARY)
 
     months = {v.month for v in values}
 
     assert "2025-11" in months
-    assert months - {"2025-11"}, "a misfiled row is visible on the axis, not hidden"
+    assert months == {"2025-11"}
 
 
 async def test_how_a_measurement_rolls_up_is_declared_not_assumed():
@@ -138,6 +136,8 @@ async def test_an_ambiguous_date_says_so_instead_of_choosing_quietly():
     assert ambiguous, "a coin toss was recorded as a confident fix"
     assert ambiguous[0].confidence <= 0.5
     assert "locale" in ambiguous[0].reason
+    assert ambiguous[0].after is None
+    assert any(row.get("date") == "03/11/2025" for row in table.quarantine)
 
 
 def test_rerunning_a_month_does_not_make_the_earlier_figures_unfindable(outputs):
@@ -171,6 +171,8 @@ async def test_a_row_is_filed_by_its_own_date_not_the_batch_label():
     from bridgeflow.schemas import EntityGraph
 
     tables = await _tables("2025-11", ("production",))
+    # A declared ISO March date is different from an unresolved slash-date guess.
+    tables[0].rows[0]["date"] = "2025-03-11"
     output = await SOPFlowEngine().run(
         SOPInput(
             period="2025-11", tables=tables, graph=EntityGraph(), findings=[], tensions=[]

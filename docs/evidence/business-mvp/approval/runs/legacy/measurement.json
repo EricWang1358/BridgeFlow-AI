@@ -1,0 +1,17 @@
+{
+  "mode": "live",
+  "approval_outcomes": [
+    "allowed-once",
+    "rejected",
+    "cancelled"
+  ],
+  "refusalNarration": "映射**未执行**：审批被拒绝。\n\n- **调用**：`confirm_mapping(source=\"sku:test-2\", target=\"customer:test\", relation=\"ordered_by\", accepted=true, ...)`\n- **实际结果**：该调用没有运行，被人工审阅者拒绝，理由原样如下：\n  > \"客户编码未核实，请销售负责人确认后再提交。\"\n- **后果**：没有任何记录写入；该决定不会被记住，下月再次导入时仍可能再次询问。请不要将此视为已完成，本次回合内也不会重试。",
+  "model_requests": 6,
+  "usage": {
+    "inputTokens": 3072,
+    "outputTokens": 877,
+    "totalTokens": 18157,
+    "cacheReadTokens": 14208,
+    "reasoningTokens": 92
+  }
+}

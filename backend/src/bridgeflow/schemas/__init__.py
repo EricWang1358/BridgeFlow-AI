@@ -72,12 +72,14 @@ class SourceRef(BaseModel):
     #: 0-based index into the cleaned rows.
     row: int
     column: str
+    source_row: int | None = None
+    original_column: str = ""
 
     def cite(self) -> str:
         """One line a person can act on."""
         where = self.filename or f"{self.department} {self.period}"
         sheet = f" [{self.sheet}]" if self.sheet else ""
-        return f"{where}{sheet} row {self.row} column {self.column}"
+        return f"{where}{sheet} row {self.source_row if self.source_row is not None else self.row} column {self.original_column or self.column}"
 
 
 class Correction(BaseModel):
@@ -99,6 +101,11 @@ class CleanTable(BaseModel):
     rows: list[dict[str, Any]] = Field(default_factory=list)
     corrections: list[Correction] = Field(default_factory=list)
     quarantine: list[dict[str, Any]] = Field(default_factory=list)
+    source_rows: list[int] = Field(default_factory=list)
+    filename: str = ""
+    sheet: str = ""
+    batch: str = ""
+    original_columns: dict[str, str] = Field(default_factory=dict)
 
 
 # --- stage 2: resolver --------------------------------------------------------

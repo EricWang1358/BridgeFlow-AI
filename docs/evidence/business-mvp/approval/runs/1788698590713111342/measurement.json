@@ -1,0 +1,17 @@
+{
+  "mode": "live",
+  "approval_outcomes": [
+    "allowed-once",
+    "rejected",
+    "cancelled"
+  ],
+  "refusalNarration": "映射确认**未执行，被拒绝**。\n\n**实际结果：**\n- `sku:test-2 → customer:test`（关系 `ordered_by`，期间 2025-11）的确认请求被审批人**拒绝**。\n- 审批人理由（原样转述）：**\"客户编码未核实，请销售负责人确认后再提交。\"**\n- 未写入任何记录；该决策不会被记住，未来导入时可能再次询问此映射。\n\n按要求不重试、不调用其他工具，也不在本轮内重新提交。",
+  "model_requests": 6,
+  "usage": {
+    "inputTokens": 3300,
+    "outputTokens": 916,
+    "totalTokens": 20472,
+    "cacheReadTokens": 16256,
+    "reasoningTokens": 145
+  }
+}

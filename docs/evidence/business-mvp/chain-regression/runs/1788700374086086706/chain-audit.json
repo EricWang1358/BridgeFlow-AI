@@ -1,0 +1,22 @@
+[
+  {
+    "name": "import B after exact report A clears old report identity",
+    "passed": false,
+    "error": "AssertionError [ERR_ASSERTION]: The input did not match the regular expression /尚无研判报告/. Input:\n\n'Error: Report not found in this batch'\n"
+  },
+  {
+    "name": "refresh preserves the explicitly selected batch B",
+    "passed": false,
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ '8f0500d5221043088a1632e1fa5d7cc7'\n- '6307d723342b423db4a70b90187c7dbb'\n"
+  },
+  {
+    "name": "switching batch does not label captain A dispatches as batch B progress",
+    "passed": false,
+    "error": "AssertionError [ERR_ASSERTION]: The input did not match the regular expression /审批.*会话|会话.*审批/. Input:\n\n'业务状态\\n' +\n  '\\n' +\n  '图为静态规则；高亮与计数来自当前批次和原生会话记录。点击节点筛选，下方可打开原始视图。\\n' +\n  '\\n' +\n  '批次编号 \\n' +\n  '打开\\n' +\n  '刷新\\n' +\n  '\\n' +\n  '2025-11 · 6307d723342b423db4a70b90187c7dbb · 需要人工复核 · 4 行\\n' +\n  '\\n' +\n  '导入并检查\\n' +\n  '需要配置字段字典\\n' +\n  '需要人工复核\\n' +\n  '可研判\\n' +\n  '没有可用数据\\n' +\n  '队长派活 → 四部门研判 → 规则校验\\n' +\n  '正在派活\\n' +\n  '已校验 0/4\\n' +\n  '研判未完成\\n' +\n  '四部门报告\\n' +\n  '需要处理 0\\n' +\n  '正常范围 0\\n' +\n  'confirm_mapping\\n' +\n  '处理中 0\\n' +\n  '允许一次 0\\n' +\n  '已拒绝 0\\n' +\n  '已取消/超时 0\\n' +\n  '\\n' +\n  '队长派活 → 四部门研判 → 规则校验 · 审批期限: 5 秒\\n' +\n  '\\n' +\n  '通过 confirm_mapping 和原生审批确认关系；决定用于后续导入，旧批次不改。 隔离行未进入计算。修正源表后重新导"
+  },
+  {
+    "name": "bad batch link clears old batch content and does not spin forever",
+    "passed": false,
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n"
+  }
+]

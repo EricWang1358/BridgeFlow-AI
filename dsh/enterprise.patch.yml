@@ -1,0 +1,169 @@
+# Reuse the pinned official Web shell. Policy belongs on the host as well as in UI.
+# This is for `dsh web`, not sdk-minimal; its approval service already exists.
+# The rc1 Python runtime omits this plugin's transitive title-llm dependency.
+# Native fallback titles remain; opening a session incurs no hidden model call.
+- id: session-title-llm
+  name: '@deepseek-ai/dsh-session-title-first-prompt-llm'
+  disabled: true
+  config: {}
+- id: session-persistence-jsonl
+  name: '@deepseek-ai/dsh-session-persistence-jsonl'
+  config:
+    root: !!js dshHomePath('sessions')
+    compression: none
+- id: tools
+  name: '@deepseek-ai/dsh-tools'
+  config:
+    mode: native
+- id: approval
+  name: '@deepseek-ai/dsh-user-approval'
+  config:
+    policy: ask
+- id: agent-presets
+  name: '@deepseek-ai/dsh-agent-presets'
+  config:
+    default: bridgeflow
+    includeShippedRoot: false
+    includeUserRoot: false
+    roots:
+      - path: ./dsh/presets
+        trust: system
+- insert:
+    - id: bridgeflow
+      name: '../plugins/src/index.ts'
+      config:
+        backendUrl: http://127.0.0.1:8000
+        approvalMode: native
+        allowMappingWrite: true
+- id: ui-cordis
+  name: '@deepseek-ai/dsh-client-ui-cordis'
+  disabled: true
+  config: {}
+
+- id: cordis-host-runner
+  name: '@deepseek-ai/dsh-cordis-host-runner'
+  disabled: true
+  config: {}
+- id: cordis-client-runner
+  name: '@deepseek-ai/dsh-cordis-client-runner'
+  disabled: true
+  config: {}
+
+- id: ui-settings-plugins
+  name: '@deepseek-ai/dsh-client-ui-settings-plugins'
+  disabled: true
+  config: {}
+
+- id: ui-settings-plugin-inventory
+  name: '@deepseek-ai/dsh-client-ui-settings-plugin-inventory'
+  disabled: true
+  config: {}
+
+- id: ui-settings-models
+  name: '@deepseek-ai/dsh-client-ui-settings-models'
+  disabled: true
+  config: {}
+
+- id: ui-model-selection
+  name: '@deepseek-ai/dsh-client-ui-model-selection'
+  disabled: true
+  config: {}
+
+- id: ui-permission
+  name: '@deepseek-ai/dsh-client-ui-permission-presets'
+  disabled: true
+  config: {}
+
+# The composer also renders permission controls from the host projection.
+- id: permission
+  name: '@deepseek-ai/dsh-permission-presets'
+  disabled: true
+  config: {}
+
+- id: ui-attachment
+  name: '@deepseek-ai/dsh-client-ui-attachment'
+  disabled: true
+  config: {}
+
+- id: ui-agent-preset
+  name: '@deepseek-ai/dsh-client-ui-agent-preset'
+  disabled: true
+  config: {}
+
+- id: ui-plan
+  name: '@deepseek-ai/dsh-client-ui-plan'
+  disabled: true
+  config: {}
+
+- id: ui-workflow-run
+  name: '@deepseek-ai/dsh-client-ui-workflow-run'
+  disabled: true
+  config: {}
+
+- id: ui-skill
+  name: '@deepseek-ai/dsh-client-ui-skill'
+  disabled: true
+  config: {}
+
+- id: ui-goal
+  name: '@deepseek-ai/dsh-client-ui-goal'
+  disabled: true
+  config: {}
+
+- id: ui-message-feedback
+  name: '@deepseek-ai/dsh-client-ui-message-feedback'
+  disabled: true
+  config: {}
+
+- id: message-feedback
+  name: '@deepseek-ai/dsh-message-feedback'
+  disabled: true
+  config: {}
+
+- id: command-feedback
+  name: '@deepseek-ai/dsh-command-feedback'
+  disabled: true
+  config: {}
+
+- id: directory-picker
+  name: '@deepseek-ai/dsh-host-directory-picker-auto'
+  disabled: true
+  config: {}
+
+- id: file-reference-local
+  name: '@deepseek-ai/dsh-file-reference-local'
+  disabled: true
+  config: {}
+
+- id: ui-reference
+  name: '@deepseek-ai/dsh-client-ui-reference'
+  disabled: true
+  config: {}
+
+- id: session-telemetry-otel
+  name: '@deepseek-ai/dsh-session-telemetry-otel'
+  disabled: true
+  config: {}
+
+- id: code-runtime
+  name: '@deepseek-ai/dsh-code-runtime-worker-thread'
+  disabled: true
+  config: {}
+
+# Official model-facing delegation; the existing Web composition supplies spawn.
+- insert:
+    - id: bridgeflow-subagent-tool
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: subagent
+        backgroundMode: one-shot
+        enableRunInBackground: false
+        modelSelectionSettings: false
+        toolFilter:
+          allow: []
+        maxDepth: 1
+        agentOptions:
+          maxTokens: 4000
+          reasoningEffort: low
+        persona: 'You are a bounded department reviewer. Use only your host-supplied packet. Submit structured_output. No files, lateral contact, business execution or delegated work.'

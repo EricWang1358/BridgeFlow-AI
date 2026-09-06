@@ -1,0 +1,3 @@
+project,date,sales,cost,ar_balance,ar_days,currency
+SKU-A1,2025-11-30,1800,2000,800,60,SGD
+SKU-B2,2025-11-30,1200,1300,600,30,SGD

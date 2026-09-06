@@ -1,0 +1,256 @@
+{
+  "month": "2025-11",
+  "retention": "2 complete runs per scenario; aliases point to latest",
+  "files": [
+    {
+      "path": "data/risk/production.csv",
+      "purpose": "Upload to production; month 2025-11",
+      "model_input": false
+    },
+    {
+      "path": "data/risk/procurement.csv",
+      "purpose": "Upload to procurement; month 2025-11",
+      "model_input": false
+    },
+    {
+      "path": "data/risk/finance.csv",
+      "purpose": "Upload to finance; month 2025-11",
+      "model_input": false
+    },
+    {
+      "path": "data/risk/marketing.csv",
+      "purpose": "Upload to marketing; month 2025-11",
+      "model_input": false
+    },
+    {
+      "path": "data/balanced/production.csv",
+      "purpose": "Upload to production; month 2025-11",
+      "model_input": false
+    },
+    {
+      "path": "data/balanced/procurement.csv",
+      "purpose": "Upload to procurement; month 2025-11",
+      "model_input": false
+    },
+    {
+      "path": "data/balanced/finance.csv",
+      "purpose": "Upload to finance; month 2025-11",
+      "model_input": false
+    },
+    {
+      "path": "data/balanced/marketing.csv",
+      "purpose": "Upload to marketing; month 2025-11",
+      "model_input": false
+    },
+    {
+      "path": "data/dictionary.yaml",
+      "purpose": "Frozen business rules; inspect before presenting",
+      "model_input": "bounded context only"
+    },
+    {
+      "path": "data/expected.json",
+      "purpose": "Independent answer key; NEVER upload or feed to a model",
+      "model_input": false
+    },
+    {
+      "path": "evidence/risk/business-review.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/risk/business-state-dark.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/risk/business-state-en.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/risk/business-state.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/risk/business-upload.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/risk/department-files.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/risk/manifest.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/risk/measurement.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/risk/native-spawn.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/risk/report.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/risk/session-audit.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/balanced/business-review.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/balanced/business-state-dark.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/balanced/business-state-en.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/balanced/business-state.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/balanced/business-upload.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/balanced/department-files.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/balanced/manifest.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/balanced/measurement.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/balanced/native-spawn.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/balanced/report.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/balanced/session-audit.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/step-limit/business-review.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/step-limit/business-state-dark.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/step-limit/business-state-en.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/step-limit/business-state.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/step-limit/business-upload.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/step-limit/department-files.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/step-limit/manifest.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/step-limit/measurement.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/step-limit/native-spawn.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/step-limit/report.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/step-limit/session-audit.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/approval/approval-events.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/approval/business-state.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/approval/manifest.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/approval/measurement.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/approval/native-approval.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/approval/rejection-note.png",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    },
+    {
+      "path": "evidence/approval/session-audit.json",
+      "purpose": "Retained measured evidence; not a live state",
+      "model_input": false
+    }
+  ]
+}

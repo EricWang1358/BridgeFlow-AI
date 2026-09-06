@@ -13,13 +13,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from bridgeflow import approvals
+from bridgeflow.config import settings
 
-router = APIRouter(tags=["approvals"])
+
+def require_legacy_console() -> None:
+    if not settings.bridgeflow_enable_legacy_console:
+        raise HTTPException(403, "Legacy console disabled; answer approvals in DSH Web")
+
+
+router = APIRouter(tags=["approvals"], dependencies=[Depends(require_legacy_console)])
 
 #: Longest a single wait call may block. Bounded so a client that dies mid-wait
 #: releases the connection, and so the answerer re-checks its own deadline and its

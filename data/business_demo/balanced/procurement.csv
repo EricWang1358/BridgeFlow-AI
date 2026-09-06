@@ -1,0 +1,5 @@
+material,date,qty,price,budget_price,currency
+RM-A,2025-11-02,10,10,10,SGD
+RM-A,2025-11-09,20,10,10,SGD
+RM-B,2025-11-02,10,20,20,SGD
+RM-B,2025-11-09,10,20,20,SGD

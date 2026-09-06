@@ -1,0 +1,316 @@
+[
+  {
+    "session_directory": "session-6c8ae1ee-d5b5-46f9-b94e-3a7959970bd6",
+    "header": {
+      "id": "session-6c8ae1ee-d5b5-46f9-b94e-3a7959970bd6",
+      "createdAt": 1788698441445
+    },
+    "events": [
+      {
+        "type": "request/header",
+        "time": 1788698443217,
+        "data": {
+          "tools": [
+            "aggregate_metric",
+            "ask_user_question",
+            "batch_summary",
+            "confirm_mapping",
+            "list_metrics",
+            "lookup_field_dictionary",
+            "review_context",
+            "review_finalize",
+            "subagent"
+          ]
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788698445548,
+        "data": {
+          "turn": 1,
+          "step": 1,
+          "usage": {
+            "inputTokens": 2569,
+            "outputTokens": 272,
+            "totalTokens": 2841,
+            "cacheReadTokens": 0,
+            "reasoningTokens": 130
+          },
+          "source": {
+            "kind": "model",
+            "provider": "deepseek-official",
+            "model": "deepseek-v4-flash"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788698445553,
+        "data": {
+          "turn": 1,
+          "step": 1,
+          "name": "confirm_mapping",
+          "callId": "call_00_iur5h0KIaGlITvKl1h216784"
+        }
+      },
+      {
+        "type": "approval/asked",
+        "time": 1788698445556,
+        "data": {
+          "id": "dcd8938a-0fed-416e-ac9f-3a51c1a29ac5",
+          "toolName": "confirm_mapping",
+          "callId": "call_00_iur5h0KIaGlITvKl1h216784",
+          "reason": "confirm_mapping records a decision that will be reused next month and cited in an audit. It changes stored state; nothing is written without approval.\nsource: sku:test-0\ntarget: customer:test\nrelation: ordered_by\naccepted: true\nevidence: 合成业务用例的人工作业关系\nperiod: 2025-11"
+        }
+      },
+      {
+        "type": "approval/decided",
+        "time": 1788698445973,
+        "data": {
+          "id": "dcd8938a-0fed-416e-ac9f-3a51c1a29ac5",
+          "outcome": "allowed-once"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788698446140,
+        "data": {
+          "error": false,
+          "source": {
+            "kind": "tool",
+            "callId": "call_00_iur5h0KIaGlITvKl1h216784"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788698448122,
+        "data": {
+          "turn": 1,
+          "step": 2,
+          "usage": {
+            "inputTokens": 108,
+            "outputTokens": 155,
+            "totalTokens": 3079,
+            "cacheReadTokens": 2816,
+            "reasoningTokens": 15
+          },
+          "source": {
+            "kind": "model",
+            "provider": "deepseek-official",
+            "model": "deepseek-v4-flash"
+          },
+          "text": [
+            "映射确认已获审批并记录在案。\n\n**实际结果：**\n- `sku:test-0 → customer:test`（关系 `ordered_by`，期间 2025-11）已被**接受**。\n- 决策由会话 `session-6c8ae1ee-d5b5-46f9-b94e-3a7959970bd6` 记录，并经 `dsh-authenticated-session` 审批。\n- 该映射现有 1 条确认记录在档；此映射以后不会再被重复询问。\n\n未发生拒绝，因此无需转述拒绝理由。按要求未重试、未调用其他工具。"
+          ]
+        }
+      },
+      {
+        "type": "turn/end",
+        "time": 1788698448123,
+        "data": {
+          "turn": 1,
+          "reason": {
+            "kind": "completed"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788698449605,
+        "data": {
+          "turn": 2,
+          "step": 1,
+          "usage": {
+            "inputTokens": 99,
+            "outputTokens": 142,
+            "totalTokens": 3313,
+            "cacheReadTokens": 3072,
+            "reasoningTokens": 0
+          },
+          "source": {
+            "kind": "model",
+            "provider": "deepseek-official",
+            "model": "deepseek-v4-flash"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788698449606,
+        "data": {
+          "turn": 2,
+          "step": 1,
+          "name": "confirm_mapping",
+          "callId": "call_00_ET_IA4oaytvyFSAm08SZxn01236"
+        }
+      },
+      {
+        "type": "approval/asked",
+        "time": 1788698449608,
+        "data": {
+          "id": "fde48faf-c82f-4afa-82b0-758f626d50fe",
+          "toolName": "confirm_mapping",
+          "callId": "call_00_ET_IA4oaytvyFSAm08SZxn01236",
+          "reason": "confirm_mapping records a decision that will be reused next month and cited in an audit. It changes stored state; nothing is written without approval.\naccepted: true\nevidence: 合成业务用例的人工作业关系\nperiod: 2025-11\nrelation: ordered_by\nsource: sku:test-2\ntarget: customer:test"
+        }
+      },
+      {
+        "type": "bridgeflow/approval-note",
+        "time": 1788698450250,
+        "data": {
+          "callId": "call_00_ET_IA4oaytvyFSAm08SZxn01236",
+          "note": "客户编码未核实，请销售负责人确认后再提交。",
+          "author": "dsh-authenticated-session"
+        }
+      },
+      {
+        "type": "approval/decided",
+        "time": 1788698450325,
+        "data": {
+          "id": "fde48faf-c82f-4afa-82b0-758f626d50fe",
+          "outcome": "rejected"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788698450349,
+        "data": {
+          "error": true,
+          "source": {
+            "kind": "tool",
+            "callId": "call_00_ET_IA4oaytvyFSAm08SZxn01236"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788698451521,
+        "data": {
+          "turn": 2,
+          "step": 2,
+          "usage": {
+            "inputTokens": 216,
+            "outputTokens": 116,
+            "totalTokens": 3532,
+            "cacheReadTokens": 3200,
+            "reasoningTokens": 0
+          },
+          "source": {
+            "kind": "model",
+            "provider": "deepseek-official",
+            "model": "deepseek-v4-flash"
+          },
+          "text": [
+            "映射确认**未执行，被拒绝**。\n\n**实际结果：**\n- `sku:test-2 → customer:test`（关系 `ordered_by`，期间 2025-11）的确认请求被审批人**拒绝**。\n- 审批人理由（原样转述）：**\"客户编码未核实，请销售负责人确认后再提交。\"**\n- 未写入任何记录；该决策不会被记住，未来导入时可能再次询问此映射。\n\n按要求不重试、不调用其他工具，也不在本轮内重新提交。"
+          ]
+        }
+      },
+      {
+        "type": "turn/end",
+        "time": 1788698451522,
+        "data": {
+          "turn": 2,
+          "reason": {
+            "kind": "completed"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788698453144,
+        "data": {
+          "turn": 3,
+          "step": 1,
+          "usage": {
+            "inputTokens": 168,
+            "outputTokens": 142,
+            "totalTokens": 3766,
+            "cacheReadTokens": 3456,
+            "reasoningTokens": 0
+          },
+          "source": {
+            "kind": "model",
+            "provider": "deepseek-official",
+            "model": "deepseek-v4-flash"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788698453147,
+        "data": {
+          "turn": 3,
+          "step": 1,
+          "name": "confirm_mapping",
+          "callId": "call_00_ET_bv5F49UuDugJvMlAaJTU1063"
+        }
+      },
+      {
+        "type": "approval/asked",
+        "time": 1788698453148,
+        "data": {
+          "id": "f27766a1-1dcd-43a9-bcf4-89c9c3f3703f",
+          "toolName": "confirm_mapping",
+          "callId": "call_00_ET_bv5F49UuDugJvMlAaJTU1063",
+          "reason": "confirm_mapping records a decision that will be reused next month and cited in an audit. It changes stored state; nothing is written without approval.\naccepted: true\nevidence: 合成业务用例的人工作业关系\nperiod: 2025-11\nrelation: ordered_by\nsource: sku:test-4\ntarget: customer:test"
+        }
+      },
+      {
+        "type": "approval/decided",
+        "time": 1788698458149,
+        "data": {
+          "id": "f27766a1-1dcd-43a9-bcf4-89c9c3f3703f",
+          "outcome": "cancelled"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788698458151,
+        "data": {
+          "error": true,
+          "source": {
+            "kind": "tool",
+            "callId": "call_00_ET_bv5F49UuDugJvMlAaJTU1063"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788698459707,
+        "data": {
+          "turn": 3,
+          "step": 2,
+          "usage": {
+            "inputTokens": 140,
+            "outputTokens": 89,
+            "totalTokens": 3941,
+            "cacheReadTokens": 3712,
+            "reasoningTokens": 0
+          },
+          "source": {
+            "kind": "model",
+            "provider": "deepseek-official",
+            "model": "deepseek-v4-flash"
+          },
+          "text": [
+            "映射确认**未执行**。\n\n**实际结果：**\n- `sku:test-4 → customer:test`（关系 `ordered_by`，期间 2025-11）的确认请求在任何人答复前被**撤回**。\n- 未写入任何记录；该决策不会被记住，未来导入时可能再次询问此映射。\n\n按要求不重试、不调用其他工具，也不在本轮内重新提交。"
+          ]
+        }
+      },
+      {
+        "type": "turn/end",
+        "time": 1788698459708,
+        "data": {
+          "turn": 3,
+          "reason": {
+            "kind": "completed"
+          }
+        }
+      }
+    ]
+  }
+]

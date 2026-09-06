@@ -9,7 +9,7 @@
 | --- | --- |
 | **想直接把它跑起来** | [`../HANDOFF.md`](../HANDOFF.md) 的「怎么把它跑起来」一节，就够了 |
 | 接手开发的人 | [`../CLAUDE.md`](../CLAUDE.md) → [`../HANDOFF.md`](../HANDOFF.md) → [`13`](13-golden-standard.md) |
-| 评委 / 外部读者 | [`01`](01-problem-and-hmw.md) → [`04`](04-demo-plan.md) → [`12`](12-delivery-controls.md) |
+| 评委 / 外部读者 | [`17`](17-business-mvp-acceptance.md) → [`00`](00-status.md) → [`01`](01-problem-and-hmw.md) |
 | 想知道某个数字 | [`00`](00-status.md)，只有这一处 |
 
 ## 三份常驻文档的分工
@@ -45,6 +45,8 @@
 | [`12-delivery-controls.md`](12-delivery-controls.md) | 🟢 | EN | 评委 | 提交表单内容。**每行带 Status，区分已实现与承诺** |
 | [`13-golden-standard.md`](13-golden-standard.md) | 🟢 | 中 | 开发 | **架构权威**，与其他文档冲突时以它为准 |
 | [`14-wsl-setup.md`](14-wsl-setup.md) | 🔵 | 中 | 开发 | WSL 环境搭建，每步带验证 |
+| [`17-business-mvp-acceptance.md`](17-business-mvp-acceptance.md) | 🟢 | 中 | 业务用例负责人 · 演示人 | 当前 MVP 演示、模拟负责人验收与复演命令 |
+| [`16-dsh-web-review.md`](16-dsh-web-review.md) | 🔵 | 中 | 开发 · 团队 | 原生 Web 复用、权限边界、issue 重排与 Rubric 验收 |
 | [`15-plugin-design.md`](15-plugin-design.md) | 🔵 | 中 | 开发 | dsh 插件设计，读完官方文档后的结论落这里 |
 
 ## 语言规则
@@ -57,3 +59,8 @@
 - issue 正文与 `docs/` 中文文档：跟随所在语境
 
 新增文档时先决定读者，再决定语言。
+
+- [18 — 原生队长、业务状态页与会话治理](18-native-captain-and-state.md)
+- [一站式业务 Demo](../demo-walkthrough/README.md)
+
+- [19 — 跨操作链路审计、已修缺陷与恢复缺口](19-chain-audit.md)

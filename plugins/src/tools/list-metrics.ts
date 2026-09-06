@@ -19,7 +19,7 @@ export function listMetrics(config: BackendConfig) {
     description:
       'List the metrics that can be computed, with their formula and the declared ' +
       'fields each one needs. Call this before aggregate_metric rather than guessing a name.',
-    parameters: {},
+    parameters: { batch_id: { type: 'string', description: 'Uploaded batch whose frozen dictionary to use.' } },
     output: {
       schema: {
         type: 'object',
@@ -65,8 +65,11 @@ export function listMetrics(config: BackendConfig) {
             ]
       },
     },
-    async execute(_args, exec) {
-      return callBackend<MetricCatalogue>(config, '/tools/list-metrics', {}, exec.signal)
+    async execute(args, exec) {
+      const value = await callBackend<MetricCatalogue>(config, '/tools/list-metrics', args, exec.signal)
+      // The Python catalogue also carries private evaluator settings. The tool's
+      // public contract deliberately exposes only the declared metric interface.
+      return { metrics: value.metrics.map(({ name, unit, formula, requires }) => ({ name, unit, formula, requires })) }
     },
   })
 }

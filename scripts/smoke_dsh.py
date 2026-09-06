@@ -66,8 +66,8 @@ def main() -> int:
         print(f"  events = {len(result.events)}, notifications = {len(result.notifications)}")
 
     step("2. our DshProvider: structured output")
-    from bridgeflow.llm.providers.dsh import DshProvider
     from bridgeflow.llm.base import Message
+    from bridgeflow.llm.providers.dsh import DshProvider
 
     async def run_provider() -> None:
         provider = DshProvider()
@@ -104,4 +104,4 @@ if __name__ == "__main__":
     except Exception:
         print("\n=== SMOKE TEST FAILED ===")
         traceback.print_exc()
-        sys.exit(1)
+        raise

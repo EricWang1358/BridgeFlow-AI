@@ -42,7 +42,7 @@ async def test_a_metric_is_computed_from_declared_columns():
         "total_output", "2025-11", await _tables("production"), dictionary=DICTIONARY
     )
 
-    assert value.value == 4030
+    assert value.value == 3050  # Clean subset; the 980-unit ambiguous date is quarantined.
     assert value.formula
 
 
@@ -52,7 +52,7 @@ async def test_the_sources_are_a_bounded_sample_with_a_true_count():
     )
 
     assert len(value.sources) <= metrics.EVIDENCE_SAMPLE
-    assert value.source_count == 5
+    assert value.source_count == 4
     assert value.truncated is False
 
 

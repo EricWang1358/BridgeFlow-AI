@@ -26,7 +26,7 @@
 resolver 已经撤出来了（#25、PR #34）——纯判断类调用走 `deepseek` 直连。
 实测代价：同一次裁决在 dsh 上是 12–212 秒、光工具输出就 7,100 token，
 因为它会自发跑十几步 bash 把整个仓库读一遍；直连是 3.6 秒、707 token。
-**sanitizer 与 evaluator 仍在 dsh 上**，同样的账还欠着。
+这段说明针对遗留 Python provider 路径；当前默认入口及尚未迁移部分以 HANDOFF 为准。
 
 ### 只用官方内置插件
 
@@ -138,14 +138,13 @@ source ~/Hackathon2026/.venv/bin/activate
 source ~/Hackathon2026/BridgeFlow-AI/env.sh
 
 cd backend && ruff check src tests
-pytest -q                               # ⚠️ 慢，且**真的调用 API 计费**
+pytest -q                               # conftest 隔离 provider，离线回归
 python ../scripts/smoke_dsh.py          # 同样会计费，别随手跑
 ```
 
-`.env.example` 里 `LLM_PROVIDER=mock` 仍是默认值，但**本机 `.env` 不是**：
-`LLM_PROVIDER=dsh` + `LLM_PROVIDER_RESOLVER=deepseek`。所以本机跑测试会花钱。
-跑之前想清楚值不值，跑完把花销告诉用户。耗时数字见
-[`docs/00-status.md`](docs/00-status.md)。
+测试配置由 `backend/tests/conftest.py` 隔离，普通 pytest 不得继承开发者的真实
+provider、输出或记忆。离线回归只证明规则与契约；真实判断质量需显式运行模型评测，
+记录费用与局限，不能把 mock 输出当作真实研判证据。
 
 ---
 

@@ -1,201 +1,62 @@
 # 交接说明
 
-**更新于 2026-09-06。** 本文独占**易变状态**：当前进度、怎么把它跑起来、下一步、已知缺陷。
+更新于 2026-09-06。当前默认产品入口已改为 **原生 DSH Web**：侧栏可导入 CSV / 单 sheet XLSX，查看主表、待确认映射、修正记录、隔离行和四部门研判报告；对话、会话、审批和轨迹使用 DSH 原有前端。
 
-分工（见 [`docs/README.md`](docs/README.md)）：硬约束在 [`CLAUDE.md`](CLAUDE.md)，
-架构决策在 [`docs/13-golden-standard.md`](docs/13-golden-standard.md)，
-**所有实测数字在 [`docs/00-status.md`](docs/00-status.md)——本文引用，不复写**。
-
-**情况变化后请更新本文**，但不要把内容抄回上面三处。
-
----
-
-## 一句话现状
-
-**能跑，但没有上传界面。** 四部门 CSV 进去、对齐后的 Master Table 加风险发现出来，
-整条链路真实可用；唯一存在的图形界面是审批控制台。rubric 7 项中 2 项达标
-（第 1、第 4），逐条比对见 `docs/00-status.md` 第五节。
-
-第一周除两条等业务方外全部完成，第二周进行中。
-
----
+当前变更是本地实现，未提交或修改远端看板。架构原则见 [docs/13](docs/13-golden-standard.md)，业务演示与模拟负责人验收见 [docs/17](docs/17-business-mvp-acceptance.md)，本次审查与 issue 重排建议见 [docs/16](docs/16-dsh-web-review.md)，所有实测数字与验证边界见 [docs/00](docs/00-status.md#原生-web-重构复测2026-09-06)。
 
 ## 怎么把它跑起来
 
-### 启动
+在仓库根目录执行：
 
 ```bash
-source ~/Hackathon2026/.venv/bin/activate
-source ~/Hackathon2026/BridgeFlow-AI/env.sh      # DSH_* 只能由启动 shell 导出
-cd ~/Hackathon2026/BridgeFlow-AI/backend
-uvicorn bridgeflow.api.main:app --port 8000
+source ../.venv/bin/activate
+source ./env.sh
+npm install -g @deepseek-ai/dsh@0.1.2-rc.1
+cd plugins
+pnpm install --frozen-lockfile
+pnpm run build
+cd ..
+python scripts/start_web.py
 ```
 
-浏览器开 <http://127.0.0.1:8000/console> 并**留着别关**。任何要写入的动作都会停在那里
-等人；没人看着就是拒绝，不是放行。
+打开终端打印的带凭证 DSH Web 地址。启动器检查锁定版本，选择官方 npm `dsh`，并启动仅监听 localhost 的 Python 服务。共享服务凭证由启动器生成，浏览器不接收它。可通过 `BRIDGEFLOW_DSH` 指定同版本 npm CLI 的完整路径；不要指定 Python SDK 的打包二进制。后端使用端口 8000，Web 端口可传 `--port 3082`。`Ctrl-C` 会停止这次启动的两个进程。
 
-### 三件今天就能做的事
-
-**一、跑一整个月的四部门对账**（⚠️ **真实计费**，实测 2m25s）
+`DSH_*` / `DEEPSEEK_BASE_URL` 仍只能由 shell 导出，不能放 `.env`。根目录启动时不会读取 `backend/.env`：将领域配置导出到启动 shell，或放根目录 `.env`（仅领域变量）。生产字典是 `FIELD_DICTIONARY_PATH`；缺失时界面明确显示未配置，不能猜测。仅练习时可显式设置：
 
 ```bash
-cd data/samples
-curl -X POST localhost:8000/analyze \
-  -F period=2025-11 \
-  -F departments=production  -F files=@production_2025-11.csv \
-  -F departments=procurement -F files=@procurement_2025-11.csv \
-  -F departments=finance     -F files=@finance_2025-11.csv \
-  -F departments=marketing   -F files=@marketing_2025-11.csv \
-  -o /tmp/analyze.json
+export FIELD_DICTIONARY_PATH=data/business_demo/dictionary.yaml
 ```
 
-回来的是 `clean_tables` / `graph` / `master_table` / `risk_report` 四段。
-实测这一次：**33 条清洗修正、0 条隔离、15 个实体、1 条已确认关系、6 条待裁决、
-9 行 Master Table、6 条发现、8 处张力、1 张卡片**。
+首次会话选择原生工作区 `BridgeFlow`。点击「导入与数据」→选择月份与部门文件→「导入并检查」→检查主表、隔离与映射→复制分析请求到原生对话框。后续工具都携带同一 `batch_id`；`review_batch` 发起官方四部门子会话，完成后在「四部门报告」查看建议、责任和来源。导入与规则计算不计模型费用；在原生对话中提交分析会使用配置模型，可能计费。
 
-结果落在 `data/outputs/2025-11.json`，历史版本在 `data/outputs/versions/`——
-已发布的批次不会被静默重算（FR 11）。
+映射写入走 `confirm_mapping` 与 DSH 原生审批面板。批准后由主机为**本次参数**生成一次性回执；拒绝不会写入。原生审批现在支持可选拒绝理由，先记录会话审计再送回 agent，不依赖旧控制台。关闭写权限时应同时将 `dsh/enterprise.patch.yml` 的 `allowMappingWrite` 与 Python 环境的 `BRIDGEFLOW_ALLOW_MAPPING_WRITE` 设为 `false`。
 
-> ⚠️ **上面那组数和那份落盘结果都是修复前产出的，里面带着两个已知错误**：
-> `material_spend` 报的 13,540 是把一整列**单价**加起来当支出（PR #91 修，真值 117,250
-> 且第四张 PO 没价、因此这个月没有可辩护的总额）；Master Table 那 9 行里 `SKU-A1` 因两种
-> 拼法占了 2 行、`RM-Alu-6061` 三张 PO 只剩最后一张（PR #93 修）。
-> **重跑才会反映出来**——重跑真实计费；而且 #79（`2025-03`）没修，重跑它还在。
+当前认证表示共享 DSH 会话，记录为 `dsh-authenticated-session`，**没有实现员工 SSO、角色管理或租户隔离**。
 
-**二、问一个能被追回单元格的数字**（不计费，纯规则）
+## 复测
 
 ```bash
-curl -X POST localhost:8000/tools/aggregate-metric \
-  -H 'content-type: application/json' \
-  -d '{"metric":"total_output","period":"2025-11","department":"production"}'
+cd backend
+pytest -q
+ruff check src tests ../scripts/start_web.py
+cd ../plugins
+pnpm run typecheck
+pnpm test
+pnpm run build
+pnpm exec playwright install chromium
+pnpm run smoke:web
+pnpm run smoke:business
+BRIDGEFLOW_TEST_FAULT=step-limit pnpm run smoke:business
 ```
 
-`4030 units`，并附上它加了哪几个单元格。`list-metrics` 列出当前字段字典**支持**的全部
-指标——问一个没声明的指标会 409 拒绝，不会编一个数出来。
+Python 测试在 `conftest.py` 隔离 provider、字典、输出与记忆。浏览器测试用临时 DSH_HOME、临时数据与离线适配器，默认不访问付费模型；真实模型复演显式加 `BRIDGEFLOW_LIVE=1`。本次已完成真实模型及业务解释审读，范围与结果见 `docs/00` 和 `docs/17`，不代表未知数据集质量。`BRIDGEFLOW_PYTHON` 可指定 smoke 的 Python；默认使用仓库外 `../.venv/bin/python`。
 
-**三、让 agent 停下来等你批**（⚠️ 真实计费，约 4 秒）
+## 仍需做什么
 
-控制台开着，跑一次会调 `confirm_mapping` 的 turn。它会停住，控制台出现待确认，
-点「允许一次」或「拒绝」。批准则映射写入 `data/outputs/mappings.json` 并带上
-`authorised_by`；拒绝则文件不动。**拒绝时在理由框里写一句**——那句话会原样进模型收到的
-拒绝文本，并由它复述出来（#94）；这一拍现在有了可看见的后果。**两条路径都在真实运行时上量过**
-（`docs/00-status.md` 第五节）。
+1. **真实企业口径**：合成案例已经有可复算指标、字段与来源，真实 OA 科目、客户级规则、多 sheet/合并表头仍须业务确认；不能将本例正数成本规则直接套到混合符号 GL。
+2. **企业身份与交付流程**：员工 SSO、角色/租户边界、版本 diff、正式签发仍未实现。
+3. **#46 / #61 / #88 人工修复**：字段向导与隔离 release/discard 未实现。现阶段修正源文件后重导，原批次不改；未声明日期的歧义值拒绝参与总额。
+4. **#38 / #40 / #87 远端评审**：本地已接通官方 spawn、结构化校验、部分失败、原生报告卡和拒绝理由。以复演证据评审 issue 范围，远端尚未改动；旧 Python Orchestrator 不能作为回退。
+5. **扩大验证**：目前是真实模型在可见合成案例上的验收，尚非留出集或真实客户验收；模型补充文字仍需业务复核。大规模性能和更广泛攻击评测未完成。
 
-### 你现在**做不到**的事
-
-| 想做的 | 现状 |
-| --- | --- |
-| 网页上传 XLS | **没有上传界面**，只能走 `curl`（#40 第三周） |
-| 看实体图并点确认 | 确认能做（控制台），**图没有**（#40） |
-| 看 Master Table 的表格视图 | 只有 JSON |
-| 真实 XLS（多 sheet / 表头不在第一行 / 合并单元格） | **未验证**（#47） |
-| 报价模拟 | 价格带是模型断言的，不是算出来的（#7），**演示时建议整拍砍掉** |
-| 处理被隔离的行 | 没有接口（#88），而且样本里 `0 quarantined`，这条路径从没被走过 |
-
----
-
-## 做完了什么
-
-**第一周**（除两条外全完成）：#4 #13 #14 #16 #26 #27 #28 #32 #37 #42 #44 #45 #51 #58 #59 #65 #67
-剩 #23、#75——都在等业务方，不是开发问题。
-
-**第二周**（进行中）：#12 #18 #29 #30 #39 #79 已做：#91 #93（算术，见下）
-
-按能力说，这些加起来是：
-
-- **工具真的到达 Python**：`defineTool` 在 TypeScript，函数体在 pandas，中间走 HTTP
-- **拒绝真的发生**：字段字典没声明的东西，一律 409，不猜
-- **人真的能介入**：批准 / 拒绝 / 无人应答，三条路径都实测过
-- **注入真的被挡**：`ctx.tools.guard()` 是单调拒绝，后面的监听器翻不了案
-- **记忆真的跨月**：确认过的映射下个月不再问，证据变了会重新问
-- **算术真的对过**：Master Table 现在按实体身份 join、按字典声明的口径折叠多行
-  （#93）；支出按声明派生而不是把单价列当金额列加（#91）。两处都是**证据齐全、
-  单元格可回溯、数字仍然错**那一类——`rollups` 缺声明就拒绝整张表，不猜
-
----
-
-## 下一步
-
-### 建议顺序
-
-1. **#89 —— evaluator 反复请求不存在的指标。** 一次 `/analyze` 运行内 `aggregate_metric`
-   被全拒（次数以 [`docs/00-status.md`](docs/00-status.md) 第四节为准，不在这里复写）。
-   拒绝机制工作得很好，代价是时间和钱。**注意 409 已经写着「Call list_metrics」而模型
-   十几次没听**，所以修法是把候选指标名**内联进错误体**，不是再补一句提示。
-2. **#87 里那条分钟级的** —— 控制台标一行「此记录为声明，非认证身份」。
-   评委看到我们自己标边界，比看到一个假装严谨的字段强。
-3. **#79 —— 月度轴。** 实测 Master Table 里出现了 `2025-03` 这个期间：`03/11/2025`
-   被读成 3 月 11 日。行里带着 `period_from` 解释了原因，**但没人被挡住**。
-4. **#92（新开）—— 财务格把销售与成本净成一个数。** #93 之后暴露的，要等真实科目表。
-5. **#82 / #46 —— 映射记忆的入口。** 记忆能用，但没有产生记忆的界面。
-
-**刚做完**：#91 支出按声明派生（不再加单价列）、#93 Master Table 按实体身份 join 并按
-`rollups` 折叠、#94 拒绝的理由进入模型叙述（就是原来的 #86）。
-
-### 第二周剩下的
-
-#5 #38 #46 #47 #55 #61 #63 #69 #72 #77 #82 #84 #87 #88（#86 已由 #94 关闭）
-
-看板：<https://github.com/users/EricWang1358/projects/1>
-
----
-
-## 已经确认过、不要再试的事
-
-| 事实 | 出处 |
-| --- | --- |
-| DeepSeek 直连**不支持** `response_format: {"type":"json_schema"}` | 实测报 `This response_format type is unavailable now`，改用 `json_object` |
-| 可用 model id：`deepseek-v4-flash` / `deepseek-v4-pro` / `deepseek-v4-flash-vision-exp` | `GET https://api.deepseek.com/models` |
-| `DeepSeekHarnessConfig` **没有任何工具/权限开关** | 工具集归 profile bundle 管，用 `--patch` 改 |
-| `deepseek_base_url` 的默认值不能放 `settings` | 它同时喂给 dsh，dsh 把显式 base URL 当覆盖 |
-| **审批的可应答接缝是 Host 侧 cordis waterfall** | `ctx.on('approval/request', (req, next) => …)`。`dsh-client-ui-approval` 只是 `web` profile 的浏览器插件，**headless 不需要换 profile** |
-| `permission-presets` **不控制工具册**，`sandbox` 只管写不管读 | `docs/13` §7，四条先前假设已证伪 |
-| `workflow` 跑的是**模型写的**脚本，自称「containment, not a security boundary」 | 同上。这是我们**主动拒绝**的东西，不是缺的能力 |
-| `.env` 里放 `DSH_*` 会被 dsh 拒绝 | 这是安全边界，不要绕 |
-
----
-
-## 已知缺陷
-
-按「演示当天会不会咬人」排：
-
-1. **拒绝之后模型说 `done`**（#86）——**最会咬人的一个**，见上。
-2. **13 次 409 的指标循环**（#89）——不影响正确性，影响时间和钱。
-3. **歧义日期没人被挡住**（#79）——`03/11/2025` 变成 2025-03，行里有解释但流程不停。
-4. **`quoted_price` 的价格带是模型断言的**（#7）——演示时**砍掉这一拍**，别讲一个推不出来的数。
-5. **`0 quarantined`**（#88）——隔离路径从没被真正走过，演示当天可能第一次执行。
-6. **`decided_by` 是自称不是身份**（#87）——本地演示够用，别声称它是审计级的。
-7. **测试绿不证明判断质量**——`LLM_PROVIDER=mock` 时返回 `mock-justification-<hash>`。
-   离线 185 全绿只说明代码不崩。
-
-`CLAUDE.md` 有完整的硬约束列表。
-
----
-
-## 与用户协作的方式
-
-- **工作语言：中文。** 代码、注释、commit message、issue 标题用英文；`docs/` 与 issue
-  正文中文。
-- **方向由用户定，定了就做完。** 先查证、给带数据的选项、让用户选；**选完不要再逐步请示**，
-  代码、看板、issue 一路做到 PR merge。
-- **不要绕过缺陷。** 用户拦下过「换 mock 让测试变绿」和「把 739 秒记成开发成本」——
-  异常是线索，不是预算项。先量出来、找到机制，再谈怎么改。
-- **省着花 token。** 真实调用会计费，跑之前想清楚值不值，跑完告诉用户花了多少。
-- **不要扩大范围。** Docker、CI、自建前端都是自作主张加的，已全部删除。
-- **每完成一个子任务，从 rubric 和交付视角提一条复核 issue**（含 UI）。
-  已提：#55 #61 #63 #67 #69 #72 #75 #77 #79 #82 #84 #86 #87 #88 #89。
-
----
-
-## 决策历史在哪
-
-| | |
-| --- | --- |
-| `CLAUDE.md` | 硬约束（每次会话自动加载） |
-| `docs/13` | 架构权威：7 问 7 答、已纠正的错误、官方能力边界、rubric 比对 |
-| `docs/00` | 所有实测数字的唯一来源 |
-| `docs/04` | 六分钟演示脚本，每一拍标注今天能不能真跑 |
-| `plugins/README.md` | 运行时踩过的坑（每一条都换过一次启动失败） |
-| `data/README.md` | 开发集 / 验收集的红线 |
-| #25 | dsh 位置错误的完整测量数据 —— 重构的证据基础 |
-| GitHub issues | 关闭的都写了理由 |
+旧 `/analyze`、`/quote`、`/console` 和样本回退默认关闭。历史控制台测试及耗时记录保留在 `docs/00`，不代表新 Web 的员工身份认证或最新业务结果。新默认入口禁止回退到缺少策略的 runtime。

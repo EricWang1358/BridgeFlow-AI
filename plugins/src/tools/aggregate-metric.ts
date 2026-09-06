@@ -52,6 +52,7 @@ export function aggregateMetric(config: BackendConfig) {
           'Metric name. Ask list_metrics first if unsure — the set is configured, not fixed in code.',
       },
       period: { type: 'string', required: true, description: 'Month, e.g. 2025-11' },
+      batch_id: { type: 'string', description: 'Immutable batch id from the upload panel; always supply for uploaded data' },
       entity: {
         type: 'string',
         description: 'Optional entity id to scope the metric to, e.g. a SKU or customer',
@@ -78,6 +79,8 @@ export function aggregateMetric(config: BackendConfig) {
                 row: { type: 'number', required: true },
                 column: { type: 'string', required: true },
                 value: { type: 'string', required: true },
+                filename: { type: 'string' }, sheet: { type: 'string' },
+                source_row: { type: 'number' }, original_column: { type: 'string' },
               },
               additionalProperties: false,
             },
@@ -97,7 +100,7 @@ export function aggregateMetric(config: BackendConfig) {
               `from ${value.evidence_total} source cell(s)` +
               (value.evidence_truncated ? `, ${evidence.length} shown` : '') +
               ': ' +
-              evidence.map((e) => `${e.department} row ${e.row} ${e.column}=${e.value}`).join('; '),
+              evidence.map((e) => `${e.filename || e.department} row ${(e.source_row ?? -1) > 0 ? e.source_row : e.row} ${e.original_column || e.column}=${e.value}`).join('; '),
           },
         ]
       },
@@ -116,7 +119,7 @@ export function aggregateMetric(config: BackendConfig) {
       return callBackend<MetricResult>(
         config,
         '/tools/aggregate-metric',
-        { metric: args.metric, period: args.period, entity: args.entity ?? null },
+        { metric: args.metric, period: args.period, entity: args.entity ?? null, batch_id: args.batch_id ?? null },
         exec.signal,
       )
     },

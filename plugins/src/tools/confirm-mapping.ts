@@ -1,6 +1,7 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
 import { callBackend, type BackendConfig } from '../backend.ts'
+import { mappingBody, type ApprovalReceipts } from '../approval/receipts.ts'
 
 /**
  * Accept or reject one proposed mapping, on the record.
@@ -25,7 +26,7 @@ export interface ConfirmationResult {
   remembered: number
 }
 
-export function confirmMapping(config: BackendConfig) {
+export function confirmMapping(config: BackendConfig, receipts: ApprovalReceipts) {
   return defineTool({
     name: 'confirm_mapping',
     description:
@@ -82,21 +83,9 @@ export function confirmMapping(config: BackendConfig) {
       return callBackend<ConfirmationResult>(
         config,
         '/tools/confirm-mapping',
-        {
-          source: args.source,
-          target: args.target,
-          relation: args.relation,
-          accepted: args.accepted,
-          evidence: args.evidence ?? '',
-          period: args.period ?? '',
-          // The agent's identity, not a name the caller made up — which is who *ran*
-          // the confirmation, not who allowed it.
-          confirmed_by: exec.agent?.id ?? 'unknown-agent',
-          // Joins this write to the approval that allowed it. Without it the record
-          // says the agent confirmed the mapping, which is true and misleading.
-          call_id: exec.callId,
-        },
+        mappingBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId),
         exec.signal,
+        receipts.take(JSON.stringify([exec.agent?.id, exec.callId])),
       )
     },
   })

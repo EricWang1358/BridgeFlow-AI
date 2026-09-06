@@ -92,8 +92,11 @@ class SemanticResolverAgent(Agent[list[CleanTable], EntityGraph]):
         "every downstream number."
     )
 
-    async def run(self, payload: list[CleanTable]) -> EntityGraph:
-        dictionary = load_field_dictionary()
+    async def run(
+        self, payload: list[CleanTable], *, adjudicate: bool = True,
+        dictionary: FieldDictionary | None = None,
+    ) -> EntityGraph:
+        dictionary = dictionary if dictionary is not None else load_field_dictionary()
         entities = self._extract_entities(payload, dictionary)
         self._merge_aliases(entities)
 
@@ -120,6 +123,13 @@ class SemanticResolverAgent(Agent[list[CleanTable], EntityGraph]):
         # because it asks fewer questions, not because it asks them faster.
         remembered, candidates = mappings.apply(candidates)
         links.extend(remembered)
+        if not adjudicate:
+            # The DSH domain-tool path leaves uncertain relationships for review.
+            # No nested completion runtime and no invented model verdicts.
+            return EntityGraph(
+                entities=list(entities.values()), links=links,
+                unresolved=[c.model_copy(update={"status": "unadjudicated"}) for c in candidates],
+            )
 
         by_relation: dict[str, list[Link]] = defaultdict(list)
         for candidate in candidates:

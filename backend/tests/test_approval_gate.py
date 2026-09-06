@@ -19,6 +19,7 @@ import re
 
 import pytest
 import yaml
+from conftest import approved_post
 from fastapi.testclient import TestClient
 
 from bridgeflow import mappings
@@ -80,9 +81,9 @@ def memory_file(tmp_path, monkeypatch):
 def test_an_approved_confirmation_is_recorded_with_who_and_when(memory_file):
     """Reaching the endpoint means the gate let it through, which is the fact an
     auditor reads — so the identity has to survive into the record."""
-    body = TestClient(app).post(
-        "/tools/confirm-mapping",
-        json={
+    body = approved_post(
+        TestClient(app),
+        {
             "source": "sku:sku-a1",
             "target": "customer:acme-pte-ltd",
             "relation": "ordered_by",
@@ -99,9 +100,9 @@ def test_an_approved_confirmation_is_recorded_with_who_and_when(memory_file):
 
 
 def test_a_rejection_is_recorded_as_deliberately_as_an_acceptance(memory_file):
-    body = TestClient(app).post(
-        "/tools/confirm-mapping",
-        json={
+    body = approved_post(
+        TestClient(app),
+        {
             "source": "sku:sku-b7",
             "target": "customer:bayfront-ltd",
             "relation": "ordered_by",
@@ -153,7 +154,7 @@ def test_the_refusal_reason_is_read_before_the_state_is_discarded():
     Reading it afterwards loses the reason silently — the first live measurement of
     this plugin did exactly that, and the model got a denial with no objection in it.
     """
-    at = GATE_SOURCE.index("const note = details.takeNote(exec.callId)")
+    at = GATE_SOURCE.index("const note = nativeNote || details.takeNote(exec.callId)")
     after = GATE_SOURCE[at:]
 
     # Whatever cleanup follows must not be the thing that erases the reason: the call
