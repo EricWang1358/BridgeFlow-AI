@@ -28,6 +28,9 @@ const MAX_VALUE = 120
 const MAX_LABEL = 40
 const MAX_ITEMS = 12
 
+/** Longest refusal reason kept — the reason matters, an essay from a console does not. */
+const MAX_NOTE = 240
+
 /** How many calls' summaries are held while their approvals are outstanding. */
 const MAX_TRACKED = 64
 
@@ -64,6 +67,7 @@ export function summarise(args: unknown): ApprovalDetail[] {
  */
 export class PendingDetails {
   readonly #byCallId = new Map<string, ApprovalDetail[]>()
+  readonly #notes = new Map<string, string>()
 
   /** Record one call's summary, evicting the oldest if the map is at its cap. */
   record(callId: string | undefined, args: unknown): void {
@@ -81,5 +85,40 @@ export class PendingDetails {
     const detail = this.#byCallId.get(callId) ?? []
     this.#byCallId.delete(callId)
     return detail
+  }
+
+  /** Drop everything held for one call. */
+  discard(callId: string | undefined): void {
+    if (!callId) return
+    this.#byCallId.delete(callId)
+    this.#notes.delete(callId)
+  }
+
+  /**
+   * Keep a refusal reason, keyed by call.
+   *
+   * The approval outcome is a closed vocabulary — \`rejected\` carries no text — so a
+   * reason a person typed travels by this side channel to reach the denial the model
+   * reads (#86). Bounded and read-once like the summaries, for the same reason: it
+   * arrives from a browser, and a stale note attached to a later call would put words
+   * in a reviewer's mouth.
+   */
+  recordNote(callId: string | undefined, note: string | undefined): void {
+    if (!callId) return
+    const trimmed = (note ?? '').replace(/\s+/g, ' ').trim()
+    if (!trimmed) return
+    if (this.#notes.size >= MAX_TRACKED) {
+      const oldest = this.#notes.keys().next()
+      if (!oldest.done) this.#notes.delete(oldest.value)
+    }
+    this.#notes.set(callId, trimmed.slice(0, MAX_NOTE))
+  }
+
+  /** Read one refusal reason once, on the way to the denial text. */
+  takeNote(callId: string | undefined): string | undefined {
+    if (!callId) return undefined
+    const note = this.#notes.get(callId)
+    this.#notes.delete(callId)
+    return note
   }
 }

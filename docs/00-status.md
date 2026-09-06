@@ -60,10 +60,10 @@ PY
 
 | | 值 |
 | --- | --- |
-| 测试数量 | **201**（`pytest --collect-only -q`，2026-09-06；#91 加 8 条指标口径、#93 加 8 条合并口径） |
+| 测试数量 | **210**（`pytest --collect-only -q`，2026-09-06；#91 指标口径 8、#93 合并口径 8、#94 拒绝叙述 9） |
 | 打真实模型的 | `test_resolver.py`（9 个） |
 | 其余 | mock provider，只证明代码不崩 |
-| 离线全绿 | **201 passed / 8.3s**（`LLM_PROVIDER=mock LLM_PROVIDER_RESOLVER=mock pytest -q`，不计费） |
+| 离线全绿 | **210 passed / 7.9s**（`LLM_PROVIDER=mock LLM_PROVIDER_RESOLVER=mock pytest -q`，不计费） |
 
 复现：`cd backend && pytest -q`（⚠️ **真实计费**）
 
@@ -209,10 +209,11 @@ cd backend && python -m bridgeflow.eval
 | 允许一次 | 3.1s | 4.0s `completed` | **写入**，含 `authorised_by: eric` |
 | 拒绝 | 2.6s | 3.6s `completed` | **不存在** |
 | 无人应答（#39 实测） | — | 报错 | **不存在** |
+| 拒绝 + 理由（#86 修后复测） | 4.2s | `completed`，**叙述里引用了理由** | **无新增** |
 
 第三行是 #39 已经证明的那条：
 `tool "confirm_mapping" requires approval, but no approval channel is available`。
-它现在是**三条路径里的一条**，而不是唯一一条——这才是「分级自主权」与「无人能介入」的差别。
+它现在是**四条路径里的一条**，而不是唯一一条——这才是「分级自主权」与「无人能介入」的差别。
 
 复现：
 
@@ -221,7 +222,21 @@ source env.sh && (cd backend && uvicorn bridgeflow.api.main:app --port 8000)
 # 另开一个终端，浏览器打开 http://127.0.0.1:8000/console
 ```
 
-**⚠️ 一处诚实的缺口**：拒绝之后模型仍回了 `done`。写没发生，话说错了——见 #86。
+**#86 已修（PR #94）。原来为什么会说 `done`**：拒绝路径下模型收到的是框架的固定句
+
+    Error: the user rejected tool "confirm_mapping"
+
+里面**没有地方放理由**——框架不认识操作者想说什么。于是拒绝与被批准在叙述里长得一样。
+
+现在 gate 自己通过 `ctx.approval.request()` 发问，因此**拒绝的话由我们写**。审计事件对、
+fail-closed、`never` 策略（CI 仍然无人被问就拒）全部保留。实测：
+
+模型收到 → `confirm_mapping did NOT run: a person reviewed it and refused. The reviewer said: "evidence is stale - use the October BOM, not this one". Nothing was written, …`
+
+模型说出 → "The record was not written: the confirm_mapping call was refused by a human reviewer because the evidence is stale — they said to use the October BOM, not that evidence — and so no mapping decision was stored."
+
+`unavailable` 与 `cancelled` **不会**被写成「有人拒绝」：没人被问到时说「没人能决定」，
+答前撤回时说「撤回后才拒」。编一个决策者出来，比这个 bug 本身更糟。
 
 ## 六 dsh 事实
 

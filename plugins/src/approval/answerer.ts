@@ -32,6 +32,8 @@ interface Question {
   id: string
   state: 'pending' | 'decided' | 'withdrawn'
   outcome: 'allowed-once' | 'rejected' | null
+  /** What the operator typed while refusing; empty when they gave no reason. */
+  decision_note?: string
 }
 
 export interface AnswererConfig extends BackendConfig {
@@ -100,7 +102,13 @@ export function answerer(ctx: Context, config: AnswererConfig, details: PendingD
           return next()
         }
 
-        if (state.state === 'decided' && state.outcome) return state.outcome
+        if (state.state === 'decided' && state.outcome) {
+          // The outcome is a closed vocabulary, so the reason has to ride alongside it:
+          // the gate turns this into the sentence the model reads (#86). Recorded
+          // before returning, because returning releases the tool call immediately.
+          details.recordNote(req.callId, state.decision_note)
+          return state.outcome
+        }
         if (state.state !== 'pending') return next()
       }
       return next()

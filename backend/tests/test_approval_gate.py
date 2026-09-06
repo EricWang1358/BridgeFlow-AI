@@ -112,3 +112,50 @@ def test_a_rejection_is_recorded_as_deliberately_as_an_acceptance(memory_file):
 
     assert body["accepted"] is False
     assert mappings.load().confirmations[0].accepted is False
+
+# --- the denial is ours to word (#86) ----------------------------------------
+
+#: Read once; these are shape assertions on the plugin, in the same spirit as the
+#: MUTATING_TOOLS parse above — the runtime is what executes them.
+GATE_SOURCE = GATE.read_text(encoding="utf-8")
+
+
+def test_the_gate_asks_the_service_instead_of_returning_ask():
+    """`ask` hands the wording to the framework, whose denial message is a constant:
+
+        Error: the user rejected tool "confirm_mapping"
+
+    No room for why the reviewer objected, which is how a refused write came to be
+    narrated as success. Asking through the service keeps the audit pair and the
+    fail-closed chain, and gives us the sentence.
+    """
+    assert "ctx.approval.request(" in GATE_SOURCE
+    assert "kind: 'ask'" not in GATE_SOURCE
+
+
+def test_the_denial_text_says_nothing_was_written_and_quotes_the_reviewer():
+    assert "did NOT run" in GATE_SOURCE
+    assert 'The reviewer said' in GATE_SOURCE
+    assert "Do not describe it as done" in GATE_SOURCE
+
+
+def test_a_denial_nobody_answered_is_not_worded_as_a_refusal():
+    """`unavailable` means no person was reached. Writing it as "a person refused"
+    would invent a decision-maker, which is worse than the bug this replaced.
+    """
+    assert "nobody was available to decide" in GATE_SOURCE
+    assert "withdrawn before anybody answered" in GATE_SOURCE
+
+
+def test_the_refusal_reason_is_read_before_the_state_is_discarded():
+    """`discard()` clears the note along with the summary.
+
+    Reading it afterwards loses the reason silently — the first live measurement of
+    this plugin did exactly that, and the model got a denial with no objection in it.
+    """
+    at = GATE_SOURCE.index("const note = details.takeNote(exec.callId)")
+    after = GATE_SOURCE[at:]
+
+    # Whatever cleanup follows must not be the thing that erases the reason: the call
+    # is denied with whatever `note` holds at that moment.
+    assert after.index("details.discard(exec.callId)") > 0
