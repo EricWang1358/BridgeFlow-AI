@@ -8,7 +8,7 @@ export async function auditChain(page, root, scratch, report) {
     try { await action(); results.push({ name, passed: true }) }
     catch (e) { results.push({ name, passed: false, error: String(e).slice(0, 700) }) }
   }
-  const dialog = page.locator('dialog.bf-panel')
+  const dialog = page.getByRole('dialog', {name:'BridgeFlow 数据工作区',exact:true})
   await page.evaluate(r => { location.hash = `bridgeflow?batch=${r.batch_id}&view=review&report=${r.report_id}` }, report)
   await dialog.getByRole('region', { name: '四部门研判报告' }).waitFor()
   await dialog.getByText('导入新批次', { exact: true }).click()
@@ -26,6 +26,7 @@ export async function auditChain(page, root, scratch, report) {
   await dialog.getByRole('button', { name: '关闭', exact: true }).click()
   await page.getByRole('tab', { name: '业务状态', exact: true }).click()
   const state = page.getByRole('main', { name: '业务状态' })
+  if (!await state.locator('.bf-document-evidence').evaluate(el => el.open)) await state.getByText('依据与归属', {exact:true}).click()
   await state.getByRole('textbox', { name: '批次编号' }).fill(second)
   await state.getByRole('button', { name: '打开', exact: true }).click()
   await state.locator('code').filter({ hasText: second }).waitFor()

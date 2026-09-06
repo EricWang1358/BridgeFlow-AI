@@ -1,3 +1,4 @@
+import { coldReload } from './cold-reload.mjs'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
@@ -65,7 +66,7 @@ try {
     + (live ? '' : `\n- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n  config:\n    provider: bridgeflow-offline-test\n    model: offline\n- insert:\n    - id: scripted-test-model\n      name: ${JSON.stringify(`${root}/plugins/tests/fixtures/scripted-model/index.ts`)}\n`)
   await writeFile(`${scratch}/web.yml`, patch)
   start(python, ['-m', 'uvicorn', 'bridgeflow.api.main:app', '--host', '127.0.0.1', '--port', String(backendPort)])
-  start(process.env.BRIDGEFLOW_DSH ?? 'dsh', ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])
+  const web = start(process.env.BRIDGEFLOW_DSH ?? 'dsh', ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])
   const deadline = Date.now() + 30_000
   let match
   while (Date.now() < deadline) {
@@ -82,14 +83,17 @@ try {
   page.on('console', message => { if (message.type() === 'error') logs += '\nCONSOLE: ' + message.text() })
   page.setDefaultTimeout(15000)
   await page.goto(match[1])
+  await page.getByRole('button', { name: '会话与设置', exact: true }).click()
   await page.getByRole('button', { name: '导入与数据', exact: true }).click({ timeout: 30_000 })
-  await page.locator('input[name=period]').fill('2025-11')
+  await page.locator('dialog[open] input[name=period]').fill('2025-11')
   const limits = await page.evaluate(async () => (await fetch('/bridgeflow/config')).json())
   assert.equal(limits.maxUploadBytes, 25 * 1024 * 1024)
   assert.equal(limits.maxRequestBytes, 26 * 1024 * 1024)
   assert.equal(limits.decisionTimeoutMs, 5000)
   assert.equal((await fetch(`http://127.0.0.1:${webPort}/bridgeflow/config`)).status, 401)
-  await page.locator('input[name=production]').setInputFiles({ name: 'oversized.csv', mimeType: 'text/csv', buffer: Buffer.alloc(limits.maxUploadBytes + 1) })
+  // Use the file chooser's disk path, avoiding a large base64 CDP transfer.
+  await writeFile(`${scratch}/oversized.csv`, Buffer.alloc(limits.maxUploadBytes + 1))
+  await page.locator('dialog[open] input[name=production]').setInputFiles(`${scratch}/oversized.csv`)
   let uploads = 0
   const countUpload = request => { if (request.method() === 'POST' && request.url().endsWith('/bridgeflow/batches')) uploads++ }
   page.on('request', countUpload)
@@ -97,7 +101,7 @@ try {
   await page.getByText('请选择至少一个 CSV/XLSX，文件总大小不得超过上限。', { exact: true }).waitFor()
   assert.equal(uploads, 0, 'Oversized data must be rejected before the upload request')
   page.off('request', countUpload)
-  await page.locator('input[name=production]').setInputFiles({ name: 'production.csv', mimeType: 'text/csv', buffer: Buffer.from('sku,output_qty\nSKU-A1,17\n') })
+  await page.locator('dialog[open] input[name=production]').setInputFiles({ name: 'production.csv', mimeType: 'text/csv', buffer: Buffer.from('sku,output_qty\nSKU-A1,17\n') })
   await page.getByRole('button', { name: '导入并检查', exact: true }).click()
   await page.getByText('主表 1 行 · 待确认映射 0 条').waitFor()
   await page.getByRole('cell', { name: '17', exact: true }).waitFor()
@@ -111,6 +115,7 @@ try {
   for (const name of ['dsh-client-ui-cordis', 'dsh-client-ui-settings-plugins', 'dsh-client-ui-attachment', 'dsh-client-ui-permission-presets']) assert(!data.boot.includes(name), name)
   assert.equal((await fetch(`http://127.0.0.1:${webPort}/bridgeflow/batches/00000000000000000000000000000000`)).status, 401)
   await page.getByRole('button', { name: '关闭', exact: true }).click()
+  await page.getByRole('button', { name: '会话与设置', exact: true }).click()
   await page.getByRole('button', { name: /^(Choose workspace|选择工作区)$/ }).click()
   await page.getByRole('menuitem', { name: 'BridgeFlow', exact: true }).click()
   const composer = page.locator('[contenteditable=true]').first()
@@ -149,7 +154,9 @@ try {
     .flatMap(text => text.trim().split('\n').map(line => JSON.parse(line)))
   const asks = events.filter(event => event.type === 'approval/asked')
   const decisions = events.filter(event => event.type === 'approval/decided')
-  const noteEvents = events.filter(event => event.type === 'bridgeflow/approval-note')
+  const noteSession=logsOnDisk.find(path=>path.endsWith('session.jsonl')).split('/').at(-2)
+  const noteAudit=await page.evaluate(async id=>(await fetch(`/bridgeflow/approval-note-audit?session_id=${encodeURIComponent(id)}`)).json(),noteSession)
+  const noteEvents=noteAudit.notes.map(data=>({type:'bridgeflow/approval-note',data}))
   assert.equal(noteEvents.length, 1)
   assert.equal(noteEvents[0].data.note, '客户编码未核实，请销售负责人确认后再提交。')
   assert(events.some(event => event.type === 'tool/result' && JSON.stringify(event).includes(noteEvents[0].data.note))
@@ -164,6 +171,9 @@ try {
   await page.getByRole('main', { name: '业务状态' }).getByRole('button', { name: '已拒绝 1', exact: true }).click()
   await page.getByRole('main', { name: '业务状态' }).getByText('客户编码未核实，请销售负责人确认后再提交。', { exact: true }).waitFor()
   await page.screenshot({ path: `${scratch}/business-state.png`, fullPage: true })
+  await coldReload({page,web,start,args:['web','--patch',`${scratch}/web.yml`,'--no-open','--port',String(webPort)],readLogs:()=>logs,sessionIds:[noteSession]})
+  const restoredNotes=await page.evaluate(async id=>(await fetch(`/bridgeflow/approval-note-audit?session_id=${encodeURIComponent(id)}`)).json(),noteSession)
+  assert.deepEqual(restoredNotes,noteAudit,'Refusal note audit must survive a full host restart')
   assert.deepEqual(errors, [])
   const measurement = { mode: live ? 'live' : 'offline', approval_outcomes: decisions.map(e => e.data.outcome), refusalNarration,
     model_requests: events.filter(e => e.type === 'assistant/message').length,
@@ -172,6 +182,7 @@ try {
       return total
     }, {}) }
   await writeFile(`${scratch}/measurement.json`, JSON.stringify(measurement, null, 2))
+  await writeFile(`${scratch}/approval-note-audit.json`, JSON.stringify(noteAudit, null, 2))
   await writeFile(`${scratch}/approval-events.json`, JSON.stringify(events.filter(e => ['approval/asked', 'approval/decided', 'bridgeflow/approval-note', 'tool/result'].includes(e.type)), null, 2))
   console.log(JSON.stringify({ ...measurement, artifacts: scratch }))
   console.log(JSON.stringify({ status: 'passed', screenshot: `${scratch}/data-workspace.png`, approvalScreenshot: `${scratch}/native-approval.png`, checks: ['native shell', 'plugin loading', 'upload', 'master table', 'authenticated proxy', 'write proxy denied', `native approval allow/reject/timeout with ${live ? 'live model' : 'offline adapter'}`, 'paired native audit events', 'zero browser errors'] }))

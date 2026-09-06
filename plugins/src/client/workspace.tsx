@@ -100,7 +100,7 @@ export function DataWorkspace({ wide }: { wide: boolean }) {
     const readRoute = () => {
       const value = route()
       abort?.abort(); setBusy(false)
-      if (value.view === 'quotation') { dialog.current?.close(); return }
+      if (['quotation', 'source', 'artifact'].includes(value.view ?? '')) { dialog.current?.close(); return }
       if (!value.batch || value.view === 'state' || !/^[a-f0-9]{32}$/.test(value.batch)) return
       pendingBatch.current?.abort(); abort = new AbortController(); pendingBatch.current = abort; const signal = abort.signal
       dialog.current?.showModal(); setBatchId(value.batch); setReportId(value.report ?? '')

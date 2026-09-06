@@ -92,23 +92,23 @@ test('receipt binds exact serialized arguments, agent and call and can only be t
   }
 })
 
-test('approval notes cannot cross sessions, reuse expired tickets or write oversized annotations', () => {
+test('approval notes cannot cross sessions, reuse expired tickets or write oversized annotations', async () => {
   const events: unknown[] = []
   const notes = new ApprovalNotes()
   const fake = (id: string) => ({ id, session: { append: (...args: unknown[]) => events.push(args) } }) as unknown as Agent
   const close = notes.open(fake('session-a'), 'shared-call')
   const closeOther = notes.open(fake('session-b'), 'shared-call')
   const ticket = notes.ticket('session-a', 'shared-call')!
-  assert.equal(notes.record('session-b', 'shared-call', ticket, 'Wrong session'), false)
-  assert.equal(notes.record('session-a', 'shared-call', 'wrong-ticket', 'Forged ticket'), false)
-  assert.equal(notes.record('session-a', 'shared-call', ticket, 'x'.repeat(241)), false)
+  assert.equal(await notes.record('session-b', 'shared-call', ticket, 'Wrong session', async entry => { events.push(entry) }), false)
+  assert.equal(await notes.record('session-a', 'shared-call', 'wrong-ticket', 'Forged ticket', async entry => { events.push(entry) }), false)
+  assert.equal(await notes.record('session-a', 'shared-call', ticket, 'x'.repeat(241), async entry => { events.push(entry) }), false)
   assert.deepEqual(events, [])
-  assert.equal(notes.record('session-a', 'shared-call', ticket, ' Needs\n review '), true)
+  assert.equal(await notes.record('session-a', 'shared-call', ticket, ' Needs\n review ', async entry => { events.push(entry) }), true)
   assert.equal(notes.get('session-a', 'shared-call'), 'Needs review')
   assert.equal(notes.get('session-b', 'shared-call'), '')
   close()
   const closeNew = notes.open(fake('session-a'), 'shared-call')
-  assert.equal(notes.record('session-a', 'shared-call', ticket, 'Expired'), false)
+  assert.equal(await notes.record('session-a', 'shared-call', ticket, 'Expired', async entry => { events.push(entry) }), false)
   closeNew(); closeOther()
   assert.equal(events.length, 1)
 })

@@ -35,3 +35,23 @@ def test_prompt_includes_system_turns_and_schema():
 def test_prompt_without_schema_asks_for_no_json():
     prompt = _build_prompt("Be brief.", [Message(role="user", content="hi")], None)
     assert "JSON" not in prompt
+
+
+def test_sdk_explicitly_uses_the_same_native_installation_as_web(monkeypatch, tmp_path):
+    """Omitting dsh_bin silently boots pkg and corrupts the live Web fallback."""
+    from unittest.mock import Mock
+
+    import deepseek_harness
+
+    from bridgeflow.llm.providers import dsh
+
+    factory = Mock()
+    monkeypatch.setattr(deepseek_harness, "DeepSeekHarness", factory)
+    monkeypatch.setattr(dsh.settings, "dsh_home", str(tmp_path))
+    monkeypatch.setattr(dsh, "native_command", lambda: "/installed/npm/dsh/lib/bin.js")
+    provider = dsh.DshProvider()
+    provider._ensure_started()
+    assert factory.call_args.kwargs["dsh_bin"] == "/installed/npm/dsh/lib/bin.js"
+    assert factory.call_args.kwargs["dsh_home"] == str(tmp_path)
+    factory.return_value.start.assert_called_once()
+    provider.close()

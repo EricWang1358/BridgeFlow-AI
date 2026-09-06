@@ -342,10 +342,12 @@ source ~/Hackathon2026/.venv/bin/activate
 uvicorn bridgeflow.api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-dsh web（端口以它自己打印的为准）：
+当前 BridgeFlow 使用以下启动器，由它同时启动私有后端与原生 Web；不要与上面的独立后端示例同时运行。Web 与 Python SDK 必须使用同一 npm 安装，不能让打包 SDK 与运行中的 Web 共用 home。端口及访问方法以 [当前启动说明](../HANDOFF.md) 为准：
 
 ```bash
-DSH_HOME=$HOME/Hackathon2026/.dsh-bridgeflow <运行时路径>/dsh web
+cd ~/Hackathon2026/BridgeFlow-AI
+source ./env.sh
+python scripts/start_web.py
 ```
 
 **验证 —— 先在 WSL 内确认监听地址，这是最常见的失败点**
@@ -445,9 +447,9 @@ data/uploads/  data/outputs/  *.log
 `DSH_HOME` 本来就应在仓库之外（`~/Hackathon2026/.dsh-bridgeflow`）。`.dsh*/` 是防呆 ——
 万一有人指错，profile、凭据、会话不会被提交。
 
-### 11.3 绝对路径只能出现在 `.env`
+### 11.3 引导路径只由启动 shell 提供
 
-`DSH_HOME` 必须是绝对路径，但它只存在于 `.env`，而 `.env` 不进仓库。
+`DSH_HOME` 必须是绝对路径，由启动 shell 导出（本机 `env.sh` 已忽略），不能放入 `.env`。
 **任何 `/home/<用户名>/...` 都不该出现在被跟踪的文件里。**
 
 ### 11.4 换行符

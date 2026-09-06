@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib.metadata
 import os
 import secrets
-import shutil
 import signal
 import subprocess
 import sys
@@ -16,23 +15,17 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 
 
+# Keep both SDK and Web on the same physical installation. Packed-runtime
+# fallbacks point into /snapshot and cannot be imported by the running Node Web.
+sys.path.insert(0, str(ROOT / "backend/src"))
+from bridgeflow.dsh_runtime import native_command
+
+
 def web_command() -> str:
-    """The rc1 Python binary cannot resolve its packed browser module manifests."""
-    configured = os.environ.get("BRIDGEFLOW_DSH")
-    candidates = [configured] if configured else [str(Path(p) / "dsh") for p in os.get_exec_path()]
-    for candidate in candidates:
-        if not candidate or not shutil.which(candidate):
-            continue
-        path = Path(candidate).resolve()
-        try:
-            if "node" not in path.open(encoding="utf-8").readline():
-                continue
-            version = subprocess.check_output([candidate, "--version"], text=True).strip()
-            if version == "0.1.2-rc.1":
-                return candidate
-        except (OSError, UnicodeError, subprocess.CalledProcessError):
-            continue
-    raise SystemExit("Install the native Web CLI: npm install -g @deepseek-ai/dsh@0.1.2-rc.1; or set BRIDGEFLOW_DSH")
+    try:
+        return native_command()
+    except RuntimeError as error:
+        raise SystemExit(str(error)) from error
 
 
 def check_client_build(root: Path) -> None:

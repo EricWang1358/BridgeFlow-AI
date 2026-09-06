@@ -1,3 +1,4 @@
+import { coldReload } from './cold-reload.mjs'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
@@ -48,7 +49,7 @@ try {
     + (live ? '' : `\n- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n  config:\n    provider: bridgeflow-offline-test\n    model: offline\n- insert:\n    - id: scripted-test-model\n      name: ${JSON.stringify(`${root}/plugins/tests/fixtures/scripted-model/index.ts`)}\n`)
   await writeFile(`${scratch}/web.yml`, patch)
   start(python, ['-m', 'uvicorn', 'bridgeflow.api.main:app', '--host', '127.0.0.1', '--port', String(backendPort)])
-  start(process.env.BRIDGEFLOW_DSH ?? 'dsh', ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])
+  const web = start(process.env.BRIDGEFLOW_DSH ?? 'dsh', ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])
   const deadline = Date.now() + 30_000
   let match
   while (Date.now() < deadline) {
@@ -65,16 +66,18 @@ try {
   page.on('console', message => { if (message.type() === 'error') logs += '\nCONSOLE: ' + message.text() })
   page.setDefaultTimeout(live ? 240000 : 30000)
   await page.goto(match[1])
+  await page.getByRole('button', { name: '会话与设置', exact: true }).click()
   await page.getByRole('button', { name: '导入与数据', exact: true }).click({ timeout: 30_000 })
-  await page.locator('input[name=period]').fill('2025-11')
+  await page.locator('dialog[open] input[name=period]').fill('2025-11')
   for (const role of ['production', 'procurement', 'finance', 'marketing']) {
-    await page.locator(`input[name=${role}]`).setInputFiles(`${root}/data/business_demo/${caseName}/${role}.csv`)
+    await page.locator(`dialog[open] input[name=${role}]`).setInputFiles(`${root}/data/business_demo/${caseName}/${role}.csv`)
   }
   await page.getByRole('button', { name: '导入并检查', exact: true }).click()
   await page.getByText('批次已保存。清洗和聚合由规则执行，未调用模型。', { exact: true }).waitFor()
-  const batchId = await page.locator('dialog code').innerText()
+  const batchId = await page.locator('dialog[open] code').innerText()
   await page.screenshot({ path: `${scratch}/business-upload.png`, fullPage: true })
   await page.getByRole('button', { name: '关闭', exact: true }).click()
+  await page.getByRole('button', { name: '会话与设置', exact: true }).click()
   await page.getByRole('button', { name: /^(Choose workspace|选择工作区)$/ }).click()
   await page.getByRole('menuitem', { name: 'BridgeFlow', exact: true }).click()
   const composer = page.locator('[contenteditable=true]').first()
@@ -166,12 +169,27 @@ try {
       return total
     }, {}), models: [...new Set(logsBySession.flatMap(x => x.events).filter(e => e.type === 'assistant/message').map(e => JSON.stringify(e.data.message.source)))] }
   await writeFile(`${scratch}/measurement.json`, JSON.stringify(measured, null, 2))
+  const studio = page.getByRole('complementary', {name:'工作室',exact:true})
+  await studio.getByRole('button', {name:'刷新产物',exact:true}).click()
+  await studio.locator('.bf-artifact[data-kind=review]').first().click()
+  const artifactPreview = studio.getByRole('region', {name:'四部门研判报告',exact:true})
+  await artifactPreview.waitFor()
+  assert.equal(new URLSearchParams(new URL(page.url()).hash.slice(12)).get('report'), report.report_id)
+  await artifactPreview.getByText('研判范围', {exact:true}).click()
+  assert.match(await artifactPreview.innerText(), new RegExp(report.report_id))
+  await studio.locator('.bf-shell-scroll').evaluate(el => {el.scrollTop=0})
+  await studio.screenshot({path:`${scratch}/artifact-preview.png`})
+  await studio.getByRole('button', {name:'展开预览',exact:true}).click()
+  await page.getByRole('dialog',{name:'预览',exact:true}).getByRole('region',{name:'四部门研判报告',exact:true}).waitFor()
+  await page.getByRole('dialog',{name:'预览',exact:true}).getByRole('button',{name:'关闭',exact:true}).click()
+  await studio.locator('.bf-inline-preview > header').getByRole('button',{name:'关闭',exact:true}).click()
   assert.equal(await page.getByRole('tab', { name: '业务状态', exact: true }).count(), 1)
   const tabNames = await page.getByRole('tablist').first().getByRole('tab').allTextContents()
   assert(tabNames.indexOf('业务状态') > tabNames.findIndex(t => /轨迹|Trajectory/.test(t)))
   await page.getByRole('tab', { name: '业务状态', exact: true }).click()
   const statePage = page.getByRole('main', { name: '业务状态', exact: true })
   await statePage.getByRole('region', { name: '四部门研判报告' }).waitFor()
+  await statePage.getByText('依据与归属', {exact:true}).click()
   await page.screenshot({ path: `${scratch}/business-state.png`, fullPage: true })
   await statePage.getByText('所选批次派活记录 · 4 Spawn · 工具派发尝试', { exact: true }).waitFor()
   await page.emulateMedia({ colorScheme: 'dark' })
@@ -186,17 +204,18 @@ try {
   await page.getByRole('tab', { name: /轨迹|Trajectory/ }).waitFor()
   await page.screenshot({ path: `${scratch}/native-spawn.png`, fullPage: true })
   await page.reload()
+  await page.getByRole('button', { name: '会话与设置', exact: true }).click()
   await page.getByRole('button', { name: '导入与数据', exact: true }).click()
-  await page.getByText('打开已有批次', { exact: true }).click()
-  await page.getByRole('textbox', { name: '批次编号' }).fill(batchId)
-  await page.getByRole('button', { name: '打开', exact: true }).click()
+  await page.getByRole('dialog', {name:'BridgeFlow 数据工作区'}).getByText('打开已有批次', { exact: true }).click()
+  await page.getByRole('dialog', {name:'BridgeFlow 数据工作区'}).getByRole('textbox', { name: '批次编号' }).fill(batchId)
+  await page.getByRole('dialog', {name:'BridgeFlow 数据工作区'}).getByRole('button', { name: '打开', exact: true }).click()
   await page.getByRole('button', { name: '四部门报告', exact: true }).click()
   await page.getByRole('region', { name: '四部门研判报告', exact: true }).waitFor()
-  for (const role of ['生产', '采购', '财务', '市场']) await page.locator('dialog').getByRole('article', { name: `${role}研判`, exact: true }).waitFor()
+  for (const role of ['生产', '采购', '财务', '市场']) await page.locator('dialog[open]').getByRole('article', { name: `${role}研判`, exact: true }).waitFor()
   await page.screenshot({ path: `${scratch}/business-review.png`, fullPage: true })
   if (fault) {
-    await page.locator('dialog').getByRole('textbox', { name: '人工复核意见' }).fill('财务尚缺签核，请财务负责人核对来源后补充判断。')
-    await page.locator('dialog').getByRole('button', { name: '交给队长复核' }).click()
+    await page.locator('dialog[open]').getByRole('textbox', { name: '人工复核意见' }).fill('财务尚缺签核，请财务负责人核对来源后补充判断。')
+    await page.locator('dialog[open]').getByRole('button', { name: '交给队长复核' }).click()
     await page.getByText(/人工复核意见（报告/).first().waitFor()
     const after = (await readdir(sessionRoot, { recursive: true })).filter(p => p.endsWith('session.jsonl'))
     assert.equal(after.length, 5, 'Human handoff must not spawn another department team')
@@ -215,6 +234,7 @@ try {
     const { auditChain } = await import('./chain-regression.mjs')
     await auditChain(page, root, scratch, report)
   }
+  await coldReload({page,web,start,args:['web','--patch',`${scratch}/web.yml`,'--no-open','--port',String(webPort)],readLogs:()=>logs,sessionIds:[report.parent_session_id,...report.roles.map(role=>role.session_id)]})
   assert.deepEqual(errors, [])
   await writeFile(`${scratch}/acceptance.json`, JSON.stringify({ passed: true, mode: live ? 'live' : 'offline', case: caseName, chain_checked: !fault }, null, 2))
   console.log(JSON.stringify({ ...measured, artifacts: scratch }))

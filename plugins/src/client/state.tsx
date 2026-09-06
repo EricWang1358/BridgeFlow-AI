@@ -3,6 +3,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventSource, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { api, navigate, route, useUI, type Summary } from './ui.ts'
+import { QuotationProgress } from './quotation-progress.tsx'
 import { Notebook } from './notebook.tsx'
 import { BusinessReview, type Review } from './review.tsx'
 import { Chip, type Limits } from './workspace.tsx'
@@ -11,6 +12,7 @@ type Injected = { source: SessionEventSource; loadOlder: () => Promise<void> }
 import { projectAudit, selectReview, type AuditEvent } from './audit.ts'
 function BusinessState({ source, loadOlder, openView }: ConvViewProps & Injected) {
   const { t } = useUI()
+  const [kind,setKind] = useState(route().kind ?? 'mixed')
   const snapshot = useSyncExternalStore<SessionEventWindow>(fn => source.subscribe(fn), () => source.getSnapshot())
   const audit = useMemo(() => projectAudit(snapshot.entries.filter(e => e.type === 'event').map(e => e.event) as AuditEvent[]), [snapshot])
   const eventBatch = String(audit.review?.batch_id ?? '')
@@ -24,6 +26,7 @@ function BusinessState({ source, loadOlder, openView }: ConvViewProps & Injected
   useEffect(() => {
     const readRoute = () => {
       const value = route()
+      setKind(value.kind ?? 'mixed')
       if (value.view === 'state') { setChosen(value.batch ?? ''); setInput(value.batch ?? ''); setNode('') }
     }
     readRoute(); window.addEventListener('hashchange', readRoute)
@@ -49,8 +52,10 @@ function BusinessState({ source, loadOlder, openView }: ConvViewProps & Injected
   const count = (id: string) => id === 'validated' ? `${report?.roles.filter(r => r.status === 'validated').length ?? 0}/4` : ['attention', 'ok'].includes(id) ? report?.roles.flatMap(r => r.checks).filter(c => c.expected_status === id).length ?? 0 : approvalCounts[id]
   const current = (id: string) => batch?.status === id || report?.status === id || id === 'dispatching' && audit.review?.status === id && batchId === eventBatch || ['attention', 'ok'].includes(id) && !!count(id) || currentApproval === id
   const isApproval = groups[3]!.items.includes(node)
+  if (kind === 'quotation') return <section className="bf-state" aria-label={t('state')}><h2>{t('state')}</h2><QuotationProgress/></section>
   return <Notebook title={t('state')} description={t('stateHelp')}
     sources={<>
+    {kind === 'mixed' && <QuotationProgress/>}
     <form className="bf-actions" onSubmit={e => { e.preventDefault(); setChosen(input); navigate({ batch: input, view: 'state' }) }}>
       <label>{t('batchId')} <input value={input} placeholder={eventBatch || t('batchId')} onChange={e => setInput(e.target.value)} /></label>
       <button disabled={!/^[a-f0-9]{32}$/.test(input)}>{t('open')}</button>

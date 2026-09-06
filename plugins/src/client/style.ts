@@ -382,30 +382,7 @@ body[data-ds-dark-theme] .bf-hero, body[data-ds-dark-theme] .bf-open {
 body[data-ds-dark-theme] .bf-primary, body[data-ds-dark-theme] .bf-open { color: #0b1420 !important }
 body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 
-/* Notebook-style working surfaces, confined to our official conversation views. */
-.bf-notebook { max-width: none; padding: 20px 20px 160px; background: var(--bf-surface-2); container-type: inline-size }
-.bf-notebook-head { display: flex; justify-content: space-between; gap: 20px; align-items: center; margin: 0 2px 20px }
-.bf-notebook-head > div:first-child { min-width: 0; flex: 1 }
-.bf-notebook-head .bf-actions { flex-shrink: 0; margin: 0 }
 .bf-eyebrow { color: var(--bf-muted); font-size: 11px; letter-spacing: .09em; font-weight: 650; margin-bottom: 6px }
-.bf-notebook-grid { display: grid; grid-template-columns: minmax(180px, .75fr) minmax(320px, 2fr) minmax(190px, .85fr); gap: 14px; align-items: start }
-.bf-notebook-grid[data-sources=false] { grid-template-columns: minmax(320px, 1fr) minmax(190px, .35fr) }
-.bf-notebook-grid[data-studio=false] { grid-template-columns: minmax(180px, .3fr) minmax(320px, 1fr) }
-.bf-notebook-grid[data-sources=false][data-studio=false] { grid-template-columns: 1fr }
-.bf-notebook-pane { min-width: 0; padding: 18px; border: 1px solid var(--bf-line); border-radius: 18px; background: var(--bf-surface); overflow-wrap: anywhere }
-.bf-notebook-pane > header { border-bottom: 1px solid var(--bf-line); padding-bottom: 14px; margin-bottom: 16px }
-.bf-notebook-work { min-height: 540px; padding: 24px }
-.bf-notebook-sources .bf-actions { display: flex; flex-wrap: wrap; gap: 8px }
-.bf-notebook-sources label { min-width: 0; width: 100% }
-.bf-notebook-sources input { width: 100%; min-width: 0; box-sizing: border-box; margin-top: 6px }
-.bf-notebook-sources .bf-band { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 0 }
-.bf-notebook-sources code { overflow-wrap: anywhere; white-space: normal }
-.bf-notebook-studio .bf-state-map { grid-template-columns: 1fr; margin: 16px 0; gap: 12px }
-.bf-notebook-studio .bf-state-map section { padding: 10px; background: var(--bf-surface-2) }
-.bf-notebook-studio .bf-state-map h3 { font-size: 12px }
-.bf-notebook-studio .bf-state-map button { padding: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center }
-.bf-notebook-studio summary { font-size: 12px; cursor: pointer; margin-top: 12px }
-.bf-notebook-studio ul { padding-left: 16px; font-size: 11px }
 .bf-source-item { display: flex; flex-direction: column; gap: 5px; padding: 12px 0; border-bottom: 1px solid var(--bf-line); font-size: 13px }
 .bf-source-item:last-child { border-bottom: 0 }
 .bf-source-pending { color: var(--bf-muted); font-size: 11px }
@@ -420,23 +397,5 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-formulas summary { cursor: pointer; color: var(--bf-accent) }
 .bf-formulas code { white-space: normal; overflow-wrap: anywhere }
 .bf-state button:disabled { opacity: .45; cursor: default }
-.bf-notebook button:focus-visible, .bf-notebook summary:focus-visible { outline: 2px solid var(--bf-accent); outline-offset: 3px }
-@container (max-width: 880px) {
-  .bf-notebook-grid, .bf-notebook-grid[data-sources=false], .bf-notebook-grid[data-studio=false] { grid-template-columns: 1fr }
-  .bf-notebook-head { align-items: flex-start; flex-direction: column; gap: 12px }
-  .bf-notebook-work { min-height: 280px; padding: 18px }
-  .bf-notebook-studio .bf-state-map { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)) }
-}
-
-.bf-quotation-dialog { padding: 0; border: 1px solid #a8b7ca; border-radius: 22px; width: min(1460px, 96vw); max-width: 96vw; height: 92vh; max-height: 92vh; overflow: hidden; background: transparent; pointer-events: auto }
-.bf-quotation-dialog::backdrop { background: #16243a66; backdrop-filter: blur(3px) }
-.bf-quotation-dialog:not([open]) { display: none }
-.bf-quotation-dialog .bf-notebook { height: 100%; padding-bottom: 32px; padding-top: 56px }
-.bf-quotation-close { width: auto; position: absolute; right: 22px; top: 14px; z-index: 10 }
-.bf-panel-head .bf-mono { display: inline-block; max-width: 100%; overflow-wrap: anywhere; vertical-align: middle }
-
-.bf-quotation-entry { margin-inline-start: 6px }
-@container (min-width: 881px) {
-  .bf-notebook-sources, .bf-notebook-studio { position: sticky; top: 0; max-height: calc(100vh - 240px); overflow: auto }
-}
+.bf-document button:focus-visible, .bf-document summary:focus-visible { outline: 2px solid var(--bf-accent); outline-offset: 3px }
 `

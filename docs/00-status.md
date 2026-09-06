@@ -13,23 +13,37 @@
 
 ---
 
-## 报价声明与 Notebook 风格工作台（2026-09-07）
+## 报价声明与原生 Notebook 三栏工作面（2026-09-07）
 
 任务书的**样板前第一步已完成**：独立的 `quotation:` 人工声明示例，复用 `business.expression` 的通用文档求值器，结构化事实与文本 SourceRef，以及不夹带价格的聚合拒绝。月度管线保留。自由文本边界先记录在 [设计文档](21-quotation-design.md)，随后实现；尚未猜测或实现客户原件解析，也没有外发入口。
 
-原生 Web 新增“报价工作区”空会话入口和会话内“报价”页签；报价页是配置声明预览，**不是已生成的交易报价**。业务状态和报价共用来源／工作区／结果与核对的分栏；可折叠、适配窄屏及深色。工作台通过官方 shell.overlay 和 conversation.view 复用同一组件，无 DSH fork 或独立前端。
+按用户截图重做整个原生工作面：**左侧 Sources 是实际上传文件，中间是原生 Chat／轨迹／审批，右侧 Studio 工具下方是实际主表与已保存报告**。来源和报告可就地预览或展开；报价工作区在空会话的 Studio 直接可用，只展示配置声明，**不是已生成交易报价**。原生月度路径及业务状态页保留，移除错误的嵌套三栏和报价模态工作台。保留 DSH AppFrame 及全部槽存储，用官方 `shell.overlay` 和公开 `data-slot` 样式锚点布局，无 DSH fork、私有组件复制、DOM 搬移或第二个 React 根。
 
 | 验证 | 本轮结果 | 复现 |
 | --- | --- | --- |
-| Python 全量 | **293 passed**，2 条依赖弃用提示 | `pytest -q backend/tests` |
+| Python 全量 | **304 passed**，2 条依赖弃用提示；日志兼容与保留策略最终聚焦复验 **6 passed** | `pytest -q -c backend/pyproject.toml backend/tests` |
 | 报价契约复验 | **28 passed**；成本变更、全缺项、来源、范围、单位、阈值、循环、除零、纯常量伪报价、改名、鉴权及有界返回 | `pytest -q backend/tests/test_declared_documents.py` |
-| TS | **20 passed** | `pnpm --dir plugins test` |
+| TS | **24 passed** | `pnpm --dir plugins test` |
 | 类型 / 产物 / 锁文件 | typecheck、build、frozen-lockfile 通过 | `pnpm --dir plugins typecheck` / `build` / `install --frozen-lockfile` |
 | Python 静态 | 通过 | `ruff check backend scripts` |
-| 报价浏览器 | 空会话打开、三栏位置、折叠、窄屏无横溢、刷新、中文/英文、深色、鉴权、无外发路由；**0 JS 异常、0 模型请求** | `pnpm --dir plugins smoke:quotation` |
-| 月度浏览器 | 完整研判、跨批次操作、父子链接通过；**4** 个实际原生子会话、**4/4** 校验 | `pnpm --dir plugins smoke:business` |
+| 报价浏览器 | 空会话 Studio 入口、原生 composer 不重挂、折叠实际状态、鼠标/键盘调整栏宽、窄屏、中英深浅色；来源上传/分页/展开/换批、命名保存/放弃/取消/失败重试/历史重开、样例与用途变体、完整宿主重启恢复；**0 JS 异常、0 模型请求** | `pnpm --dir plugins smoke:quotation` |
+| 月度浏览器 | 完整研判、工具下方报告列表及预览展开、跨批次连续操作、父子链接通过；**4** 个实际原生子会话、**4/4** 校验 | `pnpm --dir plugins smoke:business` |
 | Partial 回归 | **3/4** 保留、财务无有效判断、人工意见提交路径通过；仍不声称实现了宿主禁止重跑 | `BRIDGEFLOW_TEST_FAULT=step-limit pnpm --dir plugins smoke:business` |
-| 原生审批 | allowed-once / rejected / cancelled 与理由通道通过 | `pnpm --dir plugins smoke:web` |
+| 原生审批 | allowed-once / rejected / cancelled 与理由通道、官方存储审计及冷启动恢复通过 | `pnpm --dir plugins smoke:web` |
+
+**真机会话创建故障收尾：** npm Web 启动后，共享 home 的 fallback 被 Python 打包运行时改写为 `/snapshot` 入口，导致后续 `bridgeflow` preset 的 persona / ask-user 挂载失败。项目 SDK 入口现通过官方 `dsh_bin` 与 Web 共用 npm CLI；已移除 SDK smoke 从 `.env` 读取引导变量的旧回退。官方启动器自愈生成模块，无 DSH 源码修改。恢复前已有 **10** 份会话文件均保留，未剪裁或删除用户会话。真机 Web 原端口 **3082** 重启后，浏览器实际 `/api/session/create` 回执 `ok: true, agentPreset: bridgeflow`，空会话报价工作区可打开，**0 JS 异常、0 session/prompt 请求**。空会话不一定持久化，不能以新增日志文件数代替成功回执。
+
+运行时聚焦单测 **11 passed**（包含 CLI 选择拒绝与 SDK 显式指定）：`pytest -q backend/tests/test_start_web.py backend/tests/test_dsh_runtime.py backend/tests/test_dsh_provider.py`。`smoke:quotation` 额外播入失效 `/snapshot` 代理，检验 npm 自愈；Web 运行期间真正初始化 SDK（不执行 run），再核对新建会话回执与原生 symlink 均正确。直接试验 Python 打包运行时仍须另用独立 `DSH_HOME`；仅换 profile 名称不能隔离共享模块。
+
+**笔记本产品链路收尾：** 新建及示例笔记本使用官方 workspaceId 创建，保存同步官方成员关系，原生输入框不再要求额外选择目录；浏览器检查真实 contenteditable 就绪。 明确保存名称、用途、来源与预览位置；有编辑才出现保存/放弃/取消，失败后留在原页重试。原生会话抽屉的直接切换保留宿主语义，未保存编辑仅在当前页面草稿中保留。示例从界面直接导入真实合成文件，冻结示例字典，不修改部署政策；用途支持月度、报价、综合。重复点击报价与业务状态保持选中，来源/工作室按钮和原生折叠按钮的状态一致；栏宽支持拖动、键盘、重置及刷新恢复。完整用户故事见 [演示说明](../demo-walkthrough/notebook.md)。
+
+**连续退出恢复：** 本机复验额外发现保存退出后，当前会话从空状态重开会把默认状态页当作显式路由，漏恢复来源；已修正恢复条件并增加保存后退出再重开的连续浏览器回归。不能仅用刷新或新建后的重开代替这条验收。
+
+**冷启动根因：** 锁定的官方 `Session.append` 无法给下游自定义事件加 `ignorable`，旧 `bridgeflow/review` 与 `bridgeflow/approval-note` 会导致原生冷读拒绝。现在研判状态从原生工具事件投影，笔记本和备注写官方 storage-domain；原生标题与领域存储均确认落盘后才显示保存成功。正常、partial 的 parent + **4** children 以及拒绝备注均通过完整宿主重启读取。历史兼容工具默认只检查，显式应用才保留原始字节备份后标记已知信息事件；本机检查需修复 **0** 份，因此没有改写旧日志。
+
+失败中间轮次未计作通过：官方逐记录存储键拒绝 JSON 组合键，已改身份摘要；空会话没有原生页签是宿主行为，验收使用实际可用的 Studio 入口；恢复标题有独立读取过程，验收等待元数据加载完成。最初从仓库根运行无配置的 pytest 导致异步测试未被运行器接管，按 backend 配置完整复跑通过，未放宽测试。
+
+**本机最终入口：** 同一 Web 端口 **3082** 更新后保留 **12** 份已有会话文件，没有删除、剪裁或改写历史日志。已保存“业务演示 · 月度对账”供直接展示，实际包含 **4** 份可预览来源与规则主表；完整宿主重启、历史打开、保存、退出、再次打开均通过，**0 JS 异常、0 session/prompt 请求**。此前空入口遗漏书签的失败已被连续用例复现并修复。[本机工作面](evidence/quotation-ui/runs/1788722008993/live-notebook.png) / [检查记录](evidence/quotation-ui/runs/1788722008993/live-check.json)。
 
 **调用与费用：本轮真实模型调用 0 次、计费 tokens 0、模型费用 0。** 报价单测及报价 UI 均不启动模型；月度与审批浏览器使用进程内离线协议适配器，不访问付费模型。这不验证真实合同抽取准确率或报价业务口径。
 
@@ -37,11 +51,11 @@
 
 边界：结构化事实最多 **64** 项，指标最多 **24** 项，每个输入最多 **4** 条出处，每片段最多 **480** 字符，每个输出展示最多 **5** 条出处，并保留真实引用次数。当前合成案例把每项出处与片段扩到封顶后，序列化草稿通过 **小于 60000 bytes** 的断言；不宣称所有可能契约均是该字节数。计算不依赖展示截断，字段更名不修改 Python。
 
-本轮诊断到根因并修复：原生空会话隐藏会话页签，不能靠先发模型消息解锁功能，故提供官方 overlay 入口；原有数据页将 batch_id 直接截成省略文本，导致连续操作脚本拿到无效身份，现保留完整编号并由布局控制。初次浏览器检查失败，修复后复跑通过，不把初次结果算作成功。
+本轮定位并修复：旧版只在业务页嵌套三栏，将声明字段误作 Sources、报告挤占 Chat；原上传管线未保留清洗前浏览器视图，故新批次独立保留解析视图及 SHA-256，来源清单只读元数据；旧批次明确不可预览。样式核验发现固定侧栏脱离 grid 后中栏占零宽、继承 height 导致顶栏遮挡，几何与 drawer 层级均已修正。报告返回操作改为关闭所属 dialog，不再按全局第一个弹窗误关。DSH 原生“新建会话”会复用空会话，顶栏“新建笔记本”明确调用官方 sessions.create 创建独立会话并清空当前批次选择。保留先前完整 batch_id 修复。失败的中间检查不计作通过。
 
-报价最终浏览器目录 `/tmp/bridgeflow-web-e2e-1zVWjc`；月度 `/tmp/bridgeflow-web-e2e-Bnom9S`；partial `/tmp/bridgeflow-web-e2e-I0QB8T`；审批 `/tmp/bridgeflow-web-e2e-b8Ijvi`。截图按场景最多保留 **2** 轮，未清理用户真机会话。
+报价最终浏览器目录 `/tmp/bridgeflow-web-e2e-sEV0SF`；月度 `/tmp/bridgeflow-web-e2e-uFDJy7`；partial `/tmp/bridgeflow-web-e2e-WFyjT5`；审批 `/tmp/bridgeflow-web-e2e-c8vP5T`。截图按场景最多保留 **2** 轮，未清理用户真机会话。
 
-[报价浅色](evidence/quotation-ui/runs/1788714260781/quotation-light.png) · [深色公式核对](evidence/quotation-ui/runs/1788714260781/quotation-dark.png) · [窄屏](evidence/quotation-ui/runs/1788714260781/quotation-narrow.png) · [英文](evidence/quotation-ui/runs/1788714260781/quotation-en.png)
+[保存与离开](evidence/quotation-ui/runs/1788722008993/notebook-save.png) · [笔记本历史](evidence/quotation-ui/runs/1788722008993/notebook-history.png) · [示例来源](evidence/quotation-ui/runs/1788722008993/notebook-sample.png) · [三栏空笔记本](evidence/quotation-ui/runs/1788722008993/notebook-empty.png) · [深色报价预览](evidence/quotation-ui/runs/1788722008993/quotation-dark.png) · [原件分页预览](evidence/quotation-ui/runs/1788722008993/source-preview.png) · [工具下方的产物及预览](evidence/quotation-ui/runs/1788722008993/artifact-preview.png) · [窄屏](evidence/quotation-ui/runs/1788722008993/quotation-narrow.png) · [英文](evidence/quotation-ui/runs/1788722008993/quotation-en.png)
 
 ---
 

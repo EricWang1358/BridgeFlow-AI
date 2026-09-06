@@ -1,3 +1,4 @@
+import type { WorkspaceId } from '@deepseek-ai/dsh-workspace'
 import { useSyncExternalStore } from 'react'
 import type { SubagentListEntry } from '@deepseek-ai/dsh-subagent/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -10,7 +11,41 @@ export function configureLocale(value: Context['locale']) { locale = value }
 const subscribe = (fn: () => void) => locale.subscribe(fn)
 const current = () => locale.getSnapshot().active.startsWith('zh') ? 'zh' : 'en'
 const labels = {
-  sources: ['来源', 'Sources'], studio: ['结果与核对', 'Studio'], workArea: ['工作区', 'Workspace'],
+  notebookKind: ['笔记本用途', 'Notebook purpose'], monthlyNotebook: ['月度对账', 'Monthly review'], quotationNotebook: ['报价', 'Quotation'], mixedNotebook: ['综合工作', 'Combined work'],
+  monthlyProgress: ['月度对账进度', 'Monthly review progress'], quotationProgress: ['报价进度', 'Quotation progress'],
+  notStarted: ['尚未开始', 'Not started'], quotationNext: ['查看声明与待补依据', 'View declaration and missing evidence'],
+  notebookPurposeHelp: ['选择用途可调整状态指引；月度对账和报价保持独立。', 'Purpose tailors the status guidance; monthly review and quotation remain separate.'],
+  untitledNotebook: ['未命名笔记本', 'Untitled notebook'], notebookName: ['笔记本名称', 'Notebook name'],
+  notebooks: ['笔记本', 'Notebooks'], saveNotebook: ['保存笔记本', 'Save notebook'], exitNotebook: ['退出笔记本', 'Exit notebook'],
+  leaveNotebook: ['离开前保存笔记本？', 'Save this notebook before leaving?'],
+  noPendingApproval: ['当前没有待处理审批。需要您确认时，会在对话中提示。', 'No approval is pending. Chat will prompt you when a decision is needed.'],
+  saveNotebookHelp: ['保存名称和来源选择，之后可从笔记本列表重新打开。不保存仅放弃本次名称和来源选择；已记录的对话、已上传文件和报告仍保留。', 'Save the name and source selection to reopen from Notebooks. Discard only drops these edits; recorded conversations, uploaded files and reports remain.'],
+  saveAndContinue: ['保存并继续', 'Save and continue'], discardAndContinue: ['不保存并继续', 'Discard and continue'], cancelLeave: ['取消，继续编辑', 'Cancel, keep editing'],
+  notebookTitleRequired: ['请填写笔记本名称', 'Enter a notebook name'],
+  notebookHistoryHelp: ['从 DSH 已保存的会话中打开笔记本；来源及产物按保存的批次恢复。未保存的空白笔记本不列入历史。', 'Open saved DSH sessions with their saved sources and artifacts. Unsaved empty notebooks are omitted.'],
+  sampleNotebook: ['打开示例笔记本', 'Open sample notebook'], sampleNotebookTitle: ['合成示例 · 月度风险复核', 'Synthetic sample · monthly risk review'],
+  sampleNotebookHelp: ['合成案例可直接预览来源和规则主表。研判需手动发起，会使用配置的模型。', 'Preview synthetic sources and the rule-computed master table. Starting a review uses the configured model.'],
+  draftNotebook: ['空白草稿', 'Empty draft'],
+  unsavedNotebook: ['未保存', 'Unsaved'], savedNotebook: ['已保存', 'Saved'],
+  resizeSources: ['调整来源栏宽度', 'Resize Sources'], resizeStudio: ['调整工作室宽度', 'Resize Studio'],
+  newNotebook: ['新建笔记本', 'Create notebook'],
+  previewUnavailable: ['无法加载此预览，请检查批次或重新选择来源。', 'This preview could not be loaded. Check the batch or select a source again.'],
+  studioStateHelp: ['导入与报告来自所选批次；审批来自当前原生会话。详细轨迹可在中栏查看。', 'Import and report state belong to the selected batch; approvals belong to the current native session. Open the center trace for details.'],
+  welcomeTitle: ['从这里开始你的业务笔记本', 'Let’s start your business notebook'],
+  welcomeHelp: ['把部门文件放到左侧，在这里与队长核对，在右侧查看产物与依据。', 'Add department files on the left, work with your captain here, and preview outputs and evidence on the right.'],
+  monthlySteps: ['月度对账怎么开始', 'How to start a monthly review'],
+
+  notebookTitle: ['业务笔记本', 'Business notebook'], sessionsSettings: ['会话与设置', 'Sessions & settings'],
+  addSources: ['添加来源', 'Add sources'], sourceUploadHelp: ['月度对账 · 上传的部门文件保留在这里，点击即可预览。', 'Monthly review · Uploaded department files appear here. Select a file to preview.'],
+  emptySources: ['保存的来源会显示在这里', 'Saved sources will appear here'], emptySourcesHelp: ['添加本月部门文件，开始核对与分析。', 'Add this month’s department files to start your review.'],
+  originalUnavailable: ['旧批次未保留原件预览', 'Original preview unavailable for this older batch'],
+  sourcePreview: ['来源预览', 'Source preview'], parsedOriginal: ['原始表格的解析视图，未经清洗；数据仅供浏览器分页预览。', 'Parsed original table before cleaning; paginated browser preview only.'],
+  tools: ['工具', 'Tools'], artifacts: ['产物', 'Artifacts'], refreshArtifacts: ['刷新产物', 'Refresh artifacts'],
+  emptyArtifacts: ['完成研判后，报告会保存在这里。', 'Completed review reports will appear here.'],
+  studioStartHelp: ['添加来源后可发起月度研判。报价声明可直接查看。', 'Add sources to start a monthly review. The quotation declaration is available now.'],
+  preview: ['预览', 'Preview'], expandPreview: ['展开预览', 'Expand preview'],
+
+  sources: ['来源', 'Sources'], studio: ['工作室', 'Studio'], workArea: ['工作区', 'Workspace'],
   sourceHelp: ['依据与归属', 'Evidence and ownership'], studioHelp: ['状态、责任与下一步', 'Status, owners and next steps'],
   quotationWorkspace: ['报价工作区', 'Quotation workspace'], quotation: ['报价', 'Quotation'], quotationHelp: ['从客户需求与采购依据形成报价，与月度对账并列。', 'Build quotations from customer requirements and procurement evidence, alongside monthly review.'],
   quotationSourceHelp: ['所需依据由人工字典声明；原件先抽取为带出处的结构化事实。', 'Required evidence comes from the human dictionary. Originals must first become structured facts with citations.'],
@@ -85,8 +120,8 @@ const labels = {
   next_needs_configuration: ['字段字典没有声明可用于连接的列，所以主表没有建，研判也起不来。核对下面这份字典是不是你以为的那份，补齐后重新导入一次——旧批次不会被改。',
                              'The dictionary declares no joinable column, so no Master Table was built and the review cannot start. Check the dictionary below is the one you think it is, complete it, and import again — the old batch is left alone.'],
   askCaptain: ['让 captain 看这批数据', 'Ask the captain to look'],
-  askCaptainHint: ['它会读各列的形状与跨部门重合度（不读数据行），然后给出字段字典候选和理由。你仍然是决定的人。',
-                   'It reads column shapes and cross-department overlap — never the rows — then proposes dictionary candidates with its reasoning. You still decide.'],
+  askCaptainHint: ['它会查看列形状和重合统计，在人工字典已声明的字段中提出匹配及理由；没有候选时请负责人补充配置。',
+                   'It reads column shapes and cross-department overlap — never the rows — then proposes matches to fields already declared by people. Missing candidates need an administrator.'],
   dictionaryInForce: ['本批次冻结的字典', 'Dictionary frozen into this batch'],
   declaresEntities: ['它为各部门声明的可连接列', 'Joinable columns it declares'],
   declaresNothing: ['未声明任何可连接列', 'declares none'],
@@ -127,7 +162,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   }
   return response.json() as Promise<T>
 }
-export type Route = { batch?: string; view?: string; report?: string; parent?: string; child?: string }
+export type Route = { kind?: string; source?: string; batch?: string; view?: string; report?: string; parent?: string; child?: string }
 export function route(): Route { return location.hash.startsWith('#bridgeflow?') ? Object.fromEntries(new URLSearchParams(location.hash.slice(12))) : {} }
 export function navigate(value: Route) {
   const query = new URLSearchParams(Object.entries(value).filter((x): x is [string, string] => !!x[1]))
@@ -144,16 +179,17 @@ export function navigate(value: Route) {
  * sentence.
  */
 export function diagnoseRequest(batch: string, period = '') {
-  return `批次 ${batch}（${period}）没有可连接的列，主表建不起来。请调用一次 profile_batch，` +
-    `然后针对每个 undeclared 的部门提出一条字段字典候选：写明哪个部门的哪一列应当被声明为` +
-    `哪种实体，并用 overlaps 里的重合比例作为理由。两个 string 列高度重合是同一实体的证据，` +
-    `两个 number 列重合通常只是巧合。不要猜列名以外的东西，不要读取数据行，不要执行任何写入。`
+  return `批次 ${batch}（${period}）没有可连接的列。请调用 profile_batch 查看列形状，` +
+    `并用 lookup_field_dictionary 查询本批次冻结的人工字典。只在已声明字段的封闭候选集中提出上传列匹配，` +
+    `列出出处、统计依据、不确定项和需要确认的部门负责人。重合比例不是跨实体关系的证明。` +
+    `字典没有对应候选时明确报未配置，请负责人补充人工声明；禁止创造字段、实体或字典，` +
+    `禁止读取数据行或执行写入。`
 }
 
 export function reviewRequest(batch: string, period = '') {
   return `请研判 ${period} 批次 ${batch}：review_context → 同一响应四次官方 subagent（production/procurement/finance/marketing）→ review_finalize。缺口如实标 partial，不重试，不执行业务动作。`
 }
-export type Summary = { batch_id: string; period: string; status: string; master_rows: number; unresolved: number; refusal: string;
+export type Summary = { demo_case?: string | null; batch_id: string; period: string; status: string; master_rows: number; unresolved: number; refusal: string;
   departments: { department: string; rows: number; quarantined: number; corrections: number }[]
   /** The dictionary this batch was frozen against, and what it declares per department. */
   dictionary?: string
@@ -181,6 +217,12 @@ export async function openSession(parent: string, child?: string) {
  * A session is created when none is open, because the first thing a person does
  * after their first import must not be a dead button.
  */
+export async function createNotebookSession(sessions: ISessions) {
+  const { workspaceId } = await api<{workspaceId: string}>('/config')
+  if (!workspaceId) throw new Error('BridgeFlow workspace is unavailable')
+  return sessions.create({workspaceId: workspaceId as WorkspaceId})
+}
+
 export async function startReview(batch: string, period: string): Promise<void> {
   return ask(reviewRequest(batch, period))
 }
@@ -193,7 +235,7 @@ export async function startDiagnosis(batch: string, period: string): Promise<voi
 async function ask(text: string): Promise<void> {
   await runtime.sessions.refresh()
   const current = runtime.sessions.list.getSnapshot().current
-  const target = current ?? (await runtime.sessions.create())
+  const target = current ?? (await createNotebookSession(runtime.sessions))
   const binding = runtime.sessions.binding(target)
   if (!binding) throw new Error('No session is available to work in')
   const result = await binding.session.prompt([{ type: 'text', text }], 'queue')

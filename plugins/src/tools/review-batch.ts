@@ -52,8 +52,6 @@ export function mountReview(ctx: Context, backend: BackendConfig, policy: Review
         batch_id: state.context.batch_id, parent_session_id: state.parent.id, runs,
       }, AbortSignal.timeout(15000))
       state.report = report
-      state.parent.session.append('bridgeflow/review', { batch_id: state.context.batch_id, review_id: state.id,
-        report_id: String(report.report_id), status: String(report.status) })
       return report
     })().finally(() => cleanup(state))
     return state.finishing
@@ -74,7 +72,6 @@ export function mountReview(ctx: Context, backend: BackendConfig, policy: Review
           reserved: new Set(), children: new Map(), controller, timer: setTimeout(() => controller.abort('Review exceeded 180 seconds'), 180000) }
         state.timer.unref()
         policy.states.set(parent.id, state)
-        parent.session.append('bridgeflow/review', { batch_id: args.batch_id, review_id: state.id, status: 'dispatching' })
         return { review_id: state.id, batch_id: args.batch_id, period: context.period,
           instruction: 'Dispatch ALL FOUR official subagent calls in ONE assistant response, run_in_background=false. Host supplies each child its immutable packet. Then call review_finalize using review_id; host collects actual child results. Missing roles yield partial, never invented findings.',
           delegations: ROLES.map(role => ({ description: role, prompt: JSON.stringify({ review_id: state.id, role, ticket: state.tickets.get(role) }), run_in_background: false })) }

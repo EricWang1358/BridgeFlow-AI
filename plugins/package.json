@@ -2,7 +2,7 @@
   "name": "bridgeflow-plugins",
   "private": true,
   "version": "0.0.0",
-  "description": "BridgeFlow's dsh plugins \u2014 tool shells, guards and UI slots; the bodies live in Python.",
+  "description": "BridgeFlow's dsh plugins — tool shells, guards and UI slots; the bodies live in Python.",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -45,8 +45,10 @@
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.2",
+    "@deepseek-ai/dsh-storage-domain": "0.1.2-rc.1",
     "@deepseek-ai/dsh-tools": "0.1.2-rc.1",
-    "@deepseek-ai/schemastery": "^3.18.2"
+    "@deepseek-ai/schemastery": "^3.18.2",
+    "zod": "4.5.4"
   },
   "exports": {
     ".": "./src/index.ts",

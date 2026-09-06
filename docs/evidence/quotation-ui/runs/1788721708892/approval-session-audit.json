@@ -1,0 +1,290 @@
+[
+  {
+    "session_directory": "session-2f7dce47-13be-4931-a0a4-bd790a8d0fd8",
+    "header": {
+      "id": "session-2f7dce47-13be-4931-a0a4-bd790a8d0fd8",
+      "createdAt": 1788721200954
+    },
+    "events": [
+      {
+        "type": "request/header",
+        "time": 1788721203666,
+        "data": {
+          "tools": [
+            "aggregate_metric",
+            "ask_user_question",
+            "batch_summary",
+            "confirm_mapping",
+            "list_metrics",
+            "lookup_field_dictionary",
+            "profile_batch",
+            "review_context",
+            "review_finalize",
+            "subagent"
+          ]
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721203694,
+        "data": {
+          "turn": 1,
+          "step": 1,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721203698,
+        "data": {
+          "turn": 1,
+          "step": 1,
+          "name": "confirm_mapping",
+          "callId": "approval-fixture-0"
+        }
+      },
+      {
+        "type": "approval/asked",
+        "time": 1788721203700,
+        "data": {
+          "id": "9255e670-1b86-443e-b86d-72b67989aa82",
+          "toolName": "confirm_mapping",
+          "callId": "approval-fixture-0",
+          "reason": "confirm_mapping records a decision that will be reused next month and cited in an audit. It changes stored state; nothing is written without approval.\nsource: sku:test-0\ntarget: customer:test\nrelation: ordered_by\naccepted: true\nevidence: Offline browser test\nperiod: 2025-11"
+        }
+      },
+      {
+        "type": "approval/decided",
+        "time": 1788721203951,
+        "data": {
+          "id": "9255e670-1b86-443e-b86d-72b67989aa82",
+          "outcome": "allowed-once"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721204013,
+        "data": {
+          "error": false,
+          "source": {
+            "kind": "tool",
+            "callId": "approval-fixture-0"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721204037,
+        "data": {
+          "turn": 1,
+          "step": 2,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": [
+            "Offline fixture turn 1 finished."
+          ]
+        }
+      },
+      {
+        "type": "turn/end",
+        "time": 1788721204038,
+        "data": {
+          "turn": 1,
+          "reason": {
+            "kind": "completed"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721204266,
+        "data": {
+          "turn": 2,
+          "step": 1,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721204268,
+        "data": {
+          "turn": 2,
+          "step": 1,
+          "name": "confirm_mapping",
+          "callId": "approval-fixture-2"
+        }
+      },
+      {
+        "type": "approval/asked",
+        "time": 1788721204269,
+        "data": {
+          "id": "e3d83a1a-837b-4662-b266-58e20ec49cf1",
+          "toolName": "confirm_mapping",
+          "callId": "approval-fixture-2",
+          "reason": "confirm_mapping records a decision that will be reused next month and cited in an audit. It changes stored state; nothing is written without approval.\nsource: sku:test-2\ntarget: customer:test\nrelation: ordered_by\naccepted: true\nevidence: Offline browser test\nperiod: 2025-11"
+        }
+      },
+      {
+        "type": "approval/decided",
+        "time": 1788721204843,
+        "data": {
+          "id": "e3d83a1a-837b-4662-b266-58e20ec49cf1",
+          "outcome": "rejected"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721204845,
+        "data": {
+          "error": true,
+          "source": {
+            "kind": "tool",
+            "callId": "approval-fixture-2"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721204865,
+        "data": {
+          "turn": 2,
+          "step": 2,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": [
+            "Offline fixture turn 3 finished."
+          ]
+        }
+      },
+      {
+        "type": "turn/end",
+        "time": 1788721204866,
+        "data": {
+          "turn": 2,
+          "reason": {
+            "kind": "completed"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721205125,
+        "data": {
+          "turn": 3,
+          "step": 1,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721205126,
+        "data": {
+          "turn": 3,
+          "step": 1,
+          "name": "confirm_mapping",
+          "callId": "approval-fixture-4"
+        }
+      },
+      {
+        "type": "approval/asked",
+        "time": 1788721205127,
+        "data": {
+          "id": "fdf1734d-3a06-4929-8188-e3acf8a039b1",
+          "toolName": "confirm_mapping",
+          "callId": "approval-fixture-4",
+          "reason": "confirm_mapping records a decision that will be reused next month and cited in an audit. It changes stored state; nothing is written without approval.\nsource: sku:test-4\ntarget: customer:test\nrelation: ordered_by\naccepted: true\nevidence: Offline browser test\nperiod: 2025-11"
+        }
+      },
+      {
+        "type": "approval/decided",
+        "time": 1788721210128,
+        "data": {
+          "id": "fdf1734d-3a06-4929-8188-e3acf8a039b1",
+          "outcome": "cancelled"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721210130,
+        "data": {
+          "error": true,
+          "source": {
+            "kind": "tool",
+            "callId": "approval-fixture-4"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721210149,
+        "data": {
+          "turn": 3,
+          "step": 2,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": [
+            "Offline fixture turn 5 finished."
+          ]
+        }
+      },
+      {
+        "type": "turn/end",
+        "time": 1788721210150,
+        "data": {
+          "turn": 3,
+          "reason": {
+            "kind": "completed"
+          }
+        }
+      }
+    ]
+  }
+]
