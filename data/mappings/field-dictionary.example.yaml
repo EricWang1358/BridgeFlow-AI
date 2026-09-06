@@ -69,14 +69,19 @@ derived:
   purchase_amount:
     product: [unit_price, purchase_quantity]
 
-# 各度量的月度合并方式。
+# 各度量的合并方式：跨期汇总、以及同一个格子里落进多行时怎么折叠。
 #
 # 数量求和、单价取平均、库存取期末值——**选错了会得到一个看起来合理的数字**，
-# 所以这是声明的，不是猜的。缺省是 sum。
+# 所以这是声明的，不是猜的。
+#
+# 没有缺省值（这里曾写着「缺省是 sum」，那是假的）：某个度量真的有多行撞进一格、
+# 而这里没声明时，Master Table **拒绝整张表**并点名缺哪个度量。给单价默认求和，
+# 就是 material_spend 那个 13,540 的成因本身。
 rollups:
   output_quantity: sum
   capacity_hours: sum
   purchase_amount: sum
   purchase_quantity: sum
+  unit_price: average          # 平均的是成交价；material_price_change 用的是数量加权，两者不同
   revenue_amount: sum
   receivable_days: average
