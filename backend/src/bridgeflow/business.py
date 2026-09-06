@@ -1,6 +1,7 @@
 """Declared business arithmetic and responsibility contracts, without model arithmetic."""
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from decimal import Decimal, InvalidOperation
 from math import isfinite
 from typing import Any, NamedTuple
@@ -34,14 +35,27 @@ def number(value: Any) -> Decimal:
     return result
 
 
-def expression(node: dict, batch: BatchSnapshot, depth: int = 0) -> Value:
+def expression(node: dict, batch: BatchSnapshot | None, depth: int = 0, *,
+               inputs: Mapping[str, Value] | None = None,
+               metric: Callable[[str, int], Value] | None = None) -> Value:
     """A bounded arithmetic tree; no eval, inferred fields, joins or currencies."""
     if depth > 8 or not isinstance(node, dict):
         refuse("Invalid or excessively nested business formula")
     op = node.get("op")
+    if op == "input":
+        key = node.get("key")
+        if inputs is None or key not in inputs:
+            refuse(f"Missing declared input: {key}")
+        return inputs[key]
+    if op == "metric":
+        if metric is None or not isinstance(node.get("key"), str):
+            refuse("Metric reference is not configured")
+        return metric(node["key"], depth + 1)
     if op == "constant":
         return Value(number(node["value"]), [], 0)
     if op in ("sum", "sum_product"):
+        if batch is None:
+            refuse("A table expression requires an immutable table batch")
         department = node.get("department")
         tables = [table for table in batch.clean_tables if table.department == department]
         if len(tables) != 1 or not tables[0].rows:
@@ -74,7 +88,7 @@ def expression(node: dict, batch: BatchSnapshot, depth: int = 0) -> Value:
     operands = node.get("args", [])
     if op not in ("add", "subtract", "divide", "multiply") or len(operands) != 2:
         refuse("Unsupported business arithmetic operation")
-    a, b = [expression(child, batch, depth + 1) for child in operands]
+    a, b = [expression(child, batch, depth + 1, inputs=inputs, metric=metric) for child in operands]
     if op == "divide" and b.number == 0:
         refuse("Zero denominator; no ratio can be reported")
     value = {"add": lambda: a.number + b.number, "subtract": lambda: a.number - b.number,

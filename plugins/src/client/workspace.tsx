@@ -100,6 +100,7 @@ export function DataWorkspace({ wide }: { wide: boolean }) {
     const readRoute = () => {
       const value = route()
       abort?.abort(); setBusy(false)
+      if (value.view === 'quotation') { dialog.current?.close(); return }
       if (!value.batch || value.view === 'state' || !/^[a-f0-9]{32}$/.test(value.batch)) return
       pendingBatch.current?.abort(); abort = new AbortController(); pendingBatch.current = abort; const signal = abort.signal
       dialog.current?.showModal(); setBatchId(value.batch); setReportId(value.report ?? '')
@@ -133,7 +134,7 @@ export function DataWorkspace({ wide }: { wide: boolean }) {
         <div>
           <h2>{t(batch ? 'title' : 'intro')}</h2>
           {batch
-            ? <p className="bf-lead bf-hint">{t('batchIdShort')} <code className="bf-mono">{batch.batch_id.slice(0, 12)}…</code>{' '}
+            ? <p className="bf-lead bf-hint">{t('batchIdShort')} <code className="bf-mono">{batch.batch_id}</code>{' '}
                 <button className="bf-quiet" onClick={() => void copy(batch.batch_id, t('copied'))}>{t('copyId')}</button></p>
             : <p className="bf-lead">{t('heroLead')}</p>}
         </div>

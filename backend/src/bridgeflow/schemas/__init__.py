@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 Department = Literal["production", "procurement", "finance", "marketing"]
 Severity = Literal["info", "watch", "warning", "critical"]
@@ -64,20 +64,37 @@ class SourceRef(BaseModel):
     #: The import batch this came from. Empty until batches exist (#12).
     batch: str = ""
     department: Department
-    period: str
+    period: str = ""
     #: Original filename as uploaded, so the answer names something the user has.
     filename: str = ""
     #: Worksheet name for XLSX; empty for CSV.
     sheet: str = ""
     #: 0-based index into the cleaned rows.
-    row: int
-    column: str
+    row: int | None = None
+    column: str = ""
+    #: Text coordinates extend the same citation type; they never invent spreadsheet cells.
+    page: int | None = Field(default=None, ge=1)
+    paragraph: str = Field(default="", max_length=160)
+    excerpt: str = Field(default="", max_length=480)
+    document_sha256: str = Field(default="", pattern=r"^([a-f0-9]{64})?$")
     source_row: int | None = None
     original_column: str = ""
+
+    @model_validator(mode="after")
+    def require_location(self):
+        if self.page is not None or self.paragraph:
+            if not (self.filename.strip() and self.document_sha256 and self.excerpt.strip()):
+                raise ValueError("Text citations require a file, digest and excerpt")
+        elif self.row is None or not self.column:
+            raise ValueError("Cell citations require a row and column")
+        return self
 
     def cite(self) -> str:
         """One line a person can act on."""
         where = self.filename or f"{self.department} {self.period}"
+        if self.page is not None or self.paragraph:
+            location = f" page {self.page}" if self.page is not None else ""
+            return f"{where}{location} {self.paragraph}".strip()
         sheet = f" [{self.sheet}]" if self.sheet else ""
         return f"{where}{sheet} row {self.source_row if self.source_row is not None else self.row} column {self.original_column or self.column}"
 

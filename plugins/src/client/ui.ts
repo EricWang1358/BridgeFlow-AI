@@ -10,6 +10,19 @@ export function configureLocale(value: Context['locale']) { locale = value }
 const subscribe = (fn: () => void) => locale.subscribe(fn)
 const current = () => locale.getSnapshot().active.startsWith('zh') ? 'zh' : 'en'
 const labels = {
+  sources: ['来源', 'Sources'], studio: ['结果与核对', 'Studio'], workArea: ['工作区', 'Workspace'],
+  sourceHelp: ['依据与归属', 'Evidence and ownership'], studioHelp: ['状态、责任与下一步', 'Status, owners and next steps'],
+  quotationWorkspace: ['报价工作区', 'Quotation workspace'], quotation: ['报价', 'Quotation'], quotationHelp: ['从客户需求与采购依据形成报价，与月度对账并列。', 'Build quotations from customer requirements and procurement evidence, alongside monthly review.'],
+  quotationSourceHelp: ['所需依据由人工字典声明；原件先抽取为带出处的结构化事实。', 'Required evidence comes from the human dictionary. Originals must first become structured facts with citations.'],
+  awaitingEvidence: ['待补充真实依据', 'Awaiting source evidence'], awaitingSamples: ['等待业务样板', 'Awaiting business samples'],
+  quotationUnconfigured: ['尚未配置报价声明', 'No quotation declaration configured'],
+  quotationConfigureHelp: ['请管理员在字段字典中配置报价契约；样板到达后再确认输入格式与抽取方式。', 'Ask the administrator to configure the quotation contract in the field dictionary. Input formats and extraction follow business samples.'],
+  quotationStage: ['当前：声明与算术准备', 'Current stage: declaration and arithmetic'],
+  quotationStageHelp: ['缺成本、产能或付款历史会明确拒绝。客户文件抽取与外发将在样板确认后接入。', 'Missing cost, capacity or payment history refuses a quote. Document extraction and sending follow sample confirmation.'],
+  decisionOwners: ['决策负责人', 'Decision owners'], quotationChecks: ['出数前核对', 'Checks before pricing'],
+  quotationApprovalHelp: ['报价草稿须经人工批准才可外发；此页不会发送报价。', 'A draft requires human approval before external use. This page does not send quotations.'],
+  declaredTemplate: ['声明模板', 'Declared template'], declaredFormulas: ['查看声明公式', 'View declared formulas'], declarationSource: ['查看字典出处', 'View dictionary source'],
+  quotationNoDraft: ['模板预览，尚未生成交易报价。', 'Template preview; no transaction quotation has been generated.'],
   sessionApprovals: ['下方审批属于当前会话，不代表所选批次的批准状态。', 'Approvals below belong to this session; they do not approve the selected batch.'],
   batchAudit: ['所选批次派活记录', 'Dispatches for selected batch'],
   followSession: ['跟随当前会话批次', 'Use current session batch'],

@@ -9,6 +9,7 @@ import { MappingApproval } from './approval.tsx'
 import { BusinessReview, type Review } from './review.tsx'
 import { configureRuntime, navigate, openSession, route, useUI } from './ui.ts'
 import { DataWorkspace, ImportForm } from './workspace.tsx'
+import { mountQuotation, QuotationButton } from './quotation.tsx'
 import { mountState } from './state.tsx'
 import { style } from './style.ts'
 
@@ -49,7 +50,7 @@ function Orientation({ session, input }: InputZone) {
     <p className="bf-lead bf-hint">{t('heroLead')}</p>
     <ol>{steps.map(n => <li key={n}><b>{t(`heroStep${n}`)}</b> <span>· {t(`heroStep${n}Hint`)}</span></li>)}</ol>
     <div className="bf-actions" style={{ marginBottom: 0 }}>
-      <button className="bf-primary" onClick={() => setDrawer(true)}>{t('heroOpen')}</button>
+      <button className="bf-primary" onClick={() => setDrawer(true)}>{t('heroOpen')}</button><QuotationButton />
     </div>
   </aside>
 }
@@ -90,6 +91,7 @@ export function apply(ctx: Context): void {
   // than competing with it.
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({ name: 'conversation.input.dock', id: 'bridgeflow-orientation', order: -10 }, Orientation))
   mountState(ctx)
+  mountQuotation(ctx)
   ctx.effect(() => {
     const navigateSession = () => { const value = route(); if (value.parent) void openSession(value.parent, value.child).catch(e => ctx.logger.warn('Session route unavailable: %s', String(e))) }
     navigateSession(); window.addEventListener('hashchange', navigateSession); return () => window.removeEventListener('hashchange', navigateSession)

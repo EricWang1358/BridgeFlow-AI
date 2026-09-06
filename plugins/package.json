@@ -11,7 +11,8 @@
     "smoke:web": "node tests/web-smoke.mjs",
     "smoke:business": "node tests/business-smoke.mjs",
     "sessions:prune": "python3 ../scripts/session_retention.py",
-    "shots": "node tests/screenshots.mjs"
+    "shots": "node tests/screenshots.mjs",
+    "smoke:quotation": "node tests/quotation-smoke.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-agent": "0.1.2-rc.1",

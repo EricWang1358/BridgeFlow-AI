@@ -1,0 +1,100 @@
+# Human-maintained synthetic policy, not a customer template or production default.
+quotation:
+  title: 交易报价草稿
+  description: 合成规则示例。正式字段、成本构成、部门责任与输入格式须待业务样板确认。
+  roles:
+    procurement:
+      responsibility: 提供可核验的材料及加工成本、可用产能与交期依据。
+      decision_owner: 采购侧负责人（示例，待业务确认）
+    marketing:
+      responsibility: 核对客户需求与既有付款记录，提交报价复核，不自行承诺外发。
+      decision_owner: 客户侧负责人（示例，待业务确认）
+  inputs:
+    order_quantity: {title: 客户需求数量, unit: unit, owner: marketing, exclusive_minimum: 0}
+    material_cost: {title: 材料采购成本, unit: SGD/kg, owner: procurement, minimum: 0}
+    material_usage: {title: 单件材料用量, unit: kg/unit, owner: procurement, exclusive_minimum: 0}
+    processing_hours: {title: 单件加工工时, unit: hour/unit, owner: procurement, exclusive_minimum: 0}
+    processing_rate: {title: 已分摊加工成本, unit: SGD/hour, owner: procurement, minimum: 0}
+    available_capacity: {title: 可用产能, unit: hour, owner: procurement, minimum: 0}
+    payment_history: {title: 经核实的历史回款天数, unit: day, owner: marketing, minimum: 0}
+    payment_request: {title: 客户请求付款期限, unit: day, owner: marketing, minimum: 0}
+    delivery_request: {title: 客户请求交期, unit: day, owner: marketing, exclusive_minimum: 0}
+    delivery_commitment: {title: 采购侧确认可交付周期, unit: day, owner: procurement, exclusive_minimum: 0}
+  metrics:
+    unit_cost:
+      title: 可核验单件成本
+      unit: SGD/unit
+      formula: material_cost × material_usage + processing_hours × processing_rate
+      expression:
+        op: add
+        args:
+          - {op: multiply, args: [{op: input, key: material_cost}, {op: input, key: material_usage}]}
+          - {op: multiply, args: [{op: input, key: processing_hours}, {op: input, key: processing_rate}]}
+    floor_price:
+      title: 成本底价
+      unit: SGD/unit
+      formula: ceil_currency(unit_cost)
+      expression: {op: metric, key: unit_cost}
+      rounding: {places: 2, mode: ceiling}
+    target_price:
+      title: 目标价
+      unit: SGD/unit
+      formula: ceil_currency(unit_cost ÷ (1 − declared_target_margin))
+      expression: {op: divide, args: [{op: metric, key: unit_cost}, {op: subtract, args: [{op: constant, value: 1}, {op: constant, value: '0.10'}]}]}
+      rounding: {places: 2, mode: ceiling}
+    stretch_price:
+      title: 备选价
+      unit: SGD/unit
+      formula: ceil_currency(unit_cost ÷ (1 − declared_stretch_margin))
+      expression: {op: divide, args: [{op: metric, key: unit_cost}, {op: subtract, args: [{op: constant, value: 1}, {op: constant, value: '0.20'}]}]}
+      rounding: {places: 2, mode: ceiling}
+    quantity:
+      title: 报价数量
+      unit: unit
+      formula: order_quantity
+      expression: {op: input, key: order_quantity}
+    target_total:
+      title: 目标方案总额
+      unit: SGD
+      formula: target_price × order_quantity
+      expression: {op: multiply, args: [{op: metric, key: target_price}, {op: input, key: order_quantity}]}
+      rounding: {places: 2, mode: half_up}
+    required_hours:
+      title: 需求工时
+      unit: hour
+      formula: order_quantity × processing_hours
+      expression: {op: multiply, args: [{op: input, key: order_quantity}, {op: input, key: processing_hours}]}
+    available_hours:
+      title: 可用工时
+      unit: hour
+      formula: available_capacity
+      expression: {op: input, key: available_capacity}
+    historic_payment_days:
+      title: 已核实回款天数
+      unit: day
+      formula: payment_history
+      expression: {op: input, key: payment_history}
+    requested_payment_days:
+      title: 请求付款期限
+      unit: day
+      formula: payment_request
+      expression: {op: input, key: payment_request}
+    requested_delivery_days:
+      title: 请求交期
+      unit: day
+      formula: delivery_request
+      expression: {op: input, key: delivery_request}
+    delivery_days:
+      title: 有依据的交付周期
+      unit: day
+      formula: delivery_commitment
+      expression: {op: input, key: delivery_commitment}
+  checks:
+    - {id: cost_floor, title: 目标价低于成本底价，需检查声明政策, owner: procurement, metric: target_price, attention_when: below, threshold_metric: floor_price, block_on_attention: true}
+    - {id: price_order, title: 备选价低于目标价，需检查声明政策, owner: marketing, metric: stretch_price, attention_when: below, threshold_metric: target_price, block_on_attention: true}
+    - {id: capacity, title: 产能不足，需采购侧重新确认, owner: procurement, metric: required_hours, attention_when: above, threshold_metric: available_hours, block_on_attention: true}
+    - {id: payment_record, title: 付款历史触及关注阈值，需客户侧复核, owner: marketing, metric: historic_payment_days, attention_when: above, threshold: 45, block_on_attention: true}
+    - {id: payment_terms, title: 请求付款期限触及关注阈值，需客户侧复核, owner: marketing, metric: requested_payment_days, attention_when: above, threshold: 45, block_on_attention: true}
+    - {id: delivery, title: 确认周期无法满足请求交期，需重新协商, owner: procurement, metric: delivery_days, attention_when: above, threshold_metric: requested_delivery_days, block_on_attention: true}
+  outputs: [quantity, floor_price, target_price, stretch_price, target_total, requested_payment_days, delivery_days]
+  manager_decision: 内部报价草稿。采购侧确认成本与交付，客户侧确认付款依据；正式外发前必须复用原生审批获得针对本报价的批准。
