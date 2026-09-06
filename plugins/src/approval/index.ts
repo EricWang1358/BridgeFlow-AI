@@ -16,7 +16,9 @@ import { gate } from './gate.ts'
  */
 
 export const name = 'bridgeflow-approval'
-export const inject = ['tools']
+// `approval` is what lets the gate ask through the service and therefore word the
+// denial; `tools` is the gate itself.
+export const inject = ['tools', 'approval']
 
 export function apply(ctx: Context, config: AnswererConfig): void {
   const details = new PendingDetails()

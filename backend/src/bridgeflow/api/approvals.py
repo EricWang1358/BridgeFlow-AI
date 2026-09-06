@@ -37,6 +37,9 @@ class AskRequest(BaseModel):
 class DecideRequest(BaseModel):
     outcome: approvals.ApprovalOutcome
     by: str = ""
+    #: Optional, and only meaningful with a rejection: the reason handed back to the
+    #: agent. A denial with no stated reason is the one #86 narrates as "done".
+    note: str = ""
 
 
 # --- the answerer's side ------------------------------------------------------
@@ -97,7 +100,9 @@ async def poll(question_id: str, wait_ms: int = 0) -> approvals.ApprovalQuestion
 async def decide(question_id: str, request: DecideRequest) -> approvals.ApprovalQuestion:
     """Record a person's decision. The only path in the system that produces a grant."""
     try:
-        return approvals.queue.decide(question_id, outcome=request.outcome, by=request.by)
+        return approvals.queue.decide(
+            question_id, outcome=request.outcome, by=request.by, note=request.note
+        )
     except approvals.UnknownQuestion as exc:
         raise HTTPException(404, f"no approval {question_id}") from exc
     except approvals.AlreadySettled as exc:

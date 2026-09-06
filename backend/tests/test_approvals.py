@@ -278,3 +278,73 @@ def test_a_rejected_approval_cannot_be_joined_as_a_grant(client, monkeypatch, tm
     client.post(f"/approvals/{question['id']}/decide", json={"outcome": "rejected", "by": "eric"})
 
     assert approvals.granted_by("call-denied") is None
+
+# --- a refusal has to carry a reason (#86) -----------------------------------
+
+# The framework's denial message is a constant, so an operator's objection had
+# nowhere to go and the agent said `done`. These four tests hold the channel open
+# from the console field to the audit line, including the case where nobody
+# bothered to explain — which stays a valid refusal.
+
+
+def test_a_refusal_keeps_the_reason_the_operator_gave(client):
+    question = _ask(client)
+
+    body = client.post(
+        f"/approvals/{question['id']}/decide",
+        json={"outcome": "rejected", "by": "eric", "note": "evidence is stale"},
+    ).json()
+
+    assert body["decision_note"] == "evidence is stale"
+
+
+def test_the_reason_reaches_the_polling_answerer(client):
+    """The answerer reads the note off this endpoint and the gate quotes it to the
+    model. If the field stops travelling here, the agent is deaf again."""
+    question = _ask(client)
+    client.post(
+        f"/approvals/{question['id']}/decide",
+        json={"outcome": "rejected", "by": "eric", "note": "wrong BOM"},
+    )
+
+    polled = client.get(f"/approvals/{question['id']}").json()
+
+    assert polled["outcome"] == "rejected"
+    assert polled["decision_note"] == "wrong BOM"
+
+
+def test_refusing_without_explaining_is_still_a_refusal(client):
+    """The note is optional. Demanding one would train people to type filler."""
+    question = _ask(client)
+
+    body = client.post(
+        f"/approvals/{question['id']}/decide",
+        json={"outcome": "rejected", "by": "eric"},
+    ).json()
+
+    assert body["outcome"] == "rejected"
+    assert body["decision_note"] == ""
+
+
+def test_an_operator_note_is_bounded_like_everything_else_on_this_path(client):
+    """It arrives from a browser and ends up inside a model prompt."""
+    question = _ask(client)
+
+    body = client.post(
+        f"/approvals/{question['id']}/decide",
+        json={"outcome": "rejected", "by": "eric", "note": "x" * 4000},
+    ).json()
+
+    assert len(body["decision_note"]) <= 240
+
+
+def test_the_decision_is_logged_with_its_reason(client):
+    question = _ask(client)
+    client.post(
+        f"/approvals/{question['id']}/decide",
+        json={"outcome": "rejected", "by": "eric", "note": "evidence is stale"},
+    )
+
+    entry = json.loads(approvals.log_path().read_text("utf-8").splitlines()[-1])
+
+    assert entry["decision_note"] == "evidence is stale"

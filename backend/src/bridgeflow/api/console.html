@@ -54,7 +54,7 @@
 <div id="pending"></div>
 
 <h2>已决定</h2>
-<table><thead><tr><th>时间</th><th>工具</th><th>结果</th><th>决定人</th></tr></thead><tbody id="log"></tbody></table>
+<table><thead><tr><th>时间</th><th>工具</th><th>结果</th><th>决定人</th><th>理由（agent 收到的原话）</th></tr></thead><tbody id="log"></tbody></table>
 
 <script>
   const who = document.getElementById('who')
@@ -87,6 +87,14 @@
       box.append(list)
     }
 
+    // A refusal without a reason is what the agent reads as "done" (#86): the
+    // outcome is a closed vocabulary, so this text is the only way a reviewer's
+    // objection reaches the narration. Optional — refusing to explain is a valid
+    // decision — but it is what turns the denial into something the agent can say.
+    const note = el('input')
+    note.placeholder = '理由（可留空）—— 会原样交给 agent'
+    note.style.flex = '1'
+
     const allow = el('button', '允许一次')
     const deny = el('button', '拒绝')
     deny.className = 'deny'
@@ -97,7 +105,7 @@
         const res = await fetch(`/approvals/${question.id}/decide`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ outcome, by: who.value }),
+          body: JSON.stringify({ outcome, by: who.value, note: note.value }),
         })
         if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
         await refresh()
@@ -112,7 +120,7 @@
     const row = el('div')
     row.style.display = 'flex'
     row.style.gap = '8px'
-    row.append(deny, allow) // 拒绝 first: the safe answer is the one under the cursor.
+    row.append(note, deny, allow) // 拒绝 first: the safe answer is the one under the cursor.
     box.append(row)
     return box
   }
@@ -145,6 +153,9 @@
       row.append(el('td', entry.tool_name))
       row.append(el('td', entry.outcome === 'allowed-once' ? '允许一次' : '拒绝'))
       row.append(el('td', entry.decided_by || ''))
+      // The reason is shown because the agent's narration is now built from it: if the
+      // two disagree, this table is where the gap gets caught (#86).
+      row.append(el('td', entry.decision_note || ''))
       logBody.append(row)
     }
   }

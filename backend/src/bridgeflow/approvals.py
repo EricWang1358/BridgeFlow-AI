@@ -86,6 +86,11 @@ class ApprovalQuestion(BaseModel):
     decided_by: str | None = None
     decided_at: str | None = None
 
+    #: Why a person refused, in their own words. It travels back to the agent on
+    #: purpose: a denial the model can only read as "not allowed" is a denial it will
+    #: narrate as "done" (#86). Bounded like everything else on this path.
+    decision_note: str = ""
+
 
 class QueueFull(RuntimeError):
     """Raised when too many questions are already waiting."""
@@ -189,7 +194,9 @@ class ApprovalQueue:
         waiting = [q for q in self._questions.values() if q.state == "pending"]
         return sorted(waiting, key=lambda q: q.asked_at)
 
-    def decide(self, question_id: str, *, outcome: ApprovalOutcome, by: str) -> ApprovalQuestion:
+    def decide(
+        self, question_id: str, *, outcome: ApprovalOutcome, by: str, note: str = ""
+    ) -> ApprovalQuestion:
         """Record a person's decision. The only path to a grant."""
         question = self.get(question_id)
         if question.state != "pending":
@@ -200,6 +207,7 @@ class ApprovalQueue:
         question.state = "decided"
         question.outcome = outcome
         question.decided_by = _clip(by, 80) or "unnamed-operator"
+        question.decision_note = _clip(note, 240)
         question.decided_at = _now()
         self._settled[question_id].set()
         _append_to_log(question)
