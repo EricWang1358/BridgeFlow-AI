@@ -71,6 +71,9 @@ const labels = {
   nextTitle: ['下一步', 'Next step'],
   next_needs_configuration: ['字段字典没有声明可用于连接的列，所以主表没有建，研判也起不来。核对下面这份字典是不是你以为的那份，补齐后重新导入一次——旧批次不会被改。',
                              'The dictionary declares no joinable column, so no Master Table was built and the review cannot start. Check the dictionary below is the one you think it is, complete it, and import again — the old batch is left alone.'],
+  askCaptain: ['让 captain 看这批数据', 'Ask the captain to look'],
+  askCaptainHint: ['它会读各列的形状与跨部门重合度（不读数据行），然后给出字段字典候选和理由。你仍然是决定的人。',
+                   'It reads column shapes and cross-department overlap — never the rows — then proposes dictionary candidates with its reasoning. You still decide.'],
   dictionaryInForce: ['本批次冻结的字典', 'Dictionary frozen into this batch'],
   declaresEntities: ['它为各部门声明的可连接列', 'Joinable columns it declares'],
   declaresNothing: ['未声明任何可连接列', 'declares none'],
@@ -119,6 +122,21 @@ export function navigate(value: Route) {
   if (location.hash === hash) window.dispatchEvent(new HashChangeEvent('hashchange'))
   else location.hash = hash
 }
+/**
+ * Ask the captain to diagnose a batch that cannot be joined.
+ *
+ * The counterpart to `reviewRequest`, for the state the review cannot start from.
+ * It names the tool and what a proposal has to carry, because a diagnosis that
+ * arrives without the column it applies to is another dead end wearing a longer
+ * sentence.
+ */
+export function diagnoseRequest(batch: string, period = '') {
+  return `批次 ${batch}（${period}）没有可连接的列，主表建不起来。请调用一次 profile_batch，` +
+    `然后针对每个 undeclared 的部门提出一条字段字典候选：写明哪个部门的哪一列应当被声明为` +
+    `哪种实体，并用 overlaps 里的重合比例作为理由。两个 string 列高度重合是同一实体的证据，` +
+    `两个 number 列重合通常只是巧合。不要猜列名以外的东西，不要读取数据行，不要执行任何写入。`
+}
+
 export function reviewRequest(batch: string, period = '') {
   return `请研判 ${period} 批次 ${batch}：review_context → 同一响应四次官方 subagent（production/procurement/finance/marketing）→ review_finalize。缺口如实标 partial，不重试，不执行业务动作。`
 }
@@ -151,12 +169,21 @@ export async function openSession(parent: string, child?: string) {
  * after their first import must not be a dead button.
  */
 export async function startReview(batch: string, period: string): Promise<void> {
+  return ask(reviewRequest(batch, period))
+}
+
+/** Send the captain a diagnosis request for a batch nothing can be built from. */
+export async function startDiagnosis(batch: string, period: string): Promise<void> {
+  return ask(diagnoseRequest(batch, period))
+}
+
+async function ask(text: string): Promise<void> {
   await runtime.sessions.refresh()
   const current = runtime.sessions.list.getSnapshot().current
   const target = current ?? (await runtime.sessions.create())
   const binding = runtime.sessions.binding(target)
-  if (!binding) throw new Error('No session is available to review in')
-  const result = await binding.session.prompt([{ type: 'text', text: reviewRequest(batch, period) }], 'queue')
+  if (!binding) throw new Error('No session is available to work in')
+  const result = await binding.session.prompt([{ type: 'text', text }], 'queue')
   if (!result.ok) throw new Error(result.error.message)
   runtime.sessions.open(target)
 }

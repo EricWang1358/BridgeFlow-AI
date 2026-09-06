@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { BusinessReview, type Review } from './review.tsx'
-import { api, cellText, columnLabel, navigate, route, reviewRequest, startReview, useUI, type Summary } from './ui.ts'
+import { api, cellText, columnLabel, navigate, route, reviewRequest, startDiagnosis, startReview, useUI, type Summary } from './ui.ts'
 export const departments = ['production', 'procurement', 'finance', 'marketing'] as const
 export const sections = ['master', 'corrections', 'mappings', 'quarantine', 'review'] as const
 export function Chip({ status }: { status: string }) { const { t } = useUI(); return <span className="bf-chip" data-status={status}>{t(status.replaceAll('-', '_'))}</span> }
@@ -153,6 +153,19 @@ export function DataWorkspace({ wide }: { wide: boolean }) {
         {/* A status is only actionable next to the step it implies. */}
         {NEXT_STEP[batch.status] && <div className="bf-callout" data-tone={NEXT_TONE[batch.status] ?? 'info'}>
           <h3>{t('nextTitle')}</h3><p>{t(NEXT_STEP[batch.status]!)}</p>
+          {/* A blocked batch must not end in a sentence. The operator is holding four
+              sheets and the same question the machine could not answer; leaving them
+              to work it out alone is the thing this product exists to remove. */}
+          {batch.status === 'needs_configuration' && <>
+            <p className="bf-hint" style={{ marginTop: 8 }}>{t('askCaptainHint')}</p>
+            <div className="bf-actions" style={{ marginBottom: 0 }}>
+              <button className="bf-primary" disabled={busy} onClick={async () => {
+                setError(''); setBusy(true)
+                try { await startDiagnosis(batch.batch_id, batch.period); close() }
+                catch (e) { setError(String(e)) } finally { setBusy(false) }
+              }}>{t(busy ? 'busy' : 'askCaptain')}</button>
+            </div>
+          </>}
         </div>}
         {/* The refusal is the most important sentence on the panel; it used to be
             ordinary red body copy sandwiched between two counts. */}

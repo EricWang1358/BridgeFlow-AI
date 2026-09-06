@@ -9,8 +9,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, ValidationError
 
-from bridgeflow import business
-from bridgeflow.api.batches import BatchRef, batch_path, load_batch
+from bridgeflow import business, profiling
+from bridgeflow.api.batches import BatchRef, batch_path, load_batch, summary
 from bridgeflow.store import _write
 
 router = APIRouter(prefix="/tools", tags=["reviews"])
@@ -19,6 +19,22 @@ router = APIRouter(prefix="/tools", tags=["reviews"])
 @router.post("/review-context")
 async def review_context(request: BatchRef) -> dict:
     return business.context(request.batch_id, load_batch(request.batch_id))
+
+
+@router.post("/profile-batch", response_model=profiling.BatchProfile)
+async def profile_batch(request: BatchRef) -> profiling.BatchProfile:
+    """What the columns look like, so a blocked batch has a way forward.
+
+    Called when a batch cannot be joined. It answers the question the refusal
+    raises and cannot answer itself — *which column should have been declared* —
+    without putting a single cell in front of the model: counts, ratios, and
+    cross-department overlap computed over hashes.
+    """
+    batch = load_batch(request.batch_id)
+    return profiling.profile(
+        request.batch_id, batch.period, batch.clean_tables,
+        declared=summary(request.batch_id, batch).declared_entities,
+    )
 
 
 class RoleRun(BaseModel):
