@@ -1,0 +1,623 @@
+[
+  {
+    "session_directory": "session-0130b455-0c95-463d-90ed-3be646ff6ff5",
+    "header": {
+      "id": "session-0130b455-0c95-463d-90ed-3be646ff6ff5",
+      "createdAt": 1788721308072
+    },
+    "events": [
+      {
+        "type": "request/header",
+        "time": 1788721310814,
+        "data": {
+          "tools": [
+            "aggregate_metric",
+            "ask_user_question",
+            "batch_summary",
+            "confirm_mapping",
+            "list_metrics",
+            "lookup_field_dictionary",
+            "profile_batch",
+            "review_context",
+            "review_finalize",
+            "subagent"
+          ]
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721310832,
+        "data": {
+          "turn": 1,
+          "step": 1,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721310835,
+        "data": {
+          "turn": 1,
+          "step": 1,
+          "name": "review_context",
+          "callId": "business-0"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721310865,
+        "data": {
+          "error": false,
+          "source": {
+            "kind": "tool",
+            "callId": "business-0"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721310890,
+        "data": {
+          "turn": 1,
+          "step": 2,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721310893,
+        "data": {
+          "turn": 1,
+          "step": 2,
+          "name": "subagent",
+          "callId": "business-1"
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721310895,
+        "data": {
+          "turn": 1,
+          "step": 2,
+          "name": "subagent",
+          "callId": "business-2"
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721310897,
+        "data": {
+          "turn": 1,
+          "step": 2,
+          "name": "subagent",
+          "callId": "business-3"
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721310898,
+        "data": {
+          "turn": 1,
+          "step": 2,
+          "name": "subagent",
+          "callId": "business-4"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721311300,
+        "data": {
+          "error": false,
+          "source": {
+            "kind": "tool",
+            "callId": "business-1"
+          }
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721311317,
+        "data": {
+          "error": false,
+          "source": {
+            "kind": "tool",
+            "callId": "business-2"
+          }
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721311721,
+        "data": {
+          "error": true,
+          "source": {
+            "kind": "tool",
+            "callId": "business-3"
+          }
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721311722,
+        "data": {
+          "error": false,
+          "source": {
+            "kind": "tool",
+            "callId": "business-4"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721311749,
+        "data": {
+          "turn": 1,
+          "step": 3,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721311750,
+        "data": {
+          "turn": 1,
+          "step": 3,
+          "name": "review_finalize",
+          "callId": "business-11"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721311783,
+        "data": {
+          "error": false,
+          "source": {
+            "kind": "tool",
+            "callId": "business-11"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721311804,
+        "data": {
+          "turn": 1,
+          "step": 4,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": [
+            "离线业务协议测试结束，请查看已保存的四部门报告。"
+          ]
+        }
+      },
+      {
+        "type": "turn/end",
+        "time": 1788721311805,
+        "data": {
+          "turn": 1,
+          "reason": {
+            "kind": "completed"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721318134,
+        "data": {
+          "turn": 2,
+          "step": 1,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": [
+            "离线业务协议测试结束，请查看已保存的四部门报告。"
+          ]
+        }
+      },
+      {
+        "type": "turn/end",
+        "time": 1788721318135,
+        "data": {
+          "turn": 2,
+          "reason": {
+            "kind": "completed"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "session_directory": "408d2b7b-809a-456f-b46a-b5a89cf4af18",
+    "header": {
+      "id": "408d2b7b-809a-456f-b46a-b5a89cf4af18",
+      "origin": "subagent",
+      "parentSession": "session-0130b455-0c95-463d-90ed-3be646ff6ff5",
+      "createdAt": 1788721310918
+    },
+    "events": [
+      {
+        "type": "request/header",
+        "time": 1788721311047,
+        "data": {
+          "tools": [
+            "structured_output"
+          ]
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721311254,
+        "data": {
+          "turn": 1,
+          "step": 1,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721311255,
+        "data": {
+          "turn": 1,
+          "step": 1,
+          "name": "structured_output",
+          "callId": "business-7"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721311280,
+        "data": {
+          "error": false,
+          "source": {
+            "kind": "tool",
+            "callId": "business-7"
+          }
+        }
+      },
+      {
+        "type": "turn/end",
+        "time": 1788721311282,
+        "data": {
+          "turn": 1,
+          "reason": {
+            "kind": "completed"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "session_directory": "92c3b691-531a-422b-bdac-0a9804adddfd",
+    "header": {
+      "id": "92c3b691-531a-422b-bdac-0a9804adddfd",
+      "origin": "subagent",
+      "parentSession": "session-0130b455-0c95-463d-90ed-3be646ff6ff5",
+      "createdAt": 1788721310923
+    },
+    "events": [
+      {
+        "type": "request/header",
+        "time": 1788721311069,
+        "data": {
+          "tools": [
+            "structured_output"
+          ]
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721311261,
+        "data": {
+          "turn": 1,
+          "step": 1,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721311263,
+        "data": {
+          "turn": 1,
+          "step": 1,
+          "name": "structured_output",
+          "callId": "business-8"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721311307,
+        "data": {
+          "error": false,
+          "source": {
+            "kind": "tool",
+            "callId": "business-8"
+          }
+        }
+      },
+      {
+        "type": "turn/end",
+        "time": 1788721311308,
+        "data": {
+          "turn": 1,
+          "reason": {
+            "kind": "completed"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "session_directory": "ade5bc2c-6798-4326-939a-a88fb77774be",
+    "header": {
+      "id": "ade5bc2c-6798-4326-939a-a88fb77774be",
+      "origin": "subagent",
+      "parentSession": "session-0130b455-0c95-463d-90ed-3be646ff6ff5",
+      "createdAt": 1788721310928
+    },
+    "events": [
+      {
+        "type": "request/header",
+        "time": 1788721311061,
+        "data": {
+          "tools": [
+            "structured_output"
+          ]
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721311246,
+        "data": {
+          "turn": 1,
+          "step": 1,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721311247,
+        "data": {
+          "turn": 1,
+          "step": 1,
+          "name": "structured_output",
+          "callId": "business-6"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721311303,
+        "data": {
+          "error": true,
+          "source": {
+            "kind": "tool",
+            "callId": "business-6"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721311510,
+        "data": {
+          "turn": 1,
+          "step": 2,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721311511,
+        "data": {
+          "turn": 1,
+          "step": 2,
+          "name": "structured_output",
+          "callId": "business-9"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721311520,
+        "data": {
+          "error": true,
+          "source": {
+            "kind": "tool",
+            "callId": "business-9"
+          }
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721311687,
+        "data": {
+          "turn": 1,
+          "step": 3,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721311689,
+        "data": {
+          "turn": 1,
+          "step": 3,
+          "name": "structured_output",
+          "callId": "business-10"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721311700,
+        "data": {
+          "error": true,
+          "source": {
+            "kind": "tool",
+            "callId": "business-10"
+          }
+        }
+      },
+      {
+        "type": "turn/end",
+        "time": 1788721311711,
+        "data": {
+          "turn": 1,
+          "reason": {
+            "kind": "blocked"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "session_directory": "9c6d7b32-b4c0-44a3-882a-2501a8ca28e4",
+    "header": {
+      "id": "9c6d7b32-b4c0-44a3-882a-2501a8ca28e4",
+      "origin": "subagent",
+      "parentSession": "session-0130b455-0c95-463d-90ed-3be646ff6ff5",
+      "createdAt": 1788721310930
+    },
+    "events": [
+      {
+        "type": "request/header",
+        "time": 1788721311032,
+        "data": {
+          "tools": [
+            "structured_output"
+          ]
+        }
+      },
+      {
+        "type": "assistant/message",
+        "time": 1788721311239,
+        "data": {
+          "turn": 1,
+          "step": 1,
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 10
+          },
+          "source": {
+            "kind": "model",
+            "provider": "bridgeflow-offline-test",
+            "model": "offline"
+          },
+          "text": []
+        }
+      },
+      {
+        "type": "tool/call",
+        "time": 1788721311240,
+        "data": {
+          "turn": 1,
+          "step": 1,
+          "name": "structured_output",
+          "callId": "business-5"
+        }
+      },
+      {
+        "type": "tool/result",
+        "time": 1788721311325,
+        "data": {
+          "error": false,
+          "source": {
+            "kind": "tool",
+            "callId": "business-5"
+          }
+        }
+      },
+      {
+        "type": "turn/end",
+        "time": 1788721311326,
+        "data": {
+          "turn": 1,
+          "reason": {
+            "kind": "completed"
+          }
+        }
+      }
+    ]
+  }
+]

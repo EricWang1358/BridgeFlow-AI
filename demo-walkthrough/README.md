@@ -33,3 +33,5 @@
 `evidence/` 链接到仓库受 `--keep 2` 管理的证据，不复制第三份截图；每场景的 `manifest.json` 指向最新运行，`runs/` 最多保存最近两轮。历史截图不是实时运行。`session-audit.json` 只投影对应队长和四个子会话，省略完整提示词、推理轨迹、凭证。文件清单可用 `python3 scripts/build_demo_walkthrough.py` 重建。
 
 English: upload the four department CSVs for November 2025, run the captain request, inspect **Chat | Trajectory | Business state**, and compare the saved report's `manager_decision` with the answer key. Interface labels follow the native DSH language setting. Business contract text and model explanations retain their declared language. Never feed `expected.json` to the model. Reports propose actions; department owners authorize decisions.
+
+从空笔记本开始的产品操作见 [笔记本演示故事](notebook.md)，包含示例、来源预览、状态用途和保存恢复。

@@ -45,3 +45,20 @@ test('a rerun cannot inherit an earlier successful report, or another batch capt
   assert.equal(selectReview(done, 'a').reportId, 'new-report')
   assert.equal(selectReview(done, 'a').waiting, false)
 })
+
+test('native tool results provide review lifecycle and refusal notes without foreign session events', () => {
+  const result = (time:number,callId:string,text:string) => event('tool/result',time,{message:{content:[{type:'tool-result',toolCallId:callId,content:[{type:'text',text}]}]}})
+  const audit=projectAudit([
+    event('tool/call',1,{name:'review_context',callId:'context'}),
+    result(2,'context',JSON.stringify({review_id:'run',batch_id:'batch'})),
+    event('tool/call',3,{name:'subagent',callId:'child'}),
+    event('tool/call',4,{name:'review_finalize',callId:'finalize'}),
+    result(5,'finalize',JSON.stringify({report_id:'report',batch_id:'batch',status:'partial'})),
+    event('approval/asked',6,{id:'approval',callId:'mapping',toolName:'confirm_mapping'}),
+    event('approval/decided',7,{id:'approval',outcome:'rejected'}),
+    result(8,'mapping','The reviewer said: "Check the customer". Nothing was written.'),
+  ])
+  assert.deepEqual(audit.review,{review_id:'run',batch_id:'batch',report_id:'report',status:'partial'})
+  assert.equal(audit.calls.length,1)
+  assert.equal(audit.approvals[0]?.note,'Check the customer')
+})

@@ -28,6 +28,8 @@
 
 整个原生工作面采用 NotebookLM 式 Sources／Chat／Studio：左侧实际上传文件，中栏原生会话与轨迹，右侧工具下方列已保存报告。来源和产物都可预览及展开。原生会话与设置在顶栏抽屉，月度对账仍可用；空会话直接点击右侧“报价工作区”。报价页仅显示当前人工配置的声明与待补依据，真实原件抽取和外发仍属于任务书后续阶段。不可将完整文件或浏览器自报的 JSON 当作可信抽取结果。
 
+笔记本支持命名、显式保存、退出选择和历史恢复。左侧“笔记本用途”控制月度、报价或综合状态，栏间分隔线可拖动或用方向键调整。空来源区及笔记本列表都有“打开示例笔记本”，会导入合成月度案例并生成规则主表，尚未调用模型。给业务负责人的连续体验说明见 [笔记本演示故事](demo-walkthrough/notebook.md)。
+
 运行 `pytest -q backend/tests/test_declared_documents.py` 验证声明及拒绝，`pnpm --dir plugins smoke:quotation` 验证原生工作台。实测、费用、截图与验证范围统一见 [docs/00](docs/00-status.md)。
 
 ## 怎么把它跑起来
@@ -53,9 +55,9 @@ python scripts/start_web.py
 export FIELD_DICTIONARY_PATH=data/business_demo/dictionary.yaml
 ```
 
-首次会话选择原生工作区 `BridgeFlow`。点击左侧 Sources「添加来源」→选择月份与部门文件→「导入并检查」→检查主表、隔离与映射→复制分析请求到原生对话框。后续工具都携带同一 `batch_id`；`review_batch` 发起官方四部门子会话，完成后在「四部门报告」查看建议、责任和来源。导入与规则计算不计模型费用；在原生对话中提交分析会使用配置模型，可能计费。
+新建笔记本自动归入原生工作区 `BridgeFlow`；旧会话若仍提示选择工作区，可显式保存笔记本来确认归属。点击左侧 Sources「添加来源」→选择月份与部门文件→「导入并检查」→检查主表、隔离与映射→复制分析请求到原生对话框。后续工具都携带同一 `batch_id`；`review_batch` 发起官方四部门子会话，完成后在「四部门报告」查看建议、责任和来源。导入与规则计算不计模型费用；在原生对话中提交分析会使用配置模型，可能计费。
 
-映射写入走 `confirm_mapping` 与 DSH 原生审批面板。批准后由主机为**本次参数**生成一次性回执；拒绝不会写入。原生审批现在支持可选拒绝理由，先记录会话审计再送回 agent，不依赖旧控制台。关闭写权限时应同时将 `dsh/enterprise.patch.yml` 的 `allowMappingWrite` 与 Python 环境的 `BRIDGEFLOW_ALLOW_MAPPING_WRITE` 设为 `false`。
+映射写入走 `confirm_mapping` 与 DSH 原生审批面板。批准后由主机为**本次参数**生成一次性回执；拒绝不会写入。原生审批现在支持可选拒绝理由，先写入官方领域存储审计再送回 agent，不依赖旧控制台。关闭写权限时应同时将 `dsh/enterprise.patch.yml` 的 `allowMappingWrite` 与 Python 环境的 `BRIDGEFLOW_ALLOW_MAPPING_WRITE` 设为 `false`。
 
 当前认证表示共享 DSH 会话，记录为 `dsh-authenticated-session`，**没有实现员工 SSO、角色管理或租户隔离**。
 
@@ -88,3 +90,6 @@ Python 测试在 `conftest.py` 隔离 provider、字典、输出与记忆。浏�
 旧 `/analyze`、`/quote`、`/console` 和样本回退默认关闭。历史控制台测试及耗时记录保留在 `docs/00`，不代表新 Web 的员工身份认证或最新业务结果。新默认入口禁止回退到缺少策略的 runtime。
 
 运行时修复：Web 与 Python SDK 共用 npm CLI 选择器，SDK 通过官方 `dsh_bin` 显式指定，避免打包运行时把同一 home 的模块入口改写到 `/snapshot`。若旧环境已污染，重启 `scripts/start_web.py`，官方启动加载器会恢复；直接试验打包 SDK 用独立 home。复现、费用与恢复结果见 [状态页](docs/00-status.md)。
+
+
+笔记本及审批元数据使用官方 storage-domain，不向原生日志写未知必需事件。研判状态从实际工具调用及结果恢复。旧日志若因 bridgeflow/review 或 bridgeflow/approval-note 无法打开，先停止启动器，再运行 `python scripts/repair_session_metadata.py --root ../.dsh-bridgeflow/sessions` 检查；确需修复再加 `--apply`，工具将保存原始备份。不要修改原生事件白名单，也不要让修复脚本与运行中的会话争写。

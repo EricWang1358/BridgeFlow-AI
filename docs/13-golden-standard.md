@@ -409,3 +409,6 @@ Client 插件与 `tool.call.toolview` 注册现已实际接入并通过浏览器
 同一 `DSH_HOME` 下的 profiles 共用模块 fallback。Python 打包运行时会写入只在其进程内可用的 `/snapshot` 代理；正在运行的 npm Web 随后动态挂载 preset 时无法导入它们。项目 Web 启动器、遗留 SDK provider 与 SDK smoke 共用 `bridgeflow.dsh_runtime.native_command`，SDK 显式传官方 `dsh_bin`，统一使用锁定版本的 npm 安装。SDK smoke 不再从 `.env` 读取引导变量。直接试验打包 SDK 时必须另设独立 `DSH_HOME`。
 
 已经被改写的 fallback 由官方 npm 启动流程自愈；停止并重启 Web 也清除此前失败的模块导入缓存。不手改生成入口，不删除用户 profiles、插件、凭据或会话；不同 profile 名称不能隔离共享 fallback。
+
+
+笔记本书签与审批备注使用官方 storage-domain；普通会话身份、标题、历史与持久化仍属于 DSH。不得通过 Session.append 写入原生冷读取器不认识且不能标记为可忽略的插件事件。研判生命周期从原生工具调用和结果投影，旧信息事件的兼容修复必须停机、保留原始备份且显式运行；不得为此改写 DSH 事件白名单或跳过未知必需事件校验。具体恢复语义见 [报价与笔记本设计](21-quotation-design.md)。

@@ -1,3 +1,4 @@
+import type { ApprovalNote } from '../notebooks.ts'
 import { randomUUID } from 'node:crypto'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 
@@ -15,19 +16,14 @@ export class ApprovalNotes {
   ticket(sessionId: string, callId: string) {
     return this.#pending.get(this.key(sessionId, callId))?.ticket
   }
-  record(sessionId: string, callId: string, ticket: string, note: string): boolean {
+  async record(sessionId: string, callId: string, ticket: string, note: string, persist: (entry:ApprovalNote)=>Promise<void>): Promise<boolean> {
     const pending = this.#pending.get(this.key(sessionId, callId))
     if (!pending || pending.ticket !== ticket || note.length > 240) return false
     const normalized = note.replace(/\s+/g, ' ').trim()
-    pending.agent.session.append('bridgeflow/approval-note', { callId, note: normalized, author: 'dsh-authenticated-session' })
+    await persist({sessionId,callId,note:normalized,author:'dsh-authenticated-session',time:Date.now()})
+    if (this.#pending.get(this.key(sessionId,callId)) !== pending) return false
     pending.note = normalized
     return true
   }
   get(sessionId: string, callId: string) { return this.#pending.get(this.key(sessionId, callId))?.note }
-}
-
-declare module '@deepseek-ai/dsh-session/types' {
-  interface SessionEventMap {
-    'bridgeflow/approval-note': { callId: string; note: string; author: string }
-  }
 }

@@ -1,3 +1,4 @@
+import { coldReload } from './cold-reload.mjs'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
@@ -65,7 +66,7 @@ try {
     + (live ? '' : `\n- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n  config:\n    provider: bridgeflow-offline-test\n    model: offline\n- insert:\n    - id: scripted-test-model\n      name: ${JSON.stringify(`${root}/plugins/tests/fixtures/scripted-model/index.ts`)}\n`)
   await writeFile(`${scratch}/web.yml`, patch)
   start(python, ['-m', 'uvicorn', 'bridgeflow.api.main:app', '--host', '127.0.0.1', '--port', String(backendPort)])
-  start(process.env.BRIDGEFLOW_DSH ?? 'dsh', ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])
+  const web = start(process.env.BRIDGEFLOW_DSH ?? 'dsh', ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])
   const deadline = Date.now() + 30_000
   let match
   while (Date.now() < deadline) {
@@ -153,7 +154,9 @@ try {
     .flatMap(text => text.trim().split('\n').map(line => JSON.parse(line)))
   const asks = events.filter(event => event.type === 'approval/asked')
   const decisions = events.filter(event => event.type === 'approval/decided')
-  const noteEvents = events.filter(event => event.type === 'bridgeflow/approval-note')
+  const noteSession=logsOnDisk.find(path=>path.endsWith('session.jsonl')).split('/').at(-2)
+  const noteAudit=await page.evaluate(async id=>(await fetch(`/bridgeflow/approval-note-audit?session_id=${encodeURIComponent(id)}`)).json(),noteSession)
+  const noteEvents=noteAudit.notes.map(data=>({type:'bridgeflow/approval-note',data}))
   assert.equal(noteEvents.length, 1)
   assert.equal(noteEvents[0].data.note, '客户编码未核实，请销售负责人确认后再提交。')
   assert(events.some(event => event.type === 'tool/result' && JSON.stringify(event).includes(noteEvents[0].data.note))
@@ -168,6 +171,9 @@ try {
   await page.getByRole('main', { name: '业务状态' }).getByRole('button', { name: '已拒绝 1', exact: true }).click()
   await page.getByRole('main', { name: '业务状态' }).getByText('客户编码未核实，请销售负责人确认后再提交。', { exact: true }).waitFor()
   await page.screenshot({ path: `${scratch}/business-state.png`, fullPage: true })
+  await coldReload({page,web,start,args:['web','--patch',`${scratch}/web.yml`,'--no-open','--port',String(webPort)],readLogs:()=>logs,sessionIds:[noteSession]})
+  const restoredNotes=await page.evaluate(async id=>(await fetch(`/bridgeflow/approval-note-audit?session_id=${encodeURIComponent(id)}`)).json(),noteSession)
+  assert.deepEqual(restoredNotes,noteAudit,'Refusal note audit must survive a full host restart')
   assert.deepEqual(errors, [])
   const measurement = { mode: live ? 'live' : 'offline', approval_outcomes: decisions.map(e => e.data.outcome), refusalNarration,
     model_requests: events.filter(e => e.type === 'assistant/message').length,
@@ -176,6 +182,7 @@ try {
       return total
     }, {}) }
   await writeFile(`${scratch}/measurement.json`, JSON.stringify(measurement, null, 2))
+  await writeFile(`${scratch}/approval-note-audit.json`, JSON.stringify(noteAudit, null, 2))
   await writeFile(`${scratch}/approval-events.json`, JSON.stringify(events.filter(e => ['approval/asked', 'approval/decided', 'bridgeflow/approval-note', 'tool/result'].includes(e.type)), null, 2))
   console.log(JSON.stringify({ ...measurement, artifacts: scratch }))
   console.log(JSON.stringify({ status: 'passed', screenshot: `${scratch}/data-workspace.png`, approvalScreenshot: `${scratch}/native-approval.png`, checks: ['native shell', 'plugin loading', 'upload', 'master table', 'authenticated proxy', 'write proxy denied', `native approval allow/reject/timeout with ${live ? 'live model' : 'offline adapter'}`, 'paired native audit events', 'zero browser errors'] }))

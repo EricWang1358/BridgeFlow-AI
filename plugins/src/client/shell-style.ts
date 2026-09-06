@@ -2,7 +2,7 @@
  * No private CSS module names, DOM reparenting, second React root or DSH fork. */
 export const shellStyle = `
 body[data-bf-notebook] {
-  --bf-shell-bg: #e9eef6; --bf-shell-pane: #fff; --bf-shell-border: #dbe0e7;
+  --bf-shell-top-height: 52px; --bf-shell-bg: #e9eef6; --bf-shell-pane: #fff; --bf-shell-border: #dbe0e7;
   --bf-shell-text: #242629; --bf-shell-muted: #606773;
   --bf-shell-left: clamp(240px, 25vw, 440px); --bf-shell-right: clamp(280px, 26vw, 460px);
 }
@@ -13,7 +13,7 @@ body[data-bf-notebook][data-ds-dark-theme] {
 /* AppFrame wrappers contain public slot anchors; native detail transitions stay. */
 body[data-bf-notebook] [data-slot="root"] > div {
   grid-template-columns: 0 minmax(0, 1fr) 0 !important;
-  padding: 52px calc(var(--bf-shell-right) + 24px) 14px calc(var(--bf-shell-left) + 24px);
+  padding: var(--bf-shell-top-height) calc(var(--bf-shell-right) + 24px) 14px calc(var(--bf-shell-left) + 24px);
   box-sizing: border-box; background: var(--bf-shell-bg);
 }
 body[data-bf-notebook] [data-slot="root"] > div > [data-side] { display: none }
@@ -48,16 +48,16 @@ body[data-bf-hide-studio] [data-slot="root"] > div { padding-right: 12px }
 body[data-bf-hide-sources] .bf-shell-sources, body[data-bf-hide-studio] .bf-shell-studio { display: none !important }
 /* Navigation remains a native drawer, including settings and workspaces. */
 body[data-bf-notebook] [data-slot="root"] > div > div:has(> [data-slot="sidebar"]) {
-  position: fixed; left: 12px; top: 52px; bottom: 14px; width: 300px; z-index: 45;
+  position: fixed; left: 12px; top: var(--bf-shell-top-height); bottom: 14px; width: 300px; z-index: 45;
   border-radius: 16px; box-shadow: 0 12px 40px #0004; display: none;
 }
 body[data-bf-notebook][data-bf-nav] [data-slot="root"] > div > div:has(> [data-slot="sidebar"]) { display: block }
 body[data-bf-notebook] [data-slot="root"] > div > div:has(> [data-slot="details"]) {
-  position: fixed; right: 12px; top: 52px; bottom: 14px; width: var(--bf-shell-right);
+  position: fixed; right: 12px; top: var(--bf-shell-top-height); bottom: 14px; width: var(--bf-shell-right);
   z-index: 35; background: var(--bf-shell-pane); border-radius: 16px;
 }
 body[data-bf-notebook] [data-slot="root"] > [data-details-collapsed] > div:has(> [data-slot="details"]) { width: 0; border: 0 }
-.bf-shell-top { position: fixed; inset: 0 0 auto; height: 52px; padding: 0 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--bf-shell-text); pointer-events: auto }
+.bf-shell-top { position: fixed; inset: 0 0 auto; height: var(--bf-shell-top-height); padding: 0 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--bf-shell-text); pointer-events: auto }
 .bf-shell-brand { display: flex; align-items: center; gap: 12px; min-width: 0 }
 .bf-shell-brand > span:first-child { display: grid; place-items: center; width: 29px; height: 29px; background: #f4f7ff; color: #386bbb; border-radius: 50%; font-weight: 700 }
 .bf-shell-brand strong { font-size: 17px; font-weight: 500 }
@@ -66,7 +66,7 @@ body[data-bf-notebook] [data-slot="root"] > [data-details-collapsed] > div:has(>
 .bf-shell-top button, .bf-shell-pane button { font: inherit; cursor: pointer; color: inherit }
 .bf-shell-top button { border: 1px solid var(--bf-shell-border); background: transparent; border-radius: 24px; padding: 5px 12px; font-size: 12px }
 .bf-shell-pane.bf-state {
-  position: fixed; top: 52px; bottom: 14px; height: auto; margin: 0; border-radius: 16px; padding: 0;
+  position: fixed; top: var(--bf-shell-top-height); bottom: 14px; height: auto; margin: 0; border-radius: 16px; padding: 0;
   display: flex; flex-direction: column; overflow: hidden; pointer-events: auto;
   background: var(--bf-shell-pane); color: var(--bf-shell-text); font-size: 13px;
   --bf-surface: var(--bf-shell-pane); --bf-surface-2: var(--bf-shell-bg); --bf-line: var(--bf-shell-border);
@@ -126,13 +126,42 @@ body[data-bf-notebook] [data-slot="root"] > [data-details-collapsed] > div:has(>
 .bf-shell-pane .bf-quotation-paper { padding: 16px }
 .bf-shell-pane .bf-quotation-paper dl > div { display: block }
 .bf-shell-pane .bf-quotation-paper dd { margin: 6px 0 0 }
-body[data-bf-notebook] .bf-drawer { top: 52px; right: 12px; bottom: 14px; height: auto; z-index: 50; border-radius: 16px }
+body[data-bf-notebook] .bf-drawer { top: var(--bf-shell-top-height); right: 12px; bottom: 14px; height: auto; z-index: 50; border-radius: 16px }
 .bf-mobile-close { display: none }
 .bf-source-import { max-width: 740px }
 .bf-expanded-preview .bf-document { padding: 16px }
 .bf-shell-top button:focus-visible, .bf-shell-pane button:focus-visible { outline: 2px solid #7ea8ef; outline-offset: 3px }
+.bf-shell-top button[aria-expanded=true], .bf-shell-top button[aria-pressed=true] { background: #d8e5ff; color: #244c8b; border-color: #8caade; box-shadow: inset 0 0 0 1px #8caade }
+body[data-ds-dark-theme] .bf-shell-top button[aria-expanded=true] { background: #334b70; color: #e2edff; border-color: #7d9dcd }
+.bf-shell-pane .bf-studio-tools button[aria-pressed=true] { box-shadow: inset 0 0 0 2px #6f94cb; background: color-mix(in srgb, #7ea8ef 32%, var(--bf-shell-pane)) }
+.bf-shell-top .bf-notebook-title { width: clamp(120px, 15vw, 260px); min-width: 70px; background: transparent; border: 1px solid transparent; border-radius: 6px; color: inherit; padding: 5px; font: inherit; font-size: 13px }
+.bf-notebook-title:hover, .bf-notebook-title:focus { border-color: var(--bf-shell-border) }
+.bf-save-state { font-size: 11px; white-space: nowrap; color: var(--bf-shell-muted) }
+.bf-save-state[data-dirty=true] { color: #986711 }
+body[data-ds-dark-theme] .bf-save-state[data-dirty=true] { color: #dfbd76 }
+.bf-notebook-purpose { display: flex; gap: 8px; align-items: center; justify-content: space-between }
+.bf-notebook-purpose select { max-width: 65%; border: 1px solid var(--bf-shell-border); border-radius: 7px; background: var(--bf-shell-pane); color: inherit; padding: 6px }
+.bf-panel.bf-notebook-dialog { width: min(560px, calc(100vw - 40px)); padding: 24px; color: var(--bf-shell-text); background: var(--bf-shell-pane); border: 1px solid var(--bf-shell-border); border-radius: 16px }
+.bf-panel.bf-notebook-dialog header { display:flex; justify-content:space-between; align-items:center }
+.bf-panel.bf-notebook-dialog p { font-size:13px; line-height:1.8; color:var(--bf-shell-muted) }
+.bf-panel.bf-notebook-dialog input { display:block; width:100%; box-sizing:border-box; margin-top:8px; padding:10px; border:1px solid var(--bf-shell-border); border-radius:8px; background:transparent; color:inherit }
+.bf-panel.bf-notebook-dialog button, .bf-quotation-progress button, .bf-shell-empty button { border:1px solid var(--bf-shell-border); border-radius:16px; padding:7px 12px; background:transparent; color:inherit; cursor:pointer }
+.bf-panel.bf-notebook-dialog .bf-notebook-list { list-style:none; padding:0; max-height:55vh; overflow:auto }
+.bf-panel.bf-notebook-dialog .bf-notebook-list button { display:flex; width:100%; justify-content:space-between; gap:12px; text-align:left; border:0; border-radius:10px; padding:14px 8px }
+.bf-panel.bf-notebook-dialog .bf-notebook-list button:hover, .bf-panel.bf-notebook-dialog .bf-notebook-list button[aria-current=page] { background:color-mix(in srgb,#7ea8ef 18%,transparent) }
+.bf-panel.bf-notebook-dialog .bf-notebook-list small { color:var(--bf-shell-muted); white-space:nowrap }
+.bf-panel-resizer { position:fixed; top:var(--bf-shell-top-height); bottom:14px; width:12px; z-index:32; cursor:col-resize; pointer-events:auto; touch-action:none; border-radius:6px }
+.bf-panel-resizer-left { left:calc(var(--bf-shell-left) + 12px) }
+.bf-panel-resizer-right { right:calc(var(--bf-shell-right) + 12px) }
+.bf-panel-resizer:hover, .bf-panel-resizer:focus-visible, .bf-panel-resizer:active { background:color-mix(in srgb,#7ea8ef 30%,transparent); outline:none }
+.bf-quotation-progress { border:1px solid var(--bf-shell-border); border-radius:10px; padding:12px; margin-bottom:14px }
+.bf-quotation-progress h3 { margin-top:0 }
 @media (max-width: 1100px) {
-  body[data-bf-notebook] { --bf-shell-left: 235px; --bf-shell-right: 300px }
+  .bf-shell-top { flex-wrap:wrap; align-content:center; gap:6px }
+  .bf-shell-top nav { width:100%; overflow-x:auto; white-space:nowrap }
+  .bf-shell-brand { width:100% }
+  .bf-shell-top .bf-notebook-title { flex:1 }
+  body[data-bf-notebook] { --bf-shell-top-height: 100px; --bf-shell-left: 235px; --bf-shell-right: 300px }
   body[data-bf-notebook] [data-slot="root"] > div { padding-right: 14px }
   .bf-shell-studio { display: none !important; z-index: 30; box-shadow: 0 10px 40px #0005 }
   .bf-shell-studio[data-mobile-open=true] { display: flex !important }
@@ -148,7 +177,7 @@ body[data-bf-notebook] .bf-drawer { top: 52px; right: 12px; bottom: 14px; height
   .bf-shell-brand strong { font-size: 14px }
   .bf-shell-brand { gap: 7px }
   .bf-shell-top { padding: 0 12px }
-  .bf-shell-top nav { gap: 4px }
+  .bf-shell-top nav { gap: 4px; width:100%; overflow-x:auto; white-space:nowrap; padding-bottom:4px; }
   .bf-shell-top button { padding: 5px 7px; font-size: 11px }
 }
 `

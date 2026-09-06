@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { notebookWalkthrough } from './notebook-walkthrough.mjs'
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { mkdtemp, readFile, readdir, writeFile, mkdir, copyFile, rm, lstat } from 'node:fs/promises'
@@ -55,7 +56,7 @@ try {
     + (live ? '' : `\n- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n  config:\n    provider: bridgeflow-offline-test\n    model: offline\n- insert:\n    - id: scripted-test-model\n      name: ${JSON.stringify(`${root}/plugins/tests/fixtures/scripted-model/index.ts`)}\n`)
   await writeFile(`${scratch}/web.yml`, patch)
   start(python, ['-m', 'uvicorn', 'bridgeflow.api.main:app', '--host', '127.0.0.1', '--port', String(backendPort)])
-  start(process.env.BRIDGEFLOW_DSH ?? 'dsh', ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])
+  const web = start(process.env.BRIDGEFLOW_DSH ?? 'dsh', ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])
   const deadline = Date.now() + 30_000
   let match
   while (Date.now() < deadline) {
@@ -187,8 +188,25 @@ with DeepSeekHarness(dsh_bin=native_command(), profile="sdk-minimal", initialize
     assert((await lstat(`${env.DSH_HOME}/profiles/node_modules/@deepseek-ai/${name}`)).isSymbolicLink(), 'SDK must preserve native module fallback links')
   }
   await page.locator('.bf-shell-top').getByRole('button',{name:'新建笔记本',exact:true}).click()
+  await page.getByRole('dialog',{name:'离开前保存笔记本？'}).getByRole('button',{name:'不保存并继续'}).click()
   await page.waitForFunction(() => document.querySelectorAll('.bf-resource-list li').length === 0)
   assert.equal(new URLSearchParams(new URL(page.url()).hash.slice(12)).get('batch'),null)
+  await notebookWalkthrough(page,scratch)
+  // A full host restart must recover notebook title, purpose, batch and preview
+  // from DSH persistence, without relying on the browser's transient drafts.
+  const restoreUrl=page.url()
+  await page.goto('about:blank')
+  const stopped = new Promise(resolve => web.once('exit', resolve))
+  web.kill('SIGTERM'); await stopped
+  const restartOffset = logs.length
+  start(process.env.BRIDGEFLOW_DSH ?? 'dsh', ['web','--patch',`${scratch}/web.yml`,'--no-open','--port',String(webPort)])
+  const restartDeadline = Date.now()+30000
+  while (!logs.slice(restartOffset).includes('dsh web: ') && Date.now()<restartDeadline) await new Promise(resolve=>setTimeout(resolve,100))
+  assert(logs.slice(restartOffset).includes('dsh web: '),'Restart did not become ready')
+  await page.goto(restoreUrl)
+  await page.getByRole('complementary',{name:'来源',exact:true}).getByRole('button',{name:/sample-production.csv/}).waitFor()
+  await page.getByRole('complementary',{name:'工作室',exact:true}).getByRole('region',{name:'来源预览'}).waitFor()
+  await page.waitForFunction(()=>document.querySelector('.bf-notebook-title')?.value==='业务示例复核')
   const created = await Promise.all(createResponses)
   assert(created.length > 0, 'A real session.create reply is required; blank sessions need not be persisted')
   assert(created.every(reply => reply.result?.ok && reply.result.value?.agentPreset === 'bridgeflow'), 'Every created session must mount the BridgeFlow preset successfully')
@@ -203,7 +221,7 @@ with DeepSeekHarness(dsh_bin=native_command(), profile="sdk-minimal", initialize
   const evidence = `${root}/docs/evidence/quotation-ui/runs`
   const run = String(Date.now())
   await mkdir(`${evidence}/${run}`, {recursive:true})
-  for (const name of ['notebook-empty.png','source-preview.png','quotation-light.png','quotation-dark.png','quotation-narrow.png','quotation-en.png']) await copyFile(`${scratch}/${name}`,`${evidence}/${run}/${name}`)
+  for (const name of ['notebook-empty.png','source-preview.png','quotation-light.png','quotation-dark.png','quotation-narrow.png','quotation-en.png','notebook-history.png','notebook-save.png','notebook-sample.png']) await copyFile(`${scratch}/${name}`,`${evidence}/${run}/${name}`)
   const runs = (await readdir(evidence)).sort().reverse()
   for (const old of runs.slice(2)) await rm(`${evidence}/${old}`,{recursive:true})
   console.log(JSON.stringify({passed:true, artifacts:scratch, screenshot_run:run, model_requests:0}))

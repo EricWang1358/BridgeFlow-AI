@@ -8,6 +8,7 @@ import json
 import re
 import uuid
 import zipfile
+from pathlib import Path
 from typing import Annotated
 
 import pandas as pd
@@ -35,6 +36,8 @@ def batch_path(batch_id: str):
 class BatchSnapshot(PipelineResult):
     dictionary_snapshot: dict | None = None
     refusal: str = ""
+    demo_case: str | None = None
+    dictionary_source: str | None = None
 
 
 def load_batch(batch_id: str) -> BatchSnapshot:
@@ -62,6 +65,7 @@ class DepartmentSummary(BaseModel):
 
 
 class BatchSummary(BaseModel):
+    demo_case: str | None = None
     batch_id: str
     period: str
     departments: list[DepartmentSummary]
@@ -112,7 +116,8 @@ def summary(batch_id: str, result: BatchSnapshot) -> BatchSummary:
                 if result.graph.unresolved or any(t.quarantine for t in result.clean_tables)
                 else "ready" if result.master_table.rows else "empty"),
         refusal=result.refusal,
-        dictionary=_relative_dictionary(),
+        demo_case=result.demo_case,
+        dictionary=result.dictionary_source or _relative_dictionary(),
         declared_entities=_declared_entities(result.dictionary_snapshot),
     )
 
@@ -132,12 +137,31 @@ async def upload_batch(
     departments: Annotated[list[Department], Form()],
     files: Annotated[list[UploadFile], File()],
 ) -> BatchSummary:
+    return await _import_batch(period, departments, files)
+
+
+@router.post("/demo", response_model=BatchSummary)
+async def demo_batch() -> BatchSummary:
+    """Explicit synthetic notebook; freeze its dictionary without replacing deployment policy."""
+    folder = REPO_ROOT / "data/business_demo"
+    departments: list[Department] = ["production", "procurement", "finance", "marketing"]
+    files = [UploadFile(io.BytesIO((folder / "risk" / f"{department}.csv").read_bytes()),
+                        filename=f"sample-{department}.csv") for department in departments]
+    try:
+        return await _import_batch("2025-11", departments, files, folder / "dictionary.yaml", "risk")
+    finally:
+        for upload in files:
+            await upload.close()
+
+
+async def _import_batch(period: str, departments: list[Department], files: list[UploadFile],
+                        source_dictionary: Path | None = None, demo_case: str | None = None) -> BatchSummary:
     if len(files) != len(departments) or not 1 <= len(files) <= 4:
         raise HTTPException(422, "Provide one file per department (1–4 departments)")
     if len(set(departments)) != len(departments):
         raise HTTPException(422, "Duplicate department; combine its sheets explicitly first")
     batch_id = uuid.uuid4().hex
-    path = dictionary_path()
+    path = source_dictionary or dictionary_path()
     try:
         dictionary_raw = yaml.safe_load(path.read_text(encoding="utf-8")) if path.is_file() else {}
         if dictionary_raw is None:
@@ -206,6 +230,8 @@ async def upload_batch(
             result.master_table = assembled.master_table
         except (UnjoinableTables, MissingRollup) as exc:
             result.refusal = str(exc)
+    result.demo_case = demo_case
+    result.dictionary_source = str(path.relative_to(REPO_ROOT)) if path.is_relative_to(REPO_ROOT) else str(path)
     manifest = [{key: source[key] for key in ("id", "filename", "sheet", "sha256", "bytes")}
                 | {"total": len(source["rows"])} for source in sources]
     _write(batch_path(batch_id).parent / "sources" / batch_id / "index.json", {"sources": manifest})

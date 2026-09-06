@@ -1,3 +1,4 @@
+import { coldReload } from './cold-reload.mjs'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
@@ -48,7 +49,7 @@ try {
     + (live ? '' : `\n- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n  config:\n    provider: bridgeflow-offline-test\n    model: offline\n- insert:\n    - id: scripted-test-model\n      name: ${JSON.stringify(`${root}/plugins/tests/fixtures/scripted-model/index.ts`)}\n`)
   await writeFile(`${scratch}/web.yml`, patch)
   start(python, ['-m', 'uvicorn', 'bridgeflow.api.main:app', '--host', '127.0.0.1', '--port', String(backendPort)])
-  start(process.env.BRIDGEFLOW_DSH ?? 'dsh', ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])
+  const web = start(process.env.BRIDGEFLOW_DSH ?? 'dsh', ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])
   const deadline = Date.now() + 30_000
   let match
   while (Date.now() < deadline) {
@@ -233,6 +234,7 @@ try {
     const { auditChain } = await import('./chain-regression.mjs')
     await auditChain(page, root, scratch, report)
   }
+  await coldReload({page,web,start,args:['web','--patch',`${scratch}/web.yml`,'--no-open','--port',String(webPort)],readLogs:()=>logs,sessionIds:[report.parent_session_id,...report.roles.map(role=>role.session_id)]})
   assert.deepEqual(errors, [])
   await writeFile(`${scratch}/acceptance.json`, JSON.stringify({ passed: true, mode: live ? 'live' : 'offline', case: caseName, chain_checked: !fault }, null, 2))
   console.log(JSON.stringify({ ...measured, artifacts: scratch }))

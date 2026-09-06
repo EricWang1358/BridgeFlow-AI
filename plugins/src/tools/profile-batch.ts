@@ -54,13 +54,12 @@ export function profileBatch(config: BackendConfig) {
   return defineTool({
     name: 'profile_batch',
     description:
-      'Describe the shape of a batch\'s columns so a missing field-dictionary ' +
-      'declaration can be proposed: per-column counts and ratios, and cross-department ' +
-      'value overlap computed over hashes. Returns no cell values. Call this when a ' +
-      'batch is refused for having no joinable column, then propose which column each ' +
-      'blocked department should declare, citing the overlap as the reason. A high ' +
-      'mutual overlap between two string columns is evidence they name the same entity; ' +
-      'two numbers matching is usually coincidence.',
+      'Describe column counts, ratios and hashed value overlap without returning cell values. ' +
+      'Use lookup_field_dictionary to find the human-declared candidates in this batch. ' +
+      'Propose uploaded-column matches only within those existing declarations, citing profile evidence. ' +
+      'Overlap alone never proves a cross-entity relation. If no declared candidate fits, report ' +
+      'needs_configuration and ask the responsible person to configure the dictionary. ' +
+      'Never create fields, entity kinds, relations or a new dictionary.',
     parameters: {
       batch_id: { type: 'string', required: true, description: 'The batch to profile' },
     },

@@ -69,7 +69,7 @@ def collect(source: Path, destination: Path, keep: int = 2) -> None:
     run.mkdir()
     latest = destination
     destination = run
-    for name in ("measurement.json", "acceptance.json", "chain-audit.json", "report.json", "approval-events.json", "business-review.png", "business-upload.png", "rejection-note.png", "native-approval.png", "business-state.png", "business-state-dark.png", "business-state-en.png", "department-files.png", "native-spawn.png", "artifact-preview.png"):
+    for name in ("measurement.json", "acceptance.json", "chain-audit.json", "report.json", "approval-events.json", "approval-note-audit.json", "business-review.png", "business-upload.png", "rejection-note.png", "native-approval.png", "business-state.png", "business-state-dark.png", "business-state-en.png", "department-files.png", "native-spawn.png", "artifact-preview.png"):
         path = source / name
         if path.is_file():
             shutil.copyfile(path, destination / name)

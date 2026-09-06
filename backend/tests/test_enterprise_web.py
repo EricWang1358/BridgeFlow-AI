@@ -187,3 +187,25 @@ def test_original_xlsx_preview_preserves_sheet_and_precleaning_values(client):
     source = client.get(f'/batches/{response.json()["batch_id"]}/sources/production').json()
     assert source['sheet'] == 'Original'
     assert source['rows'] == [[' sku-a1 ', 17]]
+
+
+def test_explicit_demo_freezes_its_own_dictionary_without_changing_deployment(client, monkeypatch, tmp_path):
+    """A sample must work even when the real deployment is unconfigured."""
+    from bridgeflow.api.batches import load_batch
+    from bridgeflow.config import settings
+
+    path = str(tmp_path / "real-dictionary-not-configured.yaml")
+    monkeypatch.setattr(settings, "field_dictionary_path", path)
+    response = client.post("/batches/demo")
+    assert response.status_code == 200
+    value = response.json()
+    assert value["master_rows"] > 0
+    assert value["dictionary"] == "data/business_demo/dictionary.yaml"
+    assert settings.field_dictionary_path == path
+    batch = load_batch(value["batch_id"])
+    assert batch.demo_case == "risk"
+    assert "business_review" in batch.dictionary_snapshot
+    sources = client.get(f"/batches/{value['batch_id']}/sources").json()["sources"]
+    assert len(sources) == 4
+    assert all(source["filename"].startswith("sample-") and source["preview_available"] for source in sources)
+    assert client.post("/batches/demo", headers={"authorization":"Bearer invalid"}).status_code == 401
