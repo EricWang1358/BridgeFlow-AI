@@ -48,6 +48,7 @@
 | [`17-business-mvp-acceptance.md`](17-business-mvp-acceptance.md) | 🟢 | 中 | 业务用例负责人 · 演示人 | 当前 MVP 演示、模拟负责人验收与复演命令 |
 | [`16-dsh-web-review.md`](16-dsh-web-review.md) | 🔵 | 中 | 开发 · 团队 | 原生 Web 复用、权限边界、issue 重排与 Rubric 验收 |
 | [`15-plugin-design.md`](15-plugin-design.md) | 🔵 | 中 | 开发 | dsh 插件设计，读完官方文档后的结论落这里 |
+| [`20-quotation-brief.md`](20-quotation-brief.md) | 🟢 | 中 | 接手报价功能的人 | **报价功能任务书**：并列功能而非转向，分三步，第一步现在可做 |
 
 ## 语言规则
 
