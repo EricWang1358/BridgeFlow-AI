@@ -25,7 +25,13 @@ def _table(department: str, columns: list[str]) -> CleanTable:
 def test_a_declared_column_becomes_the_join_key():
     dictionary = FieldDictionary({"columns": {"production": {"物料编码": "sku"}}})
 
-    assert _primary_key_column(_table("production", ["日期", "物料编码"]), dictionary) == "物料编码"
+    key = _primary_key_column(_table("production", ["日期", "物料编码"]), dictionary)
+
+    assert key is not None
+    assert key.column == "物料编码"
+    # The kind travels with the column: folding a written label into its canonical
+    # entity only means something if you know what kind of thing the label names.
+    assert key.kind == "sku"
 
 
 def test_an_undeclared_table_has_no_join_key():

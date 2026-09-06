@@ -190,6 +190,12 @@ class MasterTable(BaseModel):
     periods: list[str] = Field(default_factory=list)
     rows: list[dict[str, Any]] = Field(default_factory=list)
 
+    #: Labels that never reached the entity graph, so nothing could merge them.
+    #: A row per spelling is what an incomplete dictionary looks like in the output,
+    #: and the honest thing to do is say so on the table rather than let the split
+    #: read as two entities that legitimately exist.
+    unmatched_entities: list[str] = Field(default_factory=list)
+
 
 class ApprovalCard(BaseModel):
     title: str
