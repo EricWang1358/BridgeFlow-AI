@@ -8,6 +8,7 @@ import * as untrustedInput from './guards/untrusted-input.ts'
 import { aggregateMetric } from './tools/aggregate-metric.ts'
 import { confirmMapping } from './tools/confirm-mapping.ts'
 import { listMetrics } from './tools/list-metrics.ts'
+import { profileBatch } from './tools/profile-batch.ts'
 import { lookupFieldDictionary } from './tools/lookup-field-dictionary.ts'
 import { batchSummary } from './tools/batch-summary.ts'
 import { ApprovalReceipts } from './approval/receipts.ts'
@@ -45,6 +46,7 @@ export function apply(ctx: Context, config: Config): void {
 
   // Registration is effect-based: disposing this plugin unregisters every tool.
   ctx.tools.register(listMetrics(backend))
+  ctx.tools.register(profileBatch(backend))
   ctx.tools.register(aggregateMetric(backend))
   ctx.tools.register(lookupFieldDictionary(backend))
   const receipts = new ApprovalReceipts()
