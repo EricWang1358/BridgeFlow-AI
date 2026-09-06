@@ -148,7 +148,7 @@ def test_limits_and_incomplete_extraction_never_fall_back_to_a_model(case):
 
 def test_text_citation_is_actionable_and_existing_cell_citation_unchanged():
     assert SourceRef(department='procurement', filename='contract', page=2, paragraph='Payment', excerpt='Payment due', document_sha256='a' * 64).cite() == 'contract page 2 Payment'
-    assert SourceRef(department='production', filename='sheet.csv', row=0, column='qty', source_row=2).cite() == 'sheet.csv row 2 column qty'
+    assert SourceRef(department='production', period='2025-11', filename='sheet.csv', row=0, column='qty', source_row=2).cite() == 'sheet.csv row 2 column qty'
 
 
 def test_read_only_catalogue_requires_auth_and_explicit_human_configuration(monkeypatch):
@@ -174,6 +174,8 @@ def test_text_extension_does_not_allow_empty_citations():
         SourceRef(department='procurement')
     with pytest.raises(ValidationError):
         SourceRef(department='procurement', filename='contract', page=1)
+    with pytest.raises(ValidationError):
+        SourceRef(department='procurement', row=0, column='quantity')
 
 
 def test_human_price_policy_cannot_silently_undercut_its_declared_cost_floor(case):

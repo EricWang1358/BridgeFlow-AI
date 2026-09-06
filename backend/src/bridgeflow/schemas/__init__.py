@@ -85,8 +85,8 @@ class SourceRef(BaseModel):
         if self.page is not None or self.paragraph:
             if not (self.filename.strip() and self.document_sha256 and self.excerpt.strip()):
                 raise ValueError("Text citations require a file, digest and excerpt")
-        elif self.row is None or not self.column:
-            raise ValueError("Cell citations require a row and column")
+        elif self.row is None or not self.column or not self.period:
+            raise ValueError("Cell citations require a period, row and column")
         return self
 
     def cite(self) -> str:

@@ -148,7 +148,7 @@ def evaluate_document(config: dict, document: StructuredDocument | dict, declara
     if not valid_text_source(declaration):
         fail("missing_declaration_source", title="The human policy needs a traceable frozen source")
         return result
-    result["contract_digest"] = hashlib.sha256(json.dumps(config, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    result["contract_digest"] = hashlib.sha256(json.dumps(contract.model_dump(mode="json"), sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     result["declaration"] = declaration.model_dump()
     try:
         document = StructuredDocument.model_validate(document)
