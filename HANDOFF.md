@@ -4,6 +4,22 @@
 
 当前变更是本地实现，未提交或修改远端看板。架构原则见 [docs/13](docs/13-golden-standard.md)，业务演示与模拟负责人验收见 [docs/17](docs/17-business-mvp-acceptance.md)，本次审查与 issue 重排建议见 [docs/16](docs/16-dsh-web-review.md)，所有实测数字与验证边界见 [docs/00](docs/00-status.md#原生-web-重构复测2026-09-06)。
 
+## 2026-09-07 业务方定的边界（影响后续所有设计）
+
+**标准格式与初始字典由人事先预设，模型只做匹配，不做创造。** 原话与分工表见
+[`CLAUDE.md`](CLAUDE.md) 的「字典由人预设，模型只做匹配」一节。
+
+两条直接后果：
+
+1. **不要再设计「让 captain 提出一份字典」。** [#102](https://github.com/EricWang1358/BridgeFlow-AI/issues/102)
+   的原始前提已作废，已在该 issue 下更正。`profile_batch`（[#101](https://github.com/EricWang1358/BridgeFlow-AI/issues/101)）
+   保留，用途改为**把上传列匹配到标准字典已声明的字段**——候选集是封闭的。
+2. **场景可能收窄。** 业务方提到先做「客户会话 + 采购合同 → 报价单」，只涉及两个部门，
+   样板案例待上传（[#104](https://github.com/EricWang1358/BridgeFlow-AI/issues/104)）。
+   **样板到手之前不要按它改代码**，但排期上要知道
+   [#7](https://github.com/EricWang1358/BridgeFlow-AI/issues/7)（报价价格带）
+   可能从「演示砍掉的一拍」变成主线。
+
 ## 怎么把它跑起来
 
 在仓库根目录执行：
