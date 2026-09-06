@@ -1,6 +1,6 @@
 # 交接说明
 
-**更新于 2026-09-06。** 本文独占**易变状态**：当前进度、已知缺陷、下一步、待验证问题。
+**更新于 2026-09-06。** 本文独占**易变状态**：当前进度、怎么把它跑起来、下一步、已知缺陷。
 
 分工（见 [`docs/README.md`](docs/README.md)）：硬约束在 [`CLAUDE.md`](CLAUDE.md)，
 架构决策在 [`docs/13-golden-standard.md`](docs/13-golden-standard.md)，
@@ -12,55 +12,118 @@
 
 ## 一句话现状
 
-**架构重构开始落地了。** 第一刀已经切下去：resolver 从 dsh 上撤到 DeepSeek 直连（#25）。
-剩下的骨架仍是按错误架构写的，下一阶段继续重构，不是加功能。
+**能跑，但没有上传界面。** 四部门 CSV 进去、对齐后的 Master Table 加风险发现出来，
+整条链路真实可用；唯一存在的图形界面是审批控制台。rubric 7 项中 2 项达标
+（第 1、第 4），逐条比对见 `docs/00-status.md` 第五节。
 
-rubric 7 项目前仍只有第 1 项达标（`docs/13` 第六节有逐条比对）。
+第一周除两条等业务方外全部完成，第二周进行中。
 
 ---
 
-## 环境
+## 怎么把它跑起来
 
-```
-~/Hackathon2026/
-├── BridgeFlow-AI/     仓库
-├── .venv/             Python 3.12.8（仓库外）
-└── .dsh-bridgeflow/   DSH_HOME（仓库外，与日常 dsh 隔离）
-```
-
-**`env.sh` 是 gitignored 的，换机器要重建**：`cp env.sh.example env.sh` 然后填
-`DEEPSEEK_API_KEY`。上一版交接说「setup 全部走完并验证」，但 `env.sh` 根本不存在——
-上个会话是在 shell 里临时 export 的，从没落盘。缺了它 dsh 起不来，测试直接红。
-
-每次开工：
+### 启动
 
 ```bash
 source ~/Hackathon2026/.venv/bin/activate
-source ~/Hackathon2026/BridgeFlow-AI/env.sh
+source ~/Hackathon2026/BridgeFlow-AI/env.sh      # DSH_* 只能由启动 shell 导出
 cd ~/Hackathon2026/BridgeFlow-AI/backend
+uvicorn bridgeflow.api.main:app --port 8000
 ```
 
-`scripts/smoke_dsh.py` 可以确认 dsh 还活着，但**它会真的调用 API**，别随手跑。
+浏览器开 <http://127.0.0.1:8000/console> 并**留着别关**。任何要写入的动作都会停在那里
+等人；没人看着就是拒绝，不是放行。
+
+### 三件今天就能做的事
+
+**一、跑一整个月的四部门对账**（⚠️ **真实计费**，实测 2m25s）
+
+```bash
+cd data/samples
+curl -X POST localhost:8000/analyze \
+  -F period=2025-11 \
+  -F departments=production  -F files=@production_2025-11.csv \
+  -F departments=procurement -F files=@procurement_2025-11.csv \
+  -F departments=finance     -F files=@finance_2025-11.csv \
+  -F departments=marketing   -F files=@marketing_2025-11.csv \
+  -o /tmp/analyze.json
+```
+
+回来的是 `clean_tables` / `graph` / `master_table` / `risk_report` 四段。
+实测这一次：**33 条清洗修正、0 条隔离、15 个实体、1 条已确认关系、6 条待裁决、
+9 行 Master Table、6 条发现、8 处张力、1 张卡片**。
+
+结果落在 `data/outputs/2025-11.json`，历史版本在 `data/outputs/versions/`——
+已发布的批次不会被静默重算（FR 11）。
+
+**二、问一个能被追回单元格的数字**（不计费，纯规则）
+
+```bash
+curl -X POST localhost:8000/tools/aggregate-metric \
+  -H 'content-type: application/json' \
+  -d '{"metric":"total_output","period":"2025-11","department":"production"}'
+```
+
+`4030 units`，并附上它加了哪几个单元格。`list-metrics` 列出当前字段字典**支持**的全部
+指标——问一个没声明的指标会 409 拒绝，不会编一个数出来。
+
+**三、让 agent 停下来等你批**（⚠️ 真实计费，约 4 秒）
+
+控制台开着，跑一次会调 `confirm_mapping` 的 turn。它会停住，控制台出现待确认，
+点「允许一次」或「拒绝」。批准则映射写入 `data/outputs/mappings.json` 并带上
+`authorised_by`；拒绝则文件根本不存在。**两条路径都在真实运行时上量过**
+（`docs/00-status.md` 第五节）。
+
+### 你现在**做不到**的事
+
+| 想做的 | 现状 |
+| --- | --- |
+| 网页上传 XLS | **没有上传界面**，只能走 `curl`（#40 第三周） |
+| 看实体图并点确认 | 确认能做（控制台），**图没有**（#40） |
+| 看 Master Table 的表格视图 | 只有 JSON |
+| 真实 XLS（多 sheet / 表头不在第一行 / 合并单元格） | **未验证**（#47） |
+| 报价模拟 | 价格带是模型断言的，不是算出来的（#7），**演示时建议整拍砍掉** |
+| 处理被隔离的行 | 没有接口（#88），而且样本里 `0 quarantined`，这条路径从没被走过 |
 
 ---
 
-## 上一个会话（2026-09-06）做了什么
+## 做完了什么
 
-查清了「样本数据跑几百秒」到底是什么，结论推翻了原来的定性：
+**第一周**（除两条外全完成）：#4 #13 #14 #16 #26 #27 #28 #32 #37 #42 #44 #45 #51 #58 #59 #65 #67
+剩 #23、#75——都在等业务方，不是开发问题。
 
-1. **不是性能问题，是架构问题。** 6 次调用、每次提示词 590 字符、运行时启动 0.6 秒。
-   单次 turn 却要 5.3–212.5 秒。
-2. **时间花在 dsh 自发跑 bash 上。** 一次映射裁决跑了 12 步 shell，读了 README、源码、
-   `test_resolver.py`、`git log`、`CLAUDE.md`、`HANDOFF.md`——**读整个仓库来回答一个
-   提示词里已经写全答案的是非题**，而且是**读测试文件抄的答案**。
-3. **token 账单：发出去 548 字符，工具输出灌回来 28,431 字符 ≈ 7,100 token，52 倍。**
-   dsh 是多步循环，后续步骤连同前面所有工具输出重发，实际计费是这个数的数倍。
-4. **安全结论比 #26 原来写的严重**：`sdk-minimal` 给的 bash 没有目录约束，而喂进去的
-   `row_support` 派生自表格单元格内容。注入的落点不是提示词，是 shell。
-5. **修了 #25 和 #33**（PR #34）：resolver 改走 DeepSeek 直连，解析器提取到
-   `llm/json_reply.py` 共用并修掉 schema 外壳。
+**第二周**（进行中）：#12 #18 #29 #30 #39 #79
 
-**测试与耗时数字见 [`docs/00-status.md`](docs/00-status.md) §3–§4。**
+按能力说，这些加起来是：
+
+- **工具真的到达 Python**：`defineTool` 在 TypeScript，函数体在 pandas，中间走 HTTP
+- **拒绝真的发生**：字段字典没声明的东西，一律 409，不猜
+- **人真的能介入**：批准 / 拒绝 / 无人应答，三条路径都实测过
+- **注入真的被挡**：`ctx.tools.guard()` 是单调拒绝，后面的监听器翻不了案
+- **记忆真的跨月**：确认过的映射下个月不再问，证据变了会重新问
+
+---
+
+## 下一步
+
+### 建议顺序
+
+1. **#86 —— 拒绝之后模型仍回 `done`。** 演示时台上点「拒绝」、屏幕说完成，这一拍就废了。
+   先量一次拒绝 turn 的完整 event 流，别急着改。
+2. **#89 —— evaluator 反复请求不存在的指标。** 实测一次 `/analyze` 里 13 次
+   `aggregate_metric` **全部 409**，而它此前已经调过 4 次 `list_metrics`。
+   拒绝机制本身工作得很好，但代价是时间和钱。
+3. **#87 里那条分钟级的** —— 控制台标一行「此记录为声明，非认证身份」。
+   评委看到我们自己标边界，比看到一个假装严谨的字段强。
+4. **#79 —— 月度轴。** 实测 Master Table 里出现了 `2025-03` 这个期间：`03/11/2025`
+   被读成 3 月 11 日。行里带着 `period_from` 解释了原因，**但没人被挡住**。
+5. **#82 / #46 —— 映射记忆的入口。** 记忆能用，但没有产生记忆的界面。
+
+### 第二周剩下的
+
+#5 #38 #46 #47 #55 #61 #63 #69 #72 #77 #82 #84 #86 #87 #88
+
+看板：<https://github.com/users/EricWang1358/projects/1>
 
 ---
 
@@ -70,82 +133,44 @@ cd ~/Hackathon2026/BridgeFlow-AI/backend
 | --- | --- |
 | DeepSeek 直连**不支持** `response_format: {"type":"json_schema"}` | 实测报 `This response_format type is unavailable now`，改用 `json_object` |
 | 可用 model id：`deepseek-v4-flash` / `deepseek-v4-pro` / `deepseek-v4-flash-vision-exp` | `GET https://api.deepseek.com/models` |
-| `DeepSeekHarnessConfig` **没有任何工具/权限开关** | 只有 provider/model/reasoning_effort/max_tokens/cwd/profile/patches/base_url/api_key。工具集归 profile bundle 管 |
-| `deepseek_base_url` 的默认值不能放 `settings` | 它同时喂给 dsh，dsh 把显式 base URL 当覆盖。默认值放在 `DeepSeekProvider` 里 |
-| `provider_for()` 早就支持按 agent 覆盖 | `config.py:60`，`LLM_PROVIDER_RESOLVER` 等 |
+| `DeepSeekHarnessConfig` **没有任何工具/权限开关** | 工具集归 profile bundle 管，用 `--patch` 改 |
+| `deepseek_base_url` 的默认值不能放 `settings` | 它同时喂给 dsh，dsh 把显式 base URL 当覆盖 |
+| **审批的可应答接缝是 Host 侧 cordis waterfall** | `ctx.on('approval/request', (req, next) => …)`。`dsh-client-ui-approval` 只是 `web` profile 的浏览器插件，**headless 不需要换 profile** |
+| `permission-presets` **不控制工具册**，`sandbox` 只管写不管读 | `docs/13` §7，四条先前假设已证伪 |
+| `workflow` 跑的是**模型写的**脚本，自称「containment, not a security boundary」 | 同上。这是我们**主动拒绝**的东西，不是缺的能力 |
+| `.env` 里放 `DSH_*` 会被 dsh 拒绝 | 这是安全边界，不要绕 |
 
 ---
 
-## 建议的下一步
+## 已知缺陷
 
-### 优先级最高：evaluator 还在 dsh 上
+按「演示当天会不会咬人」排：
 
-#26 的 shell 暴露面**没有消失**，只是缩小了。evaluator 仍然把单元格内容原样拼进提示词，
-仍然跑在带 bash 的 dsh 上。这条链路 = 不可信输入 + 无约束 shell。
+1. **拒绝之后模型说 `done`**（#86）——**最会咬人的一个**，见上。
+2. **13 次 409 的指标循环**（#89）——不影响正确性，影响时间和钱。
+3. **歧义日期没人被挡住**（#79）——`03/11/2025` 变成 2025-03，行里有解释但流程不停。
+4. **`quoted_price` 的价格带是模型断言的**（#7）——演示时**砍掉这一拍**，别讲一个推不出来的数。
+5. **`0 quarantined`**（#88）——隔离路径从没被真正走过，演示当天可能第一次执行。
+6. **`decided_by` 是自称不是身份**（#87）——本地演示够用，别声称它是审计级的。
+7. **测试绿不证明判断质量**——`LLM_PROVIDER=mock` 时返回 `mock-justification-<hash>`。
+   离线 185 全绿只说明代码不崩。
 
-但 evaluator 还欠 #13 的「规则算数、模型解释」改造，两件事应该一起做。
-
-### 然后：还没读的 dsh 文档
-
-设计插件形态之前必须读，至今没人读过：
-
-- `docs/subsystems/permission-presets.md` —— **最要紧的一份**，「定制版 dsh」的入口就在这里
-- `docs/subsystems/plan.md` / `goal.md` —— 可能直接给出 rubric 第 2 项的 planning pattern
-- `docs/subsystems/session-query.md` —— 追踪能力的查询面
-- `packages/workflow/README.md` —— 决定能否取代 `Orchestrator`
-- `docs/user/develop/basic/tool.md` —— 决定 TS→Python 怎么连
-
-用 `gh api repos/deepseek-ai/deepseek-harness/contents/<path> --jq '.content' | base64 -d` 读。
-
-### 看板上按性价比排的
-
-1. **注入防御做成 guard 插件**（#26，rubric 第 5 项，当前 0 分且有真实漏洞）
-2. **数据操作暴露为 typed tools**（#27，第 3+7 项）
-3. **eval 套件 golden + adversarial**（#28，第 6 项，rubric 明写）
-4. **跨月映射记忆**（#29，第 2 项 state/memory）
-
-看板：https://github.com/users/EricWang1358/projects/1
-
-**注意**：`gh` 的 token 缺 `read:project` scope，命令行加不了 item。跑
-`gh auth refresh -s project` 补上。
-
----
-
-## 待验证的开放问题
-
-| 问题 | 为什么重要 |
-| --- | --- |
-| `dsh plugin add file:` 是拷贝还是可 link/watch？ | 直接决定插件开发循环的速度 |
-| 能不能做一个**没有 bash** 的 profile？ | #26 的收口手段，SDK 层没有开关 |
-| subagent 是否受「单 runtime 不能交错 turn」限制？ | 决定四角色能否真并发 |
-| dsh web 的端口与 Client 插件注册机制 | `tool.call.toolview` 的具体用法未验证 |
+`CLAUDE.md` 有完整的硬约束列表。
 
 ---
 
 ## 与用户协作的方式
 
 - **工作语言：中文。** 代码、注释、commit message、issue 标题用英文；`docs/` 与 issue
-  正文已经是中文，跟随即可。
+  正文中文。
 - **方向由用户定，定了就做完。** 先查证、给带数据的选项、让用户选；**选完不要再逐步请示**，
-  代码、看板、issue 一路做到 PR merge。上个会话在这两头都犯过错——先是没问就写代码，
-  后来又问得太碎。
-- **不要绕过缺陷。** 用户两次拦下「换 mock 让测试变绿」和「把 739 秒记成开发成本」——
+  代码、看板、issue 一路做到 PR merge。
+- **不要绕过缺陷。** 用户拦下过「换 mock 让测试变绿」和「把 739 秒记成开发成本」——
   异常是线索，不是预算项。先量出来、找到机制，再谈怎么改。
 - **省着花 token。** 真实调用会计费，跑之前想清楚值不值，跑完告诉用户花了多少。
 - **不要扩大范围。** Docker、CI、自建前端都是自作主张加的，已全部删除。
-
----
-
-## 已知缺陷（`CLAUDE.md` 有完整列表）
-
-最容易误判的三个：
-
-1. **测试里只有 `test_resolver.py` 打真实模型。** 其余仍在 mock 下跑，而 mock 返回
-   `mock-justification-<hash>`。绿色**不证明判断质量**。
-2. **`evaluator.py` 把单元格内容原样拼进提示词** —— 真实注入漏洞，未修，且它还在 dsh 上。
-3. **样本只有 2025-11 一个月。** 无法验证跨月记忆，也无法测规模（行数见 `docs/00-status.md` §1）。
-
-**仓库看起来比实际健康**，绿色的测试是这个错觉的主要来源。
+- **每完成一个子任务，从 rubric 和交付视角提一条复核 issue**（含 UI）。
+  已提：#55 #61 #63 #67 #69 #72 #75 #77 #79 #82 #84 #86 #87 #88 #89。
 
 ---
 
@@ -153,11 +178,11 @@ cd ~/Hackathon2026/BridgeFlow-AI/backend
 
 | | |
 | --- | --- |
-| `CLAUDE.md` | 硬约束 + 已知缺陷（每次会话自动加载） |
+| `CLAUDE.md` | 硬约束（每次会话自动加载） |
 | `docs/13` | 架构权威：7 问 7 答、已纠正的错误、官方能力边界、rubric 比对 |
-| `docs/14` | WSL 环境搭建（已完成，留作参考与重装用） |
-| `docs/09` | rubric 自评（第 4 项评价已被 13 修正） |
-| `docs/07` | 业务方 PRD |
-| `docs/12` | 提交表单内容（Owner 栏待填真人姓名） |
+| `docs/00` | 所有实测数字的唯一来源 |
+| `docs/04` | 六分钟演示脚本，每一拍标注今天能不能真跑 |
+| `plugins/README.md` | 运行时踩过的坑（每一条都换过一次启动失败） |
+| `data/README.md` | 开发集 / 验收集的红线 |
 | #25 | dsh 位置错误的完整测量数据 —— 重构的证据基础 |
-| GitHub issues | 26 个已开 + 7 个已关，关闭的都写了理由 |
+| GitHub issues | 关闭的都写了理由 |
