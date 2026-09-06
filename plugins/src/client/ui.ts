@@ -69,8 +69,11 @@ const labels = {
 
   // --- a state is only useful next to the action it implies -------------------
   nextTitle: ['下一步', 'Next step'],
-  next_needs_configuration: ['字段字典没有声明可用于连接的列，所以主表没有建。补齐字典后重新导入一次。',
-                             'The field dictionary declares no joinable column, so no Master Table was built. Complete the dictionary and import again.'],
+  next_needs_configuration: ['字段字典没有声明可用于连接的列，所以主表没有建，研判也起不来。核对下面这份字典是不是你以为的那份，补齐后重新导入一次——旧批次不会被改。',
+                             'The dictionary declares no joinable column, so no Master Table was built and the review cannot start. Check the dictionary below is the one you think it is, complete it, and import again — the old batch is left alone.'],
+  dictionaryInForce: ['本批次冻结的字典', 'Dictionary frozen into this batch'],
+  declaresEntities: ['它为各部门声明的可连接列', 'Joinable columns it declares'],
+  declaresNothing: ['未声明任何可连接列', 'declares none'],
   next_needs_review: ['有行被扣下或有映射待确认。先看隔离行和待确认映射两个页签，再发起研判。',
                       'Rows were held back or mappings are unconfirmed. Check the quarantine and pending-mapping tabs before asking for a review.'],
   next_ready: ['数据可用了。复制研判请求，粘贴到会话里发起四部门研判。',
@@ -120,7 +123,10 @@ export function reviewRequest(batch: string, period = '') {
   return `请研判 ${period} 批次 ${batch}：review_context → 同一响应四次官方 subagent（production/procurement/finance/marketing）→ review_finalize。缺口如实标 partial，不重试，不执行业务动作。`
 }
 export type Summary = { batch_id: string; period: string; status: string; master_rows: number; unresolved: number; refusal: string;
-  departments: { department: string; rows: number; quarantined: number; corrections: number }[] }
+  departments: { department: string; rows: number; quarantined: number; corrections: number }[]
+  /** The dictionary this batch was frozen against, and what it declares per department. */
+  dictionary?: string
+  declared_entities?: Record<string, string[]> }
 
 let runtime: { sessions: ISessions; conversation: Context['conversation'] }
 export function configureRuntime(ctx: Context) { runtime = ctx as unknown as typeof runtime; configureLocale(ctx.locale) }

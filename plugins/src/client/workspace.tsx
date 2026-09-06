@@ -158,6 +158,14 @@ export function DataWorkspace({ wide }: { wide: boolean }) {
             ordinary red body copy sandwiched between two counts. */}
         {batch.refusal && <div className="bf-callout" data-tone="danger">
           <h3>{t(batch.master_rows ? 'whyRefused' : 'whyEmpty')}</h3><p>{batch.refusal}</p>
+          {/* The refusal names the department. It cannot say whether the dictionary
+              is incomplete or simply not the one the operator meant to use, and that
+              is the difference between a five-second fix and a dead end. */}
+          {batch.dictionary && <p className="bf-hint" style={{ marginTop: 8 }}>
+            {t('dictionaryInForce')}: <code className="bf-mono">{batch.dictionary}</code>
+          </p>}
+          {batch.declared_entities && <p className="bf-hint">{t('declaresEntities')}: {departments.map(name =>
+            `${t(name)} → ${batch.declared_entities?.[name]?.join('、') || t('declaresNothing')}`).join(' · ')}</p>}
         </div>}
 
         <div className="bf-stats">{batch.departments.map(d => <div className="bf-stat" key={d.department}>

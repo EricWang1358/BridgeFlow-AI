@@ -40,8 +40,21 @@ python scripts/start_web.py --port 3082
 
 ## 台上操作
 
-1. 从「导入与数据」或右上角「部门文件」选择并导入 `data/business_demo/risk/` 下各部门 CSV，月份与 [案例说明](../data/business_demo/README.md) 一致。解释待确认映射与隔离行的区别；未确认映射不被本次直接列汇总计算消费。
-2. 复制研判请求，在原生工作区 `BridgeFlow` 的会话中发送。观察 `review_context → 同一响应四次 subagent → review_finalize`、轨迹四次 Spawn 与顶栏四个子代理；每个部门有自己的会话编号和结构化结果。
+**先决条件（不做这一步，第 2 步一定走不通）**：本案例只在它自己的字典下成立——
+`data/business_demo/dictionary.yaml` 是唯一声明了 finance 可连接列（`project`）
+和 `business_review` 契约的字典。默认的 `data/mappings/field-dictionary.yaml`
+两样都没有，于是导入会成功、批次回 `needs_configuration`、`review_context` 拒绝，
+**第 1 步过、第 2 步不可能**。实测过一次，就是这么坏的。
+
+```bash
+source env.sh && python3 scripts/start_web.py --demo --port 3082
+```
+
+`--demo` 把服务指向本案例的字典，启动时会打印 `BridgeFlow field dictionary: …`。
+面板上「为什么主表是空的」下面也会显示本批次冻结的是哪一份字典——**对不上就是这里对不上**。
+
+1. 从「导入与数据」或右上角「部门文件」选择并导入 `data/business_demo/risk/` 下各部门 CSV，月份与 [案例说明](../data/business_demo/README.md) 一致（**2025-11**）。解释待确认映射与隔离行的区别；未确认映射不被本次直接列汇总计算消费。
+2. 点「发起研判」——请求直接进当前会话，不需要复制粘贴（想先改再发就用旁边的「改一改再发」）。观察 `review_context → 同一响应四次 subagent → review_finalize`、轨迹四次 Spawn 与顶栏四个子代理；每个部门有自己的会话编号和结构化结果。
 3. 点「对话｜轨迹」右边的「业务状态」页签，再打开「四部门报告」，看部门负责人、风险方向和建议；公式直接显示，展开一项“解释与原始来源”，沿文件、原始行号、原始列名核对。来源展示封顶不代表只用样本算数。
 4. 在相同演示环境导入 `balanced/` 为新批次，再次研判。比较风险方向，重开旧批确认它没有被覆写。不要声称正常范围就代表所有风险消失。
 5. 展示映射审批时，明确工具的 `accepted=false` 是“记录一项否定关系的决定”，仍需批准写入；审批面板的“拒绝”则是**不执行这次写入**。两者不能混称。
