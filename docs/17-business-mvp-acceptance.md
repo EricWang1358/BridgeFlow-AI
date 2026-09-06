@@ -40,6 +40,9 @@ python scripts/start_web.py --port 3082
 
 ## 台上操作
 
+> **字典从哪来:人,事先。** 2026-09-07 业务方定的边界——标准格式与初始字典纯人工预设,
+> 模型只把上传列匹配到已声明字段并给出证据。见 [`../CLAUDE.md`](../CLAUDE.md)。
+
 **先决条件（不做这一步，第 2 步一定走不通）**：本案例只在它自己的字典下成立——
 `data/business_demo/dictionary.yaml` 是唯一声明了 finance 可连接列（`project`）
 和 `business_review` 契约的字典。默认的 `data/mappings/field-dictionary.yaml`
