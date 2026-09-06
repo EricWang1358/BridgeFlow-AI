@@ -28,6 +28,8 @@ existing agents keep their logic; they stop being the top of the stack.
 src/
   tools/          One file per domain tool. Declaration only — execute() calls Python.
   guards/         The injection boundary: a monotonic deny (#26)
+  approval/       The escalation checkpoint: the gate that asks, the answerer that
+                  puts the question in front of a person, and the summary they read (#30)
   backend.ts      The one place that knows how to reach Python
   index.ts        Plugin entry: registers everything
 ```
@@ -35,11 +37,15 @@ src/
 ## Loading it
 
 ```bash
-uvicorn bridgeflow.api.main:app        # the bodies
-# then run dsh with both patch layers:
+uvicorn bridgeflow.api.main:app        # the bodies, and the operator console
+# then run dsh with all three patch layers:
 #   dsh/no-shell.patch.yml     takes the shells away
+#   dsh/approval.patch.yml     loads ctx.approval with policy: ask
 #   dsh/bridgeflow.patch.yml   inserts this plugin
 ```
+
+Open <http://127.0.0.1:8000/console> before starting a turn that may write. A mutating
+tool call blocks there; with nobody watching it fails closed.
 
 No fork and no published package: a patch layer applies after every bundle layer.
 
@@ -70,7 +76,12 @@ messages do not say what to do about them.
   its card from a Client plugin registered in the `tool.call.toolview` slot plus the
   persisted `result.meta`. Host presenters alone add no Web card (#40). The rest of
   the UI is equally open — `docs/subsystems/slots.md` lists about fifty slots, and
-  `conversation.approval.detail` is where the human-in-the-loop work belongs (#39).
+  `conversation.approval.detail` is where a Web Client would render the correlated
+  tool call. **We do not use it.** `@deepseek-ai/dsh-client-ui-approval` ships that
+  panel, but it is a browser plugin for the `web` profile, and this project drives
+  `sdk-minimal` headless. The answerable seam underneath is a plain Host-side cordis
+  waterfall — `ctx.on('approval/request', (req, next) => …)` — so `src/approval/`
+  listens on it directly and sends the question to our own console (#30).
 - **Return one canonical JSON value**, not content blocks and not prose to be parsed.
   `output.render` owns the model-facing wording.
 - **Honor `exec.signal`.** Cancel in-flight work when it fires.
@@ -84,3 +95,9 @@ a cell.
 
 Refusals work too. The model tried two invented metric names first, was refused with
 409, and was told to call `list_metrics` — rather than being handed a plausible number.
+
+And a write waits for a person. In one live turn the model called `confirm_mapping`,
+the question reached the console in 3.1s, a click released it, and the turn ended at
+4.0s with the mapping on disk carrying `authorised_by`. Clicking 拒绝 instead ended the
+turn just as cleanly with nothing written. The third path — nobody there at all — is the
+one #39 measured: `requires approval, but no approval channel is available`.

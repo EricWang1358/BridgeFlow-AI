@@ -38,6 +38,11 @@ class ConfirmedMapping(BaseModel):
     evidence: str = ""
     #: The period the confirmation was made in, so its age is visible.
     period: str = ""
+    #: The person who allowed the call that wrote this, joined from the approval log
+    #: by tool-call id. `confirmed_by` is the agent that ran; this is the human who
+    #: let it. Empty when the record predates the console (#30) or the join failed —
+    #: which is itself worth seeing, rather than filling in a plausible name.
+    authorised_by: str = ""
 
     @property
     def key(self) -> tuple[str, str, str]:
@@ -65,7 +70,9 @@ def load() -> MappingMemory:
     return MappingMemory.model_validate_json(path.read_text(encoding="utf-8"))
 
 
-def confirm(link: Link, *, by: str, accepted: bool, period: str = "") -> MappingMemory:
+def confirm(
+    link: Link, *, by: str, accepted: bool, period: str = "", authorised_by: str = ""
+) -> MappingMemory:
     """Record a decision, replacing any earlier one for the same link.
 
     Replacing rather than appending because the current answer is what matters to the
@@ -82,6 +89,7 @@ def confirm(link: Link, *, by: str, accepted: bool, period: str = "") -> Mapping
         confirmed_at=datetime.now(UTC).isoformat(),
         evidence=link.justification,
         period=period,
+        authorised_by=authorised_by,
     )
     memory.confirmations = [c for c in memory.confirmations if c.key != entry.key] + [entry]
     memory.version = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")

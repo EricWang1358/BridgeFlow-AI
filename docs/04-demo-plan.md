@@ -8,22 +8,32 @@ Six minutes, one story: **"Should we take Acme's November order?"**
 
 ## What can actually run today
 
-**Read this column before rehearsing.** Four of the seven beats have no UI at all: the
-self-built frontend was deleted (`fea1fdd`) and the dsh web plugins that replace it are
-not written — `plugins/` does not exist yet (#40). The pipeline behind beats 2–5 runs;
-what is missing is the screen.
+**Read this column before rehearsing.** Most beats still have no UI: the self-built
+frontend was deleted (`fea1fdd`), and of the plugins that replace it only the approval
+half is written (#30). The pipeline behind beats 2–5 runs; what is mostly missing is the
+screen. The one screen that exists is the operator console, and it is the screen that
+carries rubric item 4.
 
 | # | Beat | Rubric | Runs today? | Fallback if it does not |
 | - | ---- | ------ | ----------- | ----------------------- |
 | 1 | Show the four real spreadsheets. Different dates, different SKU spellings, a shifted header row, a merged cell. "This is a normal Tuesday." | 1 | ✅ Excel, no code needed | — |
 | 2 | Drop all four in. Correction log streams in. | 1, 6 | 🟡 Pipeline yes, **no upload UI** | Run the sanitizer at the terminal and show `CorrectionLog` |
-| 3 | Resolver shows the entity graph. Presenter confirms a low-confidence link in one click. "It learns this once." | 4 | ❌ **No confirmation UI, and confirmations are not persisted** (#29, #40) | Show `unresolved` in the JSON and say the queue exists at the type level only |
+| 3 | Resolver shows the entity graph. Presenter confirms a low-confidence link in one click. "It learns this once." | 4 | 🟡 **The confirmation half runs end to end.** The tool call blocks on a person, the pending decision appears at `/console`, one click releases it, and the mapping is written naming who approved it. Measured: 3.1s to the console, 4.0s to turn end. Click 拒绝 instead and nothing is written. **Still no entity graph** (#40) | Show the console and the two outcomes; describe the graph rather than showing it |
 | 4 | Master Table appears. One aligned table from four files. | 2 | 🟡 Built, **no screen**; and the join key is guessed (#44) | Print the table; do not claim the join is safe |
 | 5 | Four role panels. Finance: margin negative. Procurement: Alu-6061 +18%. Production: Line 2 at 94%. Marketing: Acme is Tier C. **The tension is the punchline.** | 3, 6 | 🟡 Margin and the price change are computed by rule and cite their cells (#13, #65). **Still missing: line utilisation needs a declared capacity ceiling, and customer tiering has no rule at all.** No screen either (#40) | Show the metric tool output at the terminal; do not claim the two missing figures |
 | 6 | Quote Simulator → floor / target / stretch + 45-day terms instead of 90. | 4 | ❌ Price bands are asserted by the model, not computed (#7) | Cut the beat rather than assert a number we cannot derive |
 | 7 | Close on the HMW slide. | 1 | ✅ | — |
 
-**As of 2026-09-06 the honest demo is beats 1, 2, 7 plus a terminal walkthrough.**
+### Rehearse beat 3 like this
+
+Have the console open on a second screen *before* the turn starts. The point lands only
+if the judges watch the agent stop and wait. Say the sentence out loud while it is
+waiting: **"nothing has been written yet, and if I walk away now nothing will be."** Then
+click 拒绝 first and re-run to approve — the refusal is the more interesting half, and it
+is the half no other team will show.
+
+**As of 2026-09-06 the honest demo is beats 1, 2, 3 (confirmation half), 7 plus a
+terminal walkthrough.**
 Beats 3–6 need the week-1 and week-2 work. This table is the acceptance criterion for
 #41 — when every row reads ✅, the demo is real.
 

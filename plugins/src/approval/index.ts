@@ -1,0 +1,35 @@
+import type { Context } from '@deepseek-ai/cordis'
+
+import { DEFAULT_BACKEND } from '../backend.ts'
+import type { AnswererConfig } from './answerer.ts'
+import { answerer } from './answerer.ts'
+import { PendingDetails } from './detail.ts'
+import { gate } from './gate.ts'
+
+/**
+ * The escalation checkpoint, both halves (#30).
+ *
+ * The gate decides *that* a question must be asked; the answerer decides *who* is
+ * asked. They ship as one plugin because they share the argument summary the operator
+ * reads, and because that summary must not outlive them: a stale entry attached to a
+ * later call would show a person the wrong thing while they authorise something else.
+ */
+
+export const name = 'bridgeflow-approval'
+export const inject = ['tools']
+
+export function apply(ctx: Context, config: AnswererConfig): void {
+  const details = new PendingDetails()
+  gate(ctx, details)
+  answerer(ctx, config, details)
+}
+
+/** Defaults used when the composing plugin does not override them. */
+export const DEFAULT_ANSWERER: AnswererConfig = {
+  ...DEFAULT_BACKEND,
+  // Long enough that a reviewer can read the evidence and think; short enough that a
+  // run left alone fails closed rather than hanging until somebody notices.
+  decisionTimeoutMs: 300_000,
+}
+
+export { MUTATING_TOOLS } from './gate.ts'
