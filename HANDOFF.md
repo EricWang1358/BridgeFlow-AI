@@ -14,11 +14,13 @@
 1. **不要再设计「让 captain 提出一份字典」。** [#102](https://github.com/EricWang1358/BridgeFlow-AI/issues/102)
    的原始前提已作废，已在该 issue 下更正。`profile_batch`（[#101](https://github.com/EricWang1358/BridgeFlow-AI/issues/101)）
    保留，用途改为**把上传列匹配到标准字典已声明的字段**——候选集是封闭的。
-2. **场景可能收窄。** 业务方提到先做「客户会话 + 采购合同 → 报价单」，只涉及两个部门，
-   样板案例待上传（[#104](https://github.com/EricWang1358/BridgeFlow-AI/issues/104)）。
-   **样板到手之前不要按它改代码**，但排期上要知道
-   [#7](https://github.com/EricWang1358/BridgeFlow-AI/issues/7)（报价价格带）
-   可能从「演示砍掉的一拍」变成主线。
+2. **多一个并列功能，不是转向。** 「客户会话 + 采购合同 → 报价单」（两个部门）是
+   四部门月度对账**旁边**的第二条路径，两者共存
+   （[#104](https://github.com/EricWang1358/BridgeFlow-AI/issues/104)）。任务书见
+   [`docs/20`](docs/20-quotation-brief.md)：分三步，**第一步不依赖样板案例，现在就能做**
+   ——把报价单变成字典里的一份声明，而不是一段代码。
+   [#7](https://github.com/EricWang1358/BridgeFlow-AI/issues/7)（价格带要有真实成本算术）
+   因此从「演示砍掉的一拍」升级为这条路径的核心输出。
 
 ## 怎么把它跑起来
 
