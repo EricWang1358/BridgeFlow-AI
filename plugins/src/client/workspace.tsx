@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { BusinessReview, type Review } from './review.tsx'
-import { api, cellText, columnLabel, navigate, route, reviewRequest, useUI, type Summary } from './ui.ts'
+import { api, cellText, columnLabel, navigate, route, reviewRequest, startReview, useUI, type Summary } from './ui.ts'
 export const departments = ['production', 'procurement', 'finance', 'marketing'] as const
 export const sections = ['master', 'corrections', 'mappings', 'quarantine', 'review'] as const
 export function Chip({ status }: { status: string }) { const { t } = useUI(); return <span className="bf-chip" data-status={status}>{t(status.replaceAll('-', '_'))}</span> }
@@ -165,9 +165,17 @@ export function DataWorkspace({ wide }: { wide: boolean }) {
         </div>)}</div>
 
         <div className="bf-actions">
-          <button className="bf-primary" onClick={() => void copy(reviewRequest(batch.batch_id, batch.period), t('copiedRequest'))}>{t('copy')}</button>
+          {/* One button, doing the thing. Copy stays as the escape hatch for a
+              reviewer who wants to edit the request before sending it. */}
+          <button className="bf-primary" disabled={busy} onClick={async () => {
+            setError(''); setBusy(true)
+            try { await startReview(batch.batch_id, batch.period); close() }
+            catch (e) { setError(String(e)) } finally { setBusy(false) }
+          }}>{t(busy ? 'busy' : 'startReview')}</button>
+          <button onClick={() => void copy(reviewRequest(batch.batch_id, batch.period), t('copiedRequest'))}>{t('copy')}</button>
           <button onClick={() => setRevision(r => r + 1)}>{t('refresh')}</button>
         </div>
+        <p className="bf-hint">{t('startReviewHint')}</p>
         <nav className="bf-tabs" aria-label={t('tabs')}>{sections.map(key => <button key={key} aria-label={t(key)} aria-pressed={section === key} onClick={() => tab(key)}>{t(key)} <span className="bf-badge">{counts[key]}</span></button>)}</nav>
         {section === 'mappings' && <p className="bf-hint">{t('mappingHelp')}</p>}{section === 'quarantine' && <p className="bf-hint">{t('quarantineHelp')}</p>}
         {section === 'review' ? review ? <BusinessReview report={review} /> : !error && <p role="status">{t('loading')}</p> : view ? <>

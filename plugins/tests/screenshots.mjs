@@ -96,10 +96,18 @@ try {
       await page.screenshot({ path: `${out}/04-${tab}.png`, fullPage: true }) } catch { logs += `\n(no tab ${tab})` }
   }
   // The approval composer takeover — the human-in-the-loop centrepiece.
+  //
+  // Best effort: whether the offline fixture reaches `confirm_mapping` depends on
+  // session state this script does not control, so a miss prints and continues
+  // rather than failing the run. `web-smoke.mjs` is the authority on this flow and
+  // captures the same frames — see #97 for why it currently does not run.
   try {
     await page.getByRole('button', { name: '关闭', exact: true }).click()
-    await page.getByRole('button', { name: /^(Choose workspace|选择工作区)$/ }).click({ timeout: 8000 })
+    // A session has to be chosen before the composer is live; without this the fill
+    // lands on the inert no-session composer and nothing is ever asked.
+    await page.getByRole('button', { name: /^(Choose workspace|选择工作区)$/ }).click({ timeout: 15000 })
     await page.getByRole('menuitem').first().click()
+
     const composer = page.locator('[contenteditable=true]').first()
     await composer.fill('Exercise the approved mapping fixture.')
     await composer.press('Enter')
@@ -111,6 +119,19 @@ try {
     await page.waitForTimeout(4000)
     await page.screenshot({ path: `${out}/06-toolcards.png`, fullPage: false })
   } catch (e) { console.error('approval capture failed:', e.message.slice(0, 400)) }
+  await page.getByRole('button', { name: '导入与数据', exact: true }).click().catch(() => {})
+  await page.waitForTimeout(1200)
+  // The panel must be able to start the review itself. Copy/close/paste was three
+  // steps of clerical work, and the request names a batch id — a stale paste
+  // reviews last month.
+  try {
+    await page.getByRole('button', { name: '发起研判', exact: true }).click({ timeout: 8000 })
+    await page.waitForTimeout(2500)
+    const sent = await page.getByText(/review_context/).count()
+    console.log('start-review delivered into the conversation:', sent > 0)
+    await page.screenshot({ path: `${out}/07-started.png`, fullPage: false })
+  } catch (e) { console.error('start-review failed:', e.message.slice(0, 200)) }
+
   console.log('done: ' + out)
 } catch (e) {
   console.error('FAILED', e.message)
