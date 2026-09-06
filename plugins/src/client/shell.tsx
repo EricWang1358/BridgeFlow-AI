@@ -86,9 +86,18 @@ function Shell({ ctx }: { ctx: Context }) {
   const previewContent = selected.view === 'quotation' ? <Quotation /> : preview ? <section aria-label={t('sourcePreview')}>
     <h3>{preview.filename}</h3><p className="bf-hint">{t('parsedOriginal')} {preview.sheet}</p>
     <div className="bf-source-table"><table><thead><tr><th>{t('sourceRow')}</th>{preview.columns.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>
-      <tbody>{preview.rows.map((row, i) => <tr key={offset + i}><th>{offset + i + 2}</th>{row.map((cell, j) => <td key={j}>{cell === null ? '—' : String(cell)}</td>)}</tr>)}</tbody></table></div>
-    <div className="bf-actions"><button disabled={!offset} onClick={() => setOffset(Math.max(0, offset - 50))}>{t('previous')}</button><span>{offset + 1}–{offset + preview.rows.length} / {preview.total}</span><button disabled={offset + preview.rows.length >= preview.total} onClick={() => setOffset(offset + 50)}>{t('next')}</button></div>
-    <details><summary>{t('evidence')}</summary><p>{batchId}</p><code>{preview.sha256}</code></details>
+      <tbody>{preview.rows.map((row, i) => <tr key={preview.offset + i}><th>{preview.offset + i + 2}</th>{row.map((cell, j) => <td key={j}>{cell === null ? '—' : String(cell)}</td>)}</tr>)}</tbody></table></div>
+    {preview.total > 50 ? <nav className="bf-actions" aria-label={t('sourcePagination')}>
+      <button disabled={preview.offset === 0} onClick={() => setOffset(Math.max(0, preview.offset - 50))}>{t('previous')}</button>
+      <span role="status">{t('pageLabel')} {Math.floor(preview.offset / 50) + 1} / {Math.ceil(preview.total / 50)} · {preview.offset + 1}–{preview.offset + preview.rows.length} / {preview.total} {t('rows')}</span>
+      <button disabled={preview.offset + preview.rows.length >= preview.total} onClick={() => setOffset(preview.offset + 50)}>{t('next')}</button>
+    </nav> : <p className="bf-hint" role="status">{t('allRowsShown')} · {preview.total} {t('rows')}</p>}
+    <details className="bf-source-provenance"><summary>{t('sourceDetails')}</summary>
+      <dl><dt>{t('sourceFilename')}</dt><dd>{preview.filename}</dd><dt>{t('batchId')}</dt><dd><code>{batchId}</code></dd>
+        {preview.sheet && <><dt>{t('sourceSheet')}</dt><dd>{preview.sheet}</dd></>}
+        <dt>{t('sourceFingerprint')}</dt><dd><code>{preview.sha256}</code></dd></dl>
+      <p className="bf-hint">{t('sourceFingerprintHelp')}</p>
+    </details>
   </section> : report ? <BusinessReview key={report.report_id} report={report} /> : <p role="status">{t(error || !batchId || selected.view === 'source' && !selected.source || selected.view === 'artifact' && !selected.report ? 'previewUnavailable' : 'loading')}</p>
   return <>
     <header className="bf-shell-top"><div className="bf-shell-brand"><span aria-hidden="true">B</span><strong>BridgeFlow</strong>

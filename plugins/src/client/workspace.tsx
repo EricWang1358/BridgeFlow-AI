@@ -78,7 +78,13 @@ const NEXT_STEP: Record<string, string> = {
 const NEXT_TONE: Record<string, string> = {
   needs_configuration: 'danger', needs_review: 'warn', ready: 'info', empty: 'warn',
 }
-export function DataWorkspace({ wide }: { wide: boolean }) {
+export function DataWorkspaceButton({ wide }: { wide: boolean }) {
+  const { t } = useUI()
+  return <button className="bf-open" onClick={() => window.dispatchEvent(new Event('bridgeflow:open-data'))} title={t('data')}>{wide ? t('data') : t('master')}</button>
+}
+
+/** Keep the modal in shell.overlay: a collapsed sidebar must never hide a modal that makes the page inert. */
+export function DataWorkspace() {
   const { t } = useUI(), dialog = useRef<HTMLDialogElement>(null)
   const [batch, setBatch] = useState<Summary | null>(null), [batchId, setBatchId] = useState('')
   const [section, setSection] = useState('master'), [offset, setOffset] = useState(0)
@@ -110,8 +116,10 @@ export function DataWorkspace({ wide }: { wide: boolean }) {
       setNotice(''); setBatch(null); setView(null); setReview(null); setBusy(true)
       void api<Summary>(`/batches/${value.batch}`, { signal }).then(result => { if (!signal.aborted) setBatch(result) }).catch(e => { if (!signal.aborted) setError(String(e)) }).finally(() => { if (!signal.aborted) setBusy(false) })
     }
+    const open = () => { if (!dialog.current?.open) dialog.current?.showModal() }
+    window.addEventListener('bridgeflow:open-data', open)
     readRoute(); window.addEventListener('hashchange', readRoute)
-    return () => { abort?.abort(); pendingBatch.current?.abort(); window.removeEventListener('hashchange', readRoute) }
+    return () => { abort?.abort(); pendingBatch.current?.abort(); window.removeEventListener('hashchange', readRoute); window.removeEventListener('bridgeflow:open-data', open) }
   }, [])
   useEffect(() => {
     if (!batch) return
@@ -128,7 +136,6 @@ export function DataWorkspace({ wide }: { wide: boolean }) {
     corrections: batch.departments.reduce((n, d) => n + d.corrections, 0), quarantine: batch.departments.reduce((n, d) => n + d.quarantined, 0), review: review ? `${review.roles.filter(r => r.status === 'validated').length}/4` : '—' } : {}
   function tab(key: string) { setSection(key); setOffset(0); if (batch) navigate({ batch: batch.batch_id, view: key, ...(key === 'review' && reportId ? { report: reportId } : {}) }) }
   return <>
-    <button className="bf-open" onClick={() => dialog.current?.showModal()} title={t('data')}>{wide ? t('data') : t('master')}</button>
     <dialog className="bf-panel" ref={dialog} onCancel={close} aria-label={t('workspace')}>
       <header className="bf-panel-head">
         <div>
@@ -213,8 +220,10 @@ export function DataWorkspace({ wide }: { wide: boolean }) {
           {!view.rows.length && <div className="bf-empty"><strong>{t('empty')}</strong>{t('noRows')}</div>}
           <div className="bf-pager">
             <span className="bf-hint">{t('total')} {view.total} · {offset + (view.rows.length ? 1 : 0)}–{offset + view.rows.length}</span>
-            <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 50))}>{t('previous')}</button>
-            <button disabled={offset + 50 >= view.total} onClick={() => setOffset(offset + 50)}>{t('next')}</button>
+            {view.total > 50 ? <>
+              <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 50))}>{t('previous')}</button>
+              <button disabled={offset + 50 >= view.total} onClick={() => setOffset(offset + 50)}>{t('next')}</button>
+            </> : <span className="bf-hint">{t('allRowsShown')}</span>}
           </div>
         </> : !error && <p role="status">{t('loading')}</p>}
       </section>}

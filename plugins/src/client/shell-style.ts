@@ -141,6 +141,8 @@ body[data-ds-dark-theme] .bf-shell-top button[aria-expanded=true] { background: 
 body[data-ds-dark-theme] .bf-save-state[data-dirty=true] { color: #dfbd76 }
 .bf-notebook-purpose { display: flex; gap: 8px; align-items: center; justify-content: space-between }
 .bf-notebook-purpose select { max-width: 65%; border: 1px solid var(--bf-shell-border); border-radius: 7px; background: var(--bf-shell-pane); color: inherit; padding: 6px }
+.bf-source-provenance dt { font-weight:600; margin-top:10px }
+.bf-source-provenance dd { margin:4px 0; overflow-wrap:anywhere }
 .bf-panel.bf-notebook-dialog { width: min(560px, calc(100vw - 40px)); padding: 24px; color: var(--bf-shell-text); background: var(--bf-shell-pane); border: 1px solid var(--bf-shell-border); border-radius: 16px }
 .bf-panel.bf-notebook-dialog header { display:flex; justify-content:space-between; align-items:center }
 .bf-panel.bf-notebook-dialog p { font-size:13px; line-height:1.8; color:var(--bf-shell-muted) }
