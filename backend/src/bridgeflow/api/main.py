@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from bridgeflow import __version__, store
 from bridgeflow.api.approvals import router as approvals_router
 from bridgeflow.api.batches import router as batches_router
+from bridgeflow.api.documents import router as documents_router
 from bridgeflow.api.reviews import router as reviews_router
 from bridgeflow.api.tools import router as tools_router
 from bridgeflow.config import settings
@@ -30,6 +31,7 @@ app.add_middleware(
 app.include_router(tools_router, dependencies=[Depends(require_host)])
 app.include_router(batches_router, dependencies=[Depends(require_host)])
 app.include_router(reviews_router, dependencies=[Depends(require_host)])
+app.include_router(documents_router, dependencies=[Depends(require_host)])
 
 # The escalation checkpoint (#30): where a pending decision is published, and where
 # a person answers it. Without this the approval seam is fail-closed and unanswerable

@@ -53,7 +53,7 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           } catch { res.writeHead(422).end(JSON.stringify({ detail: 'Could not record approval note' })) }
           return
         }
-        const read = req.method === 'GET' && /^\/batches\/[a-f0-9]{32}(\/(view|review))?$/.test(path)
+        const read = req.method === 'GET' && (path === '/quotation/contract' || /^\/batches\/[a-f0-9]{32}(\/(view|review))?$/.test(path))
         const upload = req.method === 'POST' && path === '/batches'
         // No generic proxy. Browser requests cannot mint approval receipts or call writes.
         if (!read && !upload) { res.writeHead(403).end('Route not authorized'); return }

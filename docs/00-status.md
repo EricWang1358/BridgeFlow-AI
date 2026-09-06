@@ -9,7 +9,39 @@
 > 「每个数字都量过、可追溯」是这个项目对评委的核心叙事。评委抓到一处对不上，
 > 整个叙事打折。所以：**改数字只改这一处。**
 
-**最后更新：2026-09-06。** 更新时请附上复现命令。
+**最后更新：2026-09-07。** 更新时请附上复现命令。
+
+---
+
+## 报价声明与 Notebook 风格工作台（2026-09-07）
+
+任务书的**样板前第一步已完成**：独立的 `quotation:` 人工声明示例，复用 `business.expression` 的通用文档求值器，结构化事实与文本 SourceRef，以及不夹带价格的聚合拒绝。月度管线保留。自由文本边界先记录在 [设计文档](21-quotation-design.md)，随后实现；尚未猜测或实现客户原件解析，也没有外发入口。
+
+原生 Web 新增“报价工作区”空会话入口和会话内“报价”页签；报价页是配置声明预览，**不是已生成的交易报价**。业务状态和报价共用来源／工作区／结果与核对的分栏；可折叠、适配窄屏及深色。工作台通过官方 shell.overlay 和 conversation.view 复用同一组件，无 DSH fork 或独立前端。
+
+| 验证 | 本轮结果 | 复现 |
+| --- | --- | --- |
+| Python 全量 | **293 passed**，2 条依赖弃用提示 | `pytest -q backend/tests` |
+| 报价契约复验 | **28 passed**；成本变更、全缺项、来源、范围、单位、阈值、循环、除零、纯常量伪报价、改名、鉴权及有界返回 | `pytest -q backend/tests/test_declared_documents.py` |
+| TS | **20 passed** | `pnpm --dir plugins test` |
+| 类型 / 产物 / 锁文件 | typecheck、build、frozen-lockfile 通过 | `pnpm --dir plugins typecheck` / `build` / `install --frozen-lockfile` |
+| Python 静态 | 通过 | `ruff check backend scripts` |
+| 报价浏览器 | 空会话打开、三栏位置、折叠、窄屏无横溢、刷新、中文/英文、深色、鉴权、无外发路由；**0 JS 异常、0 模型请求** | `pnpm --dir plugins smoke:quotation` |
+| 月度浏览器 | 完整研判、跨批次操作、父子链接通过；**4** 个实际原生子会话、**4/4** 校验 | `pnpm --dir plugins smoke:business` |
+| Partial 回归 | **3/4** 保留、财务无有效判断、人工意见提交路径通过；仍不声称实现了宿主禁止重跑 | `BRIDGEFLOW_TEST_FAULT=step-limit pnpm --dir plugins smoke:business` |
+| 原生审批 | allowed-once / rejected / cancelled 与理由通道通过 | `pnpm --dir plugins smoke:web` |
+
+**调用与费用：本轮真实模型调用 0 次、计费 tokens 0、模型费用 0。** 报价单测及报价 UI 均不启动模型；月度与审批浏览器使用进程内离线协议适配器，不访问付费模型。这不验证真实合同抽取准确率或报价业务口径。
+
+合成单测的独立标准答案：材料成本 **100 SGD/kg × 2 kg/unit**，加工成本 **0.5 hour/unit × 40 SGD/hour**，合计 **220 SGD/unit**；声明目标毛利率 **10%**、备选毛利率 **20%**，按分向上舍入得到底价 **220.00**、目标价 **244.45**、备选价 **275.00 SGD/unit**；数量 **10** 的目标总额 **2444.50 SGD**。材料成本改为 **110 SGD/kg** 且更新对应合成出处后，底价变为 **240.00 SGD/unit**。这些来自单测内部事实，不是客户合同实测或 UI 已出具报价。
+
+边界：结构化事实最多 **64** 项，指标最多 **24** 项，每个输入最多 **4** 条出处，每片段最多 **480** 字符，每个输出展示最多 **5** 条出处，并保留真实引用次数。当前合成案例把每项出处与片段扩到封顶后，序列化草稿通过 **小于 60000 bytes** 的断言；不宣称所有可能契约均是该字节数。计算不依赖展示截断，字段更名不修改 Python。
+
+本轮诊断到根因并修复：原生空会话隐藏会话页签，不能靠先发模型消息解锁功能，故提供官方 overlay 入口；原有数据页将 batch_id 直接截成省略文本，导致连续操作脚本拿到无效身份，现保留完整编号并由布局控制。初次浏览器检查失败，修复后复跑通过，不把初次结果算作成功。
+
+报价最终浏览器目录 `/tmp/bridgeflow-web-e2e-1zVWjc`；月度 `/tmp/bridgeflow-web-e2e-Bnom9S`；partial `/tmp/bridgeflow-web-e2e-I0QB8T`；审批 `/tmp/bridgeflow-web-e2e-b8Ijvi`。截图按场景最多保留 **2** 轮，未清理用户真机会话。
+
+[报价浅色](evidence/quotation-ui/runs/1788714260781/quotation-light.png) · [深色公式核对](evidence/quotation-ui/runs/1788714260781/quotation-dark.png) · [窄屏](evidence/quotation-ui/runs/1788714260781/quotation-narrow.png) · [英文](evidence/quotation-ui/runs/1788714260781/quotation-en.png)
 
 ---
 

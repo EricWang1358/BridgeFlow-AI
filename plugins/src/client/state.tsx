@@ -3,6 +3,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventSource, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { api, navigate, route, useUI, type Summary } from './ui.ts'
+import { Notebook } from './notebook.tsx'
 import { BusinessReview, type Review } from './review.tsx'
 import { Chip, type Limits } from './workspace.tsx'
 
@@ -48,8 +49,8 @@ function BusinessState({ source, loadOlder, openView }: ConvViewProps & Injected
   const count = (id: string) => id === 'validated' ? `${report?.roles.filter(r => r.status === 'validated').length ?? 0}/4` : ['attention', 'ok'].includes(id) ? report?.roles.flatMap(r => r.checks).filter(c => c.expected_status === id).length ?? 0 : approvalCounts[id]
   const current = (id: string) => batch?.status === id || report?.status === id || id === 'dispatching' && audit.review?.status === id && batchId === eventBatch || ['attention', 'ok'].includes(id) && !!count(id) || currentApproval === id
   const isApproval = groups[3]!.items.includes(node)
-  return <main className="bf-state" aria-label={t('state')}>
-    <header className="bf-state-head"><h2>{t('state')}</h2><p className="bf-hint">{t('stateHelp')}</p></header>
+  return <Notebook title={t('state')} description={t('stateHelp')}
+    sources={<>
     <form className="bf-actions" onSubmit={e => { e.preventDefault(); setChosen(input); navigate({ batch: input, view: 'state' }) }}>
       <label>{t('batchId')} <input value={input} placeholder={eventBatch || t('batchId')} onChange={e => setInput(e.target.value)} /></label>
       <button disabled={!/^[a-f0-9]{32}$/.test(input)}>{t('open')}</button>
@@ -58,19 +59,22 @@ function BusinessState({ source, loadOlder, openView }: ConvViewProps & Injected
     </form>
     {error && <p role="alert" className="bf-error">{error}</p>}
     <p className="bf-band">{batch
-      ? <><span className="bf-period">{batch.period}</span> <Chip status={batch.status} /> <span className="bf-hint">{batch.master_rows} {t('rows')} · <code className="bf-mono">{batch.batch_id.slice(0, 12)}…</code></span></>
+      ? <><span className="bf-period">{batch.period}</span> <Chip status={batch.status} /> <span className="bf-hint">{batch.master_rows} {t('rows')} · <code className="bf-mono">{batch.batch_id}</code></span></>
       : <span className="bf-hint">{t('unknown')}</span>}</p>
+    <nav><button disabled={!batch} onClick={() => navigate({ batch: batchId, view: node === 'needs_review' ? 'mappings' : node === 'needs_configuration' ? 'corrections' : 'master' })}>{t('data')} ↗</button>
+      <button onClick={() => openView('trajectory', '')}>{t('inspect')} ↗</button>
+      {report && <button onClick={() => navigate({ batch: batchId, view: 'review', report: report.report_id })}>{t('review')} ↗</button>}</nav>
+    </>}
+    studio={<>
     <p className="bf-hint">{t('sessionApprovals')}</p>
     <div className="bf-state-map">{groups.map(group => <section key={group.title}><h3>{group.title}</h3>{group.items.map(id => <button key={id} data-current={current(id)} aria-pressed={node === id} onClick={() => setNode(id)}><Chip status={id} /> {count(id) !== undefined && <span className="bf-badge">{count(id)}</span>}</button>)}</section>)}</div>
     <p className="bf-hint">{t('approval')} · {t('timeout')}: {limits ? limits.decisionTimeoutMs / 1000 : '—'} {t('seconds')}</p>
     <p className="bf-hint">{t('mappingHelp')} {t('quarantineHelp')}</p>
-    <nav><button disabled={!batch} onClick={() => navigate({ batch: batchId, view: node === 'needs_review' ? 'mappings' : node === 'needs_configuration' ? 'corrections' : 'master' })}>{t('data')} ↗</button>
-      <button onClick={() => openView('trajectory', '')}>{t('inspect')} ↗</button>
-      {report && <button onClick={() => navigate({ batch: batchId, view: 'review', report: report.report_id })}>{t('review')} ↗</button>}</nav>
+    <details><summary>{t('batchAudit')} · {selected.calls.length} Spawn · {t('dispatchCount')}</summary><p>{t('loadedWindow')}</p><ul>{selected.calls.map((e, i) => <li key={i}>{String(e.data.callId)} · {new Date(e.time).toLocaleTimeString()}</li>)}</ul>{snapshot.hasMore && <button onClick={() => void loadOlder().catch(e => setError(String(e)))}>{t('loadOlder')}</button>}</details>
+    </>}>
     {isApproval ? <section aria-label={t('approval')}><h3>{t('approval')}</h3>{audit.approvals.filter(a => a.outcome === node).map(a => <article className="bf-card" key={a.id}><Chip status={a.outcome} /><p>{a.id}</p><p>{a.note}</p><small>{a.call}</small></article>)}{!approvalCounts[node] && <p>{t('unknown')}</p>}</section>
       : report && !['needs_configuration', 'needs_review', 'ready', 'empty'].includes(node) ? <BusinessReview report={{ ...report, roles: ['attention', 'ok'].includes(node) ? report.roles.map(r => ({ ...r, checks: r.checks.filter(c => c.expected_status === node) })) : report.roles }} /> : <p>{batch?.refusal || (waiting ? t('waitingReview') : report ? t('batchHint') : batch ? t('noReport') : t('batchHint'))}</p>}
-    <details><summary>{t('batchAudit')} · {selected.calls.length} Spawn · {t('dispatchCount')}</summary><p>{t('loadedWindow')}</p><ul>{selected.calls.map((e, i) => <li key={i}>{String(e.data.callId)} · {new Date(e.time).toLocaleTimeString()}</li>)}</ul>{snapshot.hasMore && <button onClick={() => void loadOlder().catch(e => setError(String(e)))}>{t('loadOlder')}</button>}</details>
-  </main>
+  </Notebook>
 }
 export function mountState(ctx: Context) {
   const sessions = ctx.sessions as unknown as ISessions

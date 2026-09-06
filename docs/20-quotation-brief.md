@@ -95,6 +95,17 @@
 
 **验收**:一份声明 + 一组合成输入 → 一张带出处的报价单,或一条点名缺什么的拒绝。全程无模型调用。
 
+### 样板前阶段的实现入口
+
+文本抽取与证据边界先写入 [设计记录](21-quotation-design.md)。人工维护的合成声明在
+[`data/quotation_demo/dictionary.yaml`](../data/quotation_demo/dictionary.yaml)，通用执行入口是
+`bridgeflow.documents.evaluate_document`，算术仍由 `business.expression` 执行。
+合成验证见 `backend/tests/test_declared_documents.py`；结果与费用以 [实测状态](00-status.md) 为准。
+
+该示例字典只供隔离验证。部署时由管理员把确认后的 quotation 段加入现有字段字典，保留月度路径所需声明；不要用只含报价示例的文件覆盖月度字典。报价页通过已鉴权的只读契约接口展示当前配置。
+
+原生 Web 的“报价工作区”入口在空会话也可用；已有会话还提供并列“报价”页签。页面当前是声明与所需依据的预览，不冒充已抽取文件或已生成交易报价。没有开放原件解析、未经验证的事实写入或报价外发入口。
+
 ### 第二步(样板案例到手后)
 
 1. 先回答这四个问题,写进本文件:
