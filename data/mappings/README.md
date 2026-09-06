@@ -82,6 +82,49 @@ relations:
 `SKU-A1` → `sku:sku-a1`，`4000-Sales/A1` → `gl_account:4000-sales-a1`，
 `Acme Pte Ltd` → `customer:acme-pte-ltd`。
 
+### `measures` / `rollups` / `derived` 段
+
+`columns` 说的是「这一行讲的是谁」，这三段说的是「什么可以被算、怎么算」。
+指标需要它们，而把列名写进 Python 就等于把客户的表结构写死——真实字段还在协商中
+（`CLAUDE.md` 第八条硬约束）。
+
+```yaml
+measures:
+  procurement:
+    unit_price: unit_price          # 每一单位多少钱
+    qty: purchase_quantity          # 买了几单位
+
+rollups:
+  purchase_quantity: sum            # 跨期合并方式：sum / average / period_end
+
+derived:
+  purchase_amount:
+    product: [unit_price, purchase_quantity]   # 表里没有金额列时，金额由这两列算出来
+```
+
+| 段 | 键 → 值 | 说明 |
+| --- | --- | --- |
+| `measures` | 清洗后列名 → 度量名 | 这一列**可以被算**。度量名（`output_quantity`、
+| | | `purchase_amount`…）是代码认识的词汇，列名不是 |
+| `rollups` | 度量名 → `sum`/`average`/`period_end` | 跨期怎么合并。数量求和、单价取平均、
+| | | 库存取期末——**选错了会得到一个看起来合理的数字**，所以是声明的 |
+| `derived` | 度量名 → `product: [度量, 度量]` | 表里没有、但由有的列算出来的度量 |
+
+#### 一条踩过的前车之鉴
+
+**不要把单价列声明成金额。** `unit_price: purchase_amount` 曾在这份字典里待过，于是
+`material_spend` 老老实实把一整列单价加起来当支出：2025-11 报出 **13,540**，而三张填了价的
+PO 实际是 **117,250**。被引用的三个单元格全都真实存在，公式也照声明执行了——**错在声明**。
+
+#### `derived` 的两条规矩
+
+1. **表里已有金额列时不要写 `derived`。** 两条都可用时系统优先读客户自己写下的金额
+   （那才是能签字的数），派生只是没有金额列时的路。
+2. **一个度量只能对上一列。** 两个列都声明成 `unit_price` 时 `material_spend` 会拒绝，
+   而不是取先出现的那个——「哪一列才是单价」是字典该回答的问题。
+
+缺价的采购行：**`material_spend` 整条拒绝**并点名那一行（少算一行就是把支出报小），
+而 `material_price_change` 只把那一行同时移出分子与分母（比率仍然成立，公式写明覆盖几行）。
 ## 待 OA 字段到位后要做的事
 
 1. 用真实字段名填 `columns`，替换掉现在的关键词猜测
