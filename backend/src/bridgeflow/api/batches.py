@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import io
+import json
 import re
 import uuid
 import zipfile
@@ -146,6 +148,7 @@ async def upload_batch(
     except (yaml.YAMLError, OSError, UnicodeError, ValueError, TypeError, AttributeError, KeyError) as exc:
         raise HTTPException(503, "Field dictionary configuration is invalid; ask the administrator to correct it before importing") from exc
     tables = []
+    sources = []
     byte_count = row_count = 0
     for department, upload in zip(departments, files, strict=True):
         payload = await upload.read(settings.bridgeflow_max_upload_bytes + 1)
@@ -177,6 +180,12 @@ async def upload_batch(
             raise HTTPException(413, "Batch exceeds configured row limit")
         if frame.empty:
             raise HTTPException(422, f"{filename} has no data rows")
+        # Browser-only originals live outside the model-readable batch snapshot.
+        # Capture before sanitation mutates values; this is a parsed table preview.
+        parsed = json.loads(frame.to_json(orient="split", date_format="iso"))
+        sources.append({"id": department, "filename": filename, "sheet": sheet,
+                        "sha256": hashlib.sha256(payload).hexdigest(), "bytes": len(payload),
+                        "columns": parsed["columns"], "rows": parsed["data"]})
         table = await DataSanitizerAgent().run(SanitizerInput(department, period, frame))
         table.filename, table.sheet, table.batch = filename, sheet, batch_id
         for correction in table.corrections:
@@ -197,6 +206,11 @@ async def upload_batch(
             result.master_table = assembled.master_table
         except (UnjoinableTables, MissingRollup) as exc:
             result.refusal = str(exc)
+    manifest = [{key: source[key] for key in ("id", "filename", "sheet", "sha256", "bytes")}
+                | {"total": len(source["rows"])} for source in sources]
+    _write(batch_path(batch_id).parent / "sources" / batch_id / "index.json", {"sources": manifest})
+    for source in sources:
+        _write(batch_path(batch_id).parent / "sources" / batch_id / f"{source['id']}.json", source)
     _write(batch_path(batch_id), result.model_dump(mode="json"))
     return summary(batch_id, result)
 
@@ -231,3 +245,51 @@ async def view(
 async def review(batch_id: str, report_id: str | None = None) -> dict:
     from bridgeflow.api.reviews import saved_review
     return saved_review(batch_id, report_id)
+
+
+@router.get("/{batch_id}/sources")
+async def list_sources(batch_id: str) -> dict:
+    batch = load_batch(batch_id)
+    sources = []
+    folder = batch_path(batch_id).parent / "sources" / batch_id
+    manifest_path = folder / "index.json"
+    manifest = {item["id"]: item for item in json.loads(manifest_path.read_text(encoding="utf-8"))["sources"]} if manifest_path.is_file() else {}
+    for table in batch.clean_tables:
+        path = batch_path(batch_id).parent / "sources" / batch_id / f"{table.department}.json"
+        if path.is_file() and table.department in manifest:
+            sources.append(manifest[table.department] | {"preview_available": True})
+        else:
+            # Older batches have no retained original. Never substitute cleaned rows.
+            sources.append({"id": table.department, "filename": table.filename,
+                            "sheet": table.sheet, "preview_available": False})
+    return {"batch_id": batch_id, "sources": sources}
+
+
+@router.get("/{batch_id}/sources/{source_id}")
+async def source_preview(batch_id: str, source_id: Department,
+                         offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100)) -> dict:
+    batch = load_batch(batch_id)
+    if source_id not in {table.department for table in batch.clean_tables}:
+        raise HTTPException(404, "Source not found in this batch")
+    path = batch_path(batch_id).parent / "sources" / batch_id / f"{source_id}.json"
+    if not path.is_file():
+        raise HTTPException(404, "Original preview was not retained for this batch; import a new batch")
+    source = json.loads(path.read_text(encoding="utf-8"))
+    rows = source.pop("rows")
+    return {**source, "batch_id": batch_id, "total": len(rows), "offset": offset,
+            "rows": rows[offset:offset + limit]}
+
+
+@router.get("/{batch_id}/artifacts")
+async def list_artifacts(batch_id: str, offset: int = Query(0, ge=0),
+                         limit: int = Query(50, ge=1, le=100)) -> dict:
+    load_batch(batch_id)
+    folder = batch_path(batch_id).parent / "reviews" / batch_id
+    paths = sorted(folder.glob("*.json"), key=lambda p: p.stat().st_mtime_ns, reverse=True)
+    artifacts = []
+    for path in paths[offset:offset + limit]:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        artifacts.append({key: report[key] for key in
+                          ("report_id", "batch_id", "period", "status", "parent_session_id")}
+                         | {"created_at": path.stat().st_mtime})
+    return {"batch_id": batch_id, "total": len(paths), "offset": offset, "artifacts": artifacts}

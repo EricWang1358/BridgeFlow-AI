@@ -1,0 +1,106 @@
+{
+  "real_model_requests": 0,
+  "model_cost": 0,
+  "quotation_model_requests": 0,
+  "checks": {
+    "monthly": {
+      "mode": "offline",
+      "fault": null,
+      "case": "risk",
+      "elapsed_ms": 1339,
+      "report_status": "validated",
+      "roles": [
+        {
+          "role": "production",
+          "session_id": "b084dd93-fc5f-4e4e-aeae-e2439264c1a5",
+          "checks": 2
+        },
+        {
+          "role": "procurement",
+          "session_id": "789230aa-b577-4ac4-8160-e1c578dfd47a",
+          "checks": 2
+        },
+        {
+          "role": "finance",
+          "session_id": "50b47128-a478-4cc0-ab2b-a63224255d6e",
+          "checks": 2
+        },
+        {
+          "role": "marketing",
+          "session_id": "2b1a1fb6-f91b-4ae3-abf8-e4e97ddc6eb2",
+          "checks": 2
+        }
+      ],
+      "overlap_verified": true,
+      "request_header_events": 5,
+      "model_requests": 8,
+      "usage": {
+        "inputTokens": 80,
+        "outputTokens": 80
+      },
+      "models": [
+        "{\"kind\":\"model\",\"provider\":\"bridgeflow-offline-test\",\"model\":\"offline\"}"
+      ]
+    },
+    "partial": {
+      "mode": "offline",
+      "fault": "step-limit",
+      "case": "risk",
+      "elapsed_ms": 3738,
+      "report_status": "partial",
+      "roles": [
+        {
+          "role": "production",
+          "session_id": "147ff55f-5c82-4094-a965-d6cdf8a1418a",
+          "checks": 2
+        },
+        {
+          "role": "procurement",
+          "session_id": "04d09e95-4110-4e5c-a119-179145f458d1",
+          "checks": 2
+        },
+        {
+          "role": "finance",
+          "session_id": "8df23e44-3979-4eff-8a9b-dd0f5076d53c",
+          "checks": 0
+        },
+        {
+          "role": "marketing",
+          "session_id": "7e355888-23cf-4204-9e09-9c7816ad6d22",
+          "checks": 2
+        }
+      ],
+      "overlap_verified": true,
+      "request_header_events": 5,
+      "model_requests": 10,
+      "usage": {
+        "inputTokens": 100,
+        "outputTokens": 100
+      },
+      "models": [
+        "{\"kind\":\"model\",\"provider\":\"bridgeflow-offline-test\",\"model\":\"offline\"}"
+      ]
+    },
+    "approval": {
+      "mode": "offline",
+      "approval_outcomes": [
+        "allowed-once",
+        "rejected",
+        "cancelled"
+      ],
+      "refusalNarration": "Offline fixture turn 3 finished.",
+      "model_requests": 6,
+      "usage": {
+        "inputTokens": 60,
+        "outputTokens": 60
+      }
+    },
+    "runtime": {
+      "seeded_snapshot_proxies_healed": true,
+      "sdk_initialized_while_web_alive": true,
+      "session_create_preset": "bridgeflow",
+      "live_service_recovered": true,
+      "prompt_requests": 0
+    }
+  }
+}

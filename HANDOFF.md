@@ -2,7 +2,7 @@
 
 更新于 2026-09-07。当前默认产品入口已改为 **原生 DSH Web**：侧栏可导入 CSV / 单 sheet XLSX，查看主表、待确认映射、修正记录、隔离行和四部门研判报告；对话、会话、审批和轨迹使用 DSH 原有前端。
 
-当前变更是本地实现，未提交或修改远端看板。架构原则见 [docs/13](docs/13-golden-standard.md)，业务演示与模拟负责人验收见 [docs/17](docs/17-business-mvp-acceptance.md)，本次审查与 issue 重排建议见 [docs/16](docs/16-dsh-web-review.md)，所有实测数字与验证边界见 [docs/00](docs/00-status.md#原生-web-重构复测2026-09-06)。
+实现经分支与 PR 合并；远端看板的业务规划不由界面验收代替。架构原则见 [docs/13](docs/13-golden-standard.md)，业务演示与模拟负责人验收见 [docs/17](docs/17-business-mvp-acceptance.md)，本次审查与 issue 重排建议见 [docs/16](docs/16-dsh-web-review.md)，所有实测数字与验证边界见 [docs/00](docs/00-status.md)。
 
 ## 2026-09-07 业务方定的边界（影响后续所有设计）
 
@@ -26,7 +26,7 @@
 
 报价的样板前阶段已经实现，和月度对账并列；设计先于代码记录在 [docs/21](docs/21-quotation-design.md)。通用文档求值器共用既有算术，接受内部结构化事实及 SourceRef，生成 Decimal 成本草稿或点名缺项的拒绝。示例政策只用于合成验证，业务字段与责任仍待样板确认。
 
-侧栏“报价工作区”无需启动模型即可打开；会话内有“报价”页签。报价和业务状态页采用来源、工作区、结果与核对的分栏布局。报价页仅显示当前人工配置的声明与待补依据，真实原件抽取和外发仍属于任务书后续阶段。不可将完整文件或浏览器自报的 JSON 当作可信抽取结果。
+整个原生工作面采用 NotebookLM 式 Sources／Chat／Studio：左侧实际上传文件，中栏原生会话与轨迹，右侧工具下方列已保存报告。来源和产物都可预览及展开。原生会话与设置在顶栏抽屉，月度对账仍可用；空会话直接点击右侧“报价工作区”。报价页仅显示当前人工配置的声明与待补依据，真实原件抽取和外发仍属于任务书后续阶段。不可将完整文件或浏览器自报的 JSON 当作可信抽取结果。
 
 运行 `pytest -q backend/tests/test_declared_documents.py` 验证声明及拒绝，`pnpm --dir plugins smoke:quotation` 验证原生工作台。实测、费用、截图与验证范围统一见 [docs/00](docs/00-status.md)。
 
@@ -53,7 +53,7 @@ python scripts/start_web.py
 export FIELD_DICTIONARY_PATH=data/business_demo/dictionary.yaml
 ```
 
-首次会话选择原生工作区 `BridgeFlow`。点击「导入与数据」→选择月份与部门文件→「导入并检查」→检查主表、隔离与映射→复制分析请求到原生对话框。后续工具都携带同一 `batch_id`；`review_batch` 发起官方四部门子会话，完成后在「四部门报告」查看建议、责任和来源。导入与规则计算不计模型费用；在原生对话中提交分析会使用配置模型，可能计费。
+首次会话选择原生工作区 `BridgeFlow`。点击左侧 Sources「添加来源」→选择月份与部门文件→「导入并检查」→检查主表、隔离与映射→复制分析请求到原生对话框。后续工具都携带同一 `batch_id`；`review_batch` 发起官方四部门子会话，完成后在「四部门报告」查看建议、责任和来源。导入与规则计算不计模型费用；在原生对话中提交分析会使用配置模型，可能计费。
 
 映射写入走 `confirm_mapping` 与 DSH 原生审批面板。批准后由主机为**本次参数**生成一次性回执；拒绝不会写入。原生审批现在支持可选拒绝理由，先记录会话审计再送回 agent，不依赖旧控制台。关闭写权限时应同时将 `dsh/enterprise.patch.yml` 的 `allowMappingWrite` 与 Python 环境的 `BRIDGEFLOW_ALLOW_MAPPING_WRITE` 设为 `false`。
 
@@ -86,3 +86,5 @@ Python 测试在 `conftest.py` 隔离 provider、字典、输出与记忆。浏�
 5. **扩大验证**：目前是真实模型在可见合成案例上的验收，尚非留出集或真实客户验收；模型补充文字仍需业务复核。大规模性能和更广泛攻击评测未完成。
 
 旧 `/analyze`、`/quote`、`/console` 和样本回退默认关闭。历史控制台测试及耗时记录保留在 `docs/00`，不代表新 Web 的员工身份认证或最新业务结果。新默认入口禁止回退到缺少策略的 runtime。
+
+运行时修复：Web 与 Python SDK 共用 npm CLI 选择器，SDK 通过官方 `dsh_bin` 显式指定，避免打包运行时把同一 home 的模块入口改写到 `/snapshot`。若旧环境已污染，重启 `scripts/start_web.py`，官方启动加载器会恢复；直接试验打包 SDK 用独立 home。复现、费用与恢复结果见 [状态页](docs/00-status.md)。

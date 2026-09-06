@@ -179,3 +179,21 @@ def test_exact_report_routes_and_explanation_limit(client):
     assert client.get(f'/batches/{batch}/review?report_id=../invalid').status_code == 422
     other = upload(client)
     assert client.get(f"/batches/{other}/review?report_id={first['report_id']}").status_code == 404
+
+
+def test_artifacts_are_saved_reports_scoped_to_batch(client):
+    first = upload(client, 'risk')
+    second = upload(client, 'balanced')
+    batch_id = first
+    context = client.post('/tools/review-context', json={'batch_id': batch_id}).json()
+    runs = [{'role': p['role'], 'session_id': f"child-{p['role']}", 'status': 'completed',
+             'judgement': judgement(p)} for p in context['roles']]
+    report = client.post('/tools/review-finalize', json={
+        'batch_id': batch_id, 'parent_session_id': 'parent', 'runs': runs}).json()
+    listed = client.get(f'/batches/{batch_id}/artifacts').json()
+    assert listed['total'] == 1
+    assert listed['artifacts'][0]['report_id'] == report['report_id']
+    assert 'roles' not in listed['artifacts'][0]
+    assert client.get(f'/batches/{second}/artifacts').json()['artifacts'] == []
+    assert client.get(f'/batches/{second}/review?report_id={report["report_id"]}').status_code == 404
+    assert client.get(f'/batches/{batch_id}/artifacts?offset=1').json()['artifacts'] == []

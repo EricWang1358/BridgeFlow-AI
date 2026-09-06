@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import type { Context } from '@deepseek-ai/cordis'
+import { useEffect, useState } from 'react'
 import { api, navigate, route, useUI } from './ui.ts'
 import { Notebook } from './notebook.tsx'
 
@@ -11,7 +10,7 @@ type Contract = {
   outputs: string[]; checks: { id: string; title: string; owner: string }[];
 }
 type Catalogue = { status: string; contract: Contract | null; source?: { filename: string; document_sha256: string; paragraph: string } }
-function Quotation() {
+export function Quotation() {
   const { t } = useUI()
   const [catalogue, setCatalogue] = useState<Catalogue | null>(null), [error, setError] = useState(''), [revision, setRevision] = useState(0)
   useEffect(() => {
@@ -52,24 +51,4 @@ function Quotation() {
 export function QuotationButton() {
   const { t } = useUI()
   return <button className="bf-open bf-quotation-entry" onClick={() => navigate({ ...route(), view: 'quotation' })}>{t('quotationWorkspace')}</button>
-}
-function QuotationOverlay() {
-  const { t } = useUI(), dialog = useRef<HTMLDialogElement>(null)
-  const [open, setOpen] = useState(false)
-  function close() { dialog.current?.close(); setOpen(false); navigate({ ...route(), view: 'state' }) }
-  useEffect(() => {
-    const read = () => { const active = route().view === 'quotation'; setOpen(active); if (active) dialog.current?.showModal(); else dialog.current?.close() }
-    read(); window.addEventListener('hashchange', read)
-    return () => window.removeEventListener('hashchange', read)
-  }, [])
-  return <dialog className="bf-quotation-dialog" ref={dialog} aria-label={t('quotationWorkspace')} onCancel={e => { e.preventDefault(); close() }}>
-    <button className="bf-open bf-quotation-close" onClick={close}>{t('close')}</button>{open && <Quotation />}
-  </dialog>
-}
-export function mountQuotation(ctx: Context) {
-  ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({ name: 'sidebar.footer.action', id: 'bridgeflow-quotation-open' }, QuotationButton))
-  ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'bridgeflow-quotation-workspace' }, QuotationOverlay))
-  ctx.slots.inject('conversation.view', () => ctx.slots.register({ name: 'conversation.view', id: 'bridgeflow-quotation', order: 30,
-    label: () => ctx.locale.getSnapshot().active.startsWith('zh') ? '报价' : 'Quotation',
-  }, Quotation))
 }

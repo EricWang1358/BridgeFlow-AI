@@ -21,29 +21,21 @@ class Verdict(BaseModel):
     justification: str
 
 
-def _home_from_env_file() -> str:
-    """Fall back to backend/.env so the script works right after setup."""
-    env = pathlib.Path(__file__).resolve().parents[1] / "backend" / ".env"
-    if not env.is_file():
-        return ""
-    for line in env.read_text(encoding="utf-8").splitlines():
-        key, _, value = line.partition("=")
-        if key.strip() == "DSH_HOME":
-            return value.strip()
-    return ""
-
-
 def step(label: str) -> None:
     print(f"\n--- {label} ---", flush=True)
 
 
 def main() -> int:
-    home = os.environ.get("DSH_HOME") or _home_from_env_file()
+    home = os.environ.get("DSH_HOME")
     if not home:
         print("DSH_HOME is not set. See docs/14-wsl-setup.md step 7.")
         return 2
     print(f"DSH_HOME = {home}")
     print(f"DEEPSEEK_API_KEY set: {bool(os.environ.get('DEEPSEEK_API_KEY'))}")
+
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "backend/src"))
+    from bridgeflow.dsh_runtime import native_command
+    dsh = native_command()
 
     step("1. raw SDK: plain turn")
     from deepseek_harness import DeepSeekHarness
@@ -51,6 +43,7 @@ def main() -> int:
     t0 = time.time()
     with DeepSeekHarness(
         dsh_home=home,
+        dsh_bin=dsh,
         profile=os.environ.get("DSH_PROFILE", "sdk-minimal"),
         provider=os.environ.get("DSH_PROVIDER", "deepseek-official"),
         model=os.environ.get("DSH_MODEL", "deepseek-v4-flash"),

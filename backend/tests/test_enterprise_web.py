@@ -131,3 +131,59 @@ def test_malformed_dictionary_is_an_actionable_configuration_failure(client, mon
     response = upload(client)
     assert response.status_code == 503
     assert "dictionary configuration is invalid" in response.json()["detail"]
+
+
+def test_original_sources_are_immutable_paginated_and_not_tool_payloads(client):
+    from hashlib import sha256
+
+    from bridgeflow.api.batches import batch_path
+
+    raw = 'sku,date,output_qty\n' + ''.join(f'RAW-{i},03/11/2025,{i}\n' for i in range(65))
+    first = client.post('/batches', data={'period': '2025-11', 'departments': 'production'},
+                        files={'files': ('../original.csv', raw, 'text/csv')}).json()['batch_id']
+    second = upload(client, 29).json()['batch_id']
+    listing = client.get(f'/batches/{first}/sources').json()
+    assert listing['sources'][0]['filename'] == 'original.csv'
+    assert listing['sources'][0]['sha256'] == sha256(raw.encode()).hexdigest()
+    assert 'RAW-0' not in json.dumps(listing)
+    assert listing['sources'][0]['total'] == 65
+    page = client.get(f'/batches/{first}/sources/production?offset=50&limit=10').json()
+    assert len(page['rows']) == 10
+    assert page['rows'][0] == ['RAW-50', '03/11/2025', 50]
+    assert page['total'] == 65
+    assert client.get(f'/batches/{first}/sources/production?limit=101').status_code == 422
+    assert client.get(f'/batches/{first}/sources/finance').status_code == 404
+    assert client.get(f'/batches/{first}/sources/not-a-department').status_code == 422
+    assert client.get(f'/batches/{second}/sources/production').json()['rows'] == [['SKU-A1', 29]]
+    tool = client.post('/tools/batch-summary', json={'batch_id': first}).json()
+    assert 'RAW-50' not in json.dumps(tool)
+    assert 'sources' not in json.loads(batch_path(first).read_text())
+    client.headers.clear()
+    assert client.get(f'/batches/{first}/sources').status_code == 401
+    assert client.get(f'/batches/{first}/sources/production').status_code == 401
+    assert client.get(f'/batches/{first}/artifacts').status_code == 401
+
+
+def test_older_batch_does_not_masquerade_cleaned_data_as_original(client):
+    from bridgeflow.api.batches import batch_path
+
+    batch = upload(client).json()['batch_id']
+    (batch_path(batch).parent / 'sources' / batch / 'production.json').unlink()
+    source = client.get(f'/batches/{batch}/sources').json()['sources'][0]
+    assert source['preview_available'] is False
+    assert client.get(f'/batches/{batch}/sources/production').status_code == 404
+
+
+def test_original_xlsx_preview_preserves_sheet_and_precleaning_values(client):
+    import io
+
+    import pandas as pd
+
+    buffer = io.BytesIO()
+    pd.DataFrame({'sku': [' sku-a1 '], 'output_qty': [17]}).to_excel(buffer, sheet_name='Original', index=False)
+    response = client.post('/batches', data={'period': '2025-11', 'departments': 'production'},
+                           files={'files': ('source.xlsx', buffer.getvalue())})
+    assert response.status_code == 200
+    source = client.get(f'/batches/{response.json()["batch_id"]}/sources/production').json()
+    assert source['sheet'] == 'Original'
+    assert source['rows'] == [[' sku-a1 ', 17]]

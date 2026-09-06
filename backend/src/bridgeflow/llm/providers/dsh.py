@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from bridgeflow.config import settings
+from bridgeflow.dsh_runtime import native_command
 from bridgeflow.llm.base import Message, Response
 from bridgeflow.llm.json_reply import parse_structured, schema_instruction
 
@@ -48,6 +49,7 @@ class DshProvider:
 
             kwargs: dict[str, Any] = {
                 "dsh_home": settings.dsh_home,
+                "dsh_bin": native_command(),
                 "profile": settings.dsh_profile,
                 "provider": settings.dsh_provider,
                 "model": settings.dsh_model,

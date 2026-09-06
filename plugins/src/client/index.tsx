@@ -9,7 +9,8 @@ import { MappingApproval } from './approval.tsx'
 import { BusinessReview, type Review } from './review.tsx'
 import { configureRuntime, navigate, openSession, route, useUI } from './ui.ts'
 import { DataWorkspace, ImportForm } from './workspace.tsx'
-import { mountQuotation, QuotationButton } from './quotation.tsx'
+import { QuotationButton } from './quotation.tsx'
+import { mountShell } from './shell.tsx'
 import { mountState } from './state.tsx'
 import { style } from './style.ts'
 
@@ -48,11 +49,16 @@ function Orientation({ session, input }: InputZone) {
   return <aside className="bf-hero" aria-label={t('heroTitle')}>
     <h3>{t('heroTitle')}</h3>
     <p className="bf-lead bf-hint">{t('heroLead')}</p>
-    <ol>{steps.map(n => <li key={n}><b>{t(`heroStep${n}`)}</b> <span>· {t(`heroStep${n}Hint`)}</span></li>)}</ol>
+    <details><summary>{t('monthlySteps')}</summary><ol>{steps.map(n => <li key={n}><b>{t(`heroStep${n}`)}</b> <span>· {t(`heroStep${n}Hint`)}</span></li>)}</ol></details>
     <div className="bf-actions" style={{ marginBottom: 0 }}>
-      <button className="bf-primary" onClick={() => setDrawer(true)}>{t('heroOpen')}</button><QuotationButton />
+      <button className="bf-primary" onClick={() => window.dispatchEvent(new Event('bridgeflow:add-sources'))}>{t('heroOpen')}</button><QuotationButton />
     </div>
   </aside>
+}
+
+function Welcome() {
+  const { t } = useUI()
+  return <div className="bf-welcome"><span aria-hidden="true">✦</span><h2>{t('welcomeTitle')}</h2><p>{t('welcomeHelp')}</p></div>
 }
 
 function ToolCard({ block, toolName, inspect }: ToolCallViewProps) {
@@ -76,13 +82,14 @@ function ToolCard({ block, toolName, inspect }: ToolCallViewProps) {
     {expanded && text.length > 180 && <pre>{text.slice(0, 2400)}{text.length > 2400 ? '\n…' : ''}</pre>}
   </section>
 }
-export const inject = ['slots', 'locale', 'sessions', 'uiConversation', 'conversation']
+export const inject = ['slots', 'locale', 'sessions', 'uiConversation', 'conversation', 'layout']
 export function apply(ctx: Context): void {
   configureRuntime(ctx)
   ctx.slots.inject('conversation.composer', () => ctx.slots.register({ name: 'conversation.composer', priority: 0,
     select: ({ pendingInteraction }: ComposerChainProps) => pendingInteraction?.kind === 'approval' && pendingInteraction.toolName === 'confirm_mapping' ? pendingInteraction : null,
   }, MappingApproval))
   ctx.effect(() => { const tag = document.createElement('style'); tag.textContent = style; document.head.append(tag); return () => tag.remove() }, 'bridgeflow: styles')
+  ctx.slots.inject('conversation.hero.brand.mark', () => ctx.slots.register({ name: 'conversation.hero.brand.mark', priority: -10 }, Welcome))
   ctx.slots.inject('sidebar.brand.name', () => ctx.slots.register({ name: 'sidebar.brand.name', priority: -10 }, () => <span>BridgeFlow AI</span>))
   ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({ name: 'sidebar.footer.action', id: 'bridgeflow-data' }, DataWorkspace))
   ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({ name: 'conversation.session.header.utilities', id: 'bridgeflow-files', order: 20 }, FileButton))
@@ -91,7 +98,7 @@ export function apply(ctx: Context): void {
   // than competing with it.
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({ name: 'conversation.input.dock', id: 'bridgeflow-orientation', order: -10 }, Orientation))
   mountState(ctx)
-  mountQuotation(ctx)
+  mountShell(ctx)
   ctx.effect(() => {
     const navigateSession = () => { const value = route(); if (value.parent) void openSession(value.parent, value.child).catch(e => ctx.logger.warn('Session route unavailable: %s', String(e))) }
     navigateSession(); window.addEventListener('hashchange', navigateSession); return () => window.removeEventListener('hashchange', navigateSession)

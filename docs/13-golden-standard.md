@@ -399,3 +399,13 @@ Client 插件与 `tool.call.toolview` 注册现已实际接入并通过浏览器
 `review_batch` 通过官方 `ctx.subagents.start('spawn')` 创建部门子会话；子只提交 `structured_output`，主机限制步骤、深度与时限。Python 从冻结字典计算事实，逐条校验数值、单位、状态、动作及来源；报告将补充文字明确标为模型建议。实证与验收见 [17](17-business-mvp-acceptance.md)。
 
 原生 UI 接缝、rc1 打包限制与本次实现审查见 [16](16-dsh-web-review.md)。
+
+### Notebook 外层定制的边界
+
+来源、原生会话、Studio 的整页布局保留官方 AppFrame 与原生占用者，只在 `shell.overlay` 增加面板，并通过宿主公开的 `data-slot` 样式锚点定制几何与主题。不得覆盖 `root` 后复制会话组件或搬移原生 DOM；根槽覆盖会丢失原生子槽的渲染权。会话与设置保留原生抽屉，工具详情仍由 `ctx.layout` 开关。报价声明在 Studio 中预览，月度状态页继续使用原生 `conversation.view`。来源与产物的只读浏览器接口复用 DSH 鉴权，来源正文不进入模型工具。设计与实际可用范围见 [报价设计](21-quotation-design.md)，验证以 [实测状态](00-status.md) 为准。
+
+### Web 与 SDK 的运行时必须一致
+
+同一 `DSH_HOME` 下的 profiles 共用模块 fallback。Python 打包运行时会写入只在其进程内可用的 `/snapshot` 代理；正在运行的 npm Web 随后动态挂载 preset 时无法导入它们。项目 Web 启动器、遗留 SDK provider 与 SDK smoke 共用 `bridgeflow.dsh_runtime.native_command`，SDK 显式传官方 `dsh_bin`，统一使用锁定版本的 npm 安装。SDK smoke 不再从 `.env` 读取引导变量。直接试验打包 SDK 时必须另设独立 `DSH_HOME`。
+
+已经被改写的 fallback 由官方 npm 启动流程自愈；停止并重启 Web 也清除此前失败的模块导入缓存。不手改生成入口，不删除用户 profiles、插件、凭据或会话；不同 profile 名称不能隔离共享 fallback。

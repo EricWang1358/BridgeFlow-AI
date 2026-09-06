@@ -10,7 +10,24 @@ export function configureLocale(value: Context['locale']) { locale = value }
 const subscribe = (fn: () => void) => locale.subscribe(fn)
 const current = () => locale.getSnapshot().active.startsWith('zh') ? 'zh' : 'en'
 const labels = {
-  sources: ['来源', 'Sources'], studio: ['结果与核对', 'Studio'], workArea: ['工作区', 'Workspace'],
+  newNotebook: ['新建笔记本', 'Create notebook'],
+  previewUnavailable: ['无法加载此预览，请检查批次或重新选择来源。', 'This preview could not be loaded. Check the batch or select a source again.'],
+  studioStateHelp: ['导入与报告来自所选批次；审批来自当前原生会话。详细轨迹可在中栏查看。', 'Import and report state belong to the selected batch; approvals belong to the current native session. Open the center trace for details.'],
+  welcomeTitle: ['从这里开始你的业务笔记本', 'Let’s start your business notebook'],
+  welcomeHelp: ['把部门文件放到左侧，在这里与队长核对，在右侧查看产物与依据。', 'Add department files on the left, work with your captain here, and preview outputs and evidence on the right.'],
+  monthlySteps: ['月度对账怎么开始', 'How to start a monthly review'],
+
+  notebookTitle: ['业务笔记本', 'Business notebook'], sessionsSettings: ['会话与设置', 'Sessions & settings'],
+  addSources: ['添加来源', 'Add sources'], sourceUploadHelp: ['月度对账 · 上传的部门文件保留在这里，点击即可预览。', 'Monthly review · Uploaded department files appear here. Select a file to preview.'],
+  emptySources: ['保存的来源会显示在这里', 'Saved sources will appear here'], emptySourcesHelp: ['添加本月部门文件，开始核对与分析。', 'Add this month’s department files to start your review.'],
+  originalUnavailable: ['旧批次未保留原件预览', 'Original preview unavailable for this older batch'],
+  sourcePreview: ['来源预览', 'Source preview'], parsedOriginal: ['原始表格的解析视图，未经清洗；数据仅供浏览器分页预览。', 'Parsed original table before cleaning; paginated browser preview only.'],
+  tools: ['工具', 'Tools'], artifacts: ['产物', 'Artifacts'], refreshArtifacts: ['刷新产物', 'Refresh artifacts'],
+  emptyArtifacts: ['完成研判后，报告会保存在这里。', 'Completed review reports will appear here.'],
+  studioStartHelp: ['添加来源后可发起月度研判。报价声明可直接查看。', 'Add sources to start a monthly review. The quotation declaration is available now.'],
+  preview: ['预览', 'Preview'], expandPreview: ['展开预览', 'Expand preview'],
+
+  sources: ['来源', 'Sources'], studio: ['工作室', 'Studio'], workArea: ['工作区', 'Workspace'],
   sourceHelp: ['依据与归属', 'Evidence and ownership'], studioHelp: ['状态、责任与下一步', 'Status, owners and next steps'],
   quotationWorkspace: ['报价工作区', 'Quotation workspace'], quotation: ['报价', 'Quotation'], quotationHelp: ['从客户需求与采购依据形成报价，与月度对账并列。', 'Build quotations from customer requirements and procurement evidence, alongside monthly review.'],
   quotationSourceHelp: ['所需依据由人工字典声明；原件先抽取为带出处的结构化事实。', 'Required evidence comes from the human dictionary. Originals must first become structured facts with citations.'],
@@ -127,7 +144,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   }
   return response.json() as Promise<T>
 }
-export type Route = { batch?: string; view?: string; report?: string; parent?: string; child?: string }
+export type Route = { source?: string; batch?: string; view?: string; report?: string; parent?: string; child?: string }
 export function route(): Route { return location.hash.startsWith('#bridgeflow?') ? Object.fromEntries(new URLSearchParams(location.hash.slice(12))) : {} }
 export function navigate(value: Route) {
   const query = new URLSearchParams(Object.entries(value).filter((x): x is [string, string] => !!x[1]))
