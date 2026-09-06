@@ -66,6 +66,24 @@ def main() -> None:
     env["BRIDGEFLOW_ALLOW_SAMPLE_DATA"] = "false"
     env["DSH_TOOLS_MODE"] = "native"
     env["PYTHONPATH"] = str(ROOT / "backend/src")
+
+    # `--demo` points the service at the walkthrough's own dictionary.
+    #
+    # `data/business_demo/README.md` already said to use it, and nothing made that
+    # happen: the default dictionary declares `gl_account` for finance while the demo
+    # sheets carry `project`, so the import succeeded, the batch came back
+    # `needs_configuration`, and `review_context` refused. Step 1 of the walkthrough
+    # passed and step 2 was impossible. A prerequisite a person has to remember is a
+    # prerequisite that fails on stage.
+    if "--demo" in sys.argv:
+        sys.argv.remove("--demo")
+        env["FIELD_DICTIONARY_PATH"] = str(ROOT / "data/business_demo/dictionary.yaml")
+
+    # Say which dictionary is in force, every time. Which one is loaded decides
+    # whether a batch can be joined at all, and it was the one fact neither the
+    # launcher nor the screen ever stated.
+    dictionary = env.get("FIELD_DICTIONARY_PATH", "data/mappings/field-dictionary.yaml")
+    print(f"BridgeFlow field dictionary: {dictionary}", flush=True)
     processes: list[subprocess.Popen] = []
     def stop(_sig=None, _frame=None):
         for process in reversed(processes):

@@ -11,12 +11,12 @@ from typing import Annotated
 import pandas as pd
 import yaml
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from bridgeflow.agents import DataSanitizerAgent, SanitizerInput
 from bridgeflow.agents.semantic_resolver import FieldDictionary, SemanticResolverAgent
 from bridgeflow.agents.sop_flow import MissingRollup, SOPFlowEngine, SOPInput, UnjoinableTables
-from bridgeflow.config import settings
+from bridgeflow.config import REPO_ROOT, settings
 from bridgeflow.metrics import dictionary_path
 from bridgeflow.schemas import Department, PipelineResult
 from bridgeflow.store import _root, _write
@@ -67,6 +67,34 @@ class BatchSummary(BaseModel):
     unresolved: int
     status: str
     refusal: str = ""
+    #: The dictionary this batch was frozen against, and what it declares as a
+    #: joinable entity per department.
+    #:
+    #: A refusal names the department that has no joinable column, which is the right
+    #: half of the answer and useless on its own: somebody staring at
+    #: `needs_configuration` cannot tell whether the dictionary is wrong or whether
+    #: they are simply pointed at a different dictionary than they think. Measured on
+    #: `data/business_demo/risk`: its finance sheet declares `project`, the default
+    #: dictionary declares `gl_account`, and nothing on screen said which file was in
+    #: force — so the walkthrough's step 1 passed and step 2 was impossible.
+    dictionary: str = ""
+    declared_entities: dict[str, list[str]] = Field(default_factory=dict)
+
+
+def _declared_entities(snapshot: dict | None) -> dict[str, list[str]]:
+    """Which columns each department declares as an entity, straight from the snapshot.
+
+    Column names only — never a value out of anybody's sheet. This is what the
+    dictionary says, not what the data holds.
+    """
+    columns = (snapshot or {}).get("columns") or {}
+    if not isinstance(columns, dict):
+        return {}
+    return {
+        str(department): sorted(str(name) for name in declared)
+        for department, declared in columns.items()
+        if isinstance(declared, dict) and declared
+    }
 
 
 def summary(batch_id: str, result: BatchSnapshot) -> BatchSummary:
@@ -82,7 +110,18 @@ def summary(batch_id: str, result: BatchSnapshot) -> BatchSummary:
                 if result.graph.unresolved or any(t.quarantine for t in result.clean_tables)
                 else "ready" if result.master_table.rows else "empty"),
         refusal=result.refusal,
+        dictionary=_relative_dictionary(),
+        declared_entities=_declared_entities(result.dictionary_snapshot),
     )
+
+
+def _relative_dictionary() -> str:
+    """The dictionary path as somebody would type it, not as the process sees it."""
+    path = dictionary_path()
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
 
 
 @router.post("", response_model=BatchSummary)

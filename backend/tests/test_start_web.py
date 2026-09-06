@@ -5,8 +5,11 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+import yaml
 
-spec = importlib.util.spec_from_file_location("start_web", Path(__file__).resolve().parents[2] / "scripts/start_web.py")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+spec = importlib.util.spec_from_file_location("start_web", REPO_ROOT / "scripts/start_web.py")
 launcher = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(launcher)
 
@@ -35,3 +38,27 @@ def test_backend_death_and_web_exit_are_not_silent_success():
         launcher.wait_services(Mock(), Mock(poll=Mock(return_value=7), returncode=7))
     assert error.value.code == 7
     launcher.wait_services(Mock(), Mock(poll=Mock(return_value=0), returncode=0))
+
+
+def test_demo_flag_points_at_the_dictionary_the_walkthrough_needs():
+    """`docs/17` step 2 is impossible without it, and step 1 gives no sign.
+
+    Only `data/business_demo/dictionary.yaml` declares a joinable column for finance
+    (`project`) and a `business_review` contract. Under the default dictionary the
+    import succeeds, the batch comes back `needs_configuration`, and `review_context`
+    refuses — measured once, on stage-shaped data. A prerequisite a person has to
+    remember is a prerequisite that fails when it matters.
+    """
+    source = (REPO_ROOT / "scripts/start_web.py").read_text(encoding="utf-8")
+
+    assert '"--demo" in sys.argv' in source
+    assert 'data/business_demo/dictionary.yaml' in source
+    assert 'BridgeFlow field dictionary:' in source, "the launcher must say which one is in force"
+
+
+def test_the_demo_dictionary_declares_what_the_review_requires():
+    """If either of these is dropped, the walkthrough dies at step 2 again."""
+    demo = yaml.safe_load((REPO_ROOT / "data/business_demo/dictionary.yaml").read_text(encoding="utf-8"))
+
+    assert demo["columns"]["finance"], "finance needs a joinable entity column"
+    assert "business_review" in demo, "review_context refuses a batch with no contract"
