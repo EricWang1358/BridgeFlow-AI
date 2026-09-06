@@ -235,13 +235,20 @@ def compute(
     unreadable: list[str] = []
 
     for table in tables:
+        # What this department's rows are *about*, as the dictionary declares it.
+        # Both filters below read identity, and reading it off the whole row let the
+        # figures themselves decide which figures to include.
+        identity_columns = [
+            c.name for c in table.columns
+            if dictionary.kind_for(table.department, c.name) is not None
+        ]
         for measure in spec.requires:
             declared = set(dictionary.columns_measuring(table.department, measure))
             for column in (c.name for c in table.columns if c.name in declared):
                 for index, row in enumerate(table.rows):
-                    if entity and entity.lower() not in str(row).lower():
+                    if entity and entity.lower() not in _identity_text(row, identity_columns):
                         continue
-                    if spec.account_prefix and not _account_matches(row, spec.account_prefix):
+                    if spec.account_prefix and not _account_matches(row, spec.account_prefix, identity_columns):
                         continue
                     raw = row.get(column)
                     if raw is None or raw == "":
@@ -306,15 +313,33 @@ def for_role(
     return values, refusals
 
 
-def _account_matches(row: dict, kind: str) -> bool:
+def _identity_text(row: dict, columns: list[str]) -> str:
+    """What this row says about *what it is*, ignoring what it measures.
+
+    Deciding anything by searching the stringified row lets every column vote: an
+    amount, a date, a currency and a customer name all get a say in whether a line
+    is a cost. Restricting the search to the columns the dictionary declares as
+    entities is not a tightening for its own sake — it is the difference between
+    reading the account code and reading whatever else happened to be on the line.
+    """
+    if not columns:
+        return ""
+    return " ".join(str(row.get(column, "")) for column in columns).lower()
+
+
+def _account_matches(row: dict, kind: str, identity_columns: list[str]) -> bool:
     """Whether this row's account code marks it as `kind`.
 
     Sales and cost lines live in the same column and are told apart by their account
     code. Summing them together is arithmetically fine and semantically wrong: it
     was how `revenue` came out as 11,700 on a month with 134,400 of sales.
+
+    Matched against the declared entity columns only. A customer called
+    "Cost Cutters Ltd" must not turn a sales line into a cost line, and before this
+    it did — the marker was searched for anywhere in the row.
     """
     markers = ACCOUNT_MARKERS.get(kind, ())
-    text = " ".join(str(v) for v in row.values()).lower()
+    text = _identity_text(row, identity_columns)
     return any(marker in text for marker in markers)
 
 

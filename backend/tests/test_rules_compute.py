@@ -14,6 +14,7 @@ from bridgeflow import metrics
 from bridgeflow.agents import DataSanitizerAgent, SanitizerInput
 from bridgeflow.agents.semantic_resolver import FieldDictionary
 from bridgeflow.config import REPO_ROOT
+from bridgeflow.schemas import CleanTable, ColumnSpec
 
 SAMPLES = REPO_ROOT / "data" / "samples"
 DICTIONARY = FieldDictionary(
@@ -111,3 +112,60 @@ async def test_the_prompt_context_carries_metrics_and_not_rows():
     assert "total_output" in prompt
     # The raw row values must not be there. 180 is a capacity figure from row 0.
     assert '"rows"' not in prompt, "the cleaned rows are back in the prompt"
+
+
+# --- what a row is about, versus what it measures ----------------------------
+
+def _finance(rows: list[dict]) -> CleanTable:
+    """A finance table whose identity column is declared and whose amount is not."""
+    return CleanTable(
+        department="finance", period="2025-11", rows=rows,
+        columns=[ColumnSpec(name=name, dtype="number" if name == "amount" else "string")
+                 for name in rows[0]],
+    )
+
+
+ACCOUNTS = FieldDictionary({
+    "columns": {"finance": {"gl_account": "gl_account"}},
+    "measures": {"finance": {"amount": "revenue_amount"}},
+})
+
+
+async def test_a_customer_name_cannot_turn_a_sale_into_a_cost():
+    """The marker used to be searched for anywhere in the row, so a buyer called
+    "Cost Cutters Ltd" put its own revenue into cost of sales. Every column got a
+    vote on what kind of line it was, including the ones that are not identity.
+
+    Asserted on `cost_of_sales` rather than `sales`, because the sales line matches
+    both markers under the old rule and only the wrong total gives the bug away.
+    """
+    tables = [_finance([
+        {"gl_account": "4000-SALES", "customer": "Cost Cutters Ltd", "amount": 90000},
+        {"gl_account": "5000-COGS", "customer": "Acme Pte Ltd", "amount": -70000},
+    ])]
+
+    cost = metrics.compute("cost_of_sales", "2025-11", tables, dictionary=ACCOUNTS)
+
+    # Under the old whole-row search the sales line matched "cost" through the
+    # customer name and this came back as 20,000.
+    assert cost.value == -70000
+
+
+async def test_an_entity_filter_reads_identity_not_the_rest_of_the_line():
+    """Filtering by entity also matched the stringified row, so any column carrying
+    the entity's text — a note, a description, a reference — pulled an unrelated
+    line into the total."""
+    tables = [_finance([
+        {"gl_account": "4000-SALES", "customer": "A1 Trading", "note": "-", "amount": 100},
+        {"gl_account": "4000-SALES", "customer": "Bayfront", "note": "replaces A1 order", "amount": 5000},
+    ])]
+    declared = FieldDictionary({
+        "columns": {"finance": {"customer": "customer"}},
+        "measures": {"finance": {"amount": "revenue_amount"}},
+    })
+
+    only_a1 = metrics.compute("revenue", "2025-11", tables, entity="A1", dictionary=declared)
+
+    # `note` is not declared as identity, so it does not decide which rows are A1's.
+    # Under the old rule this returned 5,100.
+    assert only_a1.value == 100
