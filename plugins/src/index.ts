@@ -1,8 +1,9 @@
 import type { Context } from '@deepseek-ai/cordis'
 import Schema from '@deepseek-ai/schemastery'
 
+import * as approval from './approval/index.ts'
+import { DEFAULT_ANSWERER } from './approval/index.ts'
 import { DEFAULT_BACKEND, type BackendConfig } from './backend.ts'
-import * as approvalGate from './guards/approval-gate.ts'
 import * as untrustedInput from './guards/untrusted-input.ts'
 import { aggregateMetric } from './tools/aggregate-metric.ts'
 import { confirmMapping } from './tools/confirm-mapping.ts'
@@ -17,11 +18,14 @@ export interface Config {
   backendUrl: string
   /** Per-call timeout in milliseconds. */
   backendTimeoutMs: number
+  /** How long a mutating tool may wait on a person before the ask fails closed. */
+  decisionTimeoutMs: number
 }
 
 export const Config: Schema<Config> = Schema.object({
   backendUrl: Schema.string().default(DEFAULT_BACKEND.baseUrl),
   backendTimeoutMs: Schema.number().default(DEFAULT_BACKEND.timeoutMs),
+  decisionTimeoutMs: Schema.number().default(DEFAULT_ANSWERER.decisionTimeoutMs),
 })
 
 export function apply(ctx: Context, config: Config): void {
@@ -37,5 +41,5 @@ export function apply(ctx: Context, config: Config): void {
   ctx.tools.register(confirmMapping(backend))
 
   ctx.plugin(untrustedInput)
-  ctx.plugin(approvalGate)
+  ctx.plugin(approval, { ...backend, decisionTimeoutMs: config.decisionTimeoutMs })
 }

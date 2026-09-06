@@ -60,9 +60,10 @@ PY
 
 | | 值 |
 | --- | --- |
-| 测试数量 | **169** |
+| 测试数量 | **185**（`pytest --collect-only -q`，2026-09-06） |
 | 打真实模型的 | `test_resolver.py`（9 个） |
 | 其余 | mock provider，只证明代码不崩 |
+| 离线全绿 | **185 passed / 6.9s**（`LLM_PROVIDER=mock LLM_PROVIDER_RESOLVER=mock pytest -q`，不计费） |
 
 复现：`cd backend && pytest -q`（⚠️ **真实计费**）
 
@@ -125,12 +126,36 @@ cd backend && python -m bridgeflow.eval
 | 1 | Goal & Scope | ✅ |
 | 2 | Architecture & Reasoning Loop | ❌ |
 | 3 | Tool Use & Integration | ❌ |
-| 4 | Autonomy & HITL | 🟡 机制成立且实测 fail-closed，界面仍缺（#30） |
+| 4 | Autonomy & HITL | ✅ 拒绝与批准**两条路径都在真实运行时上跑通**（见下） |
 | 5 | Safety & Guardrails | ❌ |
 | 6 | Observability & Eval | ⚠️ |
 | 7 | Platform & Tooling | ❌ |
 
-**7 项中 1 项达标。** 逐条比对见 `docs/13` 第六节。
+**7 项中 2 项达标。** 逐条比对见 `docs/13` 第六节。
+
+### 人在环内：两条路径的实测（#30，2026-09-06）
+
+一次真实 dsh turn，模型调用 `confirm_mapping`，`ctx.approval` 把问题送到控制台，
+人点一下，决定回到那次还在等的工具调用：
+
+| 操作者点了 | 到达控制台 | turn 结束 | `data/outputs/mappings.json` |
+| --- | --- | --- | --- |
+| 允许一次 | 3.1s | 4.0s `completed` | **写入**，含 `authorised_by: eric` |
+| 拒绝 | 2.6s | 3.6s `completed` | **不存在** |
+| 无人应答（#39 实测） | — | 报错 | **不存在** |
+
+第三行是 #39 已经证明的那条：
+`tool "confirm_mapping" requires approval, but no approval channel is available`。
+它现在是**三条路径里的一条**，而不是唯一一条——这才是「分级自主权」与「无人能介入」的差别。
+
+复现：
+
+```bash
+source env.sh && (cd backend && uvicorn bridgeflow.api.main:app --port 8000)
+# 另开一个终端，浏览器打开 http://127.0.0.1:8000/console
+```
+
+**⚠️ 一处诚实的缺口**：拒绝之后模型仍回了 `done`。写没发生，话说错了——见 #86。
 
 ## 六 dsh 事实
 

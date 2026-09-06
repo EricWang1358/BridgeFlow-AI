@@ -19,6 +19,8 @@ export interface ConfirmationResult {
   accepted: boolean
   confirmed_by: string
   confirmed_at: string
+  /** The person who approved this exact call, joined from the approval log. */
+  authorised_by: string
   /** How many confirmations are now on file, so the answer shows the memory growing. */
   remembered: number
 }
@@ -53,6 +55,7 @@ export function confirmMapping(config: BackendConfig) {
           accepted: { type: 'boolean', required: true },
           confirmed_by: { type: 'string', required: true },
           confirmed_at: { type: 'string', required: true },
+          authorised_by: { type: 'string' },
           remembered: { type: 'number', required: true },
         },
         additionalProperties: false,
@@ -62,7 +65,10 @@ export function confirmMapping(config: BackendConfig) {
           type: 'text',
           text:
             `${value.accepted ? 'Accepted' : 'Rejected'} ${value.source} → ${value.target} ` +
-            `(${value.relation}), recorded by ${value.confirmed_by}. ` +
+            `(${value.relation}), recorded by ${value.confirmed_by}` +
+            // Who approved it is the sentence an auditor reads. Say so when the join
+            // succeeded, and say nothing rather than something plausible when it did not.
+            `${value.authorised_by ? `, approved by ${value.authorised_by}` : ''}. ` +
             `${value.remembered} confirmation(s) now on file; this one will not be asked again.`,
         },
       ],
@@ -83,9 +89,12 @@ export function confirmMapping(config: BackendConfig) {
           accepted: args.accepted,
           evidence: args.evidence ?? '',
           period: args.period ?? '',
-          // The agent's identity, not a name the caller made up. Who decided is the
-          // part of a confirmation an auditor actually reads.
+          // The agent's identity, not a name the caller made up — which is who *ran*
+          // the confirmation, not who allowed it.
           confirmed_by: exec.agent?.id ?? 'unknown-agent',
+          // Joins this write to the approval that allowed it. Without it the record
+          // says the agent confirmed the mapping, which is true and misleading.
+          call_id: exec.callId,
         },
         exec.signal,
       )

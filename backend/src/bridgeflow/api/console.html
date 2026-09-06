@@ -1,0 +1,154 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BridgeFlow — 待确认</title>
+<!--
+  The operator console.
+
+  Everything a tool argument put on this page is written with textContent, never
+  innerHTML. Those values are model-authored and originate in spreadsheet cells, so
+  they are untrusted twice over; the guard in plugins/src/guards/untrusted-input.ts
+  refuses instruction-shaped text before it gets here, and this page still refuses to
+  interpret what does.
+
+  There is no "允许全部" and no default focus on 允许. A console that makes approving
+  the easy default trains the operator to approve without reading, which is the
+  failure this whole checkpoint exists to prevent.
+-->
+<style>
+  :root { color-scheme: light dark; --line: #d6d6d6; --muted: #6b6b6b; --warn: #b23b00; }
+  @media (prefers-color-scheme: dark) { :root { --line: #3a3a3a; --muted: #9a9a9a; --warn: #ff9a62; } }
+  body { margin: 0; padding: 24px; font: 14px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 820px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .bar { display: flex; gap: 8px; align-items: center; margin-bottom: 20px; }
+  .bar input { flex: 1; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font: inherit; background: transparent; color: inherit; }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+  .tool { font-weight: 600; font-family: ui-monospace, monospace; }
+  .reason { color: var(--muted); margin: 6px 0 10px; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin: 0 0 12px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+  button { font: inherit; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer; }
+  button.deny { border-color: var(--warn); color: var(--warn); }
+  button:disabled { opacity: .5; cursor: default; }
+  .empty { color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; padding: 20px; text-align: center; }
+  h2 { font-size: 14px; margin: 28px 0 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  td, th { text-align: left; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 400; }
+  .err { color: var(--warn); }
+</style>
+
+<h1>待确认 · escalation checkpoint</h1>
+<p class="sub">
+  没人在这里点，工具调用就会被拒——不是通过，是拒绝。审批缺席不等于同意。
+</p>
+
+<div class="bar">
+  <label for="who">操作者</label>
+  <input id="who" placeholder="你的名字（会写进审计记录）" />
+  <span id="status" class="sub"></span>
+</div>
+
+<div id="pending"></div>
+
+<h2>已决定</h2>
+<table><thead><tr><th>时间</th><th>工具</th><th>结果</th><th>决定人</th></tr></thead><tbody id="log"></tbody></table>
+
+<script>
+  const who = document.getElementById('who')
+  const pendingBox = document.getElementById('pending')
+  const statusBox = document.getElementById('status')
+  const logBody = document.getElementById('log')
+
+  who.value = localStorage.getItem('bridgeflow-operator') || ''
+  who.addEventListener('input', () => localStorage.setItem('bridgeflow-operator', who.value))
+
+  /** Build an element and fill it with text. Never with markup. */
+  function el(tag, text, className) {
+    const node = document.createElement(tag)
+    if (text !== undefined) node.textContent = text
+    if (className) node.className = className
+    return node
+  }
+
+  function card(question) {
+    const box = el('div', undefined, 'card')
+    box.append(el('div', question.tool_name, 'tool'))
+    if (question.reason) box.append(el('div', question.reason, 'reason'))
+
+    if (question.detail.length) {
+      const list = el('dl')
+      for (const item of question.detail) {
+        list.append(el('dt', item.label))
+        list.append(el('dd', item.value))
+      }
+      box.append(list)
+    }
+
+    const allow = el('button', '允许一次')
+    const deny = el('button', '拒绝')
+    deny.className = 'deny'
+    const both = [allow, deny]
+    const send = (outcome) => async () => {
+      both.forEach((b) => (b.disabled = true))
+      try {
+        const res = await fetch(`/approvals/${question.id}/decide`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ outcome, by: who.value }),
+        })
+        if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
+        await refresh()
+      } catch (err) {
+        both.forEach((b) => (b.disabled = false))
+        box.append(el('div', String(err), 'err'))
+      }
+    }
+    allow.addEventListener('click', send('allowed-once'))
+    deny.addEventListener('click', send('rejected'))
+
+    const row = el('div')
+    row.style.display = 'flex'
+    row.style.gap = '8px'
+    row.append(deny, allow) // 拒绝 first: the safe answer is the one under the cursor.
+    box.append(row)
+    return box
+  }
+
+  async function refresh() {
+    let questions, log
+    try {
+      ;[questions, log] = await Promise.all([
+        fetch('/approvals').then((r) => r.json()),
+        fetch('/approvals/log').then((r) => r.json()),
+      ])
+      statusBox.textContent = ''
+    } catch (err) {
+      statusBox.textContent = '后端未连接'
+      statusBox.className = 'err'
+      return
+    }
+
+    pendingBox.replaceChildren()
+    if (!questions.length) {
+      pendingBox.append(el('div', '没有等待中的确认。', 'empty'))
+    } else {
+      for (const question of questions) pendingBox.append(card(question))
+    }
+
+    logBody.replaceChildren()
+    for (const entry of log.slice(-20).reverse()) {
+      const row = el('tr')
+      row.append(el('td', entry.decided_at || ''))
+      row.append(el('td', entry.tool_name))
+      row.append(el('td', entry.outcome === 'allowed-once' ? '允许一次' : '拒绝'))
+      row.append(el('td', entry.decided_by || ''))
+      logBody.append(row)
+    }
+  }
+
+  refresh()
+  setInterval(refresh, 1500)
+</script>

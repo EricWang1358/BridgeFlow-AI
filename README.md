@@ -85,6 +85,8 @@ docs/             Problem framing, architecture, data contracts, demo plan
 
 There is no `frontend/` directory. The UI is dsh web, customised through Client
 plugins rather than rebuilt — see [`docs/13-golden-standard.md`](docs/13-golden-standard.md).
+The one screen that exists today is the operator console at `/console`, served by the
+backend because it has to answer a tool call that is blocked waiting on it.
 
 ## Quick start
 
@@ -100,6 +102,9 @@ pytest -q && ruff check src tests
 python ../scripts/smoke_dsh.py                 # checks the dsh runtime end to end
 uvicorn bridgeflow.api.main:app --reload
 ```
+
+Then open <http://127.0.0.1:8000/console> and leave it open. Anything that writes stops
+there for a decision; if nobody is watching, it is refused rather than performed.
 
 `DSH_*` and `DEEPSEEK_BASE_URL` belong in `env.sh`, never in `backend/.env` — dsh
 scans that file and refuses bootstrap and network variables read from it, because a

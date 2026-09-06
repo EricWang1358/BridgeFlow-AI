@@ -25,7 +25,7 @@ from bridgeflow import mappings
 from bridgeflow.api.main import app
 from bridgeflow.config import REPO_ROOT
 
-GATE = REPO_ROOT / "plugins" / "src" / "guards" / "approval-gate.ts"
+GATE = REPO_ROOT / "plugins" / "src" / "approval" / "gate.ts"
 PATCH = REPO_ROOT / "dsh" / "approval.patch.yml"
 
 

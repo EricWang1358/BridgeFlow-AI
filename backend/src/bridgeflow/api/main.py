@@ -8,6 +8,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from bridgeflow import __version__, store
+from bridgeflow.api.approvals import router as approvals_router
 from bridgeflow.api.tools import router as tools_router
 from bridgeflow.config import settings
 from bridgeflow.pipeline import Orchestrator
@@ -24,6 +25,11 @@ app.add_middleware(
 # The dsh tools call in here for the work their TypeScript declarations describe.
 # See plugins/README.md for why the two halves live where they do.
 app.include_router(tools_router)
+
+# The escalation checkpoint (#30): where a pending decision is published, and where
+# a person answers it. Without this the approval seam is fail-closed and unanswerable
+# — correct for an unattended run, and not a human in the loop.
+app.include_router(approvals_router)
 
 orchestrator = Orchestrator()
 

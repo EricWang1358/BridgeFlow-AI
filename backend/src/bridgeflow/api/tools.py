@@ -21,7 +21,7 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from bridgeflow import mappings, metrics
+from bridgeflow import approvals, mappings, metrics
 from bridgeflow.agents import DataSanitizerAgent, SanitizerInput
 from bridgeflow.agents.semantic_resolver import load_field_dictionary
 from bridgeflow.config import REPO_ROOT
@@ -202,6 +202,8 @@ class ConfirmRequest(BaseModel):
     evidence: str = ""
     period: str = ""
     confirmed_by: str = "unknown-agent"
+    #: The tool call this is. Joins the write to the approval that allowed it.
+    call_id: str | None = None
 
 
 class ConfirmationResult(BaseModel):
@@ -211,6 +213,8 @@ class ConfirmationResult(BaseModel):
     accepted: bool
     confirmed_by: str
     confirmed_at: str
+    #: The person who allowed it, when the approval log can be joined on `call_id`.
+    authorised_by: str = ""
     remembered: int
 
 
@@ -219,8 +223,9 @@ async def confirm_mapping(request: ConfirmRequest) -> ConfirmationResult:
     """Record one human decision about a mapping.
 
     The only endpoint here that writes. Its caller is gated by `ctx.approval`
-    (`plugins/src/guards/approval-gate.ts`), so reaching this point means somebody
-    granted it — which is the part an auditor reads.
+    (`plugins/src/approval/gate.ts`), so reaching this point means somebody granted
+    it — which is the part an auditor reads. So the record says who: `confirmed_by` is
+    the agent that ran, `authorised_by` the person who allowed this exact call.
     """
     link = Link(
         source=request.source,
@@ -230,7 +235,11 @@ async def confirm_mapping(request: ConfirmRequest) -> ConfirmationResult:
         justification=request.evidence,
     )
     memory = mappings.confirm(
-        link, by=request.confirmed_by, accepted=request.accepted, period=request.period
+        link,
+        by=request.confirmed_by,
+        accepted=request.accepted,
+        period=request.period,
+        authorised_by=approvals.granted_by(request.call_id) or "",
     )
     recorded = memory.find(link)
     assert recorded is not None  # just written
@@ -241,5 +250,6 @@ async def confirm_mapping(request: ConfirmRequest) -> ConfirmationResult:
         accepted=recorded.accepted,
         confirmed_by=recorded.confirmed_by,
         confirmed_at=recorded.confirmed_at,
+        authorised_by=recorded.authorised_by,
         remembered=len(memory.confirmations),
     )
