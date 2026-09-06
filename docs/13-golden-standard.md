@@ -39,7 +39,7 @@ Windows 浏览器开 `localhost:<port>` 即可。反代只在需要固定域名 
 
 ### Q3 — 当前是否是插件工作流？
 
-**不是。** `DshProvider` 只调 `harness.run()`，把 dsh 当文本补全后端。
+当前默认入口已使用原生 DSH 领域工具与官方子代理，见第九节。旧路径中的 `DshProvider` 只调 `harness.run()`，把 dsh 当文本补全后端。
 无 plugin、无 tool、未使用会话与工具执行。详见第三节的错误记录。
 
 ### Q4 — 能否禁用大部分功能以求干净 + 抗注入？
@@ -165,8 +165,8 @@ PRD 明确要求跨角色冲突交由人裁决、系统不自动调和。
 ```
                      dsh（基座）
    ┌──────────────────────────────────────────────────┐
-   │  profile: sdk-minimal 起步，按需最小加法          │
-   │  ├── workflow          阶段编排（取代 Orchestrator）│
+   │  profile: 原生 Web，按企业策略默认禁用部分功能   │
+   │  ├── 固定领域阶段       不运行模型编写的 workflow  │
    │  ├── subagent fan-out  四角色，无横向通信          │
    │  ├── ctx.approval      映射确认 / 隔离处置 / 报价放行│
    │  ├── tools.guard()     注入防御（单调终局拒绝）     │
@@ -177,7 +177,7 @@ PRD 明确要求跨角色冲突交由人裁决、系统不自动调和。
                            ▼
    ┌──────────────────────────────────────────────────┐
    │  BridgeFlow 领域工具（Python 实现体）              │
-   │  read_table · aggregate_metric · lookup_dictionary │
+   │  batch_summary · aggregate_metric · lookup_dictionary│
    │  compute_capacity_load · compute_unit_cost         │
    │  —— pandas / openpyxl，确定性，结果不经模型         │
    └──────────────────────────────────────────────────┘
@@ -199,26 +199,18 @@ Pydantic 类型契约（`bridgeflow.schemas`）与确定性 pandas 计算。
 
 ## 六 rubric 逐条比对
 
-现状 = `main` 分支当前代码。目标 = 第五节架构。
+目标架构以第五节与第七节核实结论为准；不要把采用某项 DSH 能力直接换算成 rubric 满分。
+当前逐项验收条件与远端 issue 建议见 [16 的 Rubric 表](16-dsh-web-review.md#按充分实现-rubric-验收)，
+实测数字见 [00](00-status.md#原生-web-重构复测2026-09-06)。
 
-| # | Rubric | 目标形态 | 现状 | 符合 |
-| --- | --- | --- | --- | --- |
-| 1 | Goal & Scope | HMW + PRD + 自洽样本数据 | 已完备 | ✅ |
-| 2 | Architecture & Reasoning Loop | dsh `workflow` 编排；状态与记忆落在 session 持久化 | 自建 `Orchestrator`；状态在模块级 dict，重启即失 | ❌ |
-| 3 | Tool Use & Integration | `defineTool` 领域工具，参数与返回值双向校验 | **零工具**，仅 `llm.complete()` | ❌ |
-| 4 | Autonomy & HITL | `ctx.approval`（fail-closed + 审计事件对）+ `tool-ask-user` + `permission-presets` | 仅类型层的 `unresolved` 队列，**无人可介入** | ❌ |
-| 5 | Safety & Guardrails | guard 插件拦截注入；`sdk-minimal` 最小工具册；least-privilege | **0 分，且 `evaluator.py:85` 有真实注入漏洞** | ❌ |
-| 6 | Observability & Eval | `session-query` + `session-telemetry` + JSONL + approval 审计 | 有 `CorrectionLog` 与强制 evidence；**无代理级追踪，无 eval 套件** | ⚠️ |
-| 7 | Platform & Tooling | 官方 subagent fan-out + workflow + dsh web 定制 | dsh 被塞进 `LLMProvider`，**反模式** | ❌ |
+- 编排采用固定阶段与官方 subagent fan-out，**不是模型编写的 workflow**。
+- 工具必须执行真实批次并校验输入输出，不能退回 completion 包装。
+- 人工批准必须绑定具体调用和参数；UI 隐藏不能替代主机权限。
+- 护栏、原生审批、父子 session、失败恢复都要有可执行验收。
+- 模型结论必须通过数值、口径与引用校验；规则测试不代替研判质量评测。
 
-**当前 7 项中仅 1 项达标。**
-
-这不是退步——是把"看起来能跑"换成了"照标准量"。第 2、3、4、5、7 项不达标的**同一个根因**是错误一：
-dsh 被放在了错误的位置，因此它原生提供的编排、工具、审批、护栏、多代理能力全部闲置，
-而我们用自建代码填补了其中一部分、遗漏了其余。
-
-**换言之：修正架构本身就同时修正五项。** 这是当前投入产出比最高的动作，
-远高于继续按 PRD 补功能。
+本节原来的“零工具、无 eval、模块 dict、仅一项达标”等描述已过期，删除该计分，
+避免它继续驱动错误排期。历史测量仍保留在 `00` 的原实验记录。
 
 ---
 
@@ -350,16 +342,16 @@ pnpm dsh web --patch ./scratch-plugin/cordis.yml
 - `cookbook/adding-a-tool.md` —— #27 与 #40 的真正参考（UI cards 在这里）
 - `docs/subsystems/workflow.md` —— 只读了 package README
 - `docs/subsystems/session-query.md` —— 只读了纲要，追踪能力（#31）的细节未提取
-- Client 插件与 `tool.call.toolview` 的具体注册方式
+Client 插件与 `tool.call.toolview` 注册现已实际接入并通过浏览器复演，见第九节。
 
 **待实测**（这些不能靠读文档定论）：
 
 - **把 approval policy 设成 `ask` 且不挂 answerer，bash 会不会被拒**（见 7.3，#26 的即时手段）
 - `sdk-minimal` 当前的 approval policy 默认值到底是什么——我们观测到 bash 畅通
-- 一个不加载 bash 插件的 profile 能否构造出来（7.1 说明 preset 不是入口）
+- 禁用 shell 已由原生 Web composition 与终局 guard 实测，后续仍需版本升级回归
 - `--patch` 是否支持 link/watch（7.8）
 - WSL2 下 `dsh web` 的端口转发
-- subagent 是否受"单 runtime 不能交错 turn"限制
+- 官方 spawn 已在独立子会话并行实测；不再把 SDK 同一会话限制套在子会话上
 
 **与其他文档的冲突：已全部就地修完，本清单清空。**
 
@@ -375,3 +367,17 @@ pnpm dsh web --patch ./scratch-plugin/cordis.yml
 | `docs/10` | PR #43 已重排，加了新旧顺序对照表 |
 
 **新规矩：发现冲突就地改，不要盖横幅。**
+
+## 九 原生 Web 复用决策
+
+默认产品入口使用官方 npm `dsh web`，加载 `dsh/enterprise.patch.yml` 与本地 Client/Host 插件。
+保留原生会话、聊天、审批、轨迹与展示设置；新增领域数据面板和工具卡片。
+配置关闭插件编辑、模型/权限/预设选择等能力，并以主机白名单约束实际执行。
+原始数据分页接口仅供已认证浏览器，模型工具只收摘要、公式与有上限的证据引用。
+企业认证先复用 DSH 凭证，员工身份与角色权限须另有明确实现，不能用自称姓名填补。
+
+映射审批通过官方 composer slot 增加备注输入，决定仍由原生 PendingApproval 结算；备注绑定会话、调用及临时票据，不授予写权限。
+
+`review_batch` 通过官方 `ctx.subagents.start('spawn')` 创建部门子会话；子只提交 `structured_output`，主机限制步骤、深度与时限。Python 从冻结字典计算事实，逐条校验数值、单位、状态、动作及来源；报告将补充文字明确标为模型建议。实证与验收见 [17](17-business-mvp-acceptance.md)。
+
+原生 UI 接缝、rc1 打包限制与本次实现审查见 [16](16-dsh-web-review.md)。

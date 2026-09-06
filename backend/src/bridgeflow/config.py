@@ -18,7 +18,15 @@ class Settings(BaseSettings):
     # so they are configuration rather than constants. Comma-separated origins.
     api_host: str = "127.0.0.1"
     api_port: int = 8000
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = ""
+    # Shared only by the DSH host and Python, never delivered to a browser/model.
+    bridgeflow_service_token: str = ""
+    bridgeflow_allow_sample_data: bool = False
+    bridgeflow_enable_legacy_console: bool = False
+    bridgeflow_enable_legacy_pipeline: bool = False
+    bridgeflow_allow_mapping_write: bool = True
+    bridgeflow_max_upload_bytes: int = 25 * 1024 * 1024
+    bridgeflow_max_batch_rows: int = 200_000
 
     llm_provider: str = "mock"
 
@@ -76,14 +84,15 @@ class Settings(BaseSettings):
 
     @property
     def dsh_patch_paths(self) -> list[str]:
-        """Absolute paths of the patch layers, dropping any that do not exist.
-
-        A missing patch would otherwise fail the runtime at boot for everyone who
-        set a path we no longer ship.
-        """
+        """Resolve every configured policy layer; missing security policy fails closed."""
         paths = (p.strip() for p in self.dsh_patches.split(","))
         resolved = (REPO_ROOT / p if not Path(p).is_absolute() else Path(p) for p in paths if p)
-        return [str(p) for p in resolved if p.is_file()]
+        result = []
+        for path in resolved:
+            if not path.is_file():
+                raise FileNotFoundError(f"required DSH policy patch is missing: {path}")
+            result.append(str(path))
+        return result
 
     def provider_for(self, agent: str) -> str:
         """Provider name for one agent, falling back to the global default."""

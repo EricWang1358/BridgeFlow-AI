@@ -46,8 +46,8 @@ class SOPFlowEngine(Agent[SOPInput, SOPOutput]):
 
     slug = "sop"
 
-    async def run(self, payload: SOPInput) -> SOPOutput:
-        master = self._build_master_table(payload)
+    async def run(self, payload: SOPInput, *, dictionary: FieldDictionary | None = None) -> SOPOutput:
+        master = self._build_master_table(payload, dictionary=dictionary)
         report = RiskReport(
             period=payload.period,
             findings=sorted(payload.findings, key=lambda f: _SEVERITY_ORDER[f.severity]),
@@ -56,7 +56,7 @@ class SOPFlowEngine(Agent[SOPInput, SOPOutput]):
         )
         return SOPOutput(master_table=master, risk_report=report)
 
-    def _build_master_table(self, payload: SOPInput) -> MasterTable:
+    def _build_master_table(self, payload: SOPInput, *, dictionary: FieldDictionary | None = None) -> MasterTable:
         """One row per canonical entity per month, each department's column prefixed.
 
         Two things this stops doing on purpose.
@@ -77,7 +77,7 @@ class SOPFlowEngine(Agent[SOPInput, SOPOutput]):
         `CLAUDE.md`: 跑不动比静默出错好 — combining a quantity and a price the same way
         is arithmetically legal and wrong, and only the business knows which is which.
         """
-        dictionary = load_field_dictionary(_dictionary_path())
+        dictionary = dictionary if dictionary is not None else load_field_dictionary(_dictionary_path())
         canonical = _canonical_index(payload.graph)
 
         unjoinable: list[str] = []

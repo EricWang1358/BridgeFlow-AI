@@ -258,4 +258,7 @@ async def test_the_shipped_dictionary_reconciles_with_the_metric(dictionary):
     )
     computed = metrics.compute("total_output", "2025-11", [table])
 
-    assert from_table == computed.value == 4030
+    # Only the unambiguous subset; the uploaded-batch API refuses a full total
+    # until the quarantined 980-unit row has been resolved and reimported.
+    assert from_table == computed.value == 3050
+    assert len(table.quarantine) == 1

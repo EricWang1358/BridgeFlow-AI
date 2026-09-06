@@ -18,14 +18,16 @@ Every endpoint answers one tool call. Two rules hold throughout:
 from __future__ import annotations
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from bridgeflow import approvals, mappings, metrics
+from bridgeflow import mappings, metrics, store
 from bridgeflow.agents import DataSanitizerAgent, SanitizerInput
 from bridgeflow.agents.semantic_resolver import load_field_dictionary
-from bridgeflow.config import REPO_ROOT
+from bridgeflow.api.batches import BatchRef, BatchSummary, batch_dictionary, load_batch, summary
+from bridgeflow.config import REPO_ROOT, settings
 from bridgeflow.schemas import CleanTable, Department, Link
+from bridgeflow.security import consume_approval
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 
@@ -39,10 +41,24 @@ class MetricCatalogue(BaseModel):
     metrics: list[metrics.MetricSpec]
 
 
+class CatalogueRequest(BaseModel):
+    batch_id: str | None = None
+
+
 @router.post("/list-metrics", response_model=MetricCatalogue)
-async def list_metrics() -> MetricCatalogue:
+async def list_metrics(request: CatalogueRequest | None = None) -> MetricCatalogue:
     """Which metrics can be computed with what the dictionary currently declares."""
-    return MetricCatalogue(metrics=metrics.available(_dictionary()))
+    if request and request.batch_id:
+        batch = load_batch(request.batch_id)
+        if (batch.dictionary_snapshot or {}).get("business_review"):
+            from bridgeflow.business import context
+            facts = context(request.batch_id, batch)["facts"]
+            return MetricCatalogue(metrics=[metrics.MetricSpec(name=name, unit=fact["unit"],
+                formula=fact["formula"], requires=[], role="declared_business_contract") for name, fact in facts.items()])
+        dictionary = batch_dictionary(batch)
+    else:
+        dictionary = _dictionary()
+    return MetricCatalogue(metrics=metrics.available(dictionary))
 
 
 # --- field dictionary lookup -------------------------------------------------
@@ -97,6 +113,7 @@ class AggregateRequest(BaseModel):
     metric: str
     period: str
     entity: str | None = None
+    batch_id: str | None = None
 
 
 #: Re-exported so tests and callers name one constant, not two.
@@ -120,6 +137,10 @@ class EvidenceCell(BaseModel):
     row: int
     column: str
     value: str
+    filename: str = ""
+    sheet: str = ""
+    source_row: int = -1
+    original_column: str = ""
 
 
 @router.post("/aggregate-metric", response_model=MetricResult)
@@ -130,13 +151,42 @@ async def aggregate_metric(request: AggregateRequest) -> MetricResult:
     a figure quoted in a finding and a figure returned to a tool call are the same
     figure computed the same way.
     """
-    tables = await _clean_tables(request.period)
+    if request.batch_id:
+        batch = load_batch(request.batch_id)
+        if batch.period != request.period:
+            raise HTTPException(409, "Batch period does not match requested period")
+        tables = batch.clean_tables
+        dictionary = batch_dictionary(batch)
+        if any(table.quarantine for table in tables):
+            raise HTTPException(409, "Batch contains quarantined rows; resolve the source and reimport before reporting totals")
+        if (batch.dictionary_snapshot or {}).get("business_review"):
+            from bridgeflow.business import context
+            facts = context(request.batch_id, batch)["facts"]
+            if request.entity:
+                raise HTTPException(409, "Entity-scoped business formulas are not declared; cannot infer a filter")
+            if request.metric not in facts:
+                raise HTTPException(409, f"Unknown metric; available: {', '.join(facts)}")
+            fact = facts[request.metric]
+            return MetricResult(metric=request.metric, period=request.period, value=fact["value"],
+                unit=fact["unit"], formula=fact["formula"], evidence=[EvidenceCell(
+                    **{key: ref[key] for key in ("department", "row", "column", "filename", "sheet", "original_column")},
+                    source_row=ref["source_row"] or -1,
+                    value=str(next(t for t in tables if t.department == ref["department"]).rows[ref["row"]].get(ref["column"])),
+                ) for ref in fact["sources"]], evidence_total=fact["source_count"], evidence_truncated=fact["truncated"])
+    else:
+        tables = await _clean_tables(request.period)
+        dictionary = _dictionary()
     try:
         computed = metrics.compute(
-            request.metric, request.period, tables, entity=request.entity, dictionary=_dictionary()
+            request.metric, request.period, tables, entity=request.entity, dictionary=dictionary
         )
     except metrics.MetricRefused as refused:
-        raise HTTPException(status_code=409, detail=str(refused)) from refused
+        available = [m.name for m in metrics.available(dictionary)]
+        raise HTTPException(
+            status_code=409,
+            detail=f"{refused} Available metrics: {', '.join(available) or '(none configured)'}. "
+                   "Use list_metrics; do not retry undeclared names.",
+        ) from refused
 
     return MetricResult(
         metric=computed.metric,
@@ -178,6 +228,11 @@ async def _clean_tables(period: str) -> list[CleanTable]:
     A real deployment reads the uploaded batch instead; the sample path is what the
     demo and the tests run on.
     """
+    saved = store.load(period)
+    if saved is not None:
+        return saved.clean_tables
+    if not settings.bridgeflow_allow_sample_data:
+        raise HTTPException(409, "No stored analysis; supply an uploaded batch_id")
     samples = REPO_ROOT / "data" / "samples"
     agent = DataSanitizerAgent()
     tables: list[CleanTable] = []
@@ -213,20 +268,22 @@ class ConfirmationResult(BaseModel):
     accepted: bool
     confirmed_by: str
     confirmed_at: str
-    #: The person who allowed it, when the approval log can be joined on `call_id`.
+    #: Authenticated DSH session attribution; individual employee identity is not implemented.
     authorised_by: str = ""
     remembered: int
 
 
 @router.post("/confirm-mapping", response_model=ConfirmationResult)
-async def confirm_mapping(request: ConfirmRequest) -> ConfirmationResult:
+async def confirm_mapping(request: ConfirmRequest, http_request: Request) -> ConfirmationResult:
     """Record one human decision about a mapping.
 
-    The only endpoint here that writes. Its caller is gated by `ctx.approval`
-    (`plugins/src/approval/gate.ts`), so reaching this point means somebody granted
-    it — which is the part an auditor reads. So the record says who: `confirmed_by` is
-    the agent that ran, `authorised_by` the person who allowed this exact call.
+    A host credential alone is insufficient: a fresh payload-bound receipt from
+    the DSH approval gate is required. Attribution identifies the authenticated
+    shared session, without treating an agent-supplied name as employee identity.
     """
+    if not settings.bridgeflow_allow_mapping_write:
+        raise HTTPException(403, "Mapping writes disabled by deployment policy")
+    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body())
     link = Link(
         source=request.source,
         target=request.target,
@@ -239,7 +296,7 @@ async def confirm_mapping(request: ConfirmRequest) -> ConfirmationResult:
         by=request.confirmed_by,
         accepted=request.accepted,
         period=request.period,
-        authorised_by=approvals.granted_by(request.call_id) or "",
+        authorised_by="dsh-authenticated-session",
     )
     recorded = memory.find(link)
     assert recorded is not None  # just written
@@ -253,3 +310,8 @@ async def confirm_mapping(request: ConfirmRequest) -> ConfirmationResult:
         authorised_by=recorded.authorised_by,
         remembered=len(memory.confirmations),
     )
+
+
+@router.post("/batch-summary", response_model=BatchSummary)
+async def batch_summary(request: BatchRef) -> BatchSummary:
+    return summary(request.batch_id, load_batch(request.batch_id))

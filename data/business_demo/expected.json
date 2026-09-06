@@ -1,0 +1,62 @@
+{
+  "risk": {
+    "period": "2025-11",
+    "metric_values": {
+      "total_output": 150,
+      "capacity_utilisation": 110,
+      "capacity_headroom": -10,
+      "material_spend": 760,
+      "purchase_budget": 700,
+      "purchase_price_drift": 8.5714,
+      "sales": 3000,
+      "cost_of_sales": 3300,
+      "gross_margin": -10,
+      "ar_weighted_days": 47.1429,
+      "order_gap": 30,
+      "requested_terms_days": 50
+    },
+    "check_status": "attention",
+    "roles": [
+      "production",
+      "procurement",
+      "finance",
+      "marketing"
+    ],
+    "must_not_claim": [
+      "客户 Tier",
+      "坏账认定",
+      "已执行订单或价格变更",
+      "审批即重写旧批次"
+    ]
+  },
+  "balanced": {
+    "period": "2025-11",
+    "metric_values": {
+      "total_output": 150,
+      "capacity_utilisation": 80,
+      "capacity_headroom": 20,
+      "material_spend": 700,
+      "purchase_budget": 700,
+      "purchase_price_drift": 0,
+      "sales": 3000,
+      "cost_of_sales": 2000,
+      "gross_margin": 33.3333,
+      "ar_weighted_days": 30,
+      "order_gap": -20,
+      "requested_terms_days": 30
+    },
+    "check_status": "ok",
+    "roles": [
+      "production",
+      "procurement",
+      "finance",
+      "marketing"
+    ],
+    "must_not_claim": [
+      "客户 Tier",
+      "坏账认定",
+      "已执行订单或价格变更",
+      "审批即重写旧批次"
+    ]
+  }
+}

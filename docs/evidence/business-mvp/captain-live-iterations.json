@@ -1,0 +1,63 @@
+{
+  "scope": "Current native-captain sprint only; previous sprint is live-iterations.json",
+  "runs": [
+    {
+      "artifact": "bridgeflow-web-e2e-ybmpxB",
+      "case": "risk",
+      "outcome": "failed: capture tool registered after first assembly",
+      "model_responses": 7,
+      "recorded_usage": {
+        "inputTokens": 10626,
+        "outputTokens": 11546,
+        "totalTokens": 28700,
+        "cacheReadTokens": 6528,
+        "reasoningTokens": 10375
+      },
+      "complete_usage": false
+    },
+    {
+      "artifact": "bridgeflow-web-e2e-TKOx2R",
+      "case": "risk",
+      "outcome": "passed",
+      "model_responses": 9,
+      "recorded_usage": {
+        "inputTokens": 16825,
+        "outputTokens": 3945,
+        "totalTokens": 36770,
+        "cacheReadTokens": 16000,
+        "reasoningTokens": 1440
+      },
+      "complete_usage": true
+    },
+    {
+      "artifact": "bridgeflow-web-e2e-JhP32D",
+      "case": "balanced",
+      "outcome": "business/state passed; new child-link check failed, UI fix verified offline separately",
+      "model_responses": 8,
+      "recorded_usage": {
+        "inputTokens": 16725,
+        "outputTokens": 6130,
+        "totalTokens": 36935,
+        "cacheReadTokens": 14080,
+        "reasoningTokens": 3671
+      },
+      "complete_usage": true
+    },
+    {
+      "artifact": "bridgeflow-web-e2e-Kk3nMJ",
+      "case": "approval",
+      "outcome": "passed",
+      "model_responses": 6,
+      "recorded_usage": {
+        "inputTokens": 3300,
+        "outputTokens": 916,
+        "totalTokens": 20472,
+        "cacheReadTokens": 16256,
+        "reasoningTokens": 145
+      },
+      "complete_usage": true
+    }
+  ],
+  "recorded_total_tokens": 122877,
+  "billing_note": "Recorded completed response usage only; failed first run was stopped while captain was responding. Monetary bill not reconciled."
+}

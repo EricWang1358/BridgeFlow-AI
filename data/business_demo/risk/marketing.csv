@@ -1,0 +1,3 @@
+product,customer,date,qty,terms,currency
+SKU-A1,ACME,2025-11-05,120,60,SGD
+SKU-B2,BETA,2025-11-05,60,30,SGD

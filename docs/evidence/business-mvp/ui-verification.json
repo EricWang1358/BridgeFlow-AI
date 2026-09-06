@@ -1,0 +1,49 @@
+{
+  "browser": "Chromium",
+  "model": "offline scripted adapter",
+  "checks": [
+    {
+      "scenario": "balanced",
+      "artifact": "bridgeflow-web-e2e-jQrtzm",
+      "passed": [
+        "native four Spawn calls",
+        "first child request advertises structured_output",
+        "no tool errors",
+        "lineage and overlap",
+        "business state after trajectory",
+        "dark mode",
+        "English",
+        "department file drawer",
+        "report reload",
+        "cold parent route",
+        "cold child route to native read-only record",
+        "zero JS exceptions"
+      ]
+    },
+    {
+      "scenario": "step-limit",
+      "artifact": "bridgeflow-web-e2e-IBgze1",
+      "passed": [
+        "finance stops after three invalid steps",
+        "partial with three valid departments",
+        "human note sent through native session",
+        "still exactly four children",
+        "cold child route",
+        "zero JS exceptions"
+      ]
+    },
+    {
+      "scenario": "approval",
+      "artifact": "bridgeflow-web-e2e-MUaZOq",
+      "passed": [
+        "25 MiB client preflight prevents network upload",
+        "26 MiB transport config",
+        "5 second test timeout config",
+        "unauthenticated config denied",
+        "allow/reject/timeout",
+        "rejection note in state node",
+        "zero JS exceptions"
+      ]
+    }
+  ]
+}

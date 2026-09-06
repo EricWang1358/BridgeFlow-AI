@@ -1,0 +1,5 @@
+sku,line,date,output,used_hrs,available_hrs
+SKU-A1,LINE-A,2025-11-03,60,48,40
+sku-a1,LINE-A,2025-11-04,40,32,30
+SKU-B2,LINE-B,2025-11-03,30,18,20
+SKU-B2,LINE-B,2025-11-04,20,12,10

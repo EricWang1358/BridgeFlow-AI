@@ -1,0 +1,42 @@
+{
+  "mode": "live",
+  "fault": null,
+  "case": "risk",
+  "elapsed_ms": 21901,
+  "report_status": "validated",
+  "roles": [
+    {
+      "role": "production",
+      "session_id": "144926ac-9159-4893-9cac-0c301074f245",
+      "checks": 2
+    },
+    {
+      "role": "procurement",
+      "session_id": "e043c5f6-60ee-435a-8635-177c7727b60e",
+      "checks": 2
+    },
+    {
+      "role": "finance",
+      "session_id": "896f0783-2d0e-4817-8799-c6bf80e4338b",
+      "checks": 2
+    },
+    {
+      "role": "marketing",
+      "session_id": "671ca1e4-5073-4b3f-871e-4a9133bc5a0c",
+      "checks": 2
+    }
+  ],
+  "overlap_verified": true,
+  "request_header_events": 5,
+  "model_requests": 9,
+  "usage": {
+    "inputTokens": 16825,
+    "outputTokens": 3945,
+    "totalTokens": 36770,
+    "cacheReadTokens": 16000,
+    "reasoningTokens": 1440
+  },
+  "models": [
+    "{\"kind\":\"model\",\"provider\":\"deepseek-official\",\"model\":\"deepseek-v4-flash\"}"
+  ]
+}

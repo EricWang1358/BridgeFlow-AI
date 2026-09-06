@@ -1,0 +1,179 @@
+[
+  {
+    "type": "approval/asked",
+    "seq": 120,
+    "time": 1788691796323,
+    "data": {
+      "id": "4e483ac5-f5d6-4899-b9a7-1174bc5992e8",
+      "toolName": "confirm_mapping",
+      "callId": "call_00_1w0Zn1YcqlkNRFGEsDo05261",
+      "reason": "confirm_mapping records a decision that will be reused next month and cited in an audit. It changes stored state; nothing is written without approval.\nsource: sku:test-0\ntarget: customer:test\nrelation: ordered_by\naccepted: true\nevidence: 合成业务用例的人工作业关系\nperiod: 2025-11"
+    }
+  },
+  {
+    "type": "approval/decided",
+    "seq": 121,
+    "time": 1788691796790,
+    "data": {
+      "id": "4e483ac5-f5d6-4899-b9a7-1174bc5992e8",
+      "outcome": "allowed-once"
+    }
+  },
+  {
+    "type": "tool/result",
+    "seq": 122,
+    "time": 1788691796842,
+    "data": {
+      "turn": 1,
+      "step": 1,
+      "message": {
+        "source": {
+          "kind": "tool",
+          "callId": "call_00_1w0Zn1YcqlkNRFGEsDo05261"
+        },
+        "content": [
+          {
+            "type": "tool-result",
+            "toolCallId": "call_00_1w0Zn1YcqlkNRFGEsDo05261",
+            "content": [
+              {
+                "type": "text",
+                "text": "Accepted sku:test-0 → customer:test (ordered_by), recorded by session-deb76bff-1b87-4b6b-9496-ee2bc69760a0, approved by dsh-authenticated-session. 1 confirmation(s) now on file; this one will not be asked again."
+              }
+            ],
+            "isError": false
+          }
+        ],
+        "role": "user",
+        "id": "f7eb9b8b-3e4d-4642-864e-0484cf16e744"
+      },
+      "meta": {
+        "accepted": true,
+        "relation": "ordered_by",
+        "remembered": 1
+      }
+    },
+    "sourceEventSeqs": [
+      119
+    ],
+    "surfaceOp": "append"
+  },
+  {
+    "type": "approval/asked",
+    "seq": 373,
+    "time": 1788691799735,
+    "data": {
+      "id": "18498e6b-1fa3-48f8-b84c-768c7ba235d1",
+      "toolName": "confirm_mapping",
+      "callId": "call_00_mcfXyyNLyBXkcqaQyPLP9360",
+      "reason": "confirm_mapping records a decision that will be reused next month and cited in an audit. It changes stored state; nothing is written without approval.\naccepted: true\nevidence: 合成业务用例的人工作业关系\nperiod: 2025-11\nrelation: ordered_by\nsource: sku:test-2\ntarget: customer:test"
+    }
+  },
+  {
+    "type": "bridgeflow/approval-note",
+    "seq": 374,
+    "time": 1788691800164,
+    "data": {
+      "callId": "call_00_mcfXyyNLyBXkcqaQyPLP9360",
+      "note": "客户编码未核实，请销售负责人确认后再提交。",
+      "author": "dsh-authenticated-session"
+    }
+  },
+  {
+    "type": "approval/decided",
+    "seq": 375,
+    "time": 1788691800177,
+    "data": {
+      "id": "18498e6b-1fa3-48f8-b84c-768c7ba235d1",
+      "outcome": "rejected"
+    }
+  },
+  {
+    "type": "tool/result",
+    "seq": 376,
+    "time": 1788691800178,
+    "data": {
+      "turn": 2,
+      "step": 1,
+      "message": {
+        "source": {
+          "kind": "tool",
+          "callId": "call_00_mcfXyyNLyBXkcqaQyPLP9360"
+        },
+        "content": [
+          {
+            "type": "tool-result",
+            "toolCallId": "call_00_mcfXyyNLyBXkcqaQyPLP9360",
+            "content": [
+              {
+                "type": "text",
+                "text": "Error: confirm_mapping did NOT run: a person reviewed it and refused. The reviewer said: \"客户编码未核实，请销售负责人确认后再提交。\". Nothing was written, and the decision is not remembered for next month; a future import may therefore ask again. Do NOT claim future requests are suppressed. Say plainly that this step did not happen and why. Do not describe it as done, and do not re-ask within this turn."
+              }
+            ],
+            "isError": true
+          }
+        ],
+        "role": "user",
+        "id": "71898c92-1245-460c-8d90-b88ce760f788"
+      }
+    },
+    "sourceEventSeqs": [
+      372
+    ],
+    "surfaceOp": "append"
+  },
+  {
+    "type": "approval/asked",
+    "seq": 604,
+    "time": 1788691803430,
+    "data": {
+      "id": "ed120fb6-5d64-40d9-9f3c-ed927ee0f167",
+      "toolName": "confirm_mapping",
+      "callId": "call_00_ET_LYe2dydrVC8atRe8TNvy8120",
+      "reason": "confirm_mapping records a decision that will be reused next month and cited in an audit. It changes stored state; nothing is written without approval.\naccepted: true\nevidence: 合成业务用例的人工作业关系\nperiod: 2025-11\nrelation: ordered_by\nsource: sku:test-4\ntarget: customer:test"
+    }
+  },
+  {
+    "type": "approval/decided",
+    "seq": 605,
+    "time": 1788691808431,
+    "data": {
+      "id": "ed120fb6-5d64-40d9-9f3c-ed927ee0f167",
+      "outcome": "cancelled"
+    }
+  },
+  {
+    "type": "tool/result",
+    "seq": 606,
+    "time": 1788691808433,
+    "data": {
+      "turn": 3,
+      "step": 1,
+      "message": {
+        "source": {
+          "kind": "tool",
+          "callId": "call_00_ET_LYe2dydrVC8atRe8TNvy8120"
+        },
+        "content": [
+          {
+            "type": "tool-result",
+            "toolCallId": "call_00_ET_LYe2dydrVC8atRe8TNvy8120",
+            "content": [
+              {
+                "type": "text",
+                "text": "Error: confirm_mapping did NOT run: the question was withdrawn before anybody answered. Nothing was written, and the decision is not remembered for next month; a future import may therefore ask again. Do NOT claim future requests are suppressed. Say plainly that this step did not happen and why. Do not describe it as done, and do not re-ask within this turn."
+              }
+            ],
+            "isError": true
+          }
+        ],
+        "role": "user",
+        "id": "3408cb7f-b067-4d1d-bb23-b726bd35d704"
+      }
+    },
+    "sourceEventSeqs": [
+      603
+    ],
+    "surfaceOp": "append"
+  }
+]

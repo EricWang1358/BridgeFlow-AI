@@ -1,0 +1,131 @@
+{
+  "model": "deepseek-official / deepseek-v4-flash",
+  "runs": [
+    {
+      "run": "ueoSHy",
+      "case": "risk",
+      "model_responses": 7,
+      "usage": {
+        "inputTokens": 17458,
+        "outputTokens": 5655,
+        "totalTokens": 30409,
+        "cacheReadTokens": 7296,
+        "reasoningTokens": 3314
+      },
+      "review": "业务审读发现关注阈值被称作批准标准，后续收紧措辞"
+    },
+    {
+      "run": "Gwtcql",
+      "case": "approval",
+      "model_responses": 6,
+      "usage": {
+        "inputTokens": 2969,
+        "outputTokens": 880,
+        "totalTokens": 18057,
+        "cacheReadTokens": 14208,
+        "reasoningTokens": 93
+      },
+      "review": "真实拒绝理由到达，但叙述错误声称未来不再询问，已修"
+    },
+    {
+      "run": "f7hkSM",
+      "case": "balanced",
+      "model_responses": 7,
+      "usage": {
+        "inputTokens": 17801,
+        "outputTokens": 7996,
+        "totalTokens": 32453,
+        "cacheReadTokens": 6656,
+        "reasoningTokens": 5583
+      },
+      "review": "真实目录工具 schema 错误，已修公共字段投影"
+    },
+    {
+      "run": "tX1xuK",
+      "case": "approval",
+      "model_responses": 6,
+      "usage": {
+        "inputTokens": 3072,
+        "outputTokens": 877,
+        "totalTokens": 18157,
+        "cacheReadTokens": 14208,
+        "reasoningTokens": 92
+      },
+      "review": "最终审批验收通过"
+    },
+    {
+      "run": "5UyR7r",
+      "case": "risk",
+      "model_responses": 6,
+      "usage": {
+        "inputTokens": 16022,
+        "outputTokens": 10562,
+        "totalTokens": 29656,
+        "cacheReadTokens": 3072,
+        "reasoningTokens": 7767
+      },
+      "review": "工具契约修复后风险组通过；随后继续收紧文字责任边界"
+    },
+    {
+      "run": "rOn39M",
+      "case": "balanced",
+      "model_responses": 7,
+      "usage": {
+        "inputTokens": 16914,
+        "outputTokens": 10274,
+        "totalTokens": 32820,
+        "cacheReadTokens": 5632,
+        "reasoningTokens": 7437
+      },
+      "review": "业务审读发现正毛利被扩写为无需计提，已加入拒绝规则"
+    },
+    {
+      "run": "dUN9aB",
+      "case": "balanced",
+      "model_responses": 7,
+      "usage": {
+        "inputTokens": 16308,
+        "outputTokens": 5121,
+        "totalTokens": 26677,
+        "cacheReadTokens": 5248,
+        "reasoningTokens": 3184
+      },
+      "review": "最终正常组验收通过"
+    },
+    {
+      "run": "QxpGfy",
+      "case": "risk",
+      "model_responses": 6,
+      "usage": {
+        "inputTokens": 16403,
+        "outputTokens": 3903,
+        "totalTokens": 22610,
+        "cacheReadTokens": 2304,
+        "reasoningTokens": 2135
+      },
+      "review": "业务审读发现已批准上限措辞，已加入拒绝规则"
+    },
+    {
+      "run": "XvcSKd",
+      "case": "risk",
+      "model_responses": 7,
+      "usage": {
+        "inputTokens": 16234,
+        "outputTokens": 4209,
+        "totalTokens": 26203,
+        "cacheReadTokens": 5760,
+        "reasoningTokens": 2055
+      },
+      "review": "最终风险组验收通过"
+    }
+  ],
+  "total_model_responses": 59,
+  "usage_total": {
+    "inputTokens": 123181,
+    "cacheReadTokens": 64384,
+    "outputTokens": 49477,
+    "reasoningTokens": 31660,
+    "totalTokens": 237042
+  },
+  "billing": "Provider-reported tokens only; currency charges not reconciled. Reasoning tokens are included in output; cache reads are separate from input in this adapter."
+}

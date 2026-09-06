@@ -1,119 +1,77 @@
 # BridgeFlow AI
 
-> A multi-agent engine that turns messy monthly spreadsheets from Production, Procurement,
-> Finance and Marketing into one aligned Master Table — with real-time risk warnings and
-> dynamic quote simulation.
+BridgeFlow turns monthly Production, Procurement, Finance and Marketing spreadsheets
+into immutable batches and evidence-backed business reviews. The MVP reuses the
+official DeepSeek Harness Web, approvals, sessions and four concurrent subagents.
+Python computes declared metrics; each department proposes actions within a stated
+responsibility, and the host validates its structured findings.
 
-**How might we** build a multi-agent AI engine for Singaporean SMEs to align unstructured
-monthly data across production, procurement, finance and marketing, in order to eliminate
-data silos, trigger real-time risk warnings, and optimize dynamic quotes?
+The current demo covers production load, purchase spend against budget, project
+margin, weighted payment terms and order/output gaps. Generated risk and balanced
+cases have independent standard answers. Quoting, customer tiers, bad-debt decisions,
+SSO and formal report release are outside the delivered MVP.
 
----
-
-## The problem
-
-A typical Singaporean SME runs on four disconnected spreadsheets:
-
-| Department  | What they track            | Granularity        | Key that never matches |
-| ----------- | -------------------------- | ------------------ | ---------------------- |
-| Production  | Output, capacity, downtime | Per SKU, per day   | `SKU-A1`               |
-| Procurement | Raw material purchases     | Per material, weekly  | `RM-Alu-6061`          |
-| Finance     | Revenue, cost, AR ageing   | Per GL account     | `4000-Sales`           |
-| Marketing   | Orders, customers, quotes  | Per customer/month | `Acme Pte Ltd`         |
-
-Nobody can answer "is this customer actually profitable at our current aluminium price and
-capacity?" without a week of manual reconciliation. BridgeFlow AI answers it in minutes.
+See the [business demo and acceptance guide](docs/17-business-mvp-acceptance.md),
+[measured results](docs/00-status.md), and [architecture decisions](docs/13-golden-standard.md).
 
 ## Architecture
 
-```
-[Messy multi-department data]  (Production / Procurement / Finance / Marketing — monthly CSV & Excel)
-                │
-                ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ 1. Data Sanitizer Agent                                          │
-│    - Fixes typos, mixed formats, shifted columns, missing values  │
-│    - Parallel monthly ingest; time-series gap-fill & normalization│
-└──────────────────────────────────────────────────────────────────┘
-                │
-                ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ 2. Semantic Resolver Agent            ★ core                     │
-│    - Cross-department entity & time mapping                       │
-│    - SKU ↔ raw material ↔ GL account ↔ capacity consumption       │
-└──────────────────────────────────────────────────────────────────┘
-                │
-                ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ 3. Multi-Role Evaluator Agent         ★ core                     │
-│    - Production view : order trend, capacity utilisation & headroom│
-│    - Finance view    : loss-making projects, AR ageing, bad debt   │
-│    - Procurement view: material price trend, purchase cost drift   │
-│    - Marketing view  : customer tiering under capacity constraints │
-└──────────────────────────────────────────────────────────────────┘
-                │
-        ┌───────┴────────┐
-        ▼ (core output)   ▼ (triggered sub-feature)
-┌────────────────────┐  ┌────────────────────────────────────┐
-│ 4. SOP & Flow      │  │ ✨ Dynamic Quote Simulator          │
-│    Engine          │  │    Marketing-facing: simulates      │
-│  - Month/Qtr/Year  │  │    material price × capacity to      │
-│    Master Table    │  │    output an optimal price and       │
-│  - Risk report &   │  │    payment-term recommendation       │
-│    approval cards  │  └────────────────────────────────────┘
-└────────────────────┘
+```text
+Official DSH Web: native chat, sessions, approvals, trajectory
+  └─ BridgeFlow slots: import/data, rejection note, review cards
+       └─ Typed domain tools + host policy
+            ├─ Python: immutable batches, dictionary, arithmetic, validation
+            ├─ Official DSH spawn: production / procurement / finance / marketing
+            └─ Native approval → one-use receipt → mapping memory
 ```
 
-Full detail: [`docs/02-architecture.md`](docs/02-architecture.md). If we adopt
-[deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) as the agent framework,
-see [`docs/06-deepseek-harness.md`](docs/06-deepseek-harness.md) for how it layers on top.
+Reports preserve the batch, source locations and child session identities. Failed
+reviewers remain visibly incomplete. Proposed business actions are not executed.
 
 ## Repo layout
 
+```text
+backend/          Python domain computation, persistence and private FastAPI service
+plugins/          DSH tools, guards, native approval integration and Client UI slots
+dsh/              Pinned Web policy patch and restricted analyst preset
+scripts/          Native Web launcher and runtime checks
+data/samples/     Historical development spreadsheets
+data/business_demo/ Generated visible business cases and independent answers
+docs/             Requirements, architecture, measured status and review
 ```
-backend/          Python 3.12 — agents, LLM provider layer, FastAPI
-  src/bridgeflow/
-    agents/       One module per agent in the diagram
-    llm/          Pluggable provider layer (hermes / deepseek / openclaw / mock)
-    schemas/      Pydantic data contracts shared across agents
-    pipeline/     Orchestrator wiring agents 1→2→3→4
-    api/          FastAPI app
-plugins/          TypeScript dsh plugins — tools, guards, UI cards (to be written)
-data/samples/     Deliberately messy sample CSVs for the demo
-docs/             Problem framing, architecture, data contracts, demo plan
-```
-
-There is no `frontend/` directory. The UI is dsh web, customised through Client
-plugins rather than rebuilt — see [`docs/13-golden-standard.md`](docs/13-golden-standard.md).
-The one screen that exists today is the operator console at `/console`, served by the
-backend because it has to answer a tool call that is blocked waiting on it.
 
 ## Quick start
 
-Development happens inside WSL or on Linux. Full setup, with a verification step
-for each stage: [`docs/14-wsl-setup.md`](docs/14-wsl-setup.md).
+From the repository root, with the Python dependencies installed:
 
 ```bash
-source ~/Hackathon2026/.venv/bin/activate
-source ~/Hackathon2026/BridgeFlow-AI/env.sh    # DSH_* must come from the shell
-
-cd backend
-pytest -q && ruff check src tests
-python ../scripts/smoke_dsh.py                 # checks the dsh runtime end to end
-uvicorn bridgeflow.api.main:app --reload
+source ../.venv/bin/activate
+source ./env.sh
+npm install -g @deepseek-ai/dsh@0.1.2-rc.1
+cd plugins
+pnpm install --frozen-lockfile
+pnpm run build
+cd ..
+python scripts/start_web.py
 ```
 
-Then open <http://127.0.0.1:8000/console> and leave it open. Anything that writes stops
-there for a decision; if nobody is watching, it is refused rather than performed.
+Open the authenticated URL printed by DSH. Use the sidebar data action to upload
+CSV or a single-sheet XLSX, inspect the batch, then copy its analysis request into
+the native conversation. Import is deterministic; sending a conversation request
+can incur model charges. Declare `FIELD_DICTIONARY_PATH` in the launching shell;
+for the business MVP rehearsal use `data/business_demo/dictionary.yaml`.
 
-`DSH_*` and `DEEPSEEK_BASE_URL` belong in `env.sh`, never in `backend/.env` — dsh
-scans that file and refuses bootstrap and network variables read from it, because a
-checked-in file must not be able to decide where code loads from or where traffic
-goes.
+The launcher uses the official npm CLI, pinned to the Python SDK version. The rc1
+Python-packed executable failed to resolve the built-in Web client manifests in
+our browser test. `BRIDGEFLOW_DSH` can select a compatible npm executable.
 
-The default `LLM_PROVIDER=mock` runs the whole pipeline with deterministic canned
-responses — no API key, no network — so tests and rehearsal never depend on
-connectivity. Its output is placeholder text, so it is not what you demo.
+`DSH_*` and `DEEPSEEK_BASE_URL` belong in the launching shell, never `.env`.
+The launcher generates a private host-service credential, reuses native Web
+authentication, and defaults legacy console/pipeline/sample fallback off. Mapping
+writes require a native approval and a one-use payload-bound receipt. Authentication
+currently identifies a shared DSH session, not an individual employee or tenant.
+
+Full setup and reproducible checks: [`HANDOFF.md`](HANDOFF.md).
 
 ### Portability
 
@@ -131,10 +89,12 @@ once.
 
 The business requirements live in [`docs/07-prd-v0.1.md`](docs/07-prd-v0.1.md) (PRD v0.1).
 [`docs/08-prd-traceability.md`](docs/08-prd-traceability.md) maps every FR to its current
-state in this codebase — roughly 25% covered, concentrated in the agent pipeline rather
-than in the auditability the PRD actually centres on. Read it before picking up work.
+state at its review date. Current evidence and remaining rubric gaps are recorded in
+[`docs/00-status.md`](docs/00-status.md) and [`docs/16-dsh-web-review.md`](docs/16-dsh-web-review.md).
 
 ## Status
 
-Early hackathon scaffold. Track work on the
+Business-use-case demonstration MVP with live-model and browser evidence. Real customer data and enterprise deployment still require validation. Track work on the
 [project board](https://github.com/users/EricWang1358/projects/1).
+
+业务演示入口：[一站式 Demo](demo-walkthrough/README.md)；界面为「对话｜轨迹｜业务状态」，右上角可选取部门文件。原生队长与会话保留策略见 [18](docs/18-native-captain-and-state.md)，最新实测见 [00](docs/00-status.md)。

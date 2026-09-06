@@ -1,0 +1,352 @@
+columns:
+  production:
+    sku: sku
+    line: capacity_unit
+  procurement:
+    material: raw_material
+  finance:
+    project: sku
+  marketing:
+    product: sku
+    customer: customer
+measures:
+  production:
+    output: output_quantity
+    used_hrs: used_hours
+    available_hrs: available_hours
+  procurement:
+    price: unit_price
+    budget_price: budget_price
+    qty: purchase_quantity
+  finance:
+    sales: sales_amount
+    cost: cost_amount
+    ar_balance: ar_balance
+    ar_days: ar_days
+  marketing:
+    qty: order_quantity
+    terms: requested_days
+rollups:
+  output_quantity: sum
+  used_hours: sum
+  available_hours: sum
+  unit_price: average
+  budget_price: average
+  purchase_quantity: sum
+  sales_amount: sum
+  cost_amount: sum
+  ar_balance: sum
+  ar_days: average
+  order_quantity: sum
+  requested_days: average
+relations:
+- source: sku:sku-a1
+  target: raw_material:rm-a
+  relation: consumes
+  note: Synthetic declared BOM
+business_review:
+  case: 合成制造企业月度交付与利润复核；非客户数据
+  inputs:
+    production:
+      date_column: date
+      nonnegative_columns:
+      - output
+      - used_hrs
+      - available_hrs
+    procurement:
+      date_column: date
+      nonnegative_columns:
+      - price
+      - budget_price
+      - qty
+      currency:
+        column: currency
+        value: SGD
+    finance:
+      date_column: date
+      nonnegative_columns:
+      - sales
+      - cost
+      - ar_balance
+      - ar_days
+      currency:
+        column: currency
+        value: SGD
+    marketing:
+      date_column: date
+      nonnegative_columns:
+      - qty
+      - terms
+      currency:
+        column: currency
+        value: SGD
+  metrics:
+    total_output:
+      unit: units
+      formula: sum(output quantity)
+      expression: &id007
+        op: sum
+        department: production
+        measures:
+        - output_quantity
+    capacity_utilisation:
+      unit: '%'
+      formula: sum(used hours) / sum(available hours) * 100
+      expression:
+        op: multiply
+        args:
+        - op: divide
+          args:
+          - &id002
+            op: sum
+            department: production
+            measures:
+            - used_hours
+          - &id001
+            op: sum
+            department: production
+            measures:
+            - available_hours
+        - op: constant
+          value: 100
+    capacity_headroom:
+      unit: hours
+      formula: sum(available hours) - sum(used hours)
+      expression:
+        op: subtract
+        args:
+        - *id001
+        - *id002
+    material_spend:
+      unit: SGD
+      formula: sum(unit price * purchase quantity)
+      expression: &id003
+        op: sum_product
+        department: procurement
+        measures:
+        - unit_price
+        - purchase_quantity
+    purchase_budget:
+      unit: SGD
+      formula: sum(budget unit price * purchase quantity)
+      expression: &id004
+        op: sum_product
+        department: procurement
+        measures:
+        - budget_price
+        - purchase_quantity
+    purchase_price_drift:
+      unit: '%'
+      formula: (actual spend - budget spend) / budget spend * 100
+      expression:
+        op: multiply
+        args:
+        - op: divide
+          args:
+          - op: subtract
+            args:
+            - *id003
+            - *id004
+          - *id004
+        - op: constant
+          value: 100
+    sales:
+      unit: SGD
+      formula: sum(sales amount); cost is a separate measurement
+      expression: &id005
+        op: sum
+        department: finance
+        measures:
+        - sales_amount
+    cost_of_sales:
+      unit: SGD
+      formula: sum(cost amount), positive cost convention
+      expression: &id006
+        op: sum
+        department: finance
+        measures:
+        - cost_amount
+    gross_margin:
+      unit: '%'
+      formula: (sales - positive costs) / sales * 100
+      expression:
+        op: multiply
+        args:
+        - op: divide
+          args:
+          - op: subtract
+            args:
+            - *id005
+            - *id006
+          - *id005
+        - op: constant
+          value: 100
+    ar_weighted_days:
+      unit: days
+      formula: sum(AR balance * AR days) / sum(AR balance)
+      expression:
+        op: divide
+        args:
+        - op: sum_product
+          department: finance
+          measures:
+          - ar_balance
+          - ar_days
+        - op: sum
+          department: finance
+          measures:
+          - ar_balance
+    order_gap:
+      unit: units
+      formula: sum(order quantity) - sum(output quantity)
+      expression:
+        op: subtract
+        args:
+        - &id008
+          op: sum
+          department: marketing
+          measures:
+          - order_quantity
+        - *id007
+    requested_terms_days:
+      unit: days
+      formula: sum(order quantity * requested days) / sum(order quantity)
+      expression:
+        op: divide
+        args:
+        - op: sum_product
+          department: marketing
+          measures:
+          - order_quantity
+          - requested_days
+        - *id008
+  roles:
+    production:
+      responsibility: 核对可交付产量、实际工时与可用工时，提出排产处置；不得批准加班预算或承诺客户交期。
+      decision_owner: operations_director
+      constraints:
+      - 可用工时按每条班次记录一次
+      - 负余量表示排产超出已声明可用工时
+      unsupported_topics: []
+    procurement:
+      responsibility: 核对采购实际支出与预算价格偏差，提出询价或预算复核；不得自行改销售报价。
+      decision_owner: procurement_manager
+      constraints:
+      - 仅比较同批采购数量下的预算与实际价格
+      - 缺价、缺数量、币种不符必须拒绝总额
+      unsupported_topics: []
+    finance:
+      responsibility: 核对项目收入、正数成本与余额加权账期，提出利润或信用复核；不得认定客户已构成坏账。
+      decision_owner: finance_controller
+      constraints:
+      - 成本独立于收入，不净额冒充收入
+      - 账期指标不是逾期账龄，也不等于坏账概率
+      unsupported_topics:
+      - 计提
+      - 减值
+      - 坏账概率
+      - 健康水平
+      - 信用敞口扩大
+      - 信用敞口缩小
+    marketing:
+      responsibility: 核对订单数量与本期产出差额、客户请求账期，提出交期和信用协商；不得自行分层客户或批准授信。
+      decision_owner: sales_director
+      constraints:
+      - 订单差额只是同期间总量比较，不是物料齐套或客户级交付保证
+      - 客户请求账期未获批准
+      unsupported_topics: []
+  checks:
+  - id: capacity
+    owner: production
+    metric: capacity_utilisation
+    attention_when: above
+    threshold: 100
+    title: 排产负荷
+    actions:
+      attention:
+      - 提交排产与加班预算复核
+      ok:
+      - 维持已批准排产
+  - id: headroom
+    owner: production
+    metric: capacity_headroom
+    attention_when: below
+    threshold: 0
+    title: 剩余工时
+    actions:
+      attention:
+      - 暂停额外产能承诺并核实班次
+      ok:
+      - 按已核实余量评估新增需求
+  - id: spend
+    owner: procurement
+    metric: material_spend
+    attention_when: above
+    threshold_metric: purchase_budget
+    title: 采购预算
+    actions:
+      attention:
+      - 提交采购超预算说明
+      ok:
+      - 记录预算内采购结果
+  - id: price
+    owner: procurement
+    metric: purchase_price_drift
+    attention_when: above
+    threshold: 5
+    title: 采购价格偏差
+    actions:
+      attention:
+      - 发起供应商复议并通知财务
+      ok:
+      - 继续监测已声明采购价格
+  - id: margin
+    owner: finance
+    metric: gross_margin
+    attention_when: below
+    threshold: 0
+    title: 项目毛利
+    actions:
+      attention:
+      - 发起成本与售价联合复核
+      ok:
+      - 记录正毛利并持续核对成本
+  - id: receivables
+    owner: finance
+    metric: ar_weighted_days
+    attention_when: above
+    threshold: 45
+    title: 应收账期
+    actions:
+      attention:
+      - 核实合同账期并复核信用敞口
+      ok:
+      - 按现行信用政策跟踪回款
+  - id: fulfilment
+    owner: marketing
+    metric: order_gap
+    attention_when: above
+    threshold: 0
+    title: 订单与产出差额
+    actions:
+      attention:
+      - 与生产核对未覆盖需求后协商交期
+      ok:
+      - 核实品项匹配后维持交付沟通
+  - id: terms
+    owner: marketing
+    metric: requested_terms_days
+    attention_when: above
+    threshold: 45
+    title: 客户请求账期
+    actions:
+      attention:
+      - 提交财务审批且暂不承诺延长账期
+      ok:
+      - 按已批准账期规则沟通客户
+  manager_decision: 由运营负责人协调排产，采购负责人解释预算差异，财务负责人复核利润及信用，销售负责人据批准结果沟通客户；本报告不自动执行订单、报价或授信。
+  limitations:
+  - 合成数据用于业务用例设计，不代表真实 OA 验收
+  - 采购偏差相对同数量预算，不是月环比
+  - 缺少存货、BOM 用量及历史回款，不能判断物料齐套或坏账
+  - 不生成价格带、客户 Tier 或自动调整账期

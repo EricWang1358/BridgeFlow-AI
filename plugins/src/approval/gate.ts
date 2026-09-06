@@ -4,6 +4,9 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-user-approval'
 
 import type { PendingDetails } from './detail.ts'
+import { summarise } from './detail.ts'
+import { mappingBody, type ApprovalReceipts } from './receipts.ts'
+import type { ApprovalNotes } from './notes.ts'
 
 /**
  * A human decision in front of anything that changes stored state.
@@ -77,14 +80,14 @@ function denialReason(toolName: string, outcome: string, note?: string): string 
   // Quoted rather than paraphrased: a model that summarises an objection tends to
   // turn it into whatever it was already about to do.
   if (note) clauses.push(`The reviewer said: "${note}"`)
-  clauses.push('Nothing was written, and the decision is not remembered for next month')
+  clauses.push('Nothing was written, and the decision is not remembered for next month; a future import may therefore ask again. Do NOT claim future requests are suppressed')
   clauses.push('Say plainly that this step did not happen and why')
   clauses.push('Do not describe it as done, and do not re-ask within this turn')
 
   return `${clauses.join('. ')}.`
 }
 
-export function gate(ctx: Context, details: PendingDetails): void {
+export function gate(ctx: Context, details: PendingDetails, receipts: ApprovalReceipts, decisionTimeoutMs: number, notes: ApprovalNotes): void {
   ctx.on('tools/pre-execute', async (exec, next) => {
     if (!MUTATING_TOOLS.includes(exec.name)) return next()
 
@@ -109,14 +112,19 @@ export function gate(ctx: Context, details: PendingDetails): void {
     }
 
     let outcome: string
+    let nativeNote: string | undefined
+    let closeNote: (() => void) | undefined
     try {
+      if (exec.callId) closeNote = notes.open(agent, exec.callId)
       outcome = await ctx.approval.request({
         agent,
         toolName: exec.name,
         callId: exec.callId,
-        reason: askReason(exec.name),
-        signal: exec.signal,
+        reason: askReason(exec.name) + '\n' + summarise(exec.arguments)
+          .map(item => `${item.label}: ${item.value}`).join('\n'),
+        signal: AbortSignal.any([exec.signal, AbortSignal.timeout(decisionTimeoutMs)]),
       })
+      nativeNote = exec.callId ? notes.get(agent.id, exec.callId) : undefined
     } catch (error) {
       // The service will not ask without committing the audit pair, so an exception
       // here means no logged decision exists. Deny, and say that rather than
@@ -128,15 +136,20 @@ export function gate(ctx: Context, details: PendingDetails): void {
           `${exec.name} was refused: the approval could not be recorded ` +
           `(${String(error)}). An unlogged decision is not a decision. No retry.`,
       }
+    } finally {
+      closeNote?.()
     }
 
     // Read the note *before* discarding: discard clears the note along with the
     // summary, and the note is the one thing this denial has to carry. Measured —
     // the first version discarded first and the reviewer's reason never arrived.
-    const note = details.takeNote(exec.callId)
+    const note = nativeNote || details.takeNote(exec.callId)
     details.discard(exec.callId)
 
-    if (outcome === GRANT) return { kind: 'allow' }
+    if (outcome === GRANT && exec.callId && !exec.signal.aborted) {
+      receipts.authorize(JSON.stringify([agent.id, exec.callId]), mappingBody(exec.arguments as Record<string, unknown>, agent.id, exec.callId))
+      return { kind: 'allow' }
+    }
     return { kind: 'deny', reason: denialReason(exec.name, outcome, note) }
   })
 }

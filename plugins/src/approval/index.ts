@@ -5,6 +5,8 @@ import type { AnswererConfig } from './answerer.ts'
 import { answerer } from './answerer.ts'
 import { PendingDetails } from './detail.ts'
 import { gate } from './gate.ts'
+import type { ApprovalReceipts } from './receipts.ts'
+import type { ApprovalNotes } from './notes.ts'
 
 /**
  * The escalation checkpoint, both halves (#30).
@@ -20,10 +22,10 @@ export const name = 'bridgeflow-approval'
 // denial; `tools` is the gate itself.
 export const inject = ['tools', 'approval']
 
-export function apply(ctx: Context, config: AnswererConfig): void {
+export function apply(ctx: Context, config: AnswererConfig & { mode: 'native' | 'console'; receipts: ApprovalReceipts; notes: ApprovalNotes }): void {
   const details = new PendingDetails()
-  gate(ctx, details)
-  answerer(ctx, config, details)
+  gate(ctx, details, config.receipts, config.decisionTimeoutMs, config.notes)
+  if (config.mode === 'console') answerer(ctx, config, details)
 }
 
 /** Defaults used when the composing plugin does not override them. */

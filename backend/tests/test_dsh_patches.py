@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from bridgeflow.config import REPO_ROOT, Settings
 
 
@@ -33,8 +35,9 @@ def test_relative_paths_are_anchored_to_the_repository():
     assert resolved == [str(REPO_ROOT / "dsh" / "no-shell.patch.yml")]
 
 
-def test_a_missing_patch_is_dropped_rather_than_booted_into_a_failure():
-    assert Settings(dsh_patches="dsh/does-not-exist.yml").dsh_patch_paths == []
+def test_a_missing_patch_fails_closed():
+    with pytest.raises(FileNotFoundError, match="required DSH policy"):
+        _ = Settings(dsh_patches="dsh/does-not-exist.yml").dsh_patch_paths
 
 
 def test_absolute_paths_pass_through(tmp_path):

@@ -34,10 +34,10 @@ async def test_dates_are_still_normalised():
 
     assert [row["date"] for row in table.rows] == [
         "2025-11-03",
-        "2025-03-11",
         "2025-11-08",
         "2025-11-12",
     ]
+    assert table.quarantine == [{"date": "03/11/2025"}]
 
 
 async def test_currency_text_is_still_stripped_to_a_number():

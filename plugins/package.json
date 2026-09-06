@@ -2,19 +2,67 @@
   "name": "bridgeflow-plugins",
   "private": true,
   "version": "0.0.0",
-  "description": "BridgeFlow's dsh plugins — tool shells, guards and UI slots; the bodies live in Python.",
+  "description": "BridgeFlow's dsh plugins \u2014 tool shells, guards and UI slots; the bodies live in Python.",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "node build.mjs",
+    "test": "tsx --test tests/*.test.ts",
+    "smoke:web": "node tests/web-smoke.mjs",
+    "smoke:business": "node tests/business-smoke.mjs",
+    "sessions:prune": "python3 ../scripts/session_retention.py",
+    "shots": "node tests/screenshots.mjs"
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-agent": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-api-session-controller": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-connection": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-locale": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-approval": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-chat": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-conversation": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-layout": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-session": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-sidebar": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-slots": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-tool": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-host-webserver": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-llm": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-session": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-subagent": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-system-prompt": "0.1.2-rc.1",
     "@deepseek-ai/dsh-user-approval": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-workspace": "0.1.2-rc.1",
+    "@playwright/test": "1.55.0",
     "@types/node": "^22.0.0",
+    "@types/react": "18.3.1",
+    "esbuild": "0.25.9",
+    "react": "18.2.0",
+    "tsx": "4.20.5",
     "typescript": "^5.6.0"
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.2",
     "@deepseek-ai/dsh-tools": "0.1.2-rc.1",
     "@deepseek-ai/schemastery": "^3.18.2"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./dist/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-tool",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-approval"
+      ],
+      "external": [
+        "react"
+      ]
+    }
   }
 }
