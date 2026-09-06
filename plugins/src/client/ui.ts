@@ -24,7 +24,10 @@ const labels = {
   import: ['导入并检查', 'Import & check'], busy: ['正在处理…', 'Processing…'], loading: ['正在加载…', 'Loading…'],
   saved: ['批次已保存。清洗和聚合由规则执行，未调用模型。', 'Batch saved. Rules cleaned and aggregated the data; no model call.'],
   existing: ['打开已有批次', 'Open an existing batch'], batchId: ['批次编号', 'Batch ID'], open: ['打开', 'Open'], copyId: ['复制批次编号', 'Copy batch ID'], copied: ['已复制', 'Copied'],
-  copy: ['复制研判请求', 'Copy review request'], copiedRequest: ['研判请求已复制，关闭此面板后粘贴到会话。', 'Request copied. Close this panel and paste it into the conversation.'],
+  startReview: ['发起研判', 'Start the review'],
+  startReviewHint: ['直接把研判请求发到当前会话，不用复制粘贴。没有会话就新建一个。',
+                    'Sends the review request straight into the current conversation. A session is created if none is open.'],
+  copy: ['改一改再发（复制）', 'Copy instead'], copiedRequest: ['研判请求已复制，关闭此面板后粘贴到会话。', 'Request copied. Close this panel and paste it into the conversation.'],
   master: ['主表', 'Master table'], corrections: ['清洗记录', 'Corrections'], mappings: ['待确认映射', 'Pending mappings'], quarantine: ['隔离行', 'Quarantined rows'], review: ['四部门报告', 'Department report'], tabs: ['批次数据视图', 'Batch data views'],
   ready: ['可研判', 'Ready'], needs_configuration: ['需要配置字段字典', 'Configuration required'], needs_review: ['需要人工复核', 'Review required'], empty: ['没有可用数据', 'No usable data'],
   validated: ['已校验', 'Validated'], partial: ['研判未完成', 'Incomplete review'], attention: ['需要处理', 'Attention'], ok: ['正常范围', 'Within threshold'], unvalidated: ['未完成', 'Unvalidated'], running: ['处理中', 'Running'], dispatching: ['正在派活', 'Dispatching'],
@@ -130,6 +133,28 @@ export async function openSession(parent: string, child?: string) {
     runtime.sessions.openSubagent({ parentSessionId: parent as SessionId, childSessionId: child as SessionId, mode: entry.mode })
   } else runtime.sessions.open(parent as SessionId)
 }
+/**
+ * Start the review from the panel the batch is already open in.
+ *
+ * Copying a prompt, closing the panel and pasting it into the composer is three
+ * steps of clerical work between "the data is ready" and "review it", and every one
+ * of them can be got wrong — the request names a batch id, so a stale paste reviews
+ * last month. The panel knows the batch; it should be able to ask.
+ *
+ * A session is created when none is open, because the first thing a person does
+ * after their first import must not be a dead button.
+ */
+export async function startReview(batch: string, period: string): Promise<void> {
+  await runtime.sessions.refresh()
+  const current = runtime.sessions.list.getSnapshot().current
+  const target = current ?? (await runtime.sessions.create())
+  const binding = runtime.sessions.binding(target)
+  if (!binding) throw new Error('No session is available to review in')
+  const result = await binding.session.prompt([{ type: 'text', text: reviewRequest(batch, period) }], 'queue')
+  if (!result.ok) throw new Error(result.error.message)
+  runtime.sessions.open(target)
+}
+
 export async function sendHumanNote(parent: string, report: string, note: string) {
   await runtime.sessions.refresh()
   const binding = runtime.sessions.binding(parent as SessionId)

@@ -35,13 +35,15 @@ function FileDrawer() {
  * This sits above the composer, so it is present exactly where the user's attention
  * already is, and it renders only while the session is blank.
  */
-function Orientation({ session }: InputZone) {
+function Orientation({ session, input }: InputZone) {
   const { t } = useUI()
   const steps = [1, 2, 3, 4] as const
-  // Orientation is for somebody who has not started. Once the conversation has
-  // content the card is just a band of colour between the answer and the reply box,
-  // which is exactly how it read in an active session.
-  if (!session.blank) return null
+  // Orientation is for somebody who has not started. `blank` alone is not that
+  // test: a session stays blank until its first durable event, so the card sat
+  // there while the user was already typing their request into the box below it.
+  // Anything drafted, queued or in flight means they have started.
+  const started = !session.blank || input.draft.trim() || input.queue.length || input.phase !== 'plain'
+  if (started) return null
   return <aside className="bf-hero" aria-label={t('heroTitle')}>
     <h3>{t('heroTitle')}</h3>
     <p className="bf-lead bf-hint">{t('heroLead')}</p>
