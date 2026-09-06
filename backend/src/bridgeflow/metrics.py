@@ -15,6 +15,7 @@ dictionary rather than named in code: the customer's schema is still being negot
 from __future__ import annotations
 
 from pathlib import Path
+from typing import NamedTuple
 
 from pydantic import BaseModel, Field
 
@@ -41,9 +42,15 @@ class MetricSpec(BaseModel):
     formula: str
     #: Declared measurement kinds, resolved to columns through the field dictionary.
     requires: list[str]
+    #: An alternative set of measurements that yields the same figure when the
+    #: primary one is not declared. A spend, for instance, is summed from a line
+    #: amount when the sheet states one and derived from price × quantity when it
+    #: does not. The primary set wins when both exist: a figure the customer wrote
+    #: down is the one an auditor signs.
+    fallback_requires: list[str] = Field(default_factory=list)
     #: Which role's brief this metric belongs in.
     role: str
-    #: sum | ratio | signed_sum | change_mom
+    #: sum | ratio | signed_sum | change_mom | spend
     op: str = "sum"
     #: For `signed_sum`: only rows whose account code matches this prefix count.
     account_prefix: str = ""
@@ -84,9 +91,12 @@ CATALOGUE: tuple[MetricSpec, ...] = (
     MetricSpec(
         name="material_spend",
         unit="currency",
-        formula="sum of declared purchase amounts",
+        formula="money actually spent on purchases",
         requires=["purchase_amount"],
+        #: Sheets state a line amount; many state only a price and a quantity.
+        fallback_requires=["unit_price", "purchase_quantity"],
         role="procurement",
+        op="spend",
     ),
     MetricSpec(
         name="revenue",
@@ -141,8 +151,10 @@ CATALOGUE: tuple[MetricSpec, ...] = (
     MetricSpec(
         name="material_price_change",
         unit="ratio",
-        formula="this period's average declared unit price against the previous period's",
+        formula="this period's quantity-weighted unit price against the previous "
+        "period's",
         requires=["purchase_amount", "purchase_quantity"],
+        fallback_requires=["unit_price", "purchase_quantity"],
         role="procurement",
         op="change_mom",
     ),
@@ -173,8 +185,7 @@ def available(dictionary: FieldDictionary | None = None) -> list[MetricSpec]:
     dictionary = dictionary or load_field_dictionary(dictionary_path())
     if dictionary.is_empty:
         return []
-    declared = {measure for (_dept, _col), measure in dictionary.measures.items()}
-    return [m for m in CATALOGUE if set(m.requires) <= declared]
+    return [m for m in CATALOGUE if _satisfies(m, dictionary.declared_measures)]
 
 
 def compute(
@@ -207,6 +218,10 @@ def compute(
             "The OA field dictionary is not configured, so no column can be identified "
             "by meaning. Nothing is computed from column spelling."
         )
+
+    if spec.op == "spend":
+        spend = _spend(period, tables, entity, dictionary)
+        return spend.model_copy(update={"metric": spec.name, "unit": spec.unit})
 
     if spec.op == "ratio":
         return _ratio(spec, period, tables, entity=entity, dictionary=dictionary)
@@ -303,6 +318,284 @@ def _account_matches(row: dict, kind: str) -> bool:
     return any(marker in text for marker in markers)
 
 
+#: The money a purchase line costs, and how many units it buys. A sheet may state
+#: either directly, or only in pieces — which is why the two metrics below resolve
+#: their lines together and then differ on what a missing piece means.
+SPEND = "purchase_amount"
+QUANTITY = "purchase_quantity"
+
+
+def _satisfies(spec: MetricSpec, declared: set[str]) -> bool:
+    """Whether the dictionary can supply what this metric needs, by either route."""
+    return set(spec.requires) <= declared or (
+        bool(spec.fallback_requires) and set(spec.fallback_requires) <= declared
+    )
+
+
+def _ref(table: CleanTable, row: int, column: str) -> SourceRef:
+    """One cell that fed a figure — the unit of evidence the PRD asks for."""
+    return SourceRef(
+        department=table.department, period=table.period, row=row, column=column
+    )
+
+
+def _exactly_one(department: str, measure: str, dictionary: FieldDictionary) -> str | None:
+    """The single column a department declares for one measurement.
+
+    Two matches is a real question about which column the dictionary means, so it is
+    refused rather than settled by whichever appears first in the file.
+    """
+    matches = dictionary.columns_measuring(department, measure)
+    if not matches:
+        return None
+    if len(matches) > 1:
+        raise MetricRefused(
+            f"{measure} cannot be resolved for {department}: it matches "
+            + f"{len(matches)} columns ({', '.join(sorted(matches))}). "
+            "The field dictionary needs to name exactly one."
+        )
+    return matches[0]
+
+
+def _product(values: dict[str, float | None], columns: list[str]) -> float:
+    """The cells multiplied together. Callers have already ruled out the blanks."""
+    total = 1.0
+    for column in columns:
+        total *= values[column]  # type: ignore[operator]
+    return total
+
+
+class PurchaseLine(NamedTuple):
+    """One purchase line: what it cost, how many units, and the cells saying so.
+
+    `quantity` is None when the sheet carries no quantity column at all — an amount
+    on its own is still an amount, and refusing such a sheet would be its own kind
+    of capability regression.
+    """
+
+    amount: float
+    quantity: float | None
+    sources: list[SourceRef]
+
+
+class PurchaseLines(NamedTuple):
+    """Every resolvable line, plus three separate accounts of what is missing.
+
+    The lists stay distinct on purpose: what a missing piece costs a caller depends
+    on the caller. A sum and a ratio do not survive the same omission, and collapsing
+    the two into one "holes" list is how a ratio ends up refusing work it could have
+    done, or a sum quietly accepting work it must not.
+    """
+
+    lines: list[PurchaseLine]
+    #: A quantity with no amount. Fatal for a sum — the month cost at least what the
+    #: complete lines say, and possibly more.
+    missing_amount: list[str]
+    #: An amount with no quantity. Harmless for a sum, unusable in a denominator.
+    missing_quantity: list[str]
+    #: Declared values that would not parse as numbers.
+    unreadable: list[str]
+    #: How the amounts were obtained, phrased for a `formula` field.
+    basis: str
+
+
+def _purchase_lines(
+    tables: list[CleanTable],
+    entity: str | None,
+    dictionary: FieldDictionary,
+) -> PurchaseLines:
+    """Resolve every purchase line into (amount, quantity, the cells behind them).
+
+    Returns the lines plus three separate lists of what is missing, because the
+    metrics reading this differ in what they can survive — see `_spend` and
+    `_unit_price` — plus a phrase naming the route the amounts came by.
+
+    Two routes, and they are not interchangeable:
+
+    * **A stated line amount.** The sheet already says what the line cost, and this
+      wins wherever it exists — a figure the customer wrote down is the one an
+      auditor signs, and recomputing it from a price and a quantity would replace
+      their arithmetic with ours.
+    * **A derived amount**: price × quantity, per line. Available only when the
+      dictionary declares that product (`FieldDictionary.derived`), because which
+      two columns multiply into an amount is a fact about the customer's schema and
+      that is still being negotiated (`CLAUDE.md`, eighth hard rule). Nothing here
+      infers it from a column name.
+
+    Departments resolve separately, so an estate where one source states amounts and
+    another does not is handled rather than averaged away.
+
+    A line carrying a quantity with no amount comes back as a hole. What the caller
+    does with a hole differs by metric, and that difference is why these two metrics
+    share a resolver instead of each reading columns its own way.
+    """
+    factors = dictionary.derived.get(SPEND) or []
+    routes: dict[str, dict[str, object]] = {}
+
+    for department in sorted({table.department for table in tables}):
+        # A quantity column is not required to know what a line cost — a ledger of
+        # amounts with no units is a real shape (finance exports it), and refusing
+        # one would be its own kind of capability regression.
+        quantity = _exactly_one(department, QUANTITY, dictionary)
+        stated = _exactly_one(department, SPEND, dictionary)
+        if stated is not None:
+            routes[department] = {"amount": stated, "factors": {}, "quantity": quantity}
+            continue
+        derived: dict[str, str] = {}
+        for factor in factors:
+            column = _exactly_one(department, factor, dictionary)
+            if column is None:
+                derived = {}
+                break
+            derived[factor] = column
+        if derived:
+            routes[department] = {"amount": None, "factors": derived, "quantity": quantity}
+
+    if not routes:
+        raise MetricRefused(
+            f"nothing declares a {SPEND}, or the factors to derive one"
+            + (f" ({' × '.join(factors)})" if factors else "")
+            + f", for any of {', '.join(sorted({t.department for t in tables}))}. Refusing "
+            "rather than reading a price column as though it were an amount — which is "
+            "how a month of 117,250 was reported as 13,540."
+        )
+
+    lines: list[PurchaseLine] = []
+    missing_amount: list[str] = []
+    missing_quantity: list[str] = []
+    unreadable: list[str] = []
+    seen: set[str] = set()
+
+    for table in tables:
+        route = routes.get(table.department)
+        if route is None:
+            continue
+        amount_column: str | None = route["amount"]  # type: ignore[assignment]
+        quantity_column: str | None = route["quantity"]  # type: ignore[assignment]
+        factor_columns: list[str] = list(route["factors"].values())  # type: ignore[union-attr]
+        # Every cell that has to carry a value for this line to have an amount at all.
+        needed = sorted(
+            set(factor_columns)
+            | ({quantity_column} if quantity_column else set())
+            | ({amount_column} if amount_column else set())
+        )
+
+        for index, row in enumerate(table.rows):
+            if entity and entity.lower() not in str(row).lower():
+                continue
+
+            values: dict[str, float | None] = {}
+            for column in needed:
+                raw = row.get(column)
+                if raw is None or raw == "":
+                    values[column] = None
+                    continue
+                number = _as_number(raw)
+                if number is None:
+                    unreadable.append(f"{table.department} row {index} {column}={raw!r}")
+                values[column] = number
+
+            if amount_column:
+                amount, feeding = values[amount_column], [amount_column]
+            else:
+                feeding = factor_columns
+                amount = (
+                    None
+                    if any(values[column] is None for column in feeding)
+                    else _product(values, feeding)
+                )
+
+            quantity = values[quantity_column] if quantity_column else None
+            if amount is None:
+                # A line stating units and not their cost is a hole in a sum; a line
+                # stating nothing at all is simply absent, and absent is not a hole.
+                if quantity is not None:
+                    missing_amount.append(
+                        f"{table.department} row {index} states no amount for its {QUANTITY}"
+                    )
+                continue
+            if quantity_column and quantity is None:
+                missing_quantity.append(
+                    f"{table.department} row {index} states no {quantity_column}"
+                )
+
+            refs = [
+                _ref(table, index, column) for column in feeding if values[column] is not None
+            ]
+            if (
+                quantity_column
+                and quantity_column not in feeding
+                and values[quantity_column] is not None
+            ):
+                refs.append(_ref(table, index, quantity_column))
+            lines.append(PurchaseLine(amount, quantity, refs))
+            seen.add("stated" if amount_column else "derived")
+
+    basis = {
+        "stated": "the line amounts the sheet states",
+        "derived": "unit price × quantity per line",
+    }.get(
+        next(iter(seen)) if len(seen) == 1 else "",
+        "stated line amounts and derived price × quantity",
+    )
+
+    return PurchaseLines(lines, missing_amount, missing_quantity, unreadable, basis)
+
+
+
+def _spend(
+    period: str,
+    tables: list[CleanTable],
+    entity: str | None,
+    dictionary: FieldDictionary,
+) -> MetricValue:
+    """Money actually spent on purchases.
+
+    A hole refuses the whole metric here. A sum that quietly omits a purchase line
+    reports a month as having spent less than it did while citing nothing but real
+    cells — which is exactly how a wrong figure survives review. `compute` already
+    refuses rather than totalling the rows that happened to parse; this is the same
+    rule applied to a value that was never entered, which is the case a partly-filled
+    purchase ledger actually hits.
+    """
+    resolved = _purchase_lines(tables, entity, dictionary)
+
+    if resolved.unreadable:
+        raise MetricRefused(
+            f"material_spend cannot be computed: {len(resolved.unreadable)} declared "
+            "value(s) could not be read as numbers — "
+            + "; ".join(resolved.unreadable[:5])
+            + ". Refusing rather than multiplying the lines that happened to parse."
+        )
+    if resolved.missing_amount:
+        raise MetricRefused(
+            f"material_spend is refused: {len(resolved.missing_amount)} purchase line(s) "
+            "state a quantity with no amount — "
+            + "; ".join(resolved.missing_amount[:5])
+            + ". Their spend is unknown, not zero, and summing the complete lines alone "
+            "would report fewer purchases than were made. Fill the cell or declare the "
+            "line out of scope; either is honest, omitting it is not."
+        )
+    if not resolved.lines:
+        raise MetricRefused(
+            f"material_spend found no purchase line stating an amount for {period}. "
+            "Refusing rather than returning a figure with no source rows."
+        )
+
+    sources = [ref for line in resolved.lines for ref in line.sources]
+    return MetricValue(
+        metric="material_spend",
+        period=period,
+        value=round(sum(line.amount for line in resolved.lines), 4),
+        unit="currency",
+        formula=f"sum of {resolved.basis}",
+        sources=sources[:EVIDENCE_SAMPLE],
+        source_count=len(sources),
+        truncated=len(sources) > EVIDENCE_SAMPLE,
+    )
+
+
+
 def _ratio(
     spec: MetricSpec,
     period: str,
@@ -394,9 +687,8 @@ def _change_mom(
             "previous period was not supplied. Refusing rather than reporting no change."
         )
 
-    amount, quantity = spec.requires
-    now = _unit_price(amount, quantity, period, tables, entity, dictionary)
-    before = _unit_price(amount, quantity, period, prior, entity, dictionary)
+    now = _unit_price(period, tables, entity, dictionary)
+    before = _unit_price(period, prior, entity, dictionary)
 
     if before.value == 0:
         raise MetricRefused(f"{spec.name} divides by the previous period's unit price, which is zero.")
@@ -415,26 +707,64 @@ def _change_mom(
 
 
 def _unit_price(
-    amount: str,
-    quantity: str,
     period: str,
     tables: list[CleanTable],
     entity: str | None,
     dictionary: FieldDictionary,
 ) -> MetricValue:
-    total = _sum_measure(amount, period, tables, entity, dictionary)
-    units = _sum_measure(quantity, period, tables, entity, dictionary)
-    if units.value == 0:
-        raise MetricRefused(f"no declared {quantity} for {period}, so a unit price has no meaning")
+    """What one unit cost, over the lines that can say so.
+
+    Two properties this has to get right, and the version it replaces got neither:
+
+    * **Quantity-weighted, not the mean of the stated prices.** Lines priced 4,850,
+      5,200 and 3,490 bought very different numbers of units, and the unweighted mean
+      of three invoice headers is not a cost per unit.
+    * **Numerator and denominator from the same lines.** Counting the units of a line
+      whose amount is unknown divides a partial spend by a full quantity and reports
+      a price lower than anything that was actually paid. The hole must leave both
+      sides together.
+
+    That is why a hole behaves differently here than in `_spend`: a sum over
+    incomplete lines understates money and is refused outright, while a ratio over
+    the lines stating both figures is a real answer — provided the formula says how
+    many lines it covers, so nobody mistakes it for the whole month.
+    """
+    resolved = _purchase_lines(tables, entity, dictionary)
+    usable = [line for line in resolved.lines if line.quantity is not None]
+
+    if not usable:
+        raise MetricRefused(
+            f"no declared {QUANTITY} for {period} alongside a known amount, so a unit "
+            "price has no meaning."
+        )
+
+    amount = sum(line.amount for line in usable)
+    units = 0.0
+    for line in usable:
+        units += line.quantity if line.quantity is not None else 0.0
+    if units == 0:
+        raise MetricRefused(
+            f"every declared {QUANTITY} for {period} is zero, so a unit price has no "
+            "meaning."
+        )
+
+    left_out = len(resolved.missing_amount) + len(resolved.missing_quantity)
+    note = f" ({left_out} line(s) left out for stating half a pair)" if left_out else ""
+    sources = [ref for line in usable for ref in line.sources]
     return MetricValue(
         metric="unit_price",
         period=period,
-        value=total.value / units.value,
+        value=amount / units,
         unit="currency",
-        formula=f"declared {amount} ÷ declared {quantity}",
-        sources=total.sources,
-        source_count=total.source_count + units.source_count,
+        formula=(
+            f"quantity-weighted price over {len(usable)} line(s), from {resolved.basis}"
+            + note
+        ),
+        sources=sources[:EVIDENCE_SAMPLE],
+        source_count=len(sources),
+        truncated=len(sources) > EVIDENCE_SAMPLE,
     )
+
 
 
 def _sum_measure(

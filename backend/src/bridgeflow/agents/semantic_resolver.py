@@ -409,6 +409,23 @@ class FieldDictionary:
         # Choosing wrong produces a plausible number, so it is declared, not guessed.
         self.rollups: dict[str, str] = dict(raw.get("rollups") or {})
 
+        # {measure: [factor, ...]}. A measurement the sheet never states but that
+        # follows from ones it does: a purchase line's amount is its unit price
+        # times its quantity when the sheet carries no line-amount column. The
+        # formula lives here rather than in code because which two columns multiply
+        # into an amount is the customer's schema, and that is still being negotiated
+        # — the same reason `measures` exists (CLAUDE.md, eighth hard rule).
+        #
+        # What it is NOT: a licence to reinterpret a column. A column declared as a
+        # price stays a price and can never be summed as an amount. Conflating the
+        # two is how material_spend came out as 13,540 for a month that actually
+        # spent 117,250 — every cell cited was real, and the figure was still wrong.
+        self.derived: dict[str, list[str]] = {}
+        for measure, spec in (raw.get("derived") or {}).items():
+            factors = spec.get("product") if isinstance(spec, dict) else None
+            if factors:
+                self.derived[measure] = [str(f) for f in factors]
+
     @property
     def is_empty(self) -> bool:
         return not self.columns and not self.relations and not self.measures
@@ -424,6 +441,21 @@ class FieldDictionary:
     def columns_measuring(self, department: str, measure: str) -> list[str]:
         """Every column in one department declared as `measure`."""
         return [c for (d, c), m in self.measures.items() if d == department and m == measure]
+
+    @property
+    def declared_measures(self) -> set[str]:
+        """Every measurement the dictionary can supply, stated or derived.
+
+        Metrics are filtered on this set. A derived-only measure is as computable as
+        a columned one, so leaving it out would hide a metric the system can actually
+        do — and a metric that is offered by nothing but asked for anyway becomes a
+        refusal the model has to work around.
+        """
+        return set(self.measures.values()) | set(self.derived)
+
+    def states(self, department: str, measure: str) -> bool:
+        """Whether this department has a real column carrying `measure`."""
+        return bool(self.columns_measuring(department, measure))
 
     def kind_for(self, department: str, column: str) -> EntityKind | None:
         declared = self.columns.get((department, column))

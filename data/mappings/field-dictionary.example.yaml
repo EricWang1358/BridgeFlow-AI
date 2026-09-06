@@ -45,11 +45,29 @@ measures:
     output_qty: output_quantity
     capacity_hrs: capacity_hours
   procurement:
-    unit_price: purchase_amount
+    # 单价是「每一单位多少钱」，不是金额。这里曾写成 purchase_amount，于是
+    # material_spend 把一整列单价加起来当支出：2025-11 报出 13,540，而三张填了价的
+    # PO 实际是 117,250。被引用的每个单元格都是真的，数字仍然是错的——
+    # 「结论必须带证据」保证的是数字来自单元格，不保证公式有意义。
+    unit_price: unit_price
     qty: purchase_quantity
   finance:
     amount: revenue_amount
     ar_days: receivable_days
+# 派生量：表里没有这一列，但它由表里有的列算出来。
+#
+# 支出 = 单价 × 数量，逐行相乘再求和。写成声明而不是写死在 Python 里，理由和
+# measures 段一样：「哪两列相乘等于金额」属于客户的表结构，还在协商中
+# （CLAUDE.md 第八条硬约束）。
+#
+# 只加填全的那几行会把这个月报小，所以某一行有数量、没单价时 material_spend
+# **整条拒绝**并点名那一行：未知不是零。实现见 metrics._spend。
+#
+# 表里本来就有金额列时不需要这一段——声明在 measures 里即可，那条路优先
+# （客户自己写下的数才是能签字的数）。见 electronics 示例的 po_value: purchase_amount。
+derived:
+  purchase_amount:
+    product: [unit_price, purchase_quantity]
 
 # 各度量的月度合并方式。
 #
