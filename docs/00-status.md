@@ -13,6 +13,27 @@
 
 ---
 
+## 主表锁屏与来源功能验收补缺（2026-09-07）
+
+用户复查指出上一轮验收遗漏：默认收起原生侧栏后，Studio 主表入口打开的是侧栏内部的 dialog。隐藏祖先使弹窗边界为 **0 × 0**，原生模态仍令其余页面不可交互，且 **0 JS 异常**；因此无异常不能证明可操作。现在侧栏仅保留按钮，数据弹窗由官方 shell.overlay 独立承载，不修改原生 DOM 或 DSH。
+
+用户所示来源来自已保存样例：**4 行**，单页没有上一页或下一页。旧界面只显示禁用按钮，说明不足；现来源和主表的单页预览明确显示“已显示全部数据，无需翻页”。原先无标签的批次编号与 SHA-256 改为“文件来源信息”，逐项标注上传文件、批次、工作表和文件指纹，并说明指纹不是业务解释。
+
+本轮验收检查实际可见与可交互结果：原生侧栏收起时，Studio 工具及产物 **2 个主表入口**都能打开有真实尺寸的表格，关闭后继续打开报价；不是只检查 dialog.open 或 JS 错误。来源合成 **65 行**，验证 **50 → 15 → 50** 行前后分页及首末页禁用边界，展开预览也能双向翻页；单页不显示无用控件。原测试已有向后翻页内容断言，漏项是返回、单页说明，以及收起侧栏的主表入口组合。
+
+| 验证 | 结果与复现 |
+| --- | --- |
+| TS、类型与构建 | **24 passed**；`pnpm --dir plugins test`、`typecheck`、`build` 通过 |
+| Python 聚焦及静态 | **19 passed**；`pytest -q -c backend/pyproject.toml backend/tests/test_enterprise_web.py`、`ruff check backend scripts` 通过，后端未修改 |
+| 来源和 Notebook 功能 | `pnpm --dir plugins smoke:quotation` 通过；`/tmp/bridgeflow-web-e2e-Rx7FT8` |
+| 完整月度链路 | `pnpm --dir plugins smoke:business` 通过；`/tmp/bridgeflow-web-e2e-VaraBn` |
+| 原生审批 | `pnpm --dir plugins smoke:web` 通过；`/tmp/bridgeflow-web-e2e-OliJw8` |
+| 本机复验 | 原端口 **3082** 更新，保留 **12** 份已有会话；真实主表打开/关闭/继续操作与来源说明通过，**0 JS 异常、0 模型请求** |
+
+[主表可见且可关闭](evidence/quotation-ui/runs/1788723465966/master-modal.png) · [有标签的来源信息](evidence/quotation-ui/runs/1788723465966/source-provenance.png) · [功能检查](evidence/quotation-ui/runs/1788723465966/functional-check.json)。截图保留最近 **2** 轮。本轮没有新增付费模型调用，费用 **0**。后文是历史验收范围，不覆盖本节发现的旧缺陷。
+
+---
+
 ## 报价声明与原生 Notebook 三栏工作面（2026-09-07）
 
 任务书的**样板前第一步已完成**：独立的 `quotation:` 人工声明示例，复用 `business.expression` 的通用文档求值器，结构化事实与文本 SourceRef，以及不夹带价格的聚合拒绝。月度管线保留。自由文本边界先记录在 [设计文档](21-quotation-design.md)，随后实现；尚未猜测或实现客户原件解析，也没有外发入口。

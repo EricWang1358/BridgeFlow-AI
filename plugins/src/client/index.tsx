@@ -8,7 +8,7 @@ import type { ComposerChainProps, InputZone } from '@deepseek-ai/dsh-client-ui-c
 import { MappingApproval } from './approval.tsx'
 import { BusinessReview, type Review } from './review.tsx'
 import { configureRuntime, navigate, openSession, route, useUI } from './ui.ts'
-import { DataWorkspace, ImportForm } from './workspace.tsx'
+import { DataWorkspace, DataWorkspaceButton, ImportForm } from './workspace.tsx'
 import { QuotationButton } from './quotation.tsx'
 import { mountShell } from './shell.tsx'
 import { mountState } from './state.tsx'
@@ -91,12 +91,13 @@ export function apply(ctx: Context): void {
   ctx.effect(() => { const tag = document.createElement('style'); tag.textContent = style; document.head.append(tag); return () => tag.remove() }, 'bridgeflow: styles')
   ctx.slots.inject('conversation.hero.brand.mark', () => ctx.slots.register({ name: 'conversation.hero.brand.mark', priority: -10 }, Welcome))
   ctx.slots.inject('sidebar.brand.name', () => ctx.slots.register({ name: 'sidebar.brand.name', priority: -10 }, () => <span>BridgeFlow AI</span>))
-  ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({ name: 'sidebar.footer.action', id: 'bridgeflow-data' }, DataWorkspace))
+  ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({ name: 'sidebar.footer.action', id: 'bridgeflow-data' }, DataWorkspaceButton))
   ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({ name: 'conversation.session.header.utilities', id: 'bridgeflow-files', order: 20 }, FileButton))
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'bridgeflow-files' }, FileDrawer))
   // Above the composer card, so the orientation reads before the prompt box rather
   // than competing with it.
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({ name: 'conversation.input.dock', id: 'bridgeflow-orientation', order: -10 }, Orientation))
+  ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'bridgeflow-data-dialog' }, DataWorkspace))
   mountState(ctx)
   mountShell(ctx)
   ctx.effect(() => {
