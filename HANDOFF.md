@@ -1,6 +1,8 @@
 # 交接说明
 
-更新于 2026-09-07。当前默认产品入口已改为 **原生 DSH Web**：侧栏可导入 CSV / 单 sheet XLSX，查看主表、待确认映射、修正记录、隔离行和四部门研判报告；对话、会话、审批和轨迹使用 DSH 原有前端。
+更新于 2026-09-07。当前默认产品入口是 **原生 DSH Web 上的三栏笔记本工作面**（Sources／Chat／Studio）：
+左栏放上传的部门文件并可预览，中栏是原生会话与轨迹，右栏是工具入口、已保存产物与报价声明。
+对话、会话、审批和轨迹仍用 DSH 原有前端。月度对账与报价两条路径并列。
 
 实现经分支与 PR 合并；远端看板的业务规划不由界面验收代替。架构原则见 [docs/13](docs/13-golden-standard.md)，业务演示与模拟负责人验收见 [docs/17](docs/17-business-mvp-acceptance.md)，本次审查与 issue 重排建议见 [docs/16](docs/16-dsh-web-review.md)，所有实测数字与验证边界见 [docs/00](docs/00-status.md)。
 
@@ -77,7 +79,34 @@ pnpm run smoke:business
 BRIDGEFLOW_TEST_FAULT=step-limit pnpm run smoke:business
 ```
 
+### ⚠️ 三条浏览器 smoke 目前在开发机上是红的（2026-09-07 实测）
+
+`smoke:web` / `smoke:quotation` / `smoke:business` **都会失败**，浏览器控制台同一句：
+
+```
+client-modules: HTML did not preload @deepseek-ai/dsh-client-modules/client.js
+```
+
+**这不是产品坏了。** 判别实验：同一份 `dsh/enterprise.patch.yml`、同一个 `dsh web` 命令，
+换成指向**已预装 web profile 的真实 `DSH_HOME`** 的 harness（`pnpm --dir plugins shots`）跑，
+该错误出现 **0 次**，界面正常渲染。三条 smoke 各自 `mkdtemp` 建**全新临时 DSH_HOME**，
+差异指向那里。`dsh --dump-config` 显示组合期 36 个官方客户端插件全在，所以问题在服务期。
+
+**跑出红不要以为是你弄坏的。** 进展与已排除的假设见
+[#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97)。在它修好之前，
+浏览器行为只能靠 `shots` 手工看，`docs/00` 里「smoke 通过」的记录**与本机复现不符**。
+
 Python 测试在 `conftest.py` 隔离 provider、字典、输出与记忆。浏览器测试用临时 DSH_HOME、临时数据与离线适配器，默认不访问付费模型；真实模型复演显式加 `BRIDGEFLOW_LIVE=1`。本次已完成真实模型及业务解释审读，范围与结果见 `docs/00` 和 `docs/17`，不代表未知数据集质量。`BRIDGEFLOW_PYTHON` 可指定 smoke 的 Python；默认使用仓库外 `../.venv/bin/python`。
+
+## 接手约定
+
+- **分支 → PR → merge，不直接提交 `main`。**
+- **所有实测数字只写进 [`docs/00`](docs/00-status.md)。** 其他文档引用它，不复写——
+  数字被抄进三五处然后开始漂移，是这个项目已经犯过的错。
+- **缺陷诊断到根因，不绕开、不记成「可接受成本」。** 异常是线索，不是预算项。
+- **真实模型调用会计费**，跑之前想清楚值不值，跑完把花销记进 `docs/00`。
+- 硬约束在 [`CLAUDE.md`](CLAUDE.md)，架构权威在 [`docs/13`](docs/13-golden-standard.md)，
+  冲突时以后者为准。报价功能的任务书是 [`docs/20`](docs/20-quotation-brief.md)。
 
 ## 仍需做什么
 
