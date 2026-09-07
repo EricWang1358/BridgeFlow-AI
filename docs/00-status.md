@@ -13,6 +13,29 @@
 
 ---
 
+## ⚠️ 三条浏览器 smoke 与本页记录不符（2026-09-07 复核）
+
+本页下方多处记录 `smoke:web` / `smoke:quotation` / `smoke:business` **通过**。
+在开发机上、干净 `main`（`fd983fc`）、重建 `plugins/dist` 之后复跑，**三条都失败**：
+
+| 命令 | 退出码 | 浏览器控制台 |
+| --- | --- | --- |
+| `pnpm --dir plugins smoke:web` | 1 | `client-modules: HTML did not preload @deepseek-ai/dsh-client-modules/client.js` |
+| `pnpm --dir plugins smoke:quotation` | 1 | 同上 |
+| `pnpm --dir plugins smoke:business` | 1 | 同上 |
+
+**产品本身没有坏。** 判别实验：同一份补丁、同一条 `dsh web` 命令，改用指向
+**已预装 web profile 的真实 `DSH_HOME`** 的 harness（`pnpm --dir plugins shots`），
+该错误出现 **0 次**，界面正常渲染并可交互。三条 smoke 各自 `mkdtemp` 建**全新临时
+DSH_HOME**，差异指向那里；`dsh --dump-config` 显示组合期 36 个官方客户端插件全在，
+所以问题在服务期而不是组合期。
+
+**结论：这三条记录当前不可复现，在 [#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97)
+关闭之前不要引用它们作为验收证据。** 如果它们在别的机器或别的启动方式下确实通过，
+那么「通过的条件」本身要写进本页——否则下一个人在自己机器上跑红，会以为是自己弄坏的。
+
+---
+
 ## 主表锁屏与来源功能验收补缺（2026-09-07）
 
 用户复查指出上一轮验收遗漏：默认收起原生侧栏后，Studio 主表入口打开的是侧栏内部的 dialog。隐藏祖先使弹窗边界为 **0 × 0**，原生模态仍令其余页面不可交互，且 **0 JS 异常**；因此无异常不能证明可操作。现在侧栏仅保留按钮，数据弹窗由官方 shell.overlay 独立承载，不修改原生 DOM 或 DSH。
