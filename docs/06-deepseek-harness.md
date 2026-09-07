@@ -1,30 +1,30 @@
-# 06 — DeepSeek Harness (`dsh`) 作为 Agent 运行时
+# 06 — DeepSeek Harness（`dsh`）作为 Agent 运行时
 
-> **参考文档：dsh 的事实与 API。** 架构结论以
-> [`13-golden-standard.md`](13-golden-standard.md) 为准，实测数字以
-> [`00-status.md`](00-status.md) 为准——本文不复写数字。
+> 参考文档：这一页只放 dsh 的版本事实与 API 形状。架构结论看
+> [`13-golden-standard.md`](13-golden-standard.md)，实测数字看
+> [`00-status.md`](00-status.md)，这里不复写数字。
 >
-> 已删除的两处错误，记在这里免得有人再走一遍：
+> 两处曾经的错误留在这里，免得有人再走一遍：
 >
-> 1. 初版依据 README 摘要判断 dsh 是 "TypeScript-first"，据此设计了「TS 插件 + HTTP 调
->    Python 后端」的双层结构。**错的**——官方有 Python SDK，可直接驱动运行时。
-> 2. 初版把 dsh 当成 provider 层的一员（「第一层 / 第二层」框架）。**错的**——它是基座本身，
->    这个错误的代价见 issue #25。
+> 1. 初版依据 README 摘要判断 dsh 是 "TypeScript-first"，据此设计了「TS 插件 + HTTP 调 Python 后端」
+>    的双层结构。错的：官方有 Python SDK，可以直接驱动运行时，没有 HTTP 这一层。
+> 2. 初版把 dsh 当成 provider 层的一员（「第一层 / 第二层」的说法）。错的：它是基座本身。
+>    代价见 issue #25 与 [`13` 第三节](13-golden-standard.md)。
 
 ## 事实基线
 
-| 项 | 值 | 核对方式 |
+| 项 | 值 | 怎么核对 |
 | --- | --- | --- |
 | 仓库 | [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) | — |
 | Python 包 | `deepseek-harness-sdk==0.1.2rc1` | PyPI |
 | 运行时包 | `deepseek-harness-runtime-bin`（同版本，随 SDK 自动安装） | PyPI |
-| Python 要求 | `>=3.10`（本项目 3.12 ✓） | PyPI metadata |
+| SDK 的 Python 要求 | `>=3.10`；本项目 `requires-python = ">=3.11"`（代码用了 `datetime.UTC`），实际跑 3.12 | PyPI metadata、`backend/pyproject.toml` |
 | 平台 wheel | `win_amd64`、`manylinux_2_28_x86_64`、`manylinux_2_28_aarch64`、`macosx_14_0_arm64` | PyPI |
 | npm `latest` | `0.1.2-rc.1` | `npm view` |
-| 发布状态 | **所有已发布版本均为 rc / alpha，无正式版** | `npm view versions` |
+| 发布状态 | 所有已发布版本均为 rc / alpha，没有正式版 | `npm view versions` |
 
-两个平台 wheel 覆盖了本机（Windows x86_64）和 AWS EC2（Linux x86_64），部署路径没有阻碍。
-运行 Python SDK **不需要系统 Node.js**——运行时是打包好的可执行文件。
+平台 wheel 覆盖本机（Windows x86_64）与 AWS EC2（Linux x86_64），部署路径上没有阻碍。
+跑 Python SDK 不需要系统装 Node.js，运行时是打包好的可执行文件。
 
 ## 真实 API
 
@@ -44,43 +44,36 @@ with DeepSeekHarness(
 print(result.final_response)
 ```
 
-`RunResult` 字段：`session_id`、`final_response`、`finish_reason`、`events`、`notifications`。
+`RunResult` 的字段：`session_id`、`final_response`、`finish_reason`、`events`、`notifications`。
 
-SDK 把打包的 `dsh` CLI 以 `--profile sdk` 拉起为子进程，通过 stdio 上的换行分隔 JSON-RPC 通信。
-Profile 拥有 JSON-RPC 服务、agent 组合、凭据、持久化、工具和关闭行为。
+SDK 把打包的 `dsh` CLI 以 `--profile sdk` 拉起为子进程，通过 stdio 上换行分隔的 JSON-RPC 通信。
+profile 拥有 JSON-RPC 服务、agent 组合、凭据、持久化、工具与关闭行为。
 
-## 三个必须知道的约束
+## 三条必须知道的约束
 
-**一、`dsh_home` 必填，SDK 刻意不去发现 `~/.dsh`。** 没有可以偷懒的默认值，所以
-`DSH_HOME` 在我们这里是必填配置项，缺失时 `DshProvider.__init__` 直接抛错，而不是
-静默用一个猜出来的路径。
+**一、`dsh_home` 必填，SDK 刻意不去发现 `~/.dsh`。** 没有可以偷懒的默认值。所以我们把它当成必填配置项，
+缺失时直接抛错，而不是静默用一个猜出来的路径。
 
-**二、`run()` 是同步阻塞的。** 我们的 Agent 全是 async，所以适配器把每次调用交给
-工作线程（`asyncio.to_thread`），并用一把锁防止并发 Agent 在同一个运行时上交错。
-`MultiRoleEvaluatorAgent` 四个角色是 `asyncio.gather` 并发跑的——没有这把锁会串。
+**二、`run()` 是同步阻塞的。** 我们的 agent 全是 async，所以适配器把每次调用交给工作线程
+（`asyncio.to_thread`），并用一把锁防止并发 agent 在同一个运行时上交错 turn。
+四角色并发（`asyncio.gather`）在没有这把锁时会串输出。要真并发得开多个 runtime 实例，
+或者像现在这样：判断类调用不走 dsh，四角色交给官方 subagent 的独立子会话。
 
-**三、`run()` 返回自由文本，没有 schema 参数。** 不像 Messages API 有结构化输出，
-dsh 只给 `final_response` 字符串。所以结构化输出靠提示词要求 + 本地解析校验：
-先找 ```` ```json ```` 代码块，找不到就取最外层花括号，然后用 Pydantic 校验。
-**解析失败直接抛错**，不会把 `None` 悄悄传给下游——那会让空结论看起来像"没发现问题"。
+**三、`run()` 返回自由文本，没有 schema 参数。** 不像 Messages API 有结构化输出，dsh 只给
+`final_response` 字符串，所以结构化输出靠提示词要求加本地解析：先找以三个反引号起头的 `json` 围栏代码块，
+找不到就取最外层花括号，再交给 Pydantic 校验。解析失败直接抛错，不把 `None` 悄悄传给下游。
+空结论看起来像「没发现问题」，是这类系统最难查的错。
 
-## 我们的接入方式
+## 版本固定，不用范围
 
-`backend/src/bridgeflow/llm/providers/dsh.py` 实现了现有的 `LLMProvider` 协议：
+`pyproject` 里写死 `deepseek-harness-sdk==0.1.2rc1`。理由很直接：所有已发布版本都是预发布版，
+而且项目自己说明会有破坏性变更。写成 `>=` 意味着某天 `pip install` 会悄悄换掉运行时行为，
+这在 hackathon 期间不可接受。升级要作为一次显式的改动去做。
 
-```
-LLM_PROVIDER=dsh  →  DshProvider  →  DeepSeekHarness 子进程  →  DeepSeek
-```
+## 遗留的 provider 接法（不要再往这个方向加东西）
 
-这样接的好处是**Agent 代码一行没改**。四个 Agent 仍然只认 `self.llm.complete(...)`，
-换运行时只是换一个环境变量。同样可以按 Agent 指定：
-
-```bash
-LLM_PROVIDER=dsh                  # 全局用 dsh
-LLM_PROVIDER_SANITIZER=deepseek   # 清洗这类脏活用便宜的直连
-```
-
-### 配置项
+`backend/src/bridgeflow/llm/providers/dsh.py` 把 dsh 实现成一个 `LLMProvider`。
+配置项长这样：
 
 ```bash
 LLM_PROVIDER=dsh
@@ -93,54 +86,38 @@ DSH_MODEL=deepseek-v4-flash
 DEEPSEEK_API_KEY=...      # 覆盖子进程环境里的 DEEPSEEK_API_KEY
 ```
 
-安装：`pip install -e ".[dsh]"`（已固定为 `==0.1.2rc1`，见下）。
+安装：`pip install -e ".[dsh]"`。
 
-### 版本固定，不用范围
+这么接的唯一好处是 agent 代码一行没改，换运行时只是换一个环境变量，连按 agent 覆盖都可以
+（`LLM_PROVIDER_SANITIZER=deepseek`）。但它也正是 [`13` 第三节记录的错误一](13-golden-standard.md)：
+把基座降级成补全后端，工具执行、会话、子代理、策略层全部闲置。
+现状是 resolver 的纯判断类调用已经撤回到 `deepseek` 直连（#25、PR #34），
+默认入口走原生工具与官方子代理（`13` 第九节）。这个文件留着是为了迁移时能对照，
+不是因为它是范例。
 
-pyproject 里写死 `deepseek-harness-sdk==0.1.2rc1`。理由：**所有已发布版本都是预发布版，
-且项目明示会有破坏性变更**。用 `>=` 范围意味着某天 `pip install` 会悄悄换掉运行时行为——
-在 hackathon 期间这是不可接受的。升级要作为一次明确的改动去做。
+## 两个曾被误归因的缺陷
 
-## 当前接入深度，以及下一步
+整条 pipeline 在真实 provider 上跑得很慢，当时被归因为「与 dsh 无关」，那个归因是错的。
+两条相关记录：[#24](https://github.com/EricWang1358/BridgeFlow-AI/issues/24)
+（拿字符串相似度做跨部门对齐，产出 0 条映射）与
+[#25](https://github.com/EricWang1358/BridgeFlow-AI/issues/25)（一次裁决慢到四个数量级）。
+两者的根因后来都归到「dsh 位置放错」，见 [`13` 第三节](13-golden-standard.md) 与
+[`00`](00-status.md) 的耗时记录。
 
-现在做到的是**第一层：把 dsh 当模型调用后端**。这是最小的正确一步，Agent 代码零改动，
-今天就能跑。但它**没有用到 dsh 真正的价值**——工具执行、会话持久化、子 agent、上下文压缩
-这些能力现在都闲置着，我们只用了它的一次 `run()`。
+## 保留退路
 
-**第二层才是真正意义上的"基座"**：把四个 Agent 做成 dsh 的 profile / 插件，让 dsh 拥有
-工具执行与会话生命周期，我们的 Python 只提供数据处理工具（pandas 清洗、模糊匹配、
-dataframe 合并）。这需要先读三份文档：
+`LLM_PROVIDER=mock` 仍是默认值，整条 pipeline 不依赖 dsh 也能跑完并通过离线回归。
+mock 的输出是占位文本，所以它是回退方案，不是演示对象，也不是判断质量的证据。
+如果预发布的 dsh 在关键一天出问题，切回 mock 或直连 API 是改一个环境变量的事。
 
-- `docs/AGENTS.md` — agent 定义方式
-- `docs/agent-lifecycle.md` — 生命周期
-- `docs/capability-seams.md` — 扩展点在哪
-- `docs/cordis-primer.md` — 底层的 Cordis 组合模型
+## 接入 dsh 之前要读的官方文档
 
-以及 `dsh plugin --profile sdk add file:...` 的本地插件打包方式。
+四份（`13` 第七节记了读完之后的结论，其中四条推翻了我们原来的假设）：
 
-### 实测结果
+- `docs/AGENTS.md`：agent 怎么定义
+- `docs/agent-lifecycle.md`：生命周期与时序，工具注册的时机就藏在这里
+- `docs/capability-seams.md`：扩展点在哪
+- `docs/cordis-primer.md`：底层的 Cordis 组合模型
 
-已用真实凭据跑通，`profile=sdk-minimal`、`model=deepseek-v4-flash`：
-
-| 项 | 实测值 |
-| --- | --- |
-| 运行时启动 | 3.6s |
-| 单次简单 turn | 0.7s，`finish_reason='completed'` |
-| 结构化输出 | 一次解析成功，无需重试 |
-| 整条 pipeline | 见 [`00-status.md`](00-status.md) §4 |
-
-握手、profile 引导、结构化输出路径都通了。**dsh 这条路可用。**
-
-但整条 pipeline 的耗时暴露了两个缺陷（当时归因为「与 dsh 无关」，**那个归因是错的**——见 issue #25），见
-[#24](https://github.com/EricWang1358/BridgeFlow-AI/issues/24)（语义对齐产出 0 条映射）和
-[#25](https://github.com/EricWang1358/BridgeFlow-AI/issues/25)（性能差四个数量级）。
-
-一个 dsh 相关的注意点：`DshProvider` 用一把锁把调用串行化了，因为单个 dsh runtime
-不能交错 turn。`MultiRoleEvaluatorAgent` 四个角色的 `asyncio.gather` 因此退化为串行。
-要恢复并发需要多个 runtime 实例，或者等 #13 把这四次调用变便宜。
-
-### 保留退路
-
-`LLM_PROVIDER=mock` 仍然是默认值，整条 pipeline 不依赖 dsh 也能完整跑通并通过测试。
-`Orchestrator` 里没有任何框架痕迹。如果 dsh 的预发布状态在 hackathon 中途出问题，
-切回 mock 或直连 API 是改一个环境变量的事。
+本地插件的打包与装载方式（不 fork dsh）：`dsh plugin --profile sdk-minimal add file:<绝对路径>`，
+细节与 `--patch` 路径的未确认差异见 `13` §7.8。

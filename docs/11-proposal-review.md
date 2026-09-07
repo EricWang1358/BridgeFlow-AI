@@ -18,7 +18,8 @@
 核对源码后确认：官方有 Python SDK（`deepseek-harness-sdk`），把打包的 `dsh` CLI 拉起为
 **子进程**，走 stdio 上的 JSON-RPC。**没有 HTTP，也不需要。**
 
-实测（`profile=sdk-minimal`, `model=deepseek-v4-flash`）：运行时启动 3.6s，单次 turn 0.7s。
+实测配置是 `profile=sdk-minimal`、`model=deepseek-v4-flash`；启动与单次 turn 的耗时记在
+[`00`](00-status.md) 的「dsh 事实」里，这里不抄一份会漂移的副本。
 
 改法：把 "driving the Python backend over HTTP" 改成 **"driving the bundled `dsh` runtime
 as a subprocess over JSON-RPC (stdio)"**。评委如果翻 `docs/06` 会看到矛盾。
@@ -81,9 +82,9 @@ declared, not inferred"**，并把"拿到字段字典"列为 Week 2 的**前置�
 
 > "scaffold already runs the pipeline end-to-end on mock data — timeline de-risked"
 
-前半句是真的。但同一条 pipeline 在真实 provider 上慢得多——数字见 [`00-status.md`](00-status.md) §4。
+前半句是真的。但同一条 pipeline 在真实 provider 上慢得多，耗时记录见 [`00`](00-status.md) 的「耗时与 token」。
 
-PRD 目标是 20 万行 / 10 分钟。当前规模差着好几个数量级（见 [`00-status.md`](00-status.md)）。
+PRD 的目标是 20 万行 / 10 分钟，当前规模差着好几个数量级（同一处记录）。
 
 骨架跑通 ≠ 时间线去风险。建议改成 **"scaffold runs end-to-end, which de-risks
 integration; throughput is a known open item (numbers in `00-status.md`) and is addressed
@@ -97,8 +98,8 @@ Week 2 要做 tool 化的理由。
 | Dev（2 人 × 15 天） | 30 | 30（10+10+10） | **0** |
 | PM（2 人 × 15 天） | 30 | 21（8+5+8） | 9 |
 
-**开发侧零缓冲**，而已知风险至少三个：dsh 全部版本均为预发布且明示会有破坏性变更、
-627 秒的吞吐问题、OA 字段字典到货时间不受我们控制。
+开发侧零缓冲，而已知风险至少三个：dsh 全部版本均为预发布且明示会有破坏性变更；627 秒的吞吐问题
+（该归因后来被 #25 推翻，见 [`00`](00-status.md)）；OA 字段字典的到货时间不受我们控制。
 
 PM 侧有 9 人天余量。建议要么把部分 PM 天转成开发支持，要么把 Week 3 的 XLSX export
 （不计分）砍掉换出缓冲。
