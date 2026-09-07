@@ -1,0 +1,36 @@
+# systemd unit for the Lightsail instance (see docs/22-lightsail-deploy.md).
+# Install as /etc/systemd/system/bridgeflow.service with the real domain
+# substituted for <domain> in --trusted-host, then:
+#
+#   sudo systemctl daemon-reload && sudo systemctl enable --now bridgeflow
+#
+# The unit runs run.sh unchanged: it sources env.sh (repo root, gitignored,
+# chmod 600) so DSH_*/DEEPSEEK_API_KEY come from the launching shell only —
+# never from this file and never from .env (that boundary is why DSH_* vars
+# appear nowhere here). start_web.py supervises both children and its SIGTERM
+# handler stops them cleanly, so Restart=on-failure covers the whole chain.
+#
+# --host 127.0.0.1 keeps dsh web loopback-only; Caddy is the only public
+# listener. The backend uvicorn is hardcoded to 127.0.0.1:8000.
+#
+# --trusted-host admits the public authority into dsh web's /api
+# browser-trust fence. Which exact form the fence matches (host vs
+# host:port) is unverified — the flag is repeatable, so if the first form
+# fails, pass both: --trusted-host <domain> --trusted-host <domain>:443
+
+[Unit]
+Description=BridgeFlow native DSH Web + domain service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Hackathon2026/BridgeFlow-AI
+ExecStart=/home/ubuntu/Hackathon2026/BridgeFlow-AI/run.sh --host 127.0.0.1 --port 3080 --trusted-host <domain>
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

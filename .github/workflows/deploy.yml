@@ -1,0 +1,101 @@
+# The single CI file for this repo (history: fea1fdd removed the old three-file
+# CI with the note that it should come back as one file — this is that file).
+#
+# test -> deploy: merges to main are tested offline (conftest isolates the
+# provider), then deployed to the Lightsail instance over SSH.
+# See docs/22-lightsail-deploy.md for the instance-side runbook.
+#
+# Required GitHub secrets: SSH_HOST, SSH_USER, SSH_PRIVATE_KEY.
+# Required GitHub variable: PUBLIC_DOMAIN.
+# DEEPSEEK_API_KEY never enters GitHub — it lives only in env.sh on the
+# instance (see CLAUDE.md: bootstrap variables come from the launching shell).
+
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install backend
+        run: |
+          uv venv .venv
+          uv pip install -e "backend[dsh,dev]" --python .venv/bin/python
+
+      - name: Ruff
+        run: .venv/bin/ruff check backend/src backend/tests scripts/start_web.py
+
+      - name: Pytest (offline; conftest isolates the provider)
+        working-directory: backend
+        run: ../.venv/bin/pytest -q
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # package.json has no packageManager pin, so pin the major here.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "9"
+
+      - name: Plugins typecheck + build + unit tests
+        run: |
+          pnpm --dir plugins install --frozen-lockfile
+          pnpm --dir plugins run typecheck
+          pnpm --dir plugins run build
+          pnpm --dir plugins test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      # Copy deploy.sh out of the checkout before running it: the script
+      # git-resets the working tree it would otherwise be executing from
+      # (bash reads scripts lazily), and the /tmp copy guarantees the script
+      # version matches the commit being deployed.
+      - name: Upload deploy script
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "deploy/deploy.sh"
+          target: "/tmp/bf-deploy"
+
+      - name: Run deploy on instance
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: bash /tmp/bf-deploy/deploy/deploy.sh
+
+      # 401 proves Caddy + TLS + basic auth are all answering, without
+      # putting the basic-auth password into GitHub.
+      - name: Public liveness check
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" "https://${{ vars.PUBLIC_DOMAIN }}/" || true)
+          if [ "$code" != "401" ]; then
+            echo "unexpected status $code (expected 401 from the basic-auth challenge)"
+            exit 1
+          fi

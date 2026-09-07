@@ -67,3 +67,5 @@
 - [19 — 跨操作链路审计、已修缺陷与恢复缺口](19-chain-audit.md)
 
 - [报价任务书](20-quotation-brief.md) · [报价声明与文本证据设计](21-quotation-design.md)
+
+- [22 — Lightsail 部署 runbook](22-lightsail-deploy.md)：一次性实例引导、GitHub Actions 流水线、Caddy 反代与回滚
