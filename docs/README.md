@@ -54,6 +54,7 @@
 | [`19-chain-audit.md`](19-chain-audit.md) | 权威 | 中 | 开发 | 跨操作链路的身份归属、已修故障、尚未收尾的 P0/P1 |
 | [`20-quotation-brief.md`](20-quotation-brief.md) | 权威 | 中 | 接手报价的人 | 报价功能任务书：并列的第二条路径，分三步，第一步现在可做 |
 | [`21-quotation-design.md`](21-quotation-design.md) | 参考 | 中 | 接手报价的人 | 报价声明与自由文本证据边界，设计先于实现写定 |
+| [`22-lightsail-deploy.md`](22-lightsail-deploy.md) | 参考 | 中 | 开发、运维 | Lightsail 部署 runbook：实例引导、GitHub Actions 流水线、Caddy 反代与回滚 |
 
 两份 README 是同一套图文操作指引的中英版本（顶部可切换）：[`../README.md`](../README.md)（English）
 与 [`../README.zh.md`](../README.zh.md)（简体中文）。截图是 `../docs/images/` 里的稳定副本，
@@ -67,7 +68,7 @@
 ## 语言规则
 
 对外可读或在台上讲的用英文：`01` `02` `03` `04` `10` `12`，以及根 README 与插件 README。
-内部工程与决策记录用中文：`00` `06`–`09` `11` `13`–`21`，以及 `CLAUDE.md`、`HANDOFF.md`。
+内部工程与决策记录用中文：`00` `06`–`09` `11` `13`–`22`，以及 `CLAUDE.md`、`HANDOFF.md`。
 代码、注释、commit message、issue 标题一律英文。新增文档先定读者，再定语言。
 
 ## 写作约定
