@@ -19,8 +19,8 @@
 
 **规则：仓库、虚拟环境、`DSH_HOME`、`node_modules` 全部放在 `~` 下，一个都不放 `/mnt`。**
 
-实测差距：dsh 运行时启动在 WSL 文件系统内 **0.5s**，在 Windows 上 **3.6s** ——
-同一个运行时，七倍。
+差距的量级值得单独记一次：同一个运行时，放在 WSL 文件系统内与放在 `/mnt` 下，启动时间差 6 倍左右。
+数字与复现方式以 [`docs/00`](00-status.md) 的「dsh 事实」为准，这里不再抄一遍。
 
 ---
 
@@ -172,7 +172,8 @@ python -c "import deepseek_harness, pandas, fastapi; print('imports ok')"
 ruff check src tests && pytest -q
 ```
 
-期望：`All checks passed!` 与 19 passed。
+期望：import 成功、`All checks passed!`、pytest 全绿。测试数量只在
+[`docs/00`](00-status.md) 记一次，这里不抄。
 
 ---
 
@@ -408,31 +409,33 @@ New-NetFirewallRule -DisplayName "BridgeFlow 8000" -Direction Inbound -LocalPort
 
 ---
 
-## 11 保证 AWS 部署不受影响
+## 11 不要把本机环境的痕迹固化进仓库
 
-WSL 是开发环境，它的痕迹不能固化进仓库。以下已处理好，**改代码时请维持**。
+WSL 只是开发环境。部署目标还没定（Docker、compose、CI 都在一次范围收敛里删掉了，见
+[`13` 第三节的错误四](13-golden-standard.md)），所以下面这些规矩不是为了 AWS，是为了换台机器还能跑。
+**改代码时请维持**。
 
 ### 11.1 地址与端口是配置，不是常量
 
 ```python
 # backend/src/bridgeflow/config.py
-api_host: str = "127.0.0.1"                    # 默认不对外暴露
+api_host: str = "127.0.0.1"       # 默认不对外暴露
 api_port: int = 8000
-cors_origins: str = "http://localhost:3000"    # 逗号分隔
+cors_origins: str = ""            # 逗号分隔，默认不放行任何跨域来源
 ```
 
-CORS 源原先硬编码为 `http://localhost:3000` —— **部署到 AWS 会直接坏**，现已改为配置项。
+CORS 源曾经硬编码为 `http://localhost:3000`：换一台机器或换个前端地址就直接坏，
+所以它是配置项，而且默认值是空——没有显式声明就不放行。
 
-生产环境用环境变量覆盖，不改代码：
+要对外服务时用环境变量覆盖，不改代码：
 
 ```bash
 API_HOST=0.0.0.0
 CORS_ORIGINS=https://your-domain.example
 ```
 
-**默认值保持 `127.0.0.1`**：默认不暴露，要暴露必须显式声明。
-容器里绑 `0.0.0.0` 是对的（`backend/Dockerfile` 就是这样），但那是**部署层的决定**，
-不该写死进应用源码。
+默认值保持 `127.0.0.1`：默认不暴露，要暴露必须有人显式说。绑 `0.0.0.0` 是部署层的决定
+（容器里可能确实需要），不该写死进应用源码。
 
 ### 11.2 `.gitignore` 覆盖的东西
 
@@ -464,9 +467,9 @@ cd ~/Hackathon2026/BridgeFlow-AI
 git ls-files | xargs grep -ln "/home/\|/mnt/\|[A-Z]:\\\\" 2>/dev/null
 ```
 
-**期望：只匹配到文档。** 若匹配到 `backend/src` 或配置文件，说明有环境特定的值被写死。
+期望是只匹配到文档。若匹配到 `backend/src` 或配置文件，说明有环境特定的值被写死了。
 
-`0.0.0.0` 单独查，因为它在部署文件里是合法的：
+`0.0.0.0` 要单独查，因为它在部署与文档语境里是合法的：
 
 ```bash
 git ls-files | xargs grep -ln "0\.0\.0\.0" 2>/dev/null

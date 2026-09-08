@@ -1,69 +1,78 @@
 # 04 — Demo plan
 
-Six minutes, one story: **"Should we take Acme's November order?"**
+Six minutes, one question: "should we take this order?"
 
-> **Audience: the judges. Written in English because it is spoken on stage.**
-> Every number in it comes from [`00-status.md`](00-status.md) — do not restate a
-> figure here that is not measured there.
+> Written in English because it is spoken on stage. Every measured figure comes from
+> [`00-status.md`](00-status.md); nothing here restates a number that is not measured there.
+> The concrete clicking sequence, prerequisites and the answer key are in
+> [`17`](17-business-mvp-acceptance.md) and the [one-stop demo](../demo-walkthrough/README.md).
 
-## What can actually run today
+## What runs today
 
-**Read this column before rehearsing.** Most beats still have no UI: the self-built
-frontend was deleted (`fea1fdd`), and of the plugins that replace it only the approval
-half is written (#30). The pipeline behind beats 2–5 runs; what is mostly missing is the
-screen. The one screen that exists is the operator console, and it is the screen that
-carries rubric item 4.
+The stage path is the native DSH Web demo with the generated 2025-11 business case: four department
+CSV files, a frozen field dictionary, four department sub-sessions, and a report that cites cells.
+The older "Acme November order" narrative runs on the legacy Python pipeline, which is off by
+default (`BRIDGEFLOW_ENABLE_LEGACY_PIPELINE`), so treat it as a terminal walkthrough rather than a
+screen you will click through.
 
-| # | Beat | Rubric | Runs today? | Fallback if it does not |
-| - | ---- | ------ | ----------- | ----------------------- |
-| 1 | Show the four real spreadsheets. Different dates, different SKU spellings, a shifted header row, a merged cell. "This is a normal Tuesday." | 1 | ✅ Excel, no code needed | — |
-| 2 | Drop all four in. Correction log streams in. | 1, 6 | 🟡 Pipeline yes, **no upload UI** | Run the sanitizer at the terminal and show `CorrectionLog` |
-| 3 | Resolver shows the entity graph. Presenter confirms a low-confidence link in one click. "It learns this once." | 4 | 🟡 **The confirmation half runs end to end.** The tool call blocks on a person, the pending decision appears at `/console`, one click releases it, and the mapping is written naming who approved it. Measured: 3.1s to the console, 4.0s to turn end. Click 拒绝 instead and nothing is written. **Still no entity graph** (#40) | Show the console and the two outcomes; describe the graph rather than showing it |
-| 4 | Master Table appears. One aligned table from four files. | 2 | 🟡 Built, **no screen**; and the join key is guessed (#44) | Print the table; do not claim the join is safe |
-| 5 | Four role panels. Finance: margin negative. Procurement: Alu-6061 +18%. Production: Line 2 at 94%. Marketing: Acme is Tier C. **The tension is the punchline.** | 3, 6 | 🟡 Margin and the price change are computed by rule and cite their cells (#13, #65). **Still missing: line utilisation needs a declared capacity ceiling, and customer tiering has no rule at all.** No screen either (#40) | Show the metric tool output at the terminal; do not claim the two missing figures |
-| 6 | Quote Simulator → floor / target / stretch + 45-day terms instead of 90. | 4 | ❌ Price bands are asserted by the model, not computed (#7) | Cut the beat rather than assert a number we cannot derive |
-| 7 | Close on the HMW slide. | 1 | ✅ | — |
+| # | Beat | Rubric | Runs today | If it does not |
+| - | ---- | ------ | ---------- | -------------- |
+| 1 | Show the four monthly files. Different date formats, different spellings for one product, a shifted header, a merged cell. "This is a normal Tuesday." | 1 | yes, no code needed | — |
+| 2 | Import all four. Corrections, quarantine and mapping questions come back per batch; the batch stays immutable, so re-running does not overwrite last month. | 1, 6 | yes, native panel | name the frozen dictionary on screen if the batch returns `needs_configuration` |
+| 3 | Start the review from the panel. Four department sub-sessions run in parallel; one of them is asked to confirm a low-confidence relation, and a person answers. | 4 | yes. The refusal half is the interesting half: nothing is written, and the reviewer's reason comes back into the model's own narration | if the approval panel is not visible, show the native audit events instead |
+| 4 | One aligned master table from four files, with the labels that never reached the entity graph listed rather than hidden. | 2 | yes, as an artifact in the right-hand panel | — |
+| 5 | Four department views: load against declared available hours, spend against budget at the same quantity, project margin, weighted payment terms, the order-vs-output gap. Tension between departments is the punchline. | 3, 6 | mostly. Every figure shown is computed by rule from declared columns and cites its cells | do not claim a customer tier, a price band, a credit decision or an executed action; none of them exist |
+| 6 | Open the quotation workspace: what a quote sheet would contain, which inputs are missing, and who owes each one. Numbers are computed from declared arithmetic on a synthetic case. | 4 | only as a declaration preview | do not present it as an issued quote; contract parsing and sending do not exist yet |
+| 7 | Close on the HMW slide. | 1 | yes | — |
+| 8 | Show an attack being stopped: a poisoned cell tries to instruct the agent, the host guard refuses at dispatch, and the attempt is in the audit trail. | 5, 6 | yes: `plugins/src/guards/untrusted-input.ts` is wired in `plugins/src/index.ts`, and the deny/allow cases are shared with the Python side | say the guard is deliberately narrow (it errs toward letting a real purchase order through), and that breadth comes from the adversarial eval suite |
 
-### Rehearse beat 3 like this
+The issue numbers behind the caveats above, in case a judge asks where a claim is tracked:
+[#7](https://github.com/EricWang1358/BridgeFlow-AI/issues/7) price bands must come from real cost
+arithmetic, [#13](https://github.com/EricWang1358/BridgeFlow-AI/issues/13) the evaluator consumes
+metrics instead of raw rows, [#25](https://github.com/EricWang1358/BridgeFlow-AI/issues/25) the
+corrected attribution of the slow runs,
+[#44](https://github.com/EricWang1358/BridgeFlow-AI/issues/44) the join key is no longer guessed
+(PR #60), [#46](https://github.com/EricWang1358/BridgeFlow-AI/issues/46) and
+[#88](https://github.com/EricWang1358/BridgeFlow-AI/issues/88) the field-mapping wizard and quarantine
+disposal, which do not exist yet and therefore are not on stage.
 
-Have the console open on a second screen *before* the turn starts. The point lands only
-if the judges watch the agent stop and wait. Say the sentence out loud while it is
-waiting: **"nothing has been written yet, and if I walk away now nothing will be."** Then
-click 拒绝 first and re-run to approve — the refusal is the more interesting half, and it
-is the half no other team will show.
+Beat 8 is the beat most teams will not have. A working pipeline is table stakes; an attack being
+refused, in a product whose input is four spreadsheets maintained by four different people, is a
+specific and plausible threat you can demonstrate in 30 seconds.
 
-**As of 2026-09-06 the honest demo is beats 1, 2, 3 (confirmation half), 7 plus a
-terminal walkthrough.**
-Beats 3–6 need the week-1 and week-2 work. This table is the acceptance criterion for
-#41 — when every row reads ✅, the demo is real.
+### How to rehearse beat 3
 
-### The beat that is not in the script yet
+Have the second screen ready before the turn starts. The point lands only if the audience watches
+the agent stop and wait. Say it out loud while it is waiting: "nothing has been written yet, and if
+I walk away now, nothing will be." Then refuse first and re-run to approve. A refusal that carries
+the reviewer's reason back into the model's narration is the part nobody else shows.
 
-Once #26 lands, add an eighth: **a poisoned cell tries to give the agent an instruction,
-the guard refuses it, and the attempt is in the audit log.** `docs/09` argues this is the
-cheapest move from zero to best-in-room, because most teams will demo a working pipeline
-and none will demo an attack being stopped.
+## Two things to say unprompted
 
-## Two things to say out loud, unprompted
+Judges will not infer either of these from watching ([`09`](09-rubric-assessment.md) argues the case):
 
-From [`09-rubric-assessment.md`](09-rubric-assessment.md) — judges will not infer either:
-
-1. **The fixed pipeline is a deliberate choice, not a missing capability.** Financial
-   figures must be auditable, replayable and attributable; an approver cannot sign a
-   number that two runs would derive differently. dsh's own `workflow` package — which
-   lets the *model* write the orchestration script — is exactly what we declined, and it
-   describes itself as "containment, not a security boundary" (`13` §7.4).
-2. **Every conclusion is bound to evidence.** `Finding` rejects an evidence-free
-   conclusion at the schema layer — it is not downgraded, it is refused. That is the most
-   direct answer to rubric 6, so say it rather than hoping someone notices.
+1. The fixed pipeline is a choice, not a missing capability. Financial figures have to be auditable,
+   replayable and attributable; an approver cannot sign a number that two runs derive differently.
+   The framework's own `workflow` package lets the model write the orchestration script and
+   describes itself as "containment, not a security boundary" ([`13` §7.4](13-golden-standard.md)).
+   Declining it is the point.
+2. Every conclusion is bound to evidence. `Finding` rejects an evidence-free claim at the schema
+   layer: refused, not downgraded.
 
 ## Demo safety rules
 
-- **Rehearse on the real provider, not on mock.** Mock returns
-  `mock-justification-<hash>`: it proves the code does not crash and proves nothing else.
-  Keep mock as the offline fallback if the network fails on stage, and say so if you use it.
-- Sample files in `data/samples/` are committed and are the ones used on stage.
-- Every number shown must be traceable to a row — a judge will ask "where did 18% come
-  from?" **Today most of them are not.** That is what beat 5's ❌ means.
-- Budget for the live run: the suite bills a real API and takes minutes, not seconds.
-  See [`00-status.md`](00-status.md) §4.
+- Rehearse on the real provider, not on mock. Mock returns placeholder text such as
+  `mock-justification-<hash>`: it proves the code does not crash. If the network fails on stage and
+  you fall back to mock, say so out loud.
+- Import and rule computation cost nothing. Sending the analysis request in the native conversation
+  calls the configured model, so budget for real charges and minutes rather than seconds; the
+  measured durations and token counts are in [`00`](00-status.md).
+- Use the case dictionary (`data/business_demo/dictionary.yaml`), or start with `--demo`. With the
+  default dictionary the import succeeds and the review refuses, and the failure looks like a bug.
+- Every number shown must trace to a cell. A judge will ask where a percentage came from; expand
+  "explanation and raw source" and show the file, row and column.
+- Do not present the sample as a customer's books. It is generated, labelled synthetic, and comes
+  with an independent answer key that must never be fed to the model.
+- Three browser smokes are currently red on the development machine for reasons unrelated to the
+  product ([#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97)). Rehearse on a real
+  `DSH_HOME`, and do not use a red smoke as evidence that the demo is broken.
