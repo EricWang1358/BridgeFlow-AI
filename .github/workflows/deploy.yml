@@ -36,7 +36,9 @@ jobs:
 
       - name: Install backend
         run: |
-          uv venv .venv
+          # --clear: newer uv refuses to create a venv where one already
+          # exists, and setup-uv leaves a .venv behind on the runner.
+          uv venv .venv --clear
           uv pip install -e "backend[dsh,dev]" --python .venv/bin/python
 
       - name: Ruff
