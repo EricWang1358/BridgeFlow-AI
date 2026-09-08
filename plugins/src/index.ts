@@ -12,6 +12,7 @@ import { profileBatch } from './tools/profile-batch.ts'
 import { lookupFieldDictionary } from './tools/lookup-field-dictionary.ts'
 import { batchSummary } from './tools/batch-summary.ts'
 import { ApprovalReceipts } from './approval/receipts.ts'
+import { PendingDetails } from './approval/detail.ts'
 import { mountWeb } from './web.ts'
 import { ApprovalNotes } from './approval/notes.ts'
 import { mountReview, ReviewPolicy } from './tools/review-batch.ts'
@@ -51,6 +52,7 @@ export function apply(ctx: Context, config: Config): void {
   ctx.tools.register(lookupFieldDictionary(backend))
   const receipts = new ApprovalReceipts()
   const notes = new ApprovalNotes()
+  const details = new PendingDetails()
   const reviews = new ReviewPolicy()
   mountReview(ctx, backend, reviews)
   ctx.tools.register(batchSummary(backend))
@@ -64,9 +66,9 @@ export function apply(ctx: Context, config: Config): void {
       ? undefined : 'Department reviewers may only submit their structured findings'
     return allowed.has(exec.name) ? undefined : `Deployment policy does not authorize ${exec.name}`
   })
-  mountWeb(ctx, backend, notes, config.decisionTimeoutMs)
+  mountWeb(ctx, backend, notes, config.decisionTimeoutMs, details)
 
   ctx.plugin(untrustedInput)
   ctx.plugin(approval, { ...backend, decisionTimeoutMs: config.decisionTimeoutMs,
-    mode: config.approvalMode, receipts, notes })
+    mode: config.approvalMode, receipts, notes, details })
 }

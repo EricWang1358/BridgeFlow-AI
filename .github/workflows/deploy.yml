@@ -88,7 +88,9 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: bash /tmp/bf-deploy/deploy/deploy.sh
+          # Pass the exact tested commit: deploy.sh defaults to origin/main,
+          # which could have moved on while the test job ran.
+          script: bash /tmp/bf-deploy/deploy/deploy.sh ${{ github.sha }}
 
       # 401 proves Caddy + TLS + basic auth are all answering, without
       # putting the basic-auth password into GitHub.

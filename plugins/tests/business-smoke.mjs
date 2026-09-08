@@ -1,4 +1,5 @@
 import { coldReload } from './cold-reload.mjs'
+import { assertDefaultEnglish, switchLanguage } from './locale.mjs'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
@@ -66,6 +67,9 @@ try {
   page.on('console', message => { if (message.type() === 'error') logs += '\nCONSOLE: ' + message.text() })
   page.setDefaultTimeout(live ? 240000 : 30000)
   await page.goto(match[1])
+  // #110: a new user on a zh-CN browser defaults to English; switch explicitly.
+  await assertDefaultEnglish(page)
+  await switchLanguage(page, '中文')
   await page.getByRole('button', { name: '会话与设置', exact: true }).click()
   await page.getByRole('button', { name: '导入与数据', exact: true }).click({ timeout: 30_000 })
   await page.locator('dialog[open] input[name=period]').fill('2025-11')
@@ -224,12 +228,16 @@ try {
   const enPage = await english.newPage()
   enPage.on('pageerror', e => errors.push(e.message))
   await enPage.goto(`http://127.0.0.1:${webPort}/#bridgeflow?parent=${report.parent_session_id}`)
+  // #110: the saved zh preference outranks this context's en-US browser language.
+  await switchLanguage(enPage, 'English')
   await enPage.getByRole('tab', { name: 'Business state', exact: true }).click()
   await enPage.getByRole('main', { name: 'Business state' }).getByRole('region', { name: 'Four-department review report' }).waitFor()
   await enPage.screenshot({ path: `${scratch}/business-state-en.png`, fullPage: true })
   await enPage.evaluate(({ parent, child }) => { location.hash = `bridgeflow?parent=${parent}&child=${child}` }, { parent: report.parent_session_id, child: report.roles[0].session_id })
   await enPage.getByText('One-shot subagent record', { exact: true }).waitFor()
   await english.close()
+  // The preference is shared and durable; hand Chinese back to the main flow.
+  await switchLanguage(page, '中文')
   if (!fault) {
     const { auditChain } = await import('./chain-regression.mjs')
     await auditChain(page, root, scratch, report)

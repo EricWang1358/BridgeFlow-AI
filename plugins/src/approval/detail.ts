@@ -87,6 +87,16 @@ export class PendingDetails {
     return detail
   }
 
+  /**
+   * Read one call's summary without consuming it, for the web approval card (#110).
+   * The card polls while the decision is pending; `take` would make the first render
+   * the only one that shows anything.
+   */
+  peek(callId: string | undefined): ApprovalDetail[] {
+    if (!callId) return []
+    return this.#byCallId.get(callId) ?? []
+  }
+
   /** Drop everything held for one call. */
   discard(callId: string | undefined): void {
     if (!callId) return

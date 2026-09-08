@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { navigate, openSession, sendHumanNote, useUI } from './ui.ts'
+import { formatNumber, navigate, openSession, sendHumanNote, useUI } from './ui.ts'
 import { Chip } from './workspace.tsx'
 type Source = { department: string; filename: string; sheet: string; source_row: number | null; original_column: string; column: string }
 type Check = { check_id: string; title: string; value: number; unit: string; expected_status: string; threshold: number; attention_when: string; formula: string; action: string; explanation: string; sources: Source[]; source_count: number; truncated: boolean }
@@ -27,7 +27,7 @@ export function BusinessReview({ report }: { report: Review }) {
       {[...role.checks].sort((a, b) => Number(b.expected_status === 'attention') - Number(a.expected_status === 'attention')).map(check => <section key={check.check_id} className={check.expected_status === 'attention' ? 'bf-attention' : ''}>
         <div className="bf-check">
           <span className="bf-check-title">{check.title}</span>
-          <b>{check.value.toLocaleString(language === 'zh' ? 'zh-CN' : 'en', { maximumFractionDigits: 4 })} <small>{check.unit}</small></b>
+          <b>{formatNumber(check.value, language, { maximumFractionDigits: 4 })} <small>{check.unit}</small></b>
           <Chip status={check.expected_status} />
         </div>
         <p>{t('action')}: {check.action}</p>

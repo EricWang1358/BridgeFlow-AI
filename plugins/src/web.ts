@@ -7,9 +7,10 @@ import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-workspace'
 import type { BackendConfig } from './backend.ts'
 import type { ApprovalNotes } from './approval/notes.ts'
+import type { PendingDetails } from './approval/detail.ts'
 
 /** The browser reuses DSH's cookie and Host/Origin fence; no second login/token. */
-export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNotes, decisionTimeoutMs: number): void {
+export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNotes, decisionTimeoutMs: number, details: PendingDetails): void {
   // The directory picker is disabled by enterprise policy. Provision the existing
   // launch directory through the native registry so a fresh Web can start a chat.
   ctx.inject(['connection', 'webServer', 'sessionController', 'sessions', 'storageDomain', 'workspaceRegistry'], async ctx => {
@@ -70,6 +71,16 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
             maxUploadBytes: Math.min(Number(process.env.BRIDGEFLOW_MAX_UPLOAD_BYTES) || 25 * 1024 * 1024, 25 * 1024 * 1024),
             maxRequestBytes: 26 * 1024 * 1024, noteLimit: 240, decisionTimeoutMs,
           }))
+          return
+        }
+        if (path === '/approval-detail' && req.method === 'GET') {
+          // What the approval card renders instead of the raw reason string (#110).
+          // Values are verbatim tool arguments, already capped by summarise(); the
+          // summary only exists while the decision is pending, so an empty list is
+          // the correct answer for a settled or unknown call — not an error.
+          const callId = url.searchParams.get('call_id') ?? ''
+          res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+            .end(JSON.stringify({ details: details.peek(callId) }))
           return
         }
         if (path === '/approval-notes' && (req.method === 'GET' || req.method === 'POST')) {

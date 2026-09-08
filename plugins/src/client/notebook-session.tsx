@@ -3,7 +3,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type { Notebook } from '../notebooks.ts'
-import { api, createNotebookSession, navigate, route, useUI, type Route, type Summary } from './ui.ts'
+import { api, createNotebookSession, formatDateTime, navigate, route, useUI, type Route, type Summary } from './ui.ts'
 
 function bookmark(title: string, selected: Route, batch: string, kind: NonNullable<Notebook['kind']>): Notebook {
   return { title, kind, ...(batch ? { batch } : {}), view: selected.view ?? 'state',
@@ -13,7 +13,7 @@ function bookmark(title: string, selected: Route, batch: string, kind: NonNullab
 
 /** DSH owns sessions and its domain store owns bookmarks; drafts remain local until saved. */
 export function useNotebook(ctx: Context, selected: Route, batch: string) {
-  const { t } = useUI(), sessions = ctx.sessions as unknown as ISessions
+  const { t, language } = useUI(), sessions = ctx.sessions as unknown as ISessions
   const list = useSyncExternalStore<SessionListState>(fn => sessions.list.subscribe(fn), () => sessions.list.getSnapshot())
   const id = list.current
   const [revision,setRevision]=useState(0)
@@ -108,7 +108,7 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
       <p>{t('notebookHistoryHelp')}</p>
       <button disabled={busy} onClick={()=>{history.current?.close();sample()}}>{t('sampleNotebook')}</button>
       {error && <p role="alert">{error}</p>}
-      <ul className="bf-notebook-list">{list.ids.map(key=>list.byId[key]).filter(row=>row && !row.parentId && row.origin !== 'subagent' && (row.title || !row.blank)).map(row => row && <li key={row.id}><button aria-current={row.id===id ? 'page' : undefined} onClick={()=>{history.current?.close();if(row.id!==id)leave(async()=>{sessions.open(row.id as SessionId)})}}><strong>{row.title || row.displayTitle}</strong><small>{new Date(row.updatedAt).toLocaleString()}</small></button></li>)}</ul>
+      <ul className="bf-notebook-list">{list.ids.map(key=>list.byId[key]).filter(row=>row && !row.parentId && row.origin !== 'subagent' && (row.title || !row.blank)).map(row => row && <li key={row.id}><button aria-current={row.id===id ? 'page' : undefined} onClick={()=>{history.current?.close();if(row.id!==id)leave(async()=>{sessions.open(row.id as SessionId)})}}><strong>{row.title || row.displayTitle}</strong><small>{formatDateTime(row.updatedAt, language)}</small></button></li>)}</ul>
     </dialog>
   </>
   return {title,setTitle,kind,setKind:(value:NonNullable<Notebook['kind']>)=>{setKind(value);navigate({...route(),kind:value})},busy,loaded:ready,dirty,persisted:Boolean(saved),error,retry:()=>setRevision(n=>n+1),dialogs,create,exit,openHistory,sample,save:()=>void perform(save)}

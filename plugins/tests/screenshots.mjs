@@ -18,6 +18,7 @@ import { randomBytes } from 'node:crypto'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { chromium } from '@playwright/test'
+import { switchLanguage } from './locale.mjs'
 
 const root = '/home/eric/Hackathon2026/BridgeFlow-AI'
 const out = process.argv[2] ?? '/tmp/bfshot/before'
@@ -65,6 +66,9 @@ try {
   page.on('pageerror', e => logs += '\nPAGEERROR: ' + e.message)
   page.setDefaultTimeout(30000)
   await page.goto(m[1])
+  // #110: new profiles default to English even on a zh-CN browser; the captures
+  // below assert Chinese copy, so switch explicitly through the native settings.
+  await switchLanguage(page, '中文')
   await page.waitForTimeout(3000)
   await page.screenshot({ path: `${out}/01-shell.png`, fullPage: false })
   console.log('shell captured')

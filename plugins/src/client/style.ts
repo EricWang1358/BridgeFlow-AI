@@ -287,6 +287,10 @@ export const style = `
    the reviewer may leave, then the two answers with reject first. */
 .bf-decision header, .bf-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px }
 .bf-decision .bf-callout { margin: 0 0 12px }
+/* The structured decision summary: label column narrow, value column wraps. */
+.bf-approval-detail { display: grid; grid-template-columns: minmax(90px, max-content) 1fr; gap: 4px 12px; margin: 8px 0 0; font-size: 13px }
+.bf-approval-detail dt { color: var(--bf-muted) }
+.bf-approval-detail dd { margin: 0; overflow-wrap: anywhere }
 .bf-field { display: block; margin: 0 0 4px }
 .bf-field > span:first-child { display: block; font-size: 12px; color: var(--bf-muted); margin-bottom: 5px }
 .bf-field > .bf-hint { display: block; text-align: right; margin-top: 3px }

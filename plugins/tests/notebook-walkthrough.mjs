@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { switchLanguage } from './locale.mjs'
 
 /** Real native sessions and persisted navigation. No model adapter is prompted. */
 export async function notebookWalkthrough(page, scratch) {
@@ -123,4 +124,18 @@ export async function notebookWalkthrough(page, scratch) {
   await top.getByRole('button',{name:'来源',exact:true}).click()
   assert.equal(await top.getByRole('button',{name:'来源',exact:true}).getAttribute('aria-expanded'),'true')
   await page.setViewportSize({width:1440,height:1000})
+  // #110: switch to English through the native settings, then prove the choice
+  // survives a reload and that English labels still fit the narrow header.
+  await switchLanguage(page,'English')
+  await page.reload()
+  await page.getByRole('complementary',{name:'Sources',exact:true}).waitFor()
+  assert.equal(await page.getByRole('complementary',{name:'来源',exact:true}).count(),0,'Language choice must survive a reload')
+  await page.setViewportSize({width:390,height:844})
+  assert(await top.evaluate(el=>el.scrollWidth<=el.clientWidth+1),'Mobile header must not overflow with English labels')
+  const sourcesToggle=top.getByRole('button',{name:'Sources',exact:true})
+  await sourcesToggle.click()
+  assert.equal(await sourcesToggle.getAttribute('aria-expanded'),'false','Accessible names must track the active language')
+  await sourcesToggle.click()
+  await page.setViewportSize({width:1440,height:1000})
+  await switchLanguage(page,'中文')
 }

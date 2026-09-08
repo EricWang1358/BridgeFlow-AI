@@ -22,8 +22,10 @@ export const name = 'bridgeflow-approval'
 // denial; `tools` is the gate itself.
 export const inject = ['tools', 'approval']
 
-export function apply(ctx: Context, config: AnswererConfig & { mode: 'native' | 'console'; receipts: ApprovalReceipts; notes: ApprovalNotes }): void {
-  const details = new PendingDetails()
+export function apply(ctx: Context, config: AnswererConfig & { mode: 'native' | 'console'; receipts: ApprovalReceipts; notes: ApprovalNotes; details?: PendingDetails }): void {
+  // The composing plugin may hand in the instance its web routes also read, so the
+  // approval card and the console answerer look at the same summaries (#110).
+  const details = config.details ?? new PendingDetails()
   gate(ctx, details, config.receipts, config.decisionTimeoutMs, config.notes)
   if (config.mode === 'console') answerer(ctx, config, details)
 }

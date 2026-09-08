@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
-import { api, navigate, route, startReview, useUI, type Summary } from './ui.ts'
+import { api, formatDateTime, navigate, route, startReview, useUI, type Summary } from './ui.ts'
 import { ImportForm, Chip } from './workspace.tsx'
 import { Quotation } from './quotation.tsx'
 import { BusinessReview, type Review } from './review.tsx'
@@ -19,7 +19,7 @@ const viewportSubscribe = (fn: () => void) => { window.addEventListener('resize'
 const hashSubscribe = (fn: () => void) => { window.addEventListener('hashchange', fn); return () => window.removeEventListener('hashchange', fn) }
 
 function Shell({ ctx }: { ctx: Context }) {
-  const { t } = useUI(), sessions = ctx.sessions as unknown as ISessions
+  const { t, language } = useUI(), sessions = ctx.sessions as unknown as ISessions
   const session = useSyncExternalStore(fn => sessions.list.subscribe(fn), () => sessions.list.getSnapshot().current)
   const binding = session ? sessions.binding(session) : undefined
   const events = useSyncExternalStore<SessionEventWindow>(fn => binding?.eventSource.subscribe(fn) ?? (() => {}), () => binding?.eventSource.getSnapshot() ?? emptyWindow)
@@ -141,7 +141,7 @@ function Shell({ ctx }: { ctx: Context }) {
         {(error || notebook.error) && <p role="alert" className="bf-error">{error || notebook.error}{notebook.error && <button onClick={notebook.retry}>{t('refresh')}</button>}</p>}
         <section className="bf-artifacts" aria-label={t('artifacts')}><header><h3>{t('artifacts')} <span className="bf-badge">{artifactTotal + (summary?.master_rows ? 1 : 0)}</span></h3><button aria-label={t('refreshArtifacts')} onClick={() => setRevision(n => n + 1)}>↻</button></header>
           {!!summary?.master_rows && <button className="bf-artifact" data-kind="master" onClick={() => navigate({ batch: batchId, view: 'master' })}><span aria-hidden="true">▦</span><span><strong>{summary.period} · {t('master')}</strong><small>{summary.master_rows} {t('rows')}</small><Chip status={summary.status}/></span><span aria-hidden="true">↗</span></button>}
-          {artifacts.map(item => <button className="bf-artifact" data-kind="review" key={item.report_id} aria-pressed={selected.report === item.report_id} onClick={() => navigate({ batch: batchId, view: 'artifact', report: item.report_id })}><span aria-hidden="true">▤</span><span><strong>{item.period} · {t('review')}</strong><small>{new Date(item.created_at * 1000).toLocaleString()}</small><Chip status={item.status}/></span><span aria-hidden="true">↗</span></button>)}
+          {artifacts.map(item => <button className="bf-artifact" data-kind="review" key={item.report_id} aria-pressed={selected.report === item.report_id} onClick={() => navigate({ batch: batchId, view: 'artifact', report: item.report_id })}><span aria-hidden="true">▤</span><span><strong>{item.period} · {t('review')}</strong><small>{formatDateTime(item.created_at * 1000, language)}</small><Chip status={item.status}/></span><span aria-hidden="true">↗</span></button>)}
           {!artifacts.length && !summary?.master_rows && <p className="bf-hint">{t('emptyArtifacts')}</p>}
           {artifactTotal > 50 && <div className="bf-actions"><button disabled={!artifactOffset} onClick={() => setArtifactOffset(Math.max(0, artifactOffset - 50))}>{t('previous')}</button><button disabled={artifactOffset + artifacts.length >= artifactTotal} onClick={() => setArtifactOffset(artifactOffset + 50)}>{t('next')}</button></div>}
         </section>
