@@ -1,77 +1,84 @@
-# 02 — Architecture
+# 02 — Agent contracts
 
-> **参考文档。** 描述的是各 Agent 的输入输出契约，这部分仍然成立。
-> 关于 dsh 在架构里的位置，以 [`13-golden-standard.md`](13-golden-standard.md) 为准；
-> 实测数字以 [`00-status.md`](00-status.md) 为准，本文不复写数字。
+> Reference document. What is still true here is the input and output contract of each stage.
+> For where dsh sits in the architecture, read [`13`](13-golden-standard.md); for measured numbers,
+> [`00`](00-status.md). This file deliberately carries no numbers.
+>
+> The stage names below come from the original Python pipeline. The delivered entry point runs the same
+> four stages as fixed domain steps plus one native subagent per department;
+> [`17`](17-business-mvp-acceptance.md) describes that path.
 
 ## Pipeline
 
-```
+```text
 Upload (n files)
    → Sanitizer      → CleanTable[]      + CorrectionLog[]
-   → Resolver       → EntityGraph       + UnresolvedLink[]  (human-in-the-loop)
-   → Evaluator ×4   → Finding[]         (one set per role, run concurrently)
+   → Resolver       → EntityGraph       + UnresolvedLink[]   (human-in-the-loop)
+   → Evaluator ×4   → Finding[]          (one set per role, run concurrently)
    → SOP & Flow     → MasterTable + RiskReport + ApprovalCard[]
         └ (on demand) QuoteSimulator → QuoteRecommendation
 ```
 
-Every stage consumes and emits a typed Pydantic model from `bridgeflow.schemas`. No stage
-reads raw files except the Sanitizer, and no stage calls an LLM directly — they all go
-through `bridgeflow.llm.get_provider()`.
+Every stage consumes and emits a typed Pydantic model from `bridgeflow.schemas` (see
+[`03`](03-data-contracts.md)). Only the Sanitizer reads raw files.
 
-## Agent responsibilities
+### 1. Data Sanitizer
 
-### 1. Data Sanitizer Agent
-- **In:** raw CSV/XLSX, one per department per month.
-- **Out:** `CleanTable` (normalised column names, typed columns, ISO dates) plus a
-  `CorrectionLog` recording every change with a reason and confidence.
-- **Method:** rules first (dtype inference, date parsing, unit normalisation, duplicate
-  and shifted-header detection), LLM only for the residue rules cannot handle —
-  ambiguous header naming, free-text category values, obvious typos in entity names.
-- **Invariant:** never silently drops a row. Unfixable rows go to a `quarantine` table
-  surfaced in the UI.
+- **In:** raw CSV or XLSX, one per department per month.
+- **Out:** `CleanTable` (normalised column names, typed columns, ISO dates) plus a `CorrectionLog`
+  recording what changed, the rule that changed it, a confidence and a reason.
+- **Method:** rules first (dtype inference, date parsing, unit normalisation, duplicate and
+  shifted-header detection); the model only handles what rules cannot, such as ambiguous header
+  naming or free-text category values.
+- **Invariant:** never drop a row silently. Rows we cannot fix go to `quarantine`, which is shown
+  in the UI rather than quietly excluded.
 
-### 2. Semantic Resolver Agent (core)
-- **In:** all `CleanTable`s for a period.
-- **Out:** an `EntityGraph` linking `SKU ↔ RawMaterial ↔ GLAccount ↔ CapacityUnit`, plus a
-  normalised time axis (weekly procurement and daily production both roll up to month).
-- **Method:** candidates come from declarations and from what the rows put together, in
-  descending order of trust — the OA field dictionary first, then co-occurrence within a
-  row, then model adjudication of whatever is left. **Never from how identifiers are
-  spelled**: `SKU-A1` and the material it consumes share no characters (measured similarity
-  35.3), so string matching produced zero links (issue #24). Similarity is used only to
-  merge aliases of one entity, and a test locks that down. Links below the confidence
-  threshold become `UnresolvedLink`s that the user confirms once — the confirmation is
-  persisted as a mapping rule, so month 2 needs far less human input than month 1.
-- **This is the moat.** Everything else is downstream of getting these joins right.
+### 2. Semantic Resolver
 
-### 3. Multi-Role Evaluator Agent (core)
-Four role prompts over the same `EntityGraph`, run concurrently:
+- **In:** all `CleanTable`s for a period, plus the field dictionary.
+- **Out:** an `EntityGraph` linking SKU, raw material, GL account, capacity unit and customer,
+  on a normalised time axis (weekly procurement and daily production both roll up to month).
+- **Method:** candidates arrive in descending order of trust: what the field dictionary declares,
+  then what the rows put together (co-occurrence), then the model adjudicating the residue. Never
+  from how an identifier is spelled. `SKU-A1` and the aluminium it consumes share no characters;
+  measured similarity is 35.3, and string matching produced zero links (issue #24). Similarity is
+  used only to merge aliases of one entity, and a test locks that down.
+- Links below the confidence threshold become unresolved and a person confirms them once. That
+  confirmation is stored as a mapping rule, so month 2 needs less human input than month 1.
+  This is the part worth the most: everything downstream depends on these joins being right.
+
+### 3. Multi-Role Evaluator
+
+Four role views over the same graph, run concurrently:
 
 | Role | Question it answers | Example finding |
 | --- | --- | --- |
-| Production | Order trend, capacity utilisation, headroom | "Line 2 at 94% utilisation; Nov orders exceed capacity by 12%" |
-| Finance | Loss-making projects, AR ageing, bad-debt risk | "Project X gross margin −4% after material rise; Acme AR at 92 days" |
-| Procurement | Material price trend, purchase cost drift | "Alu-6061 +18% QoQ; current quotes still priced at Q1 cost" |
-| Marketing | Customer tiering under capacity constraints | "Tier-C customer consuming 30% of Line 2 at lowest margin" |
+| Production | order trend, capacity utilisation, headroom | "Line 2 at 94% utilisation; November orders exceed capacity by 12%" |
+| Finance | loss-making projects, AR ageing, bad debt | "Project X gross margin −4% after material rise; Acme AR at 92 days" |
+| Procurement | material price trend, purchase cost drift | "Alu-6061 +18% quarter on quarter; current quotes still priced at Q1 cost" |
+| Marketing | customer tiering under a capacity constraint | "Tier-C customer consuming 30% of Line 2 at the lowest margin" |
 
-Each emits `Finding{role, severity, claim, evidence[], suggested_action}`. Evidence must
-cite concrete rows from the Master Table — a finding with no evidence is dropped. Findings
-that conflict across roles are surfaced as a *tension*, not resolved automatically.
+Each emits `Finding{role, severity, claim, evidence[], suggested_action}`. Evidence must cite
+specific cells, and a finding with no evidence is refused at the schema layer, not shown with a
+caveat. When two roles disagree, the disagreement is surfaced as a `Tension`; the system does not
+reconcile it.
 
 ### 4. SOP & Flow Engine
-- Builds the month/quarter/year `MasterTable` (the single aligned wide table).
-- Renders the risk report and generates `ApprovalCard`s — a discrete decision with owner,
-  deadline and the findings that justify it.
 
-### ✨ Dynamic Quote Simulator (sub-feature)
-Given an enquiry (customer, SKU, quantity, requested delivery), simulates:
-`material cost curve × capacity availability × customer AR history` and returns a
-recommended price band, payment terms, and the margin at each point of the band.
+Builds the Master Table (the one aligned wide table), renders the risk report and raises approval
+cards: a discrete decision with an owner, a deadline and the findings that justify it.
+
+### 5. Quote Simulator (sub-feature)
+
+Given an enquiry (customer, SKU, quantity, requested delivery), it simulates material cost curve,
+capacity availability and customer AR history, and returns a price band, payment terms and the
+margin at each point of the band. The floor has to come from arithmetic, not from the model
+asserting a number; that is issue #7 and the reason the current quotation path is declarative
+([docs/20](20-quotation-brief.md)).
 
 ## LLM provider layer
 
-`bridgeflow/llm/` defines one interface:
+`bridgeflow/llm/` defines one protocol:
 
 ```python
 class LLMProvider(Protocol):
@@ -79,20 +86,18 @@ class LLMProvider(Protocol):
                        schema: type[BaseModel] | None = None) -> Response: ...
 ```
 
-Adapters live in `llm/providers/`: `mock` (deterministic, default), plus stubs for
-`hermes`, `deepseek`, `openclaw` and `anthropic`. Selected by the `LLM_PROVIDER` env var,
-and overridable **per agent** (`LLM_PROVIDER_SANITIZER=deepseek`) so we can run a cheap
-model for cleaning and a strong one for evaluation.
+Adapters live in `llm/providers/`: `mock` (deterministic, the default for offline tests) plus
+`deepseek`, `anthropic`, `openai_compatible`, `hermes`, `openclaw` and `dsh`. A provider is chosen
+by `LLM_PROVIDER` and can be overridden per agent (`LLM_PROVIDER_SANITIZER=deepseek`), which is how
+you run a cheap model for cleaning and a strong one for judgement.
 
-> **Open question:** the exact SDK/endpoint for `hermes`, `deepseek-harness` and `openclaw`
-> is not yet confirmed. The adapters are written against the interface with `NotImplemented`
-> bodies — filling them in should not require touching any agent code.
+Two cautions. First, putting dsh behind this protocol is the mistake recorded in
+[`13` §3](13-golden-standard.md): dsh is the runtime, not a completion backend.
+Second, mock output is placeholder text; it proves the code does not crash and nothing else.
 
 ## Frontend
 
-**Superseded.** The UI is dsh web customised through Client plugins, not a
-self-built app — see `13-golden-standard.md`. The three surfaces it must cover:
-1. **Upload & Sanitize** — drop files, see the correction log, resolve quarantined rows.
-2. **Master Table & Risks** — the aligned table, filterable by period, with role-tagged
-   findings down the side.
-3. **Quote Simulator** — enquiry form, price-band chart, recommendation card.
+Not a self-built app. The UI is dsh web customised through Client plugins; the surfaces it has to
+cover are import and correction review, the master table with role-tagged findings, and the quote
+declaration view. Current state and boundaries: [`17`](17-business-mvp-acceptance.md),
+[`18`](18-native-captain-and-state.md).

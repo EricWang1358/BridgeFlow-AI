@@ -1,20 +1,597 @@
+<p align="center"><strong>English</strong> · <a href="README.zh.md">简体中文</a></p>
+
 # BridgeFlow AI
 
-BridgeFlow turns monthly Production, Procurement, Finance and Marketing spreadsheets
-into immutable batches and evidence-backed business reviews. The MVP reuses the
-official DeepSeek Harness Web, approvals, sessions and four concurrent subagents.
-Python computes declared metrics; each department proposes actions within a stated
-responsibility, and the host validates its structured findings.
+BridgeFlow reads the monthly spreadsheets that Production, Procurement, Finance and Marketing each
+keep in their own way, and turns them into an immutable batch plus a business review that shows its
+evidence. It runs on the official DeepSeek Harness: native Web UI, sessions, approvals and four
+concurrent subagents. Python does the arithmetic the field dictionary declares; each department agent
+proposes actions inside its stated responsibility, and the host checks the structured findings before
+anything lands in a report.
 
-The current demo covers production load, purchase spend against budget, project
-margin, weighted payment terms and order/output gaps. Generated risk and balanced
-cases have independent standard answers. Quoting, customer tiers, bad-debt decisions,
-SSO and formal report release are outside the delivered MVP.
+This README is a guided walkthrough. Follow it top to bottom and you will have the product running,
+one review completed end to end, and one mapping decision recorded, on a machine you have never used
+before. Nothing is assumed beyond "you can open a terminal".
 
-See the [business demo and acceptance guide](docs/17-business-mvp-acceptance.md),
-[measured results](docs/00-status.md), and [architecture decisions](docs/13-golden-standard.md).
+- [Before you start](#before-you-start)
+- [1 Set up the machine](#1-set-up-the-machine)
+- [2 Install](#2-install)
+- [3 Configure the launching environment](#3-configure-the-launching-environment)
+- [4 Build the plugins](#4-build-the-plugins)
+- [5 Start it](#5-start-it)
+- [6 Tour of the workspace](#6-tour-of-the-workspace)
+- [7 The fastest complete loop](#7-the-fastest-complete-loop-the-sample-notebook)
+- [8 Import your own files](#8-import-your-own-files)
+- [9 Run the review](#9-run-the-review)
+- [10 Read the report and trace one number](#10-read-the-report-and-trace-one-number)
+- [11 Mapping approval](#11-put-a-human-in-the-loop-mapping-approval)
+- [12 Save, leave, come back](#12-save-leave-come-back)
+- [13 The quotation workspace](#13-the-quotation-workspace)
+- [14 Check your install](#14-check-that-your-install-is-healthy)
+- [15 When something does not work](#15-when-something-does-not-work)
+- [16 Worked examples](#16-worked-examples)
+- [Where the real documentation is](#where-the-real-documentation-is)
 
-## Architecture
+## Before you start
+
+**What this is.** A business-use-case demonstration built for a hackathon. The data on screen is
+generated and labelled synthetic. It is not an enterprise deployment: there is no employee SSO, no
+role or tenant isolation and no formal report sign-off. Authentication identifies a shared DSH
+session, recorded as `dsh-authenticated-session`.
+
+**What costs money.** Importing files and computing the master table are deterministic and free.
+Starting a review sends a request to the configured model, and that bills. One review of the sample
+case takes tens of seconds and tens of thousands of tokens; measured figures live in
+[`docs/00-status.md`](docs/00-status.md), which is the only place a measured number is written.
+
+**About the screenshots.** Labels follow the DSH language setting, so most captures below come from a
+Chinese-locale run; the last one is in English. The mapping: 来源 = Sources, 工作室 = Studio,
+对话 = Chat, 轨迹 = Trajectory, 业务状态 = Business state, 发起研判 = Start the review, 主表 = Master
+table, 待确认映射 = Mappings awaiting confirmation, 隔离行 = Quarantined rows, 清洗记录 = Cleaning log,
+添加来源 = Add sources, 打开示例笔记本 = Open sample notebook, 新建笔记本 = Create notebook,
+保存笔记本 = Save notebook, 退出笔记本 = Exit notebook, 会话与设置 = Sessions & settings,
+允许一次 = Allow once, 拒绝 = Reject, 拒绝理由 = Rejection reason. Three captures still show the
+previous shell (Chat | Trajectory | Business state) instead of the three-pane notebook; each is
+labelled where it appears, and [`docs/images/README.md`](docs/images/README.md) records the
+provenance of every image.
+
+## 1 Set up the machine
+
+Works on Linux and on WSL2 (Ubuntu). On Windows, use WSL2 and read
+[`docs/14-wsl-setup.md`](docs/14-wsl-setup.md), which gives every step a verification command.
+
+One rule saves you days: keep everything inside the Linux filesystem (`/home/...`), never under
+`/mnt/...`. Across `/mnt`, inotify silently stops working, permission bits are lost and I/O is an
+order of magnitude slower; the same runtime takes seconds longer to boot.
+
+The layout this guide assumes:
+
+```text
+~/Hackathon2026/
+├── BridgeFlow-AI/     the repository (source only)
+├── .venv/             Python virtualenv, deliberately outside the repo
+└── .dsh-bridgeflow/   DSH_HOME, outside the repo and outside your everyday dsh
+```
+
+Virtualenv and DSH_HOME sit outside the repository so they can never be committed by accident.
+Source goes in; runtime state does not.
+
+## 2 Install
+
+```bash
+mkdir -p ~/Hackathon2026 && cd ~/Hackathon2026
+gh repo clone EricWang1358/BridgeFlow-AI      # private repo: run `gh auth login -s project` first
+                                                 # (no gh? `git clone https://github.com/EricWang1358/BridgeFlow-AI` with a token)
+cd BridgeFlow-AI
+
+python3.12 -m venv ../.venv && source ../.venv/bin/activate
+pip install -U pip
+cd backend && pip install -e ".[dev]" && cd ..
+
+npm install -g @deepseek-ai/dsh@0.1.2-rc.1    # the pinned npm CLI, not the Python-packed binary
+```
+
+The virtualenv is created at `~/Hackathon2026/.venv` while you are inside the repository, and every
+later command in this guide assumes both `source ../.venv/bin/activate` and `source ./env.sh` have
+been run in the current shell. A new terminal window means doing both again.
+
+Check it worked:
+
+```bash
+python -c "import bridgeflow, pandas, fastapi, deepseek_harness; print('imports ok')"
+dsh --version
+```
+
+The project runs on Python 3.12 (`requires-python = ">=3.11"`, because the code uses
+`datetime.UTC`). Running the SDK needs no system Node.js, but building the Client plugins needs npm
+and pnpm.
+
+## 3 Configure the launching environment
+
+```bash
+cp env.sh.example env.sh
+$EDITOR env.sh        # set DEEPSEEK_API_KEY, and DSH_HOME if the default is not what you want
+source env.sh
+```
+
+| Variable | What it does |
+| --- | --- |
+| `DSH_HOME` | Where dsh keeps profiles, plugins, credentials and sessions. Absolute path, outside the repository. Required: the SDK deliberately never discovers `~/.dsh` |
+| `DSH_PROFILE` / `DSH_PROVIDER` / `DSH_MODEL` | Which composition, provider and model the runtime boots with |
+| `DEEPSEEK_API_KEY` | The model credential |
+| `FIELD_DICTIONARY_PATH` | The domain dictionary: which column of which department holds which entity, what may be computed, and how it rolls up |
+
+`DSH_*` and `DEEPSEEK_BASE_URL` may only come from the launching shell. dsh scans `.env` in its
+working directory and refuses to read them from a file, and that is a security boundary: if a
+checked-in file could decide where code loads from and which host it reaches, cloning a hostile
+repository would be enough to redirect both. Do not work around it, for example by changing the
+runtime's working directory. An empty line `DEEPSEEK_BASE_URL=` still counts as set.
+
+`FIELD_DICTIONARY_PATH` defaults to `data/mappings/field-dictionary.yaml`. That file is gitignored
+and holds real master data, so a fresh clone does not have it, and the product says so instead of
+guessing. To follow this guide with the sample case, either start with `--demo` (step 5) or export:
+
+```bash
+export FIELD_DICTIONARY_PATH=data/business_demo/dictionary.yaml
+```
+
+## 4 Build the plugins
+
+```bash
+cd plugins
+pnpm install --frozen-lockfile
+pnpm run build
+cd ..
+```
+
+The Client bundle has to exist before the Web starts; the launcher tells you if it is older than the
+sources.
+
+## 5 Start it
+
+```bash
+python scripts/start_web.py --demo --port 3082
+```
+
+`--demo` points the domain service at the sample case's own dictionary and prints which one it froze:
+
+```text
+BridgeFlow field dictionary: /home/you/Hackathon2026/BridgeFlow-AI/data/business_demo/dictionary.yaml
+```
+
+The launcher starts a private Python service on port 8000 (localhost only) and the official
+`dsh web` on the port you passed. It prints a URL carrying a one-time credential: open that URL in
+your browser. `Ctrl-C` stops both processes it started.
+
+Why `--demo` matters: the sample case only holds together under its own dictionary, the only one
+that declares the finance join column (`project`) and the `business_review` contract. With the
+default dictionary the import still succeeds, the batch comes back `needs_configuration` and the
+review refuses. Step 1 passes, step 2 cannot. That is by design: the product states what is missing
+rather than inventing a join.
+
+## 6 Tour of the workspace
+
+![The three-pane workspace, empty](docs/images/01-notebook-empty.png)
+
+Three columns, and the split between them is the design:
+
+| Pane | Holds | Who owns it |
+| --- | --- | --- |
+| Left · 来源 Sources | The files you actually uploaded here, previewable | BridgeFlow panel |
+| Middle · Chat | The native DSH conversation, composer and approvals | DSH, untouched |
+| Right · 工作室 Studio | Domain tools on top, saved artifacts below, previews underneath | BridgeFlow panel |
+
+Top bar, left to right: 新建笔记本 Create notebook (a fresh session with its own sources) ·
+保存笔记本 Save notebook (explicit; nothing is saved silently) · 笔记本 Notebooks (list and resume) ·
+退出笔记本 Exit notebook · 来源 / 工作室 (show or hide the two side panels) · 会话与设置 Sessions &
+settings (the native drawer; sessions and settings stay native).
+
+The 笔记本用途 / Notebook purpose selector at the top of Sources decides which status guidance the
+right pane shows: 月度对账 monthly review, 报价 quotation, or 综合工作 combined. Monthly review and
+quotation stay separate paths; choosing one does not disable the other.
+
+Drag the dividers to resize, focus one and use the arrow keys, double-click to reset. Panel
+preferences are stored in the browser only.
+
+## 7 The fastest complete loop: the sample notebook
+
+Click 打开示例笔记本 / Open sample notebook in the left pane. It imports four synthetic department
+files, runs the normal import and rule computation, and freezes the sample dictionary for that batch.
+No model call happens, so this costs nothing.
+
+![Sample notebook: four sources and the master table artifact](docs/images/02-sample-sources.png)
+
+What you should see, and what each part means:
+
+1. Left: four sources with department and row count (`sample-production.csv` 生产 · 4 行,
+   procurement 4, finance 2, marketing 2), the period `2025-11`, a 需要人工复核 badge, and the batch
+   id with a copy button.
+2. Right: under 产物 Artifacts, one entry `2025-11 · 主表` with the same badge. Artifacts only ever
+   list things that were actually saved.
+3. A 预览 Preview of the selected source: the pre-cleaning parse view, with original row numbers,
+   original column names, and a note that pagination exists for the browser. Look at rows 2 and 3:
+   `SKU-A1` and `sku-a1`. That is deliberate; the case ships with planted defects.
+
+Open 文件来源信息 to see which file, batch, worksheet and SHA-256 digest the preview belongs to. The
+digest is provenance, not an explanation of the business.
+
+![Source provenance labels](docs/images/03-source-provenance.png)
+
+Now open the master table: click the artifact, or 主表 in the tool grid.
+
+![Batch modal: master table, cleaning log, pending mappings, quarantined rows](docs/images/04-batch-master-table.png)
+
+The batch modal is where you decide whether the data is fit to review:
+
+- **主表 Master table** — one aligned wide table, joined on the column the dictionary declared
+  joinable. The `rollups` column shows how multiple source rows were folded, because folding is a
+  declared decision rather than a default.
+- **清洗记录 Cleaning log** — every repair, with original value, new value, rule and confidence.
+- **待确认映射 Mappings awaiting confirmation** — relations below the confidence threshold, waiting
+  for a person. "Awaiting confirmation" is not "wrong".
+- **隔离行 Quarantined rows** — rows the system refused to guess at. A batch with quarantined rows
+  refuses to report totals; that is the amber 下一步 box in the screenshot.
+- Buttons: **发起研判 Start the review** sends the request into the current session;
+  改一改再发（复制） copies it so you can edit first; 刷新 Refresh.
+
+## 8 Import your own files
+
+Use the four CSVs in `data/business_demo/risk/`, or your own files if you have a dictionary that
+declares them.
+
+1. In Sources, click 添加来源 / Add sources.
+2. Pick the business month (`2025-11`) and the department files. One file per department, CSV or a
+   single-sheet XLSX. Multi-sheet workbooks are refused on purpose until there is an explicit sheet
+   and header choice.
+3. Click 导入并检查 Import and inspect. The batch id appears in the left pane; copy it if you want to
+   refer to it in chat.
+4. Open the batch modal and read the four tabs before going any further.
+
+What a broken cell does to a batch is not hypothetical; four worked cases are in
+[section 16, example 5](#16-worked-examples).
+
+Limits are enforced on total bytes, decompressed size, department count and row count. The browser can
+page through the data; the model never receives raw rows, only counts, formulas and a capped evidence
+sample. Being able to see a page of data is a viewing feature, not a performance claim.
+
+If the batch comes back `needs_configuration`, the dictionary declares no joinable column for one of
+the departments. Under 「为什么主表是空的」 the panel prints which dictionary was frozen for this
+batch; if that is not the file you meant, you have found the whole bug.
+
+## 9 Run the review
+
+Click 发起研判. The request goes into the current session, so you can watch it in Chat and in
+轨迹 Trajectory. This step calls the configured model and bills.
+
+![Trajectory: review_context, four subagent calls, review_finalize](docs/images/06-trajectory-four-spawns.png)
+
+*Captured on the 2026-09-06 shell (Chat | Trajectory | Business state); the tool sequence and the
+cards are unchanged on the notebook shell.*
+
+What happens, in order:
+
+1. `review_context` reads the frozen batch packet and issues four one-use dispatch tickets.
+2. The captain model calls the official `subagent` tool **four times in one response**, described as
+   production, procurement, finance and marketing. The header shows four child sessions; each has its
+   own session id, and the timeline shows they really overlap.
+3. Each child may only submit `structured_output`. It has no shell, no editor, no code execution, no
+   channel to the other three, and cannot read the parent conversation or the raw workbook.
+4. `review_finalize` collects what the host actually recorded. The parent model cannot upload four
+   judgements of its own and pass them off as children's results.
+5. Python re-checks every value, unit, status, action and citation against the frozen dictionary.
+   Anything that fails leaves that department unvalidated and the report `partial`.
+
+A department that keeps producing invalid structure is stopped by the step budget (3 steps). The
+report then says that department has no valid judgement, keeps the other three, and does not
+manufacture a substitute.
+
+Worked version of this whole loop, including doing the arithmetic by hand first:
+[section 16, example 1](#16-worked-examples); the failure path is
+[section 16, example 6](#16-worked-examples).
+
+## 10 Read the report and trace one number
+
+![Report preview: formula, threshold and responsibility](docs/images/05-report-preview.png)
+
+The report header states its own scope: proposals only, nothing executed, model prose needs a business
+reviewer, "cited N times" is not "N distinct cells", and a capped display is not a sample-only
+computation. Read that line before you read any number.
+
+Each department card shows the responsibility, the decision owner, the metric with its value, the
+suggested action, the formula exactly as the dictionary declares it, and the attention threshold.
+Expand 解释与原始来源 for the citations.
+
+To trace a number properly:
+
+1. Take the value, for example 排产负荷 110%.
+2. Read its formula: `sum(used hours) / sum(available hours) * 100`, threshold `> 100%`.
+3. Expand the citations and note the file, the original row and the original column.
+4. Open that source on the left and go to the row. Original row numbers survive blank-row removal,
+   de-duplication and quarantine, so the citation still points where it pointed at import time.
+
+![Business state page](docs/images/07-business-state-page.png)
+
+*2026-09-06 shell.* The 业务状态 tab is a status view of the batch, not a workflow engine: nodes
+highlight according to what actually happened, clicking filters, and nothing on the page executes a
+business action.
+
+Worked examples of tracing a number down to its cells: [section 16, example 2](#16-worked-examples),
+and the same code over two different months in [example 3](#16-worked-examples).
+
+Vocabulary, with the traps in it:
+
+| Token | Means | Does not mean |
+| --- | --- | --- |
+| `needs_configuration` | The dictionary does not declare what is needed | That the import failed. It did not fail |
+| `needs_review` | Mappings are awaiting a person | That business computation is forbidden. This sample computes declared columns directly and can produce a validated report while links are pending |
+| `validated` | All four departments' judgements passed the dictionary check | Approved, signed off, or executed |
+| `partial` | At least one department has no valid judgement | A warning to wave away. It is the honest state |
+| `attention` | A declared threshold was crossed | That anyone did anything about it |
+
+## 11 Put a human in the loop: mapping approval
+
+Paste this into the session (swap the batch id if you need to):
+
+> 请仅调用一次 confirm_mapping：source="sku:demo-review"，target="customer:demo"，
+> relation="ordered_by"，accepted=true，evidence="合成案例的关系待负责人核对"，period="2025-11"。
+> 等待原生审批；若拒绝，说明未写入并转述操作者理由，不重试。
+
+The tool call blocks and the native approval panel opens with the arguments visible, a rejection
+reason box (240 characters maximum), the deadline, and two buttons: 拒绝 Reject and 允许一次 Allow
+once.
+
+![Approval panel with rejection reason](docs/images/08-approval-rejection-note.png)
+
+*2026-09-06 shell. The panel, the note field and the audit events are the same today.*
+
+- **Allow once** writes one mapping rule bound to exactly these parameters, through a one-use receipt
+  the host generated after the decision. Replays are refused.
+- **Reject** writes nothing, and your reason goes back to the model, which must relay it. The wording
+  in the tool result says the write did not happen and that future imports may ask again.
+- **Nobody answers** (timeout) also writes nothing. The default is 300 seconds in production and 5 in
+  automated tests, and the panel shows the value actually in force. A timeout is reported as
+  `cancelled`, never as "a person refused": inventing a decision-maker is worse than the bug it
+  papers over.
+
+A full walk-through of all three endings, including the text the model actually receives:
+[section 16, example 4](#16-worked-examples).
+
+One distinction that gets confused on stage: `accepted=false` as a tool argument means "record a
+decision that this relation does not hold", and it is still a write that needs approval. The 拒绝
+button means "do not perform this write at all". Different things; say them differently.
+
+## 12 Save, leave, come back
+
+![Save before leaving](docs/images/09-save-notebook.png)
+
+Saving is explicit. If you changed the name, purpose or sources and try to leave, you get three
+choices: 保存并继续, 不保存并继续 (drops only the notebook edits; the conversation, uploaded files and
+saved reports stay), or 取消，继续编辑. A save reports success only after the native title and the
+official storage-domain write have both landed. A failed save keeps the page and your input and offers
+a retry.
+
+![Notebook list](docs/images/10-notebooks-list.png)
+
+The 笔记本 list restores name, purpose, source batch and the preview position you saved. Notebooks you
+named but never sent a message to are in the list; department child sessions are not.
+
+## 13 The quotation workspace
+
+![Quotation workspace, English UI](docs/images/11-quotation-workspace-en.png)
+
+Quotation is a second path next to the monthly review, not a replacement. Open it from Studio
+(报价工作区 / Quotation workspace); it also works from an empty session. What you see is the declared
+template: which fields a quotation would have, which are still `Awaiting source evidence`, and who
+owes each piece of evidence. The badge 等待业务样板 / Awaiting business samples is the honest state of
+the feature: the template proves the execution contract, it is not an approved pricing policy.
+
+Not built, and not shown as if it were: extraction from a real contract or conversation transcript, a
+validated fact store from uploaded documents, and any way to send a quote.
+
+## 14 Check that your install is healthy
+
+```bash
+cd backend && pytest -q && ruff check src tests ../scripts/start_web.py
+cd ../plugins && pnpm run typecheck && pnpm test && pnpm run build
+pnpm run smoke:web && pnpm run smoke:business
+BRIDGEFLOW_TEST_FAULT=step-limit pnpm run smoke:business
+```
+
+Expect the Python and TypeScript unit tests to pass offline, with no model calls and no cost.
+
+**Known red.** The three browser smokes currently fail on the development machine with
+`client-modules: HTML did not preload @deepseek-ai/dsh-client-modules/client.js`, tracked in
+[#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97). It is not the product: the same patch
+and the same `dsh web` command render fine against a real `DSH_HOME`. Until it is fixed, look at
+the interface with `pnpm --dir plugins shots` and do not conclude you broke something.
+
+[`docs/00-status.md`](docs/00-status.md) is the source of truth for what has been measured, what it
+cost, and what is still unverified.
+
+## 15 When something does not work
+
+| Symptom | What is actually happening | What to do |
+| --- | --- | --- |
+| Import succeeds, master table empty, review refuses | The frozen dictionary declares no joinable column or no review contract | Start with `--demo`, or export the right `FIELD_DICTIONARY_PATH`. The panel prints which dictionary the batch froze |
+| Chat says the tool needs approval but no channel is available | Approval is not reachable in that composition | Use the native Web path; do not add a bypass answerer |
+| Session creation fails after running the Python-packed SDK | The shared `DSH_HOME` module fallback was rewritten to `/snapshot` | Restart `scripts/start_web.py`; the official launcher self-heals. Use a separate `DSH_HOME` for direct SDK experiments |
+| An old session log refuses to open (`bridgeflow/review`, `bridgeflow/approval-note`) | Legacy informational events the native cold reader will not ignore | Stop the launcher, run `python scripts/repair_session_metadata.py --root ../.dsh-bridgeflow/sessions` to inspect, then add `--apply` if you agree. It keeps a byte-for-byte backup |
+| A Windows browser cannot reach the service | It is bound to `127.0.0.1` inside WSL, or you used the wrong host | Check `ss -tlnp` first, then [`docs/14` step 10](docs/14-wsl-setup.md) |
+| Everything is slow and watch mode never reloads | You are under `/mnt` | Move the repo, the venv and `DSH_HOME` into the Linux filesystem |
+| A browser smoke fails with the client-modules line | Known open issue, not your change | See [#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97); use `shots` to look at the UI |
+| You expected a number and got a refusal | The data is incomplete and the system refuses to guess | Work the four cases in [section 16, example 5](#16-worked-examples) before touching the dictionary |
+| Two panels disagree about one number | a specification conflict is possible; it has happened before | Re-derive it from the citations, then record the measurement in `docs/00` |
+
+
+## 16 Worked examples
+
+Six problems, each with the data, the exact thing you do, the output that actually came back, and the
+mistake people make reading it. Everything here was run on this repository; the refusal messages in
+example 5 were captured on 2026-09-07 against the code in `main`.
+
+### Example 1 - Judge a month: "is November 2025 healthy?"
+
+**Given.** The four files in `data/business_demo/risk/`, period `2025-11`, dictionary
+`data/business_demo/dictionary.yaml`.
+
+**Do it.** Import the four files (step 8), click 发起研判 (step 9), open the report (step 10).
+
+**Before you look at the answer, do the arithmetic yourself.** This is the point of the product: the
+numbers are not model output, they are declared formulas over cells.
+
+| Metric | Formula, as declared | By hand |
+| --- | --- | --- |
+| `capacity_utilisation` | `sum(used hours) / sum(available hours) * 100` | (48+32+18+12) / (40+30+20+10) = 110/100 = **110%** |
+| `capacity_headroom` | `sum(available) - sum(used)` | 100 - 110 = **-10 hours** |
+| `material_spend` | `sum(unit price * qty)` | 12x10 + 12x20 + 20x10 + 20x10 = **760 SGD** |
+| `purchase_budget` | `sum(budget price * qty)` | 10x10 + 10x20 + 20x10 + 20x10 = **700 SGD** |
+| `purchase_price_drift` | `(spend - budget) / budget * 100` | 60/700 = **8.5714%** |
+| `gross_margin` | `(sales - positive costs) / sales * 100` | (3000 - 3300)/3000 = **-10%** |
+| `ar_weighted_days` | `sum(AR balance * AR days) / sum(AR balance)` | (800x60 + 600x30)/1400 = **47.1429 days** |
+| `order_gap` | `sum(ordered) - sum(produced)` | 180 - 150 = **30 units** |
+| `requested_terms_days` | `sum(qty * requested days) / sum(qty)` | (120x60 + 60x30)/180 = **50 days** |
+
+**What the report says.** All eight declared checks come back `attention`: load above 100%, headroom
+below 0, spend above the same-quantity budget, drift above 5%, margin below 0, receivables above 45
+days, order gap above 0, requested terms above 45 days. The independent answer key is
+`data/business_demo/expected.json`; if the report and that file disagree, the report is wrong and the
+disagreement is a defect, not a matter of taste.
+
+**The trap.** The report's own `limitations` list is part of the answer: no BOM or inventory here, so
+"orders exceed output by 30 units" does **not** prove a delivery failure; the drift is a same-quantity
+budget comparison, not a month-on-month price change; and 47 days of weighted terms is not bad debt.
+A reviewer who reads "margin -10%" and writes "book a provision" has left the evidence behind.
+
+### Example 2 - Trace one number down to a cell
+
+**Question.** Where does 110% come from, and can you prove it?
+
+Open 解释与原始来源 on the production card. The stored record is:
+
+```json
+{"check_id": "capacity", "metric": "capacity_utilisation", "value": 110, "unit": "%",
+ "formula": "sum(used hours) / sum(available hours) * 100",
+ "source_count": 8, "source_count_basis": "formula input cell occurrences", "truncated": true,
+ "threshold": 100, "attention_when": "above", "expected_status": "attention",
+ "action": "提交排产与加班预算复核", "explanation_status": "model_advice",
+ "execution_status": "proposed_only"}
+```
+
+Read it in this order:
+
+1. `source_count: 8` is four `used_hrs` cells plus four `available_hrs` cells, which is exactly the
+   formula's input. `truncated: true` means the display lists at most 5 of them; it does not mean the
+   computation used a sample.
+2. The listed citations carry `filename`, `source_row` and `original_column` - production.csv rows
+   2 to 5, column `used_hrs`. Open that file in Sources and you are looking at the cells.
+3. `action` is not model text: it is the `attention` branch of the declared check, copied verbatim.
+4. `explanation_status: "model_advice"` marks the one sentence that *is* model prose. Different
+   authority; different colour in the card.
+5. `execution_status: "proposed_only"`: nothing was bought, scheduled or credited.
+
+**The trap.** "Cited 8 times" is not "8 distinct cells" either: a cell used twice by a formula counts
+twice. The count is of inputs, not of locations.
+
+### Example 3 - Same code, two months: risk vs balanced
+
+Import `balanced/` as a second batch and review it. Nothing about the code changes; the data does.
+
+| Metric | risk | balanced |
+| --- | --- | --- |
+| capacity load / headroom | 110% / -10 h | 80% / +20 h |
+| spend / budget / drift | 760 / 700 / +8.5714% | 700 / 700 / 0% |
+| sales / positive cost / margin | 3000 / 3300 / -10% | 3000 / 2000 / +33.3333% |
+| weighted AR days | 47.1429 | 30 |
+| order gap / requested terms | +30 units / 50 days | -20 units / 30 days |
+| status of all eight checks | attention | ok |
+
+**The two traps.** First, "ok" is not "no risk": the balanced case still has a -20 unit order gap
+below its threshold and an unapproved 30-day request. Second, reopen the risk batch afterwards: it is
+byte-identical. A new import never recomputes an old batch, which is the whole reason batches are
+immutable.
+
+### Example 4 - Mapping approval, three endings
+
+**Ask.** Paste into the session (step 11 has the full sentence): request one `confirm_mapping` with
+`accepted=true` for `sku:demo-review` to `customer:demo`, then wait.
+
+**Ending A - Allow once.** The write happens, mapping memory gains one rule naming who authorised it,
+and the next import applies it without asking.
+
+**Ending B - Reject, with a reason.** Type a reason, e.g. "客户编码未核实，请销售负责人确认后再提交。"
+Nothing is written. The tool result the model receives is ours, and it says what happened:
+
+```text
+confirm_mapping did NOT run: a person reviewed it and refused. The reviewer said:
+"evidence is stale - use the October BOM, not this one". Nothing was written, ...
+```
+
+The model then has to relay it. In review we found it claiming "the mapping will not be asked about
+next month", which was false, so the wording now says future imports may ask again - and the live test
+checks the sentence against the file.
+
+**Ending C - Nobody answers.** Also nothing is written, and the narration says no one was available to
+decide. It never says "a person refused". `cancelled`, `unavailable` and `rejected` are three
+different facts.
+
+**The trap that costs the most.** `accepted=false` is not "reject". It means "record the decision that
+this relation does not hold", and it is still a write that needs approval. The 拒绝 button means "do not
+run this call". Say them differently or you will explain your own product wrongly on stage.
+
+### Example 5 - Four ways the system refuses to produce a number
+
+Copy `data/business_demo/risk/` to a scratch folder, break one cell, import the copy, click 发起研判.
+Each row below is a message this build actually returned (409 at `/tools/review-context`; the panel
+shows the same text).
+
+| Broken input | What you see | Why it refuses instead of reporting |
+| --- | --- | --- |
+| `price` blank on one procurement row | `Declared numeric cell is missing or unreadable` | Reporting 640 of 760 would turn "at least this much" into "exactly this much". A sum with a missing row is a smaller lie than a refusal |
+| one procurement row in USD | `procurement: currency missing or mismatched; conversion is not configured` | There is no declared FX rule, so any total would be an invented rate |
+| `cost` entered as -2000 | `finance: cost violates the declared nonnegative convention` | The dictionary declares costs positive; a negative silently mixed in changes what `sales - cost` means |
+| date written `03/11/2025` | import: production 3 rows kept, **1 quarantined, 1 correction**; review: `Resolve batch configuration or quarantined rows and import a new batch before review` | Is that 3 November or 11 March? Guessing once put a row in the wrong month and the total inherited it (#79). The row is kept verbatim in quarantine, and the batch refuses to report totals |
+
+**The fix is not "make it accept less".** Fix the source file and import a new batch. The old batch
+stays as evidence of what was asked.
+
+**The trap.** A refusal is not a broken demo. If a panel shows a refusal, the honest move is to show
+the refusal and name what is missing; the dishonest move is to delete the row.
+
+### Example 6 - A partial review, and what a human note may not do
+
+**Reproduce it offline, free:**
+
+```bash
+BRIDGEFLOW_TEST_FAULT=step-limit pnpm --dir plugins smoke:business
+```
+
+The finance child produces invalid structure three times in a row, hits the step budget and stops. The
+report is `partial`: finance has no valid judgement, the other three departments keep theirs, and the
+child count is still 4 (four sessions really started; one failed).
+
+Then submit a human review note from the partial page. It reaches the captain as an ordinary chat
+message, the report stays `partial`, and the note does not sign for finance.
+
+**The known gap, stated plainly:** "do not re-run" is a text requirement today, not a host-enforced
+one, and end-to-end timeout plus restart recovery are unfinished
+([docs/19](docs/19-chain-audit.md) lists them as P0). Do not present a partial report as "handled".
+
+**The trap.** Filling the missing department with a plausible sentence makes the report look complete
+and is the single most damaging thing this product could do: the approver signs a number nobody
+computed.
+
+## Where the real documentation is
+
+| If you want | Read |
+| --- | --- |
+| Current progress, next steps, known defects | [`HANDOFF.md`](HANDOFF.md) |
+| Every measured number, with its command | [`docs/00-status.md`](docs/00-status.md), the only source |
+| Why the architecture is what it is | [`docs/13-golden-standard.md`](docs/13-golden-standard.md) |
+| Hard constraints before touching code | [`CLAUDE.md`](CLAUDE.md) |
+| Demo script and what runs on stage | [`docs/04-demo-plan.md`](docs/04-demo-plan.md), [`docs/17`](docs/17-business-mvp-acceptance.md) |
+| Which document answers which question | [`docs/README.md`](docs/README.md) |
+
+Architecture in one block, for the impatient:
 
 ```text
 Official DSH Web: native chat, sessions, approvals, trajectory
@@ -25,10 +602,7 @@ Official DSH Web: native chat, sessions, approvals, trajectory
             └─ Native approval → one-use receipt → mapping memory
 ```
 
-Reports preserve the batch, source locations and child session identities. Failed
-reviewers remain visibly incomplete. Proposed business actions are not executed.
-
-## Repo layout
+Repo layout:
 
 ```text
 backend/          Python domain computation, persistence and private FastAPI service
@@ -37,64 +611,13 @@ dsh/              Pinned Web policy patch and restricted analyst preset
 scripts/          Native Web launcher and runtime checks
 data/samples/     Historical development spreadsheets
 data/business_demo/ Generated visible business cases and independent answers
+docs/images/      Screenshots used by this guide
 docs/             Requirements, architecture, measured status and review
 ```
 
-## Quick start
-
-From the repository root, with the Python dependencies installed:
-
-```bash
-source ../.venv/bin/activate
-source ./env.sh
-npm install -g @deepseek-ai/dsh@0.1.2-rc.1
-cd plugins
-pnpm install --frozen-lockfile
-pnpm run build
-cd ..
-python scripts/start_web.py
-```
-
-Open the authenticated URL printed by DSH. Use the sidebar data action to upload
-CSV or a single-sheet XLSX, inspect the batch, then copy its analysis request into
-the native conversation. Import is deterministic; sending a conversation request
-can incur model charges. Declare `FIELD_DICTIONARY_PATH` in the launching shell;
-for the business MVP rehearsal use `data/business_demo/dictionary.yaml`.
-
-The launcher uses the official npm CLI, pinned to the Python SDK version. The rc1
-Python-packed executable failed to resolve the built-in Web client manifests in
-our browser test. `BRIDGEFLOW_DSH` can select a compatible npm executable.
-
-`DSH_*` and `DEEPSEEK_BASE_URL` belong in the launching shell, never `.env`.
-The launcher generates a private host-service credential, reuses native Web
-authentication, and defaults legacy console/pipeline/sample fallback off. Mapping
-writes require a native approval and a one-use payload-bound receipt. Authentication
-currently identifies a shared DSH session, not an individual employee or tenant.
-
-Full setup and reproducible checks: [`HANDOFF.md`](HANDOFF.md).
-
-### Portability
-
-- `.gitattributes` normalises everything to LF, so files authored on Windows do not
-  arrive on a Linux box with CRLF.
-- Bind address, port and CORS origins are settings, defaulting to `127.0.0.1` —
-  nothing is exposed unless asked for explicitly.
-- No absolute paths, drive letters or Windows-only dependencies in tracked source.
-
-Deployment is not configured: no Dockerfiles, no CI. The target is undecided, and
-adding either before that is settled was a mistake this repository already made
-once.
-
-## Requirements baseline
-
-The business requirements live in [`docs/07-prd-v0.1.md`](docs/07-prd-v0.1.md) (PRD v0.1).
-[`docs/08-prd-traceability.md`](docs/08-prd-traceability.md) maps every FR to its current
-state at its review date. Current evidence and remaining rubric gaps are recorded in
-[`docs/00-status.md`](docs/00-status.md) and [`docs/16-dsh-web-review.md`](docs/16-dsh-web-review.md).
-
-## Status
-
-Business-use-case demonstration MVP with live-model and browser evidence. Real customer data and enterprise deployment still require validation. Track work on the
+Status: a business-use-case demonstration MVP with live-model and browser evidence. Real customer
+data and enterprise deployment still need validation. Work is tracked on the
 [project board](https://github.com/users/EricWang1358/projects/1).
 
-业务演示入口：[一站式 Demo](demo-walkthrough/README.md)；界面为「对话｜轨迹｜业务状态」，右上角可选取部门文件。原生队长与会话保留策略见 [18](docs/18-native-captain-and-state.md)，最新实测见 [00](docs/00-status.md)。
+Deployment is deliberately unconfigured: no Dockerfiles, no CI. The target is undecided, and adding
+either before it is settled is a mistake this repository has already made once.
