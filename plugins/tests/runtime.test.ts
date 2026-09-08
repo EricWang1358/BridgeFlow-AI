@@ -8,6 +8,7 @@ import ToolRuntime, { defineTool } from '@deepseek-ai/dsh-tools'
 import * as bridgeflow from '../src/index.ts'
 import { ApprovalReceipts, mappingBody } from '../src/approval/receipts.ts'
 import { ApprovalNotes } from '../src/approval/notes.ts'
+import { PendingDetails } from '../src/approval/detail.ts'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 
 async function runtime(allowMappingWrite = true) {
@@ -137,4 +138,23 @@ test('official Spawn cannot bypass the sealed review guard through a permissive 
   assert.match(JSON.stringify(result.content), /Begin review_context first/)
   assert.equal(ran, false)
   await ctx.fiber.dispose()
+})
+
+test('approval detail peek reads without consuming; take and discard still own the lifecycle', () => {
+  const details = new PendingDetails()
+  details.record('call-1', { source: 'sku:a', target: 'customer:b', accepted: true, empty: '' })
+  // peek twice: the web card polls while the decision is pending (#110)
+  assert.deepEqual(details.peek('call-1'), [
+    { label: 'source', value: 'sku:a' },
+    { label: 'target', value: 'customer:b' },
+    { label: 'accepted', value: 'true' },
+  ])
+  assert.equal(details.peek('call-1').length, 3)
+  assert.equal(details.peek(undefined).length, 0)
+  assert.equal(details.peek('unknown').length, 0)
+  assert.equal(details.take('call-1').length, 3)
+  assert.equal(details.peek('call-1').length, 0, 'a taken summary is gone for the card too')
+  details.record('call-2', { source: 'sku:c' })
+  details.discard('call-2')
+  assert.equal(details.peek('call-2').length, 0)
 })

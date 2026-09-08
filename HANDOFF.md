@@ -130,6 +130,21 @@ client-modules: HTML did not preload @deepseek-ai/dsh-client-modules/client.js
 在它修好之前：浏览器行为只能靠 `shots` 手工看；`docs/00` 里那些「smoke 通过」的记录与本机复现不符，
 引用前先自己跑一遍。
 
+### 进行中：#110 中英切换默认英文（2026-09-08）
+
+已落码（本分支，未合并）：无偏好新用户默认英文（客户端启动时等宿主设置文档加载后、确认无已存偏好，
+才经官方 `setLocale` 写入一次 en，持久化仍由宿主负责）；审批卡正文改为结构化双语——新增
+`/bridgeflow/approval-detail` 端点（`PendingDetails.peek`，只在决定悬而未决时存在），卡片渲染的是
+issue #96 那份封顶摘要：标签译自我们自己声明的封闭参数名，值原文照显；日期/数字统一走
+`formatDateTime/formatTime/formatNumber`（只改显示，不改领域值）；`workspace.tsx` 的 `' 条'` 与
+`state.tsx` 的行内三元收进 labels 表。smoke 测试改为「先断言默认英文 → 原生设置里切中文 →
+原流程」，并新增重载/宿主重启后语言保持、窄屏英文标签、审批卡结构化正文的断言
+（`plugins/tests/locale.mjs` 是公共 helper）。
+
+未验证：浏览器实测全部待跑——本机 Playwright chromium_headless_shell-1187 未装（官方源下载卡死），
+且上一节 #97 的三条 smoke 红的问题可能仍在。跑之前先 `pnpm exec playwright install chromium`。
+`plugins/tests/locale-probe.mjs` 是探针脚本，验证完 `locale.mjs` 的选择器后应删除，不进 PR。
+
 ## 仍需做什么
 
 1. **真实企业口径。** 合成案例已有可复算的指标、字段与来源。真实 OA 科目、客户级规则、多 sheet 与合并表头

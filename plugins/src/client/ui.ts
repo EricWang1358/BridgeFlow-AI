@@ -150,11 +150,40 @@ const labels = {
   moreValues: ['项', 'values'],
 
   aggregate_metric: ['可追溯指标', 'Traceable metric'], confirm_mapping: ['映射决定', 'Mapping decision'], batch_summary: ['批次检查', 'Batch summary'], list_metrics: ['可用指标', 'Metric catalogue'], lookup_field_dictionary: ['字段口径', 'Field dictionary'], review_context: ['队长派活准备', 'Captain dispatch preparation'], review_finalize: ['队长汇总', 'Captain finalization'],
+
+  // --- approval body: business semantics, not button labels (#110) ---------------
+  // The prose mirrors askReason in ../approval/gate.ts; the reason string stays in
+  // the approval request as the console fallback, this card renders it localized.
+  approvalIntro: ['此操作记录的决定将在下个月复用并进入审计。它会改变已存数据；未经批准不会写入。',
+                  'This records a decision that will be reused next month and cited in an audit. It changes stored state; nothing is written without approval.'],
+  approvalTool: ['工具', 'Tool'], approvalArgs: ['决定内容', 'Decision details'],
+  // Keys below are this plugin's own tool argument names (tools/confirm-mapping.ts),
+  // a closed set we declared — never spreadsheet field names. Values stay verbatim.
+  arg_source: ['来源实体', 'Source entity'], arg_target: ['目标实体', 'Target entity'],
+  arg_relation: ['关系', 'Relation'], arg_accepted: ['决定', 'Decision'],
+  arg_evidence: ['决定时展示的依据', 'Evidence shown when deciding'], arg_period: ['业务期间', 'Period'],
+  acceptMapping: ['接受映射', 'Accept mapping'], rejectMapping: ['拒绝映射', 'Reject mapping'],
+  countSuffix: [' 条', ''],
 } as const
+/** Language outside React: slot labels are callbacks, not components. */
+export function currentLanguage(): 'zh' | 'en' { return current() }
+export function labelText(key: string): string {
+  return labels[key as keyof typeof labels]?.[current() === 'zh' ? 0 : 1] ?? key
+}
 export function useUI() {
   const language = useSyncExternalStore(subscribe, current)
   const t = (key: string): string => labels[key as keyof typeof labels]?.[language === 'zh' ? 0 : 1] ?? key
   return { t, language }
+}
+/** Display formatting only: the domain value never changes, the rendering follows the active language. */
+export function formatDateTime(value: number | string | Date, language: string): string {
+  return new Date(value).toLocaleString(language === 'zh' ? 'zh-CN' : 'en')
+}
+export function formatTime(value: number | string | Date, language: string): string {
+  return new Date(value).toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en')
+}
+export function formatNumber(value: number, language: string, options?: Intl.NumberFormatOptions): string {
+  return value.toLocaleString(language === 'zh' ? 'zh-CN' : 'en', options)
 }
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/bridgeflow${path}`, { ...init, credentials: 'same-origin' })

@@ -11,7 +11,7 @@
 本文只管一次性引导和已知坑；日常部署是自动的，回滚一行：
 
 ```bash
-ssh <user>@<host> 'bash -s' < deploy/deploy.sh <previous-sha>
+ssh <user>@<host> 'bash -s -- <previous-sha>' < deploy/deploy.sh
 ```
 
 ---

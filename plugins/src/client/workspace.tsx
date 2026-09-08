@@ -156,7 +156,7 @@ export function DataWorkspace() {
         <div className="bf-band">
           <span className="bf-period">{batch.period}</span> <Chip status={batch.status} />
         </div>
-        <p className="bf-hint" style={{ margin: 0 }}>{t('master')} {batch.master_rows} {t('rows')} · {t('mappings')} {batch.unresolved}{t('total') === '共' ? ' 条' : ''}</p>
+        <p className="bf-hint" style={{ margin: 0 }}>{t('master')} {batch.master_rows} {t('rows')} · {t('mappings')} {batch.unresolved}{t('countSuffix')}</p>
 
         {/* A status is only actionable next to the step it implies. */}
         {NEXT_STEP[batch.status] && <div className="bf-callout" data-tone={NEXT_TONE[batch.status] ?? 'info'}>

@@ -3,6 +3,9 @@ import { api, useUI } from './ui.ts'
 import type { Limits } from './workspace.tsx'
 import type { PendingApproval } from '@deepseek-ai/dsh-client-ui-approval/client'
 
+/** One label/value pair, matching the plugin's ApprovalDetail. */
+type Detail = { label: string; value: string }
+
 /** Presentation override only: the official pending request owns settlement. */
 export function MappingApproval({ matched }: { matched: PendingApproval }) {
   return <MappingApprovalForm key={matched.key} pending={matched} />
@@ -12,6 +15,7 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
   const [timeout, setTimeoutValue] = useState<number | null>(null)
   const [note, setNote] = useState('')
   const [ticket, setTicket] = useState('')
+  const [details, setDetails] = useState<Detail[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   useEffect(() => {
@@ -22,8 +26,23 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
       .then(async response => { if (!response.ok) throw new Error(t('expired')); return response.json() })
       .then(value => setTicket(value.ticket))
       .catch(e => { if (!abort.signal.aborted) setError(String(e)) })
+    void fetch(`/bridgeflow/approval-detail?${query}`, { signal: abort.signal })
+      .then(async response => (response.ok ? response.json() : { details: [] }))
+      .then(value => { if (!abort.signal.aborted) setDetails(value.details ?? []) })
+      .catch(() => { if (!abort.signal.aborted) setDetails([]) })
     return () => abort.abort()
   }, [pending])
+  // Argument names are this plugin's own closed set (tools/confirm-mapping.ts), so
+  // they translate; a name outside the set shows verbatim rather than as arg_foo.
+  // Values are the operator's evidence — shown exactly as declared, never rewritten.
+  const argLabel = (label: string): string => {
+    const translated = t(`arg_${label}`)
+    return translated === `arg_${label}` ? label : translated
+  }
+  const argValue = (detail: Detail): string =>
+    detail.label === 'accepted'
+      ? (detail.value === 'true' ? t('acceptMapping') : detail.value === 'false' ? t('rejectMapping') : detail.value)
+      : detail.value
   async function answer(outcome: 'allowed-once' | 'rejected') {
     setBusy(true); setError('')
     try {
@@ -42,9 +61,21 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
       <strong>{t('approvalTitle')}</strong>
       <span className="bf-hint">{t('timeout')} {timeout ?? '—'} {t('seconds')}</span>
     </header>
-    {/* The reason is the whole basis of the decision, so it reads as prose rather
-        than as the monospace dump of a machine value it used to be. */}
-    <div className="bf-callout" data-tone="info"><p>{pending.reason}</p></div>
+    {/* The reason is the whole basis of the decision. Rendered as localized prose
+        plus the structured summary from /approval-detail (#96 pairs, #110 locale);
+        the raw reason string is the fallback for a call whose summary is gone and
+        remains what the native console dialog shows. */}
+    <div className="bf-callout" data-tone="info">
+      <p>{t('approvalIntro')}</p>
+      {details === null
+        ? <p className="bf-hint">{t('loading')}</p>
+        : details.length
+          ? <dl className="bf-approval-detail">
+              <dt>{t('approvalTool')}</dt><dd><code className="bf-mono">{pending.toolName}</code></dd>
+              {details.map((detail, i) => <span key={i} style={{ display: 'contents' }}><dt>{argLabel(detail.label)}</dt><dd>{argValue(detail)}</dd></span>)}
+            </dl>
+          : <p>{pending.reason}</p>}
+    </div>
     <label className="bf-field">
       <span>{t('optionalReason')}</span>
       <textarea aria-label={t('reason')} value={note} maxLength={240} disabled={busy}

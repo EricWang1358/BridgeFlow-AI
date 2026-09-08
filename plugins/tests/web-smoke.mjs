@@ -1,4 +1,5 @@
 import { coldReload } from './cold-reload.mjs'
+import { assertDefaultEnglish, switchLanguage } from './locale.mjs'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
@@ -83,6 +84,10 @@ try {
   page.on('console', message => { if (message.type() === 'error') logs += '\nCONSOLE: ' + message.text() })
   page.setDefaultTimeout(15000)
   await page.goto(match[1])
+  // #110: a new user on a zh-CN browser defaults to English; the explicit switch
+  // to Chinese goes through the native Settings language row and persists.
+  await assertDefaultEnglish(page)
+  await switchLanguage(page, '中文')
   await page.getByRole('button', { name: '会话与设置', exact: true }).click()
   await page.getByRole('button', { name: '导入与数据', exact: true }).click({ timeout: 30_000 })
   await page.locator('dialog[open] input[name=period]').fill('2025-11')
@@ -122,6 +127,13 @@ try {
   const request = step => `这是隔离测试目录中的合成映射验收。请只调用一次 confirm_mapping，参数 source="sku:test-${step}", target="customer:test", relation="ordered_by", accepted=true, evidence="合成业务用例的人工作业关系", period="2025-11"。等待操作者审批，随后简短说明实际结果，若拒绝必须原样转述理由。不要重试，不调用其他工具或提问。`
   await composer.fill(live ? request(0) : 'Exercise the approved mapping fixture.')
   await composer.press('Enter')
+  // #110: the approval card renders the structured decision summary localized —
+  // labels translated, values verbatim — not just translated buttons.
+  const decision = page.getByRole('region', { name: '映射审批' })
+  await decision.getByText('决定内容', { exact: true }).waitFor({ timeout: 30_000 })
+  await decision.getByText('sku:test-0', { exact: true }).waitFor()
+  await decision.getByText('接受映射', { exact: true }).waitFor()
+  await decision.getByText('决定时展示的依据', { exact: true }).waitFor()
   await page.getByRole('button', { name: /^(允许一次|Allow once)$/ }).click({ timeout: 30_000 })
   await waitTurn(1)
   const acceptedMemory = await readFile(`${scratch}/mappings.json`, 'utf8')
@@ -174,6 +186,11 @@ try {
   await coldReload({page,web,start,args:['web','--patch',`${scratch}/web.yml`,'--no-open','--port',String(webPort)],readLogs:()=>logs,sessionIds:[noteSession]})
   const restoredNotes=await page.evaluate(async id=>(await fetch(`/bridgeflow/approval-note-audit?session_id=${encodeURIComponent(id)}`)).json(),noteSession)
   assert.deepEqual(restoredNotes,noteAudit,'Refusal note audit must survive a full host restart')
+  // #110: the language choice is a durable Host setting, so a full host restart
+  // must not reset it to the browser-derived or default locale.
+  await page.getByRole('complementary', { name: '来源', exact: true }).waitFor()
+  assert.equal(await page.getByRole('complementary', { name: 'Sources', exact: true }).count(), 0,
+    'Language preference must survive a full host restart')
   assert.deepEqual(errors, [])
   const measurement = { mode: live ? 'live' : 'offline', approval_outcomes: decisions.map(e => e.data.outcome), refusalNarration,
     model_requests: events.filter(e => e.type === 'assistant/message').length,

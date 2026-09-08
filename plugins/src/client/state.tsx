@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventSource, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import { api, navigate, route, useUI, type Summary } from './ui.ts'
+import { api, formatTime, labelText, navigate, route, useUI, type Summary } from './ui.ts'
 import { QuotationProgress } from './quotation-progress.tsx'
 import { Notebook } from './notebook.tsx'
 import { BusinessReview, type Review } from './review.tsx'
@@ -11,7 +11,7 @@ import { Chip, type Limits } from './workspace.tsx'
 type Injected = { source: SessionEventSource; loadOlder: () => Promise<void> }
 import { projectAudit, selectReview, type AuditEvent } from './audit.ts'
 function BusinessState({ source, loadOlder, openView }: ConvViewProps & Injected) {
-  const { t } = useUI()
+  const { t, language } = useUI()
   const [kind,setKind] = useState(route().kind ?? 'mixed')
   const snapshot = useSyncExternalStore<SessionEventWindow>(fn => source.subscribe(fn), () => source.getSnapshot())
   const audit = useMemo(() => projectAudit(snapshot.entries.filter(e => e.type === 'event').map(e => e.event) as AuditEvent[]), [snapshot])
@@ -75,7 +75,7 @@ function BusinessState({ source, loadOlder, openView }: ConvViewProps & Injected
     <div className="bf-state-map">{groups.map(group => <section key={group.title}><h3>{group.title}</h3>{group.items.map(id => <button key={id} data-current={current(id)} aria-pressed={node === id} onClick={() => setNode(id)}><Chip status={id} /> {count(id) !== undefined && <span className="bf-badge">{count(id)}</span>}</button>)}</section>)}</div>
     <p className="bf-hint">{t('approval')} · {t('timeout')}: {limits ? limits.decisionTimeoutMs / 1000 : '—'} {t('seconds')}</p>
     <p className="bf-hint">{t('mappingHelp')} {t('quarantineHelp')}</p>
-    <details><summary>{t('batchAudit')} · {selected.calls.length} Spawn · {t('dispatchCount')}</summary><p>{t('loadedWindow')}</p><ul>{selected.calls.map((e, i) => <li key={i}>{String(e.data.callId)} · {new Date(e.time).toLocaleTimeString()}</li>)}</ul>{snapshot.hasMore && <button onClick={() => void loadOlder().catch(e => setError(String(e)))}>{t('loadOlder')}</button>}</details>
+    <details><summary>{t('batchAudit')} · {selected.calls.length} Spawn · {t('dispatchCount')}</summary><p>{t('loadedWindow')}</p><ul>{selected.calls.map((e, i) => <li key={i}>{String(e.data.callId)} · {formatTime(e.time, language)}</li>)}</ul>{snapshot.hasMore && <button onClick={() => void loadOlder().catch(e => setError(String(e)))}>{t('loadOlder')}</button>}</details>
     </>}>
     {isApproval ? <section aria-label={t('approval')}><h3>{t('approval')}</h3>{audit.approvals.filter(a => a.outcome === node).map(a => <article className="bf-card" key={a.id}><Chip status={a.outcome} /><p>{a.id}</p><p>{a.note}</p><small>{a.call}</small></article>)}{!approvalCounts[node] && <p>{t('unknown')}</p>}</section>
       : report && !['needs_configuration', 'needs_review', 'ready', 'empty'].includes(node) ? <BusinessReview report={{ ...report, roles: ['attention', 'ok'].includes(node) ? report.roles.map(r => ({ ...r, checks: r.checks.filter(c => c.expected_status === node) })) : report.roles }} /> : <p>{batch?.refusal || (waiting ? t('waitingReview') : report ? t('batchHint') : batch ? t('noReport') : t('batchHint'))}</p>}
@@ -85,7 +85,7 @@ export function mountState(ctx: Context) {
   const sessions = ctx.sessions as unknown as ISessions
   ctx.slots.inject('conversation.view', () => ctx.slots.register({
     name: 'conversation.view', id: 'bridgeflow-state', order: 20,
-    label: () => ctx.locale.getSnapshot().active.startsWith('zh') ? '业务状态' : 'Business state',
+    label: () => labelText('state'),
     inject: sessionId => {
       const binding = sessions.binding(sessionId)
       if (!binding) throw new Error('Native session binding unavailable')

@@ -30,7 +30,9 @@ sudo systemctl restart bridgeflow
 ok=""
 for _ in $(seq 1 30); do
   sleep 2
-  if curl -fsS http://127.0.0.1:8000/health >/dev/null 2>&1 \
+  # Bounded curl: without --max-time a stalled request could outlast the
+  # whole 30×2s retry budget.
+  if curl -fsS --connect-timeout 2 --max-time 5 http://127.0.0.1:8000/health >/dev/null 2>&1 \
      && systemctl is-active --quiet bridgeflow; then
     ok=1
     break

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { notebookWalkthrough } from './notebook-walkthrough.mjs'
+import { assertDefaultEnglish, switchLanguage } from './locale.mjs'
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { mkdtemp, readFile, readdir, writeFile, mkdir, copyFile, rm, lstat } from 'node:fs/promises'
@@ -80,6 +81,9 @@ try {
   page.on('console', message => { if (message.type() === 'error') { logs += '\nCONSOLE: ' + message.text(); if (!message.text().startsWith('Failed to load resource:')) failedConsole.push(message.text()) } })
   page.setDefaultTimeout(live ? 240000 : 30000)
   await page.goto(match[1])
+  // #110: a new user on a zh-CN browser defaults to English; switch explicitly.
+  await assertDefaultEnglish(page)
+  await switchLanguage(page, '中文')
   const anonymous = await browser.newContext()
   const anonymousPage = await anonymous.newPage()
   assert.equal((await anonymousPage.request.get(`http://127.0.0.1:${webPort}/bridgeflow/quotation/contract`)).status(), 401)
@@ -128,9 +132,14 @@ try {
   const en = await english.newPage()
   en.on('pageerror', e => errors.push(e.message))
   await en.goto(`http://127.0.0.1:${webPort}/#bridgeflow?view=quotation`)
+  // #110: the saved preference (zh, chosen above) outranks this context's en-US
+  // browser language — preference wins over browser derivation by design.
+  await switchLanguage(en, 'English')
   await en.getByRole('article', {name:'Declared template',exact:true}).waitFor()
   await en.screenshot({path:`${scratch}/quotation-en.png`,fullPage:true})
   await english.close()
+  // The preference is shared and durable; hand Chinese back to the main flow.
+  await switchLanguage(page, '中文')
   composerIdentity = await page.locator('[contenteditable=true]').first().elementHandle()
   // Real source lifecycle: import through Sources, preview before sanitation,
   // paginate, reload the route, and switch batches without stale originals.
