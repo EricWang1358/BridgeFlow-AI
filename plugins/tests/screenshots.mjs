@@ -17,13 +17,16 @@ import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { createServer } from 'node:net'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { chromium } from '@playwright/test'
+import { assertClientModulesServed, resolveDsh } from './dsh.mjs'
 import { switchLanguage } from './locale.mjs'
 
-const root = '/home/eric/Hackathon2026/BridgeFlow-AI'
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const out = process.argv[2] ?? '/tmp/bfshot/before'
 await mkdir(out, { recursive: true })
-const python = '/home/eric/Hackathon2026/.venv/bin/python'
+const python = process.env.BRIDGEFLOW_PYTHON ?? resolve(root, '../.venv/bin/python')
 async function port() {
   const s = createServer(); await new Promise(r => s.listen(0, '127.0.0.1', r))
   const p = s.address().port; await new Promise(r => s.close(r)); return p
@@ -50,7 +53,7 @@ try {
     + `\n- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n  config:\n    provider: bridgeflow-offline-test\n    model: offline\n- insert:\n    - id: scripted-test-model\n      name: ${JSON.stringify(`${root}/plugins/tests/fixtures/scripted-model/index.ts`)}\n`
   await writeFile('/tmp/bfshot/web.yml', patch)
   start(python, ['-m','uvicorn','bridgeflow.api.main:app','--host','127.0.0.1','--port',String(backendPort)])
-  start('dsh', ['web','--patch','/tmp/bfshot/web.yml','--no-open','--port',String(webPort)])
+  start(resolveDsh(), ['web','--patch','/tmp/bfshot/web.yml','--no-open','--port',String(webPort)])
   const deadline = Date.now() + 60000
   let m
   while (Date.now() < deadline) {
@@ -60,6 +63,7 @@ try {
     await new Promise(r => setTimeout(r, 150))
   }
   if (!m) throw new Error('not ready:\n' + logs.slice(-3000))
+  await assertClientModulesServed(m[1])
   browser = await chromium.launch({ headless: true })
   const page = await browser.newPage({ viewport: { width: 1440, height: 950 }, locale: 'zh-CN' })
   page.on('console', x => { if (x.type() === 'error') logs += '\nCONSOLE: ' + x.text() })

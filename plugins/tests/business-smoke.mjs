@@ -1,4 +1,5 @@
 import { coldReload } from './cold-reload.mjs'
+import { assertClientModulesServed, resolveDsh } from './dsh.mjs'
 import { assertDefaultEnglish, switchLanguage } from './locale.mjs'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
@@ -50,7 +51,7 @@ try {
     + (live ? '' : `\n- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n  config:\n    provider: bridgeflow-offline-test\n    model: offline\n- insert:\n    - id: scripted-test-model\n      name: ${JSON.stringify(`${root}/plugins/tests/fixtures/scripted-model/index.ts`)}\n`)
   await writeFile(`${scratch}/web.yml`, patch)
   start(python, ['-m', 'uvicorn', 'bridgeflow.api.main:app', '--host', '127.0.0.1', '--port', String(backendPort)])
-  const web = start(process.env.BRIDGEFLOW_DSH ?? 'dsh', ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])
+  const web = start(resolveDsh(), ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])
   const deadline = Date.now() + 30_000
   let match
   while (Date.now() < deadline) {
@@ -60,6 +61,9 @@ try {
     await new Promise(resolve => setTimeout(resolve, 100))
   }
   assert(match, 'DSH did not become ready')
+  // #97: a partial client graph only surfaces as a locator timeout inside the
+  // browser; catch it here, where the cause is still nameable.
+  await assertClientModulesServed(match[1])
   browser = await chromium.launch({ headless: true })
   page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: 'zh-CN' })
   const errors = []

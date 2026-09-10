@@ -113,22 +113,28 @@ Python 测试由 `conftest.py` 隔离 provider、字典、输出与记忆。浏�
 离线回归只证明规则与契约成立。判断质量要另外跑模型评测并记录费用与局限，
 不能拿 mock 输出当真实研判的证据。
 
-### 已知问题：三条浏览器 smoke 在开发机上是红的
+### 已知问题：三条浏览器 smoke 曾在开发机上是红的（根因已定，修复在 #97 分支）
 
-`smoke:web` / `smoke:quotation` / `smoke:business` 三条都会失败，控制台同一句：
+`smoke:web` / `smoke:quotation` / `smoke:business` 三条曾同失败于：
 
 ```text
 client-modules: HTML did not preload @deepseek-ai/dsh-client-modules/client.js
 ```
 
-这不是你弄坏的，也不是产品坏了。判别实验：同一份 `dsh/enterprise.patch.yml`、同一条 `dsh web` 命令，
-换成指向已预装 web profile 的真实 `DSH_HOME` 的 harness（`pnpm --dir plugins shots`），该错误出现 0 次，
-界面正常渲染。三条 smoke 各自 `mkdtemp` 建全新临时 DSH_HOME，差异指向那里；`dsh --dump-config` 显示
-组合期 36 个官方客户端插件全在，所以问题在服务期。进展与已排除的假设见
-[#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97)。
+根因（2026-09-10 实测复现）：venv 激活后裸 `dsh` 解析到 Python SDK 的 pkg 打包 exe，它把
+`$DSH_HOME/profiles/node_modules` 自愈成 ESM proxy，proxy 的 `package.json` 只保留
+`dsh.moduleFallback.targets`、剥掉了 `dsh.client` 声明，ClientModuleRegistry 据此把全部官方
+客户端插件判为「非客户端包」，serve 出的 HTML 只剩 bridgeflow-plugins。与 DSH_HOME 新旧无关；
+npm CLI 启动会把污染自愈回符号链接。一行诊断：
 
-在它修好之前：浏览器行为只能靠 `shots` 手工看；`docs/00` 里那些「smoke 通过」的记录与本机复现不符，
-引用前先自己跑一遍。
+```bash
+ls $DSH_HOME/profiles/node_modules/@deepseek-ai/cordis   # 符号链接=健康；entry-0.js proxy=被打包 exe 污染过
+```
+
+修复：四条浏览器脚本改用 `plugins/tests/dsh.mjs` 的 `resolveDsh()`（与后端 `native_command()`
+同一套拒绝规则），并在开浏览器前断言 serve 出的页面含官方客户端图。修好后剩下的唯一本机缺口是
+`chromium_headless_shell-1187` 未装（官方源下载卡死），装完跑一遍三条 smoke 才能宣布全绿；
+`docs/00` 里那些「smoke 通过」的记录与本机复现不符，引用前先自己跑一遍。
 
 ### 进行中：#110 中英切换默认英文（2026-09-08）
 
