@@ -133,9 +133,12 @@ export async function notebookWalkthrough(page, scratch) {
   await page.setViewportSize({width:390,height:844})
   assert(await top.evaluate(el=>el.scrollWidth<=el.clientWidth+1),'Mobile header must not overflow with English labels')
   const sourcesToggle=top.getByRole('button',{name:'Sources',exact:true})
+  const initiallyOpen = await sourcesToggle.getAttribute('aria-expanded') === 'true'
   await sourcesToggle.click()
-  assert.equal(await sourcesToggle.getAttribute('aria-expanded'),'false','Accessible names must track the active language')
+  assert.equal(await sourcesToggle.getAttribute('aria-expanded'), String(!initiallyOpen), 'English toggle must change the current state')
+  assert.equal(await page.getByRole('complementary', {name:'Sources',exact:true}).getAttribute('data-mobile-open'), String(!initiallyOpen), 'Toggle state must match the actual mobile pane')
   await sourcesToggle.click()
+  assert.equal(await sourcesToggle.getAttribute('aria-expanded'), String(initiallyOpen), 'A second click must restore the initial state')
   await page.setViewportSize({width:1440,height:1000})
   await switchLanguage(page,'中文')
 }

@@ -1,3 +1,5 @@
+import { notebookPurpose, type WorkflowId } from '../notebook-capabilities.ts'
+import type { ComponentType } from 'react'
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventSource, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
@@ -10,9 +12,8 @@ import { Chip, type Limits } from './workspace.tsx'
 
 type Injected = { source: SessionEventSource; loadOlder: () => Promise<void> }
 import { projectAudit, selectReview, type AuditEvent } from './audit.ts'
-function BusinessState({ source, loadOlder, openView }: ConvViewProps & Injected) {
+function MonthlyState({ source, loadOlder, openView }: ConvViewProps & Injected) {
   const { t, language } = useUI()
-  const [kind,setKind] = useState(route().kind ?? 'mixed')
   const snapshot = useSyncExternalStore<SessionEventWindow>(fn => source.subscribe(fn), () => source.getSnapshot())
   const audit = useMemo(() => projectAudit(snapshot.entries.filter(e => e.type === 'event').map(e => e.event) as AuditEvent[]), [snapshot])
   const eventBatch = String(audit.review?.batch_id ?? '')
@@ -26,7 +27,6 @@ function BusinessState({ source, loadOlder, openView }: ConvViewProps & Injected
   useEffect(() => {
     const readRoute = () => {
       const value = route()
-      setKind(value.kind ?? 'mixed')
       if (value.view === 'state') { setChosen(value.batch ?? ''); setInput(value.batch ?? ''); setNode('') }
     }
     readRoute(); window.addEventListener('hashchange', readRoute)
@@ -52,10 +52,8 @@ function BusinessState({ source, loadOlder, openView }: ConvViewProps & Injected
   const count = (id: string) => id === 'validated' ? `${report?.roles.filter(r => r.status === 'validated').length ?? 0}/4` : ['attention', 'ok'].includes(id) ? report?.roles.flatMap(r => r.checks).filter(c => c.expected_status === id).length ?? 0 : approvalCounts[id]
   const current = (id: string) => batch?.status === id || report?.status === id || id === 'dispatching' && audit.review?.status === id && batchId === eventBatch || ['attention', 'ok'].includes(id) && !!count(id) || currentApproval === id
   const isApproval = groups[3]!.items.includes(node)
-  if (kind === 'quotation') return <section className="bf-state" aria-label={t('state')}><h2>{t('state')}</h2><QuotationProgress/></section>
   return <Notebook title={t('state')} description={t('stateHelp')}
     sources={<>
-    {kind === 'mixed' && <QuotationProgress/>}
     <form className="bf-actions" onSubmit={e => { e.preventDefault(); setChosen(input); navigate({ batch: input, view: 'state' }) }}>
       <label>{t('batchId')} <input value={input} placeholder={eventBatch || t('batchId')} onChange={e => setInput(e.target.value)} /></label>
       <button disabled={!/^[a-f0-9]{32}$/.test(input)}>{t('open')}</button>
@@ -81,6 +79,26 @@ function BusinessState({ source, loadOlder, openView }: ConvViewProps & Injected
       : report && !['needs_configuration', 'needs_review', 'ready', 'empty'].includes(node) ? <BusinessReview report={{ ...report, roles: ['attention', 'ok'].includes(node) ? report.roles.map(r => ({ ...r, checks: r.checks.filter(c => c.expected_status === node) })) : report.roles }} /> : <p>{batch?.refusal || (waiting ? t('waitingReview') : report ? t('batchHint') : batch ? t('noReport') : t('batchHint'))}</p>}
   </Notebook>
 }
+const stateViews: Record<WorkflowId, ComponentType<ConvViewProps & Injected>> = {
+  monthly: MonthlyState,
+  quotation: QuotationProgress,
+}
+const subscribeRoute = (changed: () => void) => {
+  window.addEventListener('hashchange', changed)
+  return () => window.removeEventListener('hashchange', changed)
+}
+
+function BusinessState(props: ConvViewProps & Injected) {
+  const { t } = useUI()
+  const kind = useSyncExternalStore(subscribeRoute, () => route().kind)
+  return <section className="bf-state bf-business-state" aria-label={t('state')}>
+    {notebookPurpose(kind).workflows.map(id => {
+      const View = stateViews[id]
+      return <View key={id} {...props}/>
+    })}
+  </section>
+}
+
 export function mountState(ctx: Context) {
   const sessions = ctx.sessions as unknown as ISessions
   ctx.slots.inject('conversation.view', () => ctx.slots.register({

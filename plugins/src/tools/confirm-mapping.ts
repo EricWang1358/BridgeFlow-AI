@@ -1,3 +1,4 @@
+import { withAccess } from '../tool-catalogue.ts'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
 import { callBackend, type BackendConfig } from '../backend.ts'
@@ -27,7 +28,7 @@ export interface ConfirmationResult {
 }
 
 export function confirmMapping(config: BackendConfig, receipts: ApprovalReceipts) {
-  return defineTool({
+  return withAccess(defineTool({
     name: 'confirm_mapping',
     description:
       'Record a human decision about one proposed mapping so it is not asked again ' +
@@ -88,5 +89,10 @@ export function confirmMapping(config: BackendConfig, receipts: ApprovalReceipts
         receipts.take(JSON.stringify([exec.agent?.id, exec.callId])),
       )
     },
+  }), {
+    kind: 'approval',
+    reason: 'Record a mapping decision for future imports and audit. Nothing is written without approval.',
+    denialEffect: 'Nothing was written, and the decision is not remembered for next month; a future import may therefore ask again. Do NOT claim future requests are suppressed',
+    body: mappingBody,
   })
 }

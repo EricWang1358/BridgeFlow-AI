@@ -1,3 +1,4 @@
+import { withAccess, type ToolCatalogue } from '../tool-catalogue.ts'
 import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
@@ -38,7 +39,7 @@ export class ReviewPolicy {
 const jsonOutput = { schema: { type: 'object' as const, additionalProperties: true as const },
   render: (_args: unknown, value: unknown) => [{ type: 'text' as const, text: JSON.stringify(value) }] }
 
-export function mountReview(ctx: Context, backend: BackendConfig, policy: ReviewPolicy): void {
+export function mountReview(ctx: Context, backend: BackendConfig, policy: ReviewPolicy, catalogue: ToolCatalogue): void {
   function cleanup(state: ReviewState) {
     clearTimeout(state.timer); policy.activeParents.delete(state.parent.id)
     for (const id of state.children.keys()) policy.steps.delete(id)
@@ -56,7 +57,7 @@ export function mountReview(ctx: Context, backend: BackendConfig, policy: Review
     })().finally(() => cleanup(state))
     return state.finishing
   }
-  ctx.tools.register(defineTool({ name: 'review_context',
+  catalogue.register(ctx, withAccess(defineTool({ name: 'review_context',
     description: 'Begin one immutable batch review. Returns exactly four sealed delegation prompts. In your NEXT response call official subagent FOUR times together, copying each description and prompt exactly. Then call review_finalize. Never synthesize department answers.',
     parameters: { batch_id: { type: 'string', required: true } }, output: jsonOutput,
     async execute(args, exec) {
@@ -77,8 +78,8 @@ export function mountReview(ctx: Context, backend: BackendConfig, policy: Review
           delegations: ROLES.map(role => ({ description: role, prompt: JSON.stringify({ review_id: state.id, role, ticket: state.tickets.get(role) }), run_in_background: false })) }
       } catch (error) { policy.activeParents.delete(parent.id); throw error }
     },
-  }))
-  ctx.tools.register(defineTool({ name: 'review_finalize',
+  }), { kind: 'review' }))
+  catalogue.register(ctx, withAccess(defineTool({ name: 'review_finalize',
     description: 'Collect actual results of all four official subagent calls, validate with the frozen business contract and save a report. Do not supply or invent child findings. Missing or failed departments produce partial.',
     parameters: { review_id: { type: 'string', required: true } }, output: jsonOutput,
     async execute(args, exec) {
@@ -87,7 +88,7 @@ export function mountReview(ctx: Context, backend: BackendConfig, policy: Review
       if ([...state.children.values()].some(run => run.status === 'running')) throw new Error('Children still running; await official subagent results')
       return finish(state)
     },
-  }))
+  }), { kind: 'review' }))
   ctx.tools.guard(exec => {
     if (exec.name !== 'subagent') return undefined
     const state = exec.agent && policy.states.get(exec.agent.id)

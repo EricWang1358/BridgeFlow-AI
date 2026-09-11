@@ -1,10 +1,11 @@
+import { isNotebookKind, type NotebookKind } from './notebook-capabilities.ts'
 import { z } from 'zod'
 import { defineDomain, domainTable, type KvTable } from '@deepseek-ai/dsh-storage-domain'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-api-session-controller'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 
-export type Notebook = { title: string; kind?: 'monthly' | 'quotation' | 'mixed'; batch?: string; view?: string; source?: string; report?: string }
+export type Notebook = { title: string; kind?: NotebookKind; batch?: string; view?: string; source?: string; report?: string }
 const views = new Set(['state', 'source', 'artifact', 'quotation', 'master', 'mappings', 'corrections', 'quarantine', 'review'])
 const departments = new Set(['production', 'procurement', 'finance', 'marketing'])
 
@@ -15,8 +16,8 @@ export function parseNotebook(value: unknown): Notebook {
   if (typeof data.title !== 'string' || !data.title.trim() || data.title.length > 120) throw new Error('Notebook title is required (maximum 120 characters)')
   const result: Notebook = { title: data.title.trim() }
   if (data.kind !== undefined) {
-    if (!['monthly','quotation','mixed'].includes(String(data.kind))) throw new Error('Invalid notebook kind')
-    result.kind = data.kind as Notebook['kind'] & string
+    if (!isNotebookKind(data.kind)) throw new Error('Invalid notebook kind')
+    result.kind = data.kind
   }
   for (const key of ['batch', 'report'] as const) {
     if (data[key] === undefined) continue

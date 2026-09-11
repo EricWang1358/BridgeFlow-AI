@@ -1,3 +1,4 @@
+import { withAccess } from '../tool-catalogue.ts'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
 import { callBackend, type BackendConfig } from '../backend.ts'
@@ -14,7 +15,7 @@ export interface MetricCatalogue {
 }
 
 export function listMetrics(config: BackendConfig) {
-  return defineTool({
+  return withAccess(defineTool({
     name: 'list_metrics',
     description:
       'List the metrics that can be computed, with their formula and the declared ' +
@@ -71,5 +72,5 @@ export function listMetrics(config: BackendConfig) {
       // public contract deliberately exposes only the declared metric interface.
       return { metrics: value.metrics.map(({ name, unit, formula, requires }) => ({ name, unit, formula, requires })) }
     },
-  })
+  }), { kind: 'read' })
 }

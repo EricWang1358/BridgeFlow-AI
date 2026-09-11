@@ -1,3 +1,4 @@
+import type { ToolCatalogue } from '../tool-catalogue.ts'
 import type { Context } from '@deepseek-ai/cordis'
 // Imported for its module augmentation: this is what declares `ctx.approval` (the
 // request API the gate asks through) on the cordis `Context`.
@@ -5,7 +6,7 @@ import type {} from '@deepseek-ai/dsh-user-approval'
 
 import type { PendingDetails } from './detail.ts'
 import { summarise } from './detail.ts'
-import { mappingBody, type ApprovalReceipts } from './receipts.ts'
+import type { ApprovalReceipts } from './receipts.ts'
 import type { ApprovalNotes } from './notes.ts'
 
 /**
@@ -42,19 +43,8 @@ import type { ApprovalNotes } from './notes.ts'
  * including the ones meaning "nobody answered", ends in a deny from here.
  */
 
-/** Tools that change stored state, and therefore need a decision behind them. */
-export const MUTATING_TOOLS: readonly string[] = ['confirm_mapping']
-
 /** The only outcome that permits the call (`docs/13` §7.3). */
 const GRANT = 'allowed-once'
-
-/** What the operator sees before deciding. Ours, because we know what the tool does. */
-function askReason(toolName: string): string {
-  return (
-    `${toolName} records a decision that will be reused next month and cited in an ` +
-    `audit. It changes stored state; nothing is written without approval.`
-  )
-}
 
 /**
  * The sentence the model reads when a call does not happen.
@@ -65,7 +55,7 @@ function askReason(toolName: string): string {
  * denial an agent reports as success is the worst combination available — the safety
  * worked, and the record lies about it.
  */
-function denialReason(toolName: string, outcome: string, note?: string): string {
+function denialReason(toolName: string, outcome: string, effect: string, note?: string): string {
   // Clauses joined, not concatenated: a sentence assembled from parts cannot come
   // out missing a full stop between "a person refused" and what follows, which is
   // exactly what the first version of this function did.
@@ -80,16 +70,17 @@ function denialReason(toolName: string, outcome: string, note?: string): string 
   // Quoted rather than paraphrased: a model that summarises an objection tends to
   // turn it into whatever it was already about to do.
   if (note) clauses.push(`The reviewer said: "${note}"`)
-  clauses.push('Nothing was written, and the decision is not remembered for next month; a future import may therefore ask again. Do NOT claim future requests are suppressed')
+  clauses.push(effect)
   clauses.push('Say plainly that this step did not happen and why')
   clauses.push('Do not describe it as done, and do not re-ask within this turn')
 
   return `${clauses.join('. ')}.`
 }
 
-export function gate(ctx: Context, details: PendingDetails, receipts: ApprovalReceipts, decisionTimeoutMs: number, notes: ApprovalNotes): void {
+export function gate(ctx: Context, details: PendingDetails, receipts: ApprovalReceipts, decisionTimeoutMs: number, notes: ApprovalNotes, catalogue: ToolCatalogue): void {
   ctx.on('tools/pre-execute', async (exec, next) => {
-    if (!MUTATING_TOOLS.includes(exec.name)) return next()
+    const access = catalogue.access(exec.name)
+    if (access?.kind !== 'approval') return next()
 
     // The approval request carries no arguments, so the summary is stashed here and
     // collected by the answerer. Without it the operator is asked to approve a tool
@@ -120,7 +111,7 @@ export function gate(ctx: Context, details: PendingDetails, receipts: ApprovalRe
         agent,
         toolName: exec.name,
         callId: exec.callId,
-        reason: askReason(exec.name) + '\n' + summarise(exec.arguments)
+        reason: access.reason + '\n' + summarise(exec.arguments)
           .map(item => `${item.label}: ${item.value}`).join('\n'),
         signal: AbortSignal.any([exec.signal, AbortSignal.timeout(decisionTimeoutMs)]),
       })
@@ -147,9 +138,9 @@ export function gate(ctx: Context, details: PendingDetails, receipts: ApprovalRe
     details.discard(exec.callId)
 
     if (outcome === GRANT && exec.callId && !exec.signal.aborted) {
-      receipts.authorize(JSON.stringify([agent.id, exec.callId]), mappingBody(exec.arguments as Record<string, unknown>, agent.id, exec.callId))
+      receipts.authorize(JSON.stringify([agent.id, exec.callId]), access.body(exec.arguments as Record<string, unknown>, agent.id, exec.callId))
       return { kind: 'allow' }
     }
-    return { kind: 'deny', reason: denialReason(exec.name, outcome, note) }
+    return { kind: 'deny', reason: denialReason(exec.name, outcome, access.denialEffect, note) }
   })
 }

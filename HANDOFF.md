@@ -1,6 +1,6 @@
 # 交接说明
 
-更新于 2026-09-07。这份文档只放会过期的东西：现在跑到哪了、怎么跑起来、下一步做什么、已知哪些坑。
+更新于 2026-09-11。这份文档只放会过期的东西：现在跑到哪了、怎么跑起来、下一步做什么、已知哪些坑。
 硬约束在 [`CLAUDE.md`](CLAUDE.md)，架构理由是 [`docs/13`](docs/13-golden-standard.md)，
 所有实测数字在 [`docs/00`](docs/00-status.md)，业务演示与模拟负责人验收在 [`docs/17`](docs/17-business-mvp-acceptance.md)。
 数字不要抄到这里来，它们会漂移。
@@ -113,37 +113,15 @@ Python 测试由 `conftest.py` 隔离 provider、字典、输出与记忆。浏�
 离线回归只证明规则与契约成立。判断质量要另外跑模型评测并记录费用与局限，
 不能拿 mock 输出当真实研判的证据。
 
-### 已知问题：三条浏览器 smoke 在开发机上是红的
+### 当前扩展方式与浏览器验证
 
-`smoke:web` / `smoke:quotation` / `smoke:business` 三条都会失败，控制台同一句：
+用途、选项、存储校验和状态呈现共享能力声明；新增用途组合不再修改各页面分支。
+领域工具在定义处携带读取、研判或审批契约，目录驱动执行授权，修复了诊断工具注册后仍被白名单拒绝的问题。
+详见 [产品扩展契约](docs/23-extension-contracts.md)。
 
-```text
-client-modules: HTML did not preload @deepseek-ai/dsh-client-modules/client.js
-```
-
-这不是你弄坏的，也不是产品坏了。判别实验：同一份 `dsh/enterprise.patch.yml`、同一条 `dsh web` 命令，
-换成指向已预装 web profile 的真实 `DSH_HOME` 的 harness（`pnpm --dir plugins shots`），该错误出现 0 次，
-界面正常渲染。三条 smoke 各自 `mkdtemp` 建全新临时 DSH_HOME，差异指向那里；`dsh --dump-config` 显示
-组合期 36 个官方客户端插件全在，所以问题在服务期。进展与已排除的假设见
-[#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97)。
-
-在它修好之前：浏览器行为只能靠 `shots` 手工看；`docs/00` 里那些「smoke 通过」的记录与本机复现不符，
-引用前先自己跑一遍。
-
-### 进行中：#110 中英切换默认英文（2026-09-08）
-
-已落码（本分支，未合并）：无偏好新用户默认英文（客户端启动时等宿主设置文档加载后、确认无已存偏好，
-才经官方 `setLocale` 写入一次 en，持久化仍由宿主负责）；审批卡正文改为结构化双语——新增
-`/bridgeflow/approval-detail` 端点（`PendingDetails.peek`，只在决定悬而未决时存在），卡片渲染的是
-issue #96 那份封顶摘要：标签译自我们自己声明的封闭参数名，值原文照显；日期/数字统一走
-`formatDateTime/formatTime/formatNumber`（只改显示，不改领域值）；`workspace.tsx` 的 `' 条'` 与
-`state.tsx` 的行内三元收进 labels 表。smoke 测试改为「先断言默认英文 → 原生设置里切中文 →
-原流程」，并新增重载/宿主重启后语言保持、窄屏英文标签、审批卡结构化正文的断言
-（`plugins/tests/locale.mjs` 是公共 helper）。
-
-未验证：浏览器实测全部待跑——本机 Playwright chromium_headless_shell-1187 未装（官方源下载卡死），
-且上一节 #97 的三条 smoke 红的问题可能仍在。跑之前先 `pnpm exec playwright install chromium`。
-`plugins/tests/locale-probe.mjs` 是探针脚本，验证完 `locale.mjs` 的选择器后应删除，不进 PR。
+已合入主分支的默认英文与双语审批摘要保留，本轮完成语言持久化、审批参数、Notebook 生命周期和连续用途切换复验。
+此前记录的 preload 错误本轮未复现；锁定 npm CLI、临时 DSH_HOME 和授权本地端口／IPC 的具体复现条件见
+[实测状态](docs/00-status.md)。不要把单一旧环境失败或本轮通过外推到所有机器。
 
 ## 仍需做什么
 
@@ -153,7 +131,7 @@ issue #96 那份封顶摘要：标签译自我们自己声明的封闭参数名�
 3. **#46 / #61 / #88 人工修复。** 字段映射向导与隔离区的 release/discard 未实现。
    现阶段的做法是修正源文件后重新导入，原批次不改；未声明日期的歧义值拒绝参与总额。
 4. **#38 / #40 / #87 远端评审。** 本地已接通官方 spawn、结构化校验、部分失败、原生报告卡与拒绝理由。
-   要用复演证据去评审 issue 的范围，远端尚未改动；旧的 Python Orchestrator 不能当回退。
+   远端已按实际完成范围同步，剩余恢复与运行限制仍须独立验收；旧的 Python Orchestrator 不能当回退。
 5. **扩大验证。** 目前是真实模型在可见合成案例上的验收，不是留出集，也不是真实客户验收；
    模型补充的文字仍需业务复核。大规模性能与更广泛的攻击评测未完成。
 
