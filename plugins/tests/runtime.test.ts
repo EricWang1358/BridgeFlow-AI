@@ -158,3 +158,19 @@ test('approval detail peek reads without consuming; take and discard still own t
   details.discard('call-2')
   assert.equal(details.peek('call-2').length, 0)
 })
+
+test('batch diagnosis dispatches its registered read tool without a second allowlist entry', async (t) => {
+  const ctx = await runtime(false)
+  const requests: string[] = []
+  t.mock.method(globalThis, 'fetch', async (url: string) => {
+    requests.push(String(url))
+    return Response.json({ batch_id: 'a'.repeat(32), period: '2025-11', columns: [], overlaps: [],
+      undeclared: ['production'], declared: {}, truncated: false })
+  })
+  try {
+    const result = await ctx.tools.execute(execution('profile_batch', { batch_id: 'a'.repeat(32) }))
+    assert.equal(result.isError, false)
+    assert.deepEqual(requests, ['http://127.0.0.1:1/tools/profile-batch'])
+    assert.match(JSON.stringify(result.content), /No declared joinable column in: production/)
+  } finally { await ctx.fiber.dispose() }
+})

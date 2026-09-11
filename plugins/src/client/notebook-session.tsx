@@ -1,3 +1,4 @@
+import { defaultNotebookKind } from '../notebook-capabilities.ts'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
@@ -17,7 +18,7 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
   const list = useSyncExternalStore<SessionListState>(fn => sessions.list.subscribe(fn), () => sessions.list.getSnapshot())
   const id = list.current
   const [revision,setRevision]=useState(0)
-  const [kind, setKind] = useState<NonNullable<Notebook['kind']>>('mixed')
+  const [kind, setKind] = useState<NonNullable<Notebook['kind']>>(defaultNotebookKind)
   const [title, setTitle] = useState(''), [saved, setSaved] = useState<Notebook | null>(null)
   const [loadedId,setLoadedId]=useState<SessionId | undefined>(undefined)
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [loaded, setLoaded] = useState(false)
@@ -27,8 +28,8 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
   const current = bookmark(title, selected, batch, kind)
   const ready = loaded && loadedId === id
   const dirty = Boolean(id && ready && (saved
-    ? saved.title !== title || saved.batch !== (batch || undefined) || (saved.kind ?? 'mixed') !== kind
-    : Boolean(batch) || title !== t('untitledNotebook') || kind !== 'mixed'))
+    ? saved.title !== title || saved.batch !== (batch || undefined) || (saved.kind ?? defaultNotebookKind) !== kind
+    : Boolean(batch) || title !== t('untitledNotebook') || kind !== defaultNotebookKind))
   useEffect(() => {
     if (ready && route().kind !== kind) navigate({...route(),kind})
   }, [ready, kind, selected.kind])
@@ -39,13 +40,13 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
     const changed = last.current !== undefined && last.current !== id
     last.current = id
     setLoaded(false); setSaved(null); setTitle(''); setError('')
-    if (!id) { setKind('mixed'); setLoadedId(undefined); setLoaded(true); return }
+    if (!id) { setKind(defaultNotebookKind); setLoadedId(undefined); setLoaded(true); return }
     const controller = new AbortController()
     void api<{notebook: Notebook | null}>(`/notebook?session_id=${encodeURIComponent(id)}`, {signal:controller.signal})
       .then(({notebook}) => {
         if (controller.signal.aborted) return
         const draft = drafts.current.get(id) ?? notebook
-        setKind(draft?.kind ?? 'mixed'); setSaved(notebook); setTitle(draft?.title ?? list.byId[id]?.title ?? t('untitledNotebook')); setLoadedId(id); setLoaded(true)
+        setKind(draft?.kind ?? defaultNotebookKind); setSaved(notebook); setTitle(draft?.title ?? list.byId[id]?.title ?? t('untitledNotebook')); setLoadedId(id); setLoaded(true)
         const target = route().child || route().parent
         if (id !== target && (changed || (!route().batch && (!route().view || route().view === 'state')))) {
           const {title: _title, ...destination} = draft ?? {title:''}

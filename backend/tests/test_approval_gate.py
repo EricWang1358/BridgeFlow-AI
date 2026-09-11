@@ -15,8 +15,6 @@ and nothing was written.
 
 from __future__ import annotations
 
-import re
-
 import pytest
 import yaml
 from conftest import approved_post
@@ -30,25 +28,9 @@ GATE = REPO_ROOT / "plugins" / "src" / "approval" / "gate.ts"
 PATCH = REPO_ROOT / "dsh" / "approval.patch.yml"
 
 
-def _gated_tools() -> set[str]:
-    source = GATE.read_text(encoding="utf-8")
-    # Anchored on the assignment: the type annotation contains `[]` too.
-    body = source.split("MUTATING_TOOLS: readonly string[] = [", 1)[1]
-    return set(re.findall(r"'([a-z_]+)'", body[: body.index("]")]))
-
-
-def test_the_only_writing_tool_is_gated():
-    """If a second writing tool appears and is not listed here, this fails."""
-    assert _gated_tools() == {"confirm_mapping"}
-
-
-def test_reading_tools_are_not_gated():
-    """Asking someone to approve list_metrics teaches them to approve without
-    reading, which is worse than not asking."""
-    gated = _gated_tools()
-
-    for tool in ("list_metrics", "aggregate_metric", "lookup_field_dictionary"):
-        assert tool not in gated
+# Tool registration and approval policies are exercised through the native TS
+# runtime in plugins/tests/runtime.test.ts and tool-catalogue.test.ts. Parsing a
+# second source-code list would recreate the authorization drift being prevented.
 
 
 def test_the_approval_service_is_actually_loaded():
@@ -117,7 +99,7 @@ def test_a_rejection_is_recorded_as_deliberately_as_an_acceptance(memory_file):
 # --- the denial is ours to word (#86) ----------------------------------------
 
 #: Read once; these are shape assertions on the plugin, in the same spirit as the
-#: MUTATING_TOOLS parse above — the runtime is what executes them.
+#: runtime contract tests — the runtime is what executes them.
 GATE_SOURCE = GATE.read_text(encoding="utf-8")
 
 
