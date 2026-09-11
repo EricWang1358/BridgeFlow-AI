@@ -15,11 +15,13 @@ name: deploy
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
-  group: deploy
-  cancel-in-progress: true
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -52,10 +54,10 @@ jobs:
         with:
           node-version: "22"
 
-      # package.json has no packageManager pin, so pin the major here.
+      # Use the same package manager as local development and deployment.
       - uses: pnpm/action-setup@v4
         with:
-          version: "9"
+          package_json_file: plugins/package.json
 
       - name: Plugins typecheck + build + unit tests
         run: |
@@ -65,6 +67,7 @@ jobs:
           pnpm --dir plugins test
 
   deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: test
     runs-on: ubuntu-latest
     environment: production

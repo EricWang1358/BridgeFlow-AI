@@ -11,6 +11,18 @@
 
 ---
 
+## CI 工具链修复（2026-09-11）
+
+主分支 Actions [run 34579999451](https://github.com/EricWang1358/BridgeFlow-AI/actions/runs/34579999451)
+在前端依赖安装时失败：`packages field missing or empty`。CI 固定 pnpm 9，但工作区的
+`allowBuilds` 配置使用当前开发工具链的格式；并非本轮领域逻辑测试失败。
+插件清单现固定 `pnpm@11.25.0`，Actions 与部署脚本都从该声明解析版本。
+同一 workflow 增加 PR 离线检查，部署仅允许 main；PR 不会取消进行中的生产部署。
+
+本地 frozen-lockfile / typecheck / build 与 TS **30 passed**，部署脚本 `bash -n` 通过。
+未改业务与浏览器代码，本轮不重复 UI smoke；远端结果以修复 PR 的 Actions 为准。
+真实模型调用 **0 次**，费用 **0**。
+
 ## 一 当前结论
 
 **可以对外说：**
