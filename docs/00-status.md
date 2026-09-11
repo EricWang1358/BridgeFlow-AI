@@ -23,13 +23,31 @@
 未改业务与浏览器代码，本轮不重复 UI smoke；远端结果以修复 PR 的 Actions 为准。
 真实模型调用 **0 次**，费用 **0**。
 
+## 浏览器启动链路复验（2026-09-11，PR #118）
+
+浏览器启动与冷重启统一选择锁定的 npm DSH，跳过 venv 的 Python 包装器；显式指定不支持的版本直接拒绝。
+候选文件只读 shebang 前缀；服务页诊断有总超时、重定向上限、同源 cookie 边界，HTTP 失败与缺客户端模块均明确拒绝。
+
+新增真实进程／HTTP 回归后 TS **32 passed**，typecheck、build 通过；包括流式响应卡住后的超时退出。
+在 venv 优先的 PATH 下运行 `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web`、
+`smoke:business`、`smoke:quotation` 均通过。审批实际覆盖 allowed-once／rejected／cancelled、备注回传与冷读取；
+月度 **4 个官方子会话**、**4/4 validated**、并行重叠与连续用途切换通过；报价／Notebook 完整旅程通过，浏览器无 JS 错误。
+费用 **0**：业务／审批分别是离线适配器 **8／6 次**请求，不是付费模型；报价 **0 次**。
+审计与截图复用 [business](evidence/product-patterns/business/manifest.json)、
+[approval](evidence/product-patterns/approval/manifest.json) 的 keep-2 归档；
+报价最新截图批次 **1789116709591**，保留此前 **1789114831177**，不提交原始会话或完整 prompt。
+
+CI 修复 #137 的 PR 与 main 测试均通过，但部署停在 SSH 上传；已核对仓库及 production 环境均无
+SSH_HOST／SSH_USER／SSH_PRIVATE_KEY 与 PUBLIC_DOMAIN。缺项追踪 [#138](https://github.com/EricWang1358/BridgeFlow-AI/issues/138)，
+未运行服务器更新或公网检查，不能宣称部署成功。
+
 ## 一 当前结论
 
 **可以对外说：**
 
 - 月度对账闭环能在原生 DSH Web 上跑通：导入 → 冻结字典的规则计算 → 官方四角色子会话 → 原生审批 → 可重开报告。
 - 报价路径的样板前第一步已完成：`quotation:` 人工声明 + 通用文档求值器 + 点名缺项的聚合拒绝，全程不调模型。
-- 离线回归 Python 全量 **302 passed**（2 条依赖弃用提示），TS **30 passed**，typecheck / build / frozen-lockfile 通过。
+- 离线回归 Python 全量 **302 passed**（2 条依赖弃用提示），TS **32 passed**，typecheck / build / frozen-lockfile 通过。
 - 报价契约复验 **28 passed**：成本变更、全缺项、来源、范围、单位、阈值、循环、除零、纯常量伪报价、改名、鉴权、有界返回。
 - 最近一轮（2026-09-11）真实模型调用 **0 次**、计费 tokens **0**、模型费用 **0**。
 
@@ -46,7 +64,7 @@
 | --- | --- | --- |
 | Python 全量 | **302 passed**，2 条依赖弃用提示 | `pytest -q -c backend/pyproject.toml backend/tests` |
 | Python 聚焦（报价契约） | **28 passed** | `pytest -q -c backend/pyproject.toml backend/tests/test_declared_documents.py` |
-| TS 单测 | **30 passed** | `pnpm --dir plugins test` |
+| TS 单测 | **32 passed** | `pnpm --dir plugins test` |
 | 类型 / 产物 / 锁文件 | 通过 | `pnpm --dir plugins typecheck` / `build` / `install --frozen-lockfile` |
 | Python 静态 | 通过 | `ruff check backend scripts` |
 | 浏览器 smoke 三条 | 本轮隔离验收通过，退出码 **0**；历史环境差异见第二节 | `pnpm --dir plugins smoke:web` / `smoke:quotation` / `smoke:business` |

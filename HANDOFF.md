@@ -120,7 +120,7 @@ Python 测试由 `conftest.py` 隔离 provider、字典、输出与记忆。浏�
 详见 [产品扩展契约](docs/23-extension-contracts.md)。
 
 已合入主分支的默认英文与双语审批摘要保留，本轮完成语言持久化、审批参数、Notebook 生命周期和连续用途切换复验。
-此前记录的 preload 错误本轮未复现；锁定 npm CLI、临时 DSH_HOME 和授权本地端口／IPC 的具体复现条件见
+浏览器测试现在主动选择锁定 npm CLI，避免激活 venv 后误用 Python 打包运行时；启动诊断有界，并在开浏览器前检查官方客户端模块。临时 DSH_HOME、venv 优先 PATH 和本地端口／IPC 的复验条件见
 [实测状态](docs/00-status.md)。不要把单一旧环境失败或本轮通过外推到所有机器。
 
 ## 仍需做什么

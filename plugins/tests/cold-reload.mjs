@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { resolveDsh } from './dsh.mjs'
 
 /** Restart the actual host, then make its native cold reader inspect every session. */
 export async function coldReload({page, web, start, args, readLogs, sessionIds}) {
@@ -10,7 +11,7 @@ export async function coldReload({page, web, start, args, readLogs, sessionIds})
     web.kill('SIGTERM')
   })
   const offset = readLogs().length
-  start(process.env.BRIDGEFLOW_DSH ?? 'dsh', args)
+  start(resolveDsh(), args)
   const deadline = Date.now() + 30000
   while (!readLogs().slice(offset).includes('dsh web: ') && Date.now() < deadline) {
     await new Promise(resolve => setTimeout(resolve, 100))

@@ -1,0 +1,169 @@
+[
+  {
+    "type": "approval/asked",
+    "seq": 16,
+    "time": 1789116656025,
+    "data": {
+      "id": "77570beb-b85d-4b16-91c7-651eabc41675",
+      "toolName": "confirm_mapping",
+      "callId": "approval-fixture-0",
+      "reason": "Record a mapping decision for future imports and audit. Nothing is written without approval.\nsource: sku:test-0\ntarget: customer:test\nrelation: ordered_by\naccepted: true\nevidence: Offline browser test\nperiod: 2025-11"
+    }
+  },
+  {
+    "type": "approval/decided",
+    "seq": 17,
+    "time": 1789116656299,
+    "data": {
+      "id": "77570beb-b85d-4b16-91c7-651eabc41675",
+      "outcome": "allowed-once"
+    }
+  },
+  {
+    "type": "tool/result",
+    "seq": 18,
+    "time": 1789116656350,
+    "data": {
+      "turn": 1,
+      "step": 1,
+      "message": {
+        "source": {
+          "kind": "tool",
+          "callId": "approval-fixture-0"
+        },
+        "content": [
+          {
+            "type": "tool-result",
+            "toolCallId": "approval-fixture-0",
+            "content": [
+              {
+                "type": "text",
+                "text": "Accepted sku:test-0 → customer:test (ordered_by), recorded by session-1ee139bc-1fd5-47ba-886f-5bd33257b129, approved by dsh-authenticated-session. 1 confirmation(s) now on file; this one will not be asked again."
+              }
+            ],
+            "isError": false
+          }
+        ],
+        "role": "user",
+        "id": "f0cda14f-ea7a-4d94-b86c-0d0576601a5e"
+      },
+      "meta": {
+        "accepted": true,
+        "relation": "ordered_by",
+        "remembered": 1
+      }
+    },
+    "sourceEventSeqs": [
+      15
+    ],
+    "surfaceOp": "append"
+  },
+  {
+    "type": "approval/asked",
+    "seq": 41,
+    "time": 1789116656573,
+    "data": {
+      "id": "2de505a2-9884-498f-8963-2652c85e692b",
+      "toolName": "confirm_mapping",
+      "callId": "approval-fixture-2",
+      "reason": "Record a mapping decision for future imports and audit. Nothing is written without approval.\nsource: sku:test-2\ntarget: customer:test\nrelation: ordered_by\naccepted: true\nevidence: Offline browser test\nperiod: 2025-11"
+    }
+  },
+  {
+    "type": "approval/decided",
+    "seq": 42,
+    "time": 1789116656909,
+    "data": {
+      "id": "2de505a2-9884-498f-8963-2652c85e692b",
+      "outcome": "rejected"
+    }
+  },
+  {
+    "type": "tool/result",
+    "seq": 43,
+    "time": 1789116656910,
+    "data": {
+      "turn": 2,
+      "step": 1,
+      "message": {
+        "source": {
+          "kind": "tool",
+          "callId": "approval-fixture-2"
+        },
+        "content": [
+          {
+            "type": "tool-result",
+            "toolCallId": "approval-fixture-2",
+            "content": [
+              {
+                "type": "text",
+                "text": "Error: confirm_mapping did NOT run: a person reviewed it and refused. The reviewer said: \"客户编码未核实，请销售负责人确认后再提交。\". Nothing was written, and the decision is not remembered for next month; a future import may therefore ask again. Do NOT claim future requests are suppressed. Say plainly that this step did not happen and why. Do not describe it as done, and do not re-ask within this turn."
+              }
+            ],
+            "isError": true
+          }
+        ],
+        "role": "user",
+        "id": "1c690f69-7822-4668-a75d-d78beaf627ee"
+      }
+    },
+    "sourceEventSeqs": [
+      40
+    ],
+    "surfaceOp": "append"
+  },
+  {
+    "type": "approval/asked",
+    "seq": 66,
+    "time": 1789116657158,
+    "data": {
+      "id": "7ec3c467-4d7b-4bcc-a559-c36914650118",
+      "toolName": "confirm_mapping",
+      "callId": "approval-fixture-4",
+      "reason": "Record a mapping decision for future imports and audit. Nothing is written without approval.\nsource: sku:test-4\ntarget: customer:test\nrelation: ordered_by\naccepted: true\nevidence: Offline browser test\nperiod: 2025-11"
+    }
+  },
+  {
+    "type": "approval/decided",
+    "seq": 67,
+    "time": 1789116662159,
+    "data": {
+      "id": "7ec3c467-4d7b-4bcc-a559-c36914650118",
+      "outcome": "cancelled"
+    }
+  },
+  {
+    "type": "tool/result",
+    "seq": 68,
+    "time": 1789116662160,
+    "data": {
+      "turn": 3,
+      "step": 1,
+      "message": {
+        "source": {
+          "kind": "tool",
+          "callId": "approval-fixture-4"
+        },
+        "content": [
+          {
+            "type": "tool-result",
+            "toolCallId": "approval-fixture-4",
+            "content": [
+              {
+                "type": "text",
+                "text": "Error: confirm_mapping did NOT run: the question was withdrawn before anybody answered. Nothing was written, and the decision is not remembered for next month; a future import may therefore ask again. Do NOT claim future requests are suppressed. Say plainly that this step did not happen and why. Do not describe it as done, and do not re-ask within this turn."
+              }
+            ],
+            "isError": true
+          }
+        ],
+        "role": "user",
+        "id": "8515cdd4-82c2-4a70-a9a9-06c75c544cb3"
+      }
+    },
+    "sourceEventSeqs": [
+      65
+    ],
+    "surfaceOp": "append"
+  }
+]
