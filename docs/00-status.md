@@ -19,7 +19,7 @@
 插件清单现固定 `pnpm@11.25.0`，Actions 与部署脚本都从该声明解析版本。
 同一 workflow 增加 PR 离线检查，部署仅允许 main；PR 不会取消进行中的生产部署。
 
-本地 frozen-lockfile / typecheck / build 与 TS **32 passed**，部署脚本 `bash -n` 通过。
+本地 frozen-lockfile / typecheck / build 与 TS **30 passed**，部署脚本 `bash -n` 通过。
 未改业务与浏览器代码，本轮不重复 UI smoke；远端结果以修复 PR 的 Actions 为准。
 真实模型调用 **0 次**，费用 **0**。
 
@@ -64,7 +64,7 @@ SSH_HOST／SSH_USER／SSH_PRIVATE_KEY 与 PUBLIC_DOMAIN。缺项追踪 [#138](ht
 | --- | --- | --- |
 | Python 全量 | **302 passed**，2 条依赖弃用提示 | `pytest -q -c backend/pyproject.toml backend/tests` |
 | Python 聚焦（报价契约） | **28 passed** | `pytest -q -c backend/pyproject.toml backend/tests/test_declared_documents.py` |
-| TS 单测 | **30 passed** | `pnpm --dir plugins test` |
+| TS 单测 | **32 passed** | `pnpm --dir plugins test` |
 | 类型 / 产物 / 锁文件 | 通过 | `pnpm --dir plugins typecheck` / `build` / `install --frozen-lockfile` |
 | Python 静态 | 通过 | `ruff check backend scripts` |
 | 浏览器 smoke 三条 | 本轮隔离验收通过，退出码 **0**；历史环境差异见第二节 | `pnpm --dir plugins smoke:web` / `smoke:quotation` / `smoke:business` |
