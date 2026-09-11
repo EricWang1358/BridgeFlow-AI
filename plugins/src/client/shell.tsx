@@ -1,4 +1,4 @@
-import { notebookKinds, notebookPurposes, notebookPurpose, isNotebookKind } from '../notebook-capabilities.ts'
+import { notebookKinds, notebookPurposes, isNotebookKind } from '../notebook-capabilities.ts'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
@@ -7,7 +7,7 @@ import { ImportForm, Chip } from './workspace.tsx'
 import { Quotation } from './quotation.tsx'
 import { BusinessReview, type Review } from './review.tsx'
 import { projectAudit, type AuditEvent } from './audit.ts'
-import { QuotationProgress } from './quotation-progress.tsx'
+import { WorkflowProgress } from './workflow-progress.tsx'
 import { useNotebook } from './notebook-session.tsx'
 import { PanelResizers, useNativeSidebar } from './shell-layout.tsx'
 import { shellStyle } from './shell-style.ts'
@@ -147,11 +147,7 @@ function Shell({ ctx }: { ctx: Context }) {
           {artifactTotal > 50 && <div className="bf-actions"><button disabled={!artifactOffset} onClick={() => setArtifactOffset(Math.max(0, artifactOffset - 50))}>{t('previous')}</button><button disabled={artifactOffset + artifacts.length >= artifactTotal} onClick={() => setArtifactOffset(artifactOffset + 50)}>{t('next')}</button></div>}
         </section>
         {viewing && <section className="bf-inline-preview" aria-label={t('preview')}><header><h3>{t('preview')}</h3><button onClick={() => { setExpanded(true); viewer.current?.showModal() }}>{t('expandPreview')}</button><button onClick={closePreview}>{t('close')}</button></header>{previewContent}</section>}
-        {!viewing && showState && <section className="bf-studio-state" aria-label={t('state')}><header><h3>{t('state')}</h3><button onClick={()=>navigate(batchId?{batch:batchId}:{})}>{t('close')}</button></header><p className="bf-hint">{t('studioStateHelp')}</p>{notebookPurpose(notebook.kind).workflows.some(id => id === 'quotation') && <QuotationProgress/>}{notebookPurpose(notebook.kind).workflows.some(id => id === 'monthly') && <div className="bf-state-map" aria-label={t('monthlyProgress')}>
-          <section><h3>{t('import')}</h3>{summary ? <Chip status={summary.status}/> : <p>{t('emptySourcesHelp')}</p>}</section>
-          <section><h3>{t('review')}</h3><Chip status={audit.review?.batch_id === batchId ? String(audit.review.status) : artifacts[0]?.status ?? 'notStarted'}/></section>
-          <section><h3>{t('approval')}</h3>{audit.approvals.length ? audit.approvals.map(a => <div key={a.id}><Chip status={a.outcome}/>{a.note && <p>{a.note}</p>}</div>) : <p>{t('noPendingApproval')}</p>}</section>
-        </div>}</section>}
+        {!viewing && showState && <section className="bf-studio-state" aria-label={t('state')}><header><h3>{t('state')}</h3><button onClick={()=>navigate(batchId?{batch:batchId}:{})}>{t('close')}</button></header><p className="bf-hint">{t('studioStateHelp')}</p><WorkflowProgress kind={notebook.kind} batchId={batchId} summary={summary} audit={audit} savedReportStatus={artifacts[0]?.status}/></section>}
       </div>
     </aside>
     <dialog className="bf-panel bf-source-import" aria-label={t('addSources')} ref={importer}><header className="bf-panel-head"><h2>{t('addSources')}</h2><button onClick={() => importer.current?.close()}>{t('close')}</button></header><div className="bf-panel-body"><ImportForm onSaved={batch => { importer.current?.close(); navigate({ batch: batch.batch_id, view: 'state' }); setRevision(n => n + 1) }}/></div></dialog>

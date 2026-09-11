@@ -91,7 +91,7 @@ const subscribeRoute = (changed: () => void) => {
 function BusinessState(props: ConvViewProps & Injected) {
   const { t } = useUI()
   const kind = useSyncExternalStore(subscribeRoute, () => route().kind)
-  return <section className="bf-state" aria-label={t('state')}>
+  return <section className="bf-state bf-business-state" aria-label={t('state')}>
     {notebookPurpose(kind).workflows.map(id => {
       const View = stateViews[id]
       return <View key={id} {...props}/>

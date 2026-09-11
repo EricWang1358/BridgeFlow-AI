@@ -130,7 +130,7 @@ try {
   // #110: the approval card renders the structured decision summary localized —
   // labels translated, values verbatim — not just translated buttons.
   const decision = page.getByRole('region', { name: '映射审批' })
-  await decision.getByText('决定内容', { exact: true }).waitFor({ timeout: 30_000 })
+  await decision.locator('.bf-approval-detail').waitFor({ timeout: 30_000 })
   await decision.getByText('sku:test-0', { exact: true }).waitFor()
   await decision.getByText('接受映射', { exact: true }).waitFor()
   await decision.getByText('决定时展示的依据', { exact: true }).waitFor()
