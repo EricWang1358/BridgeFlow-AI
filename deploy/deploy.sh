@@ -22,8 +22,12 @@ git reset --hard "${1:-origin/main}"
 # cached and take seconds, and the rebuild keeps dist/client.js newer than
 # its sources, which start_web.py checks at launch.
 uv pip install -e "backend[dsh,dev]" --python "$VENV"
-pnpm --dir plugins install --frozen-lockfile
-pnpm --dir plugins run build
+(
+  cd plugins
+  # Resolve the committed packageManager pin, not the instance-global pnpm.
+  corepack pnpm install --frozen-lockfile
+  corepack pnpm run build
+)
 
 sudo systemctl restart bridgeflow
 
