@@ -1,0 +1,39 @@
+{
+  "mode": "offline",
+  "fault": "step-limit",
+  "case": "risk",
+  "elapsed_ms": 1319,
+  "report_status": "partial",
+  "roles": [
+    {
+      "role": "production",
+      "session_id": "c8fe2759-e06d-4b7e-8ea0-e1351c461e69",
+      "checks": 2
+    },
+    {
+      "role": "procurement",
+      "session_id": "b5151302-bc5c-4c16-9b23-daac279fd7f8",
+      "checks": 2
+    },
+    {
+      "role": "finance",
+      "session_id": "6b04cbd5-8b84-4a54-b53a-0a69223dcd9d",
+      "checks": 0
+    },
+    {
+      "role": "marketing",
+      "session_id": "9c904bf8-8060-4157-8f03-48f4f2b437ba",
+      "checks": 2
+    }
+  ],
+  "overlap_verified": true,
+  "request_header_events": 5,
+  "model_requests": 10,
+  "usage": {
+    "inputTokens": 100,
+    "outputTokens": 100
+  },
+  "models": [
+    "{\"kind\":\"model\",\"provider\":\"bridgeflow-offline-test\",\"model\":\"offline\"}"
+  ]
+}

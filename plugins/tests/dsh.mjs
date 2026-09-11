@@ -17,7 +17,7 @@
  * candidates.
  */
 import { execFileSync } from 'node:child_process'
-import { accessSync, constants, readFileSync, realpathSync } from 'node:fs'
+import { accessSync, closeSync, constants, openSync, readSync, realpathSync } from 'node:fs'
 import { delimiter, join } from 'node:path'
 
 const PINNED_VERSION = '0.1.2-rc.1'
@@ -36,7 +36,11 @@ export function resolveDsh() {
     try {
       accessSync(candidate, constants.X_OK)
       path = realpathSync(candidate)
-      const header = readFileSync(path, { encoding: 'utf8', flag: 'r' }).split('\n', 1)[0]
+      const fd = openSync(path, 'r')
+      const prefix = Buffer.alloc(256)
+      let header
+      try { header = prefix.subarray(0, readSync(fd, prefix)).toString('utf8').split('\n', 1)[0] }
+      finally { closeSync(fd) }
       if (!header.startsWith('#!') || !header.includes('node')) continue
       const version = execFileSync(path, ['--version'], { encoding: 'utf8', timeout: 10_000 }).trim()
       if (version === PINNED_VERSION) return (resolved = path)
@@ -53,14 +57,34 @@ export function resolveDsh() {
  * GET redeems the token into an auth cookie and redirects; the jar follows.
  */
 export async function assertClientModulesServed(url) {
-  const jar = []
-  async function get(target) {
-    const res = await fetch(target, { redirect: 'manual', headers: jar.length ? { cookie: jar.join('; ') } : {} })
-    for (const cookie of res.headers.getSetCookie()) jar.push(cookie.split(';')[0])
-    if (res.status >= 300 && res.status < 400) return get(new URL(res.headers.get('location'), target).href)
-    return res
+  const origin = new URL(url).origin
+  const jar = new Map()
+  const signal = AbortSignal.timeout(10_000)
+  let target = new URL(url)
+  let html
+  for (let redirects = 0; redirects <= 5; redirects++) {
+    const res = await fetch(target, { redirect: 'manual', signal,
+      headers: jar.size ? { cookie: [...jar.values()].join('; ') } : {} })
+    for (const cookie of res.headers.getSetCookie()) {
+      const pair = cookie.split(';')[0]
+      jar.set(pair.split('=')[0], pair)
+    }
+    if ([301, 302, 303, 307, 308].includes(res.status)) {
+      await res.body?.cancel()
+      const location = res.headers.get('location')
+      if (!location) throw new Error('DSH client preflight: redirect without Location')
+      target = new URL(location, target)
+      if (target.origin !== origin) throw new Error('DSH client preflight: cross-origin redirect refused')
+      continue
+    }
+    if (!res.ok) {
+      await res.body?.cancel()
+      throw new Error(`DSH client preflight: HTTP ${res.status}`)
+    }
+    html = await res.text()
+    break
   }
-  const html = await (await get(url)).text()
+  if (html === undefined) throw new Error('DSH client preflight: redirect limit exceeded')
   if (!html.includes('@deepseek-ai/dsh-client-modules/client.js')) {
     throw new Error(
       'dsh web served a page without the official client modules; the browser would fail with ' +

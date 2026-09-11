@@ -1,3 +1,4 @@
+import { withAccess } from '../tool-catalogue.ts'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
 import { callBackend, type BackendConfig } from '../backend.ts'
@@ -37,7 +38,7 @@ export interface MetricResult {
 }
 
 export function aggregateMetric(config: BackendConfig) {
-  return defineTool({
+  return withAccess(defineTool({
     name: 'aggregate_metric',
     description:
       'Compute one metric for one period by rule. Returns the figure, the count of ' +
@@ -123,5 +124,5 @@ export function aggregateMetric(config: BackendConfig) {
         exec.signal,
       )
     },
-  })
+  }), { kind: 'read' })
 }

@@ -1,3 +1,4 @@
+import type { ToolCatalogue } from '../tool-catalogue.ts'
 import type { Context } from '@deepseek-ai/cordis'
 
 import { DEFAULT_BACKEND } from '../backend.ts'
@@ -22,11 +23,10 @@ export const name = 'bridgeflow-approval'
 // denial; `tools` is the gate itself.
 export const inject = ['tools', 'approval']
 
-export function apply(ctx: Context, config: AnswererConfig & { mode: 'native' | 'console'; receipts: ApprovalReceipts; notes: ApprovalNotes; details?: PendingDetails }): void {
-  // The composing plugin may hand in the instance its web routes also read, so the
-  // approval card and the console answerer look at the same summaries (#110).
+export function apply(ctx: Context, config: AnswererConfig & { mode: 'native' | 'console'; receipts: ApprovalReceipts; notes: ApprovalNotes; catalogue: ToolCatalogue; details?: PendingDetails }): void {
+  // Web cards and the console answerer share the same pending summaries.
   const details = config.details ?? new PendingDetails()
-  gate(ctx, details, config.receipts, config.decisionTimeoutMs, config.notes)
+  gate(ctx, details, config.receipts, config.decisionTimeoutMs, config.notes, config.catalogue)
   if (config.mode === 'console') answerer(ctx, config, details)
 }
 
@@ -37,5 +37,3 @@ export const DEFAULT_ANSWERER: AnswererConfig = {
   // run left alone fails closed rather than hanging until somebody notices.
   decisionTimeoutMs: 300_000,
 }
-
-export { MUTATING_TOOLS } from './gate.ts'

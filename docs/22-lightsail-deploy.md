@@ -77,8 +77,8 @@ glibc ≥ 2.28（`deepseek_harness_runtime_bin` 的 `manylinux_2_28` wheel 要�
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
 
-# pnpm（package.json 无 pin，major 对齐 CI 的 9）
-sudo corepack enable && corepack prepare pnpm@9 --activate
+# pnpm 版本由 plugins/package.json 的 packageManager 声明；部署用 corepack 解析
+sudo corepack enable
 
 # uv
 curl -LsSf https://astral.sh/uv/install.sh | sh   # 装到 ~/.local/bin
@@ -91,7 +91,7 @@ sudo npm install -g @deepseek-ai/dsh@0.1.2-rc.1
 
 ```bash
 node -v                 # v22.x
-pnpm -v                 # 9.x
+corepack --version      # 部署时从插件目录解析项目声明的 pnpm
 ~/.local/bin/uv -V      # uv 版本号
 dsh --version           # 0.1.2-rc.1
 ```
@@ -154,8 +154,8 @@ source env.sh && [ -n "$DEEPSEEK_API_KEY" ] && [ -d "$DSH_HOME" ] && echo ok
 
 ```bash
 cd ~/Hackathon2026/BridgeFlow-AI
-pnpm --dir plugins install --frozen-lockfile
-pnpm --dir plugins run build      # dist/ 是 gitignored，必须在实例上构建
+(cd plugins && corepack pnpm install --frozen-lockfile && corepack pnpm run build)
+# dist/ 是 gitignored，必须在实例上构建
 ./run.sh --host 127.0.0.1 --port 3080
 ```
 

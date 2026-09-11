@@ -1,8 +1,9 @@
+import { withAccess } from '../tool-catalogue.ts'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { callBackend, type BackendConfig } from '../backend.ts'
 
 export function batchSummary(config: BackendConfig) {
-  return defineTool({
+  return withAccess(defineTool({
     name: 'batch_summary',
     description: 'Read bounded counts and readiness of an uploaded batch, without raw data rows. Use the exact batch id supplied by the user.',
     parameters: { batch_id: { type: 'string', required: true } },
@@ -24,5 +25,5 @@ export function batchSummary(config: BackendConfig) {
     async execute(args, exec) {
       return callBackend(config, '/tools/batch-summary', args, exec.signal)
     },
-  })
+  }), { kind: 'read' })
 }

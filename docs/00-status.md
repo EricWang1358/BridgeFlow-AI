@@ -7,9 +7,39 @@
 「每个数字都量过、可追溯」是本项目对评委的核心叙事，评委抓到一处对不上，整个叙事就打折。
 所以改数字只改这一处。
 
-最后更新：2026-09-07。新增一轮时照第三节的格式写，并附上复现命令。
+最后更新：2026-09-11。新增一轮时照第三节的格式写，并附上复现命令。
 
 ---
+
+## CI 工具链修复（2026-09-11）
+
+主分支 Actions [run 34579999451](https://github.com/EricWang1358/BridgeFlow-AI/actions/runs/34579999451)
+在前端依赖安装时失败：`packages field missing or empty`。CI 固定 pnpm 9，但工作区的
+`allowBuilds` 配置使用当前开发工具链的格式；并非本轮领域逻辑测试失败。
+插件清单现固定 `pnpm@11.25.0`，Actions 与部署脚本都从该声明解析版本。
+同一 workflow 增加 PR 离线检查，部署仅允许 main；PR 不会取消进行中的生产部署。
+
+本地 frozen-lockfile / typecheck / build 与 TS **32 passed**，部署脚本 `bash -n` 通过。
+未改业务与浏览器代码，本轮不重复 UI smoke；远端结果以修复 PR 的 Actions 为准。
+真实模型调用 **0 次**，费用 **0**。
+
+## 浏览器启动链路复验（2026-09-11，PR #118）
+
+浏览器启动与冷重启统一选择锁定的 npm DSH，跳过 venv 的 Python 包装器；显式指定不支持的版本直接拒绝。
+候选文件只读 shebang 前缀；服务页诊断有总超时、重定向上限、同源 cookie 边界，HTTP 失败与缺客户端模块均明确拒绝。
+
+新增真实进程／HTTP 回归后 TS **32 passed**，typecheck、build 通过；包括流式响应卡住后的超时退出。
+在 venv 优先的 PATH 下运行 `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web`、
+`smoke:business`、`smoke:quotation` 均通过。审批实际覆盖 allowed-once／rejected／cancelled、备注回传与冷读取；
+月度 **4 个官方子会话**、**4/4 validated**、并行重叠与连续用途切换通过；报价／Notebook 完整旅程通过，浏览器无 JS 错误。
+费用 **0**：业务／审批分别是离线适配器 **8／6 次**请求，不是付费模型；报价 **0 次**。
+审计与截图复用 [business](evidence/product-patterns/business/manifest.json)、
+[approval](evidence/product-patterns/approval/manifest.json) 的 keep-2 归档；
+报价最新截图批次 **1789116709591**，保留此前 **1789114831177**，不提交原始会话或完整 prompt。
+
+CI 修复 #137 的 PR 与 main 测试均通过，但部署停在 SSH 上传；已核对仓库及 production 环境均无
+SSH_HOST／SSH_USER／SSH_PRIVATE_KEY 与 PUBLIC_DOMAIN。缺项追踪 [#138](https://github.com/EricWang1358/BridgeFlow-AI/issues/138)，
+未运行服务器更新或公网检查，不能宣称部署成功。
 
 ## 一 当前结论
 
@@ -17,14 +47,12 @@
 
 - 月度对账闭环能在原生 DSH Web 上跑通：导入 → 冻结字典的规则计算 → 官方四角色子会话 → 原生审批 → 可重开报告。
 - 报价路径的样板前第一步已完成：`quotation:` 人工声明 + 通用文档求值器 + 点名缺项的聚合拒绝，全程不调模型。
-- 离线回归 Python 全量 **304 passed**（2 条依赖弃用提示），TS **24 passed**，typecheck / build / frozen-lockfile 通过。
+- 离线回归 Python 全量 **302 passed**（2 条依赖弃用提示），TS **32 passed**，typecheck / build / frozen-lockfile 通过。
 - 报价契约复验 **28 passed**：成本变更、全缺项、来源、范围、单位、阈值、循环、除零、纯常量伪报价、改名、鉴权、有界返回。
-- 最近一轮（2026-09-07）真实模型调用 **0 次**、计费 tokens **0**、模型费用 **0**。
+- 最近一轮（2026-09-11）真实模型调用 **0 次**、计费 tokens **0**、模型费用 **0**。
 
 **还不能说：**
 
-- 三条浏览器 smoke 在开发机上复跑是红的（退出码 1），与下面各轮记录的「通过」不符，原因见第二节。
-  在 [#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97) 关闭之前，不要把那些「通过」当验收证据。
 - 「稳定业务展示 MVP」还不成立：人工意见不触发宿主级禁重跑、端到端超时、重启后恢复三处仍有实现缺口
   （清单见 [19 的未收尾链路](19-chain-audit.md)）。
 - 「真实企业验收」不成立：目前是真实模型在**可见合成案例**上的验收，不是留出集，也不是客户数据。
@@ -34,17 +62,17 @@
 
 | 检查 | 结果 | 复现 |
 | --- | --- | --- |
-| Python 全量 | **304 passed**，2 条依赖弃用提示 | `pytest -q -c backend/pyproject.toml backend/tests` |
+| Python 全量 | **302 passed**，2 条依赖弃用提示 | `pytest -q -c backend/pyproject.toml backend/tests` |
 | Python 聚焦（报价契约） | **28 passed** | `pytest -q -c backend/pyproject.toml backend/tests/test_declared_documents.py` |
-| TS 单测 | **24 passed** | `pnpm --dir plugins test` |
+| TS 单测 | **30 passed** | `pnpm --dir plugins test` |
 | 类型 / 产物 / 锁文件 | 通过 | `pnpm --dir plugins typecheck` / `build` / `install --frozen-lockfile` |
 | Python 静态 | 通过 | `ruff check backend scripts` |
-| 浏览器 smoke 三条 | 本机红，退出码 **1**（#97） | `pnpm --dir plugins smoke:web` / `smoke:quotation` / `smoke:business` |
+| 浏览器 smoke 三条 | 本轮隔离验收通过，退出码 **0**；历史环境差异见第二节 | `pnpm --dir plugins smoke:web` / `smoke:quotation` / `smoke:business` |
 | 本轮模型费用 | **0** | 浏览器测试用进程内离线适配器 |
 
 ---
 
-## 二 一个尚未解决的记录冲突（#97）
+## 二 历史运行环境差异与当前复验（#97）
 
 本页下方多处记录 `smoke:web` / `smoke:quotation` / `smoke:business` 通过。2026-09-07 复核时，
 在干净 `main`（`fd983fc`）、重建 `plugins/dist` 之后复跑，三条都失败，浏览器控制台同一句：
@@ -55,23 +83,41 @@
 | `pnpm --dir plugins smoke:quotation` | 1 | 同上 |
 | `pnpm --dir plugins smoke:business` | 1 | 同上 |
 
-**产品没有坏。** 判别实验：同一份补丁、同一条 `dsh web` 命令，改用指向已预装 web profile 的真实
+当时的判别实验：同一份补丁、同一条 `dsh web` 命令，改用指向已预装 web profile 的真实
 `DSH_HOME` 的 harness（`pnpm --dir plugins shots`），该错误出现 **0 次**，界面正常渲染、可交互。
 三条 smoke 各自用 `mkdtemp` 建全新临时 `DSH_HOME`，差异指向那里；`dsh --dump-config` 显示组合期
 36 个官方客户端插件全在，所以问题出在服务期而不是组合期。
 
-怎么处理：
-
-1. 那些「通过」记录保留在下方各轮里，不删，但它们当前不可复现。引用前先跑一遍。
-2. 如果它们在别的机器或别的启动方式下确实能过，就把通过的条件写进本节。否则下一个人在自己
-   机器上跑红，会以为是自己弄坏的。
-3. 修好之前，浏览器行为只能靠 `shots` 手工看。
+当前复验条件：本轮使用 PATH 中的 `/home/eric/.nvm/versions/node/v22.23.2/bin/dsh`（锁定 npm CLI），
+浏览器各自创建临时 DSH_HOME、临时业务存储，明确设置 `BRIDGEFLOW_LIVE=0`；需要本地端口与 IPC 的验收在授权的沙箱外执行。
+正常、报价、审批及 partial 均通过，见下方最新记录。没有复现此前 preload 报错，也没有修改共享用户 home 来绕过它。
+因此历史失败不应继续被描述为当前所有环境的状态；本轮通过也不等于已定位其它运行时／环境中的根因。
 
 ---
 
 ## 三 各轮验收记录（新在上）
 
 每轮固定四件事：做了什么、数字、复现命令、这轮不能证明什么。
+
+### 2026-09-11 · 产品能力与工具策略重构
+
+根因：`profile_batch` 已注册且诊断话术会调用它，却被独立执行白名单漏掉；笔记本用途在存储、选项、Studio 和状态页重复分支，报价状态的月度 hooks 仍执行。现在工具自带 `read`／`review`／`approval` 契约，注册目录驱动授权，审批策略注入 gate；用途共享声明，进度与完整页面按工作流组件组合。扩展步骤见 [产品扩展契约](23-extension-contracts.md)。未增加新业务写动作，未改变领域计算或 DSH 源码。
+
+| 检查 | 本轮结果 | 复现 |
+| --- | --- | --- |
+| Python 全量 | **302 passed**，2 条依赖弃用提示；移除原有 2 条解析 TS 手工清单的断言，由实际 TS 契约测试接管 | `pytest -q -c backend/pyproject.toml backend/tests` |
+| TS | **30 passed**，含注册缺项／重复／卸载撤权、扩展审批语义、实际派发诊断工具、用途持久化与非法输入 | `pnpm --dir plugins test` |
+| 类型／构建／锁文件／静态 | typecheck、build、frozen-lockfile、ruff 通过 | `pnpm --dir plugins typecheck` / `build` / `install --frozen-lockfile`；`ruff check backend scripts` |
+| Notebook 浏览器 | 默认英文、中英切换与持久化、用途、保存重开、来源分页、主表开关通过；**0 模型请求** | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:quotation` |
+| 月度浏览器 | **4** 个官方子会话、角色 **4/4 validated**；连续操作 **5 项通过**，含报价状态换批无月度报告请求、月度／综合恢复 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:business` |
+| Partial 浏览器 | **3/4** 角色保留、财务 unvalidated、人工意见可提交，未声称宿主已禁止重跑 | `BRIDGEFLOW_LIVE=0 BRIDGEFLOW_TEST_FAULT=step-limit pnpm --dir plugins smoke:business` |
+| 审批浏览器 | allowed-once／rejected／cancelled、双语结构化摘要、拒绝备注、一次性回执及冷读通过 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web` |
+
+最终证据：[月度验收](evidence/product-patterns/business/acceptance.json)、[连续功能检查](evidence/product-patterns/business/chain-audit.json)、[月度血缘](evidence/product-patterns/business/session-audit.json)、[审批审计](evidence/product-patterns/approval/session-audit.json)、[部分失败](evidence/product-patterns/partial/report.json)。Notebook 截图在 `evidence/quotation-ui/runs/1789114831177/`。来源临时目录分别为 `/tmp/bridgeflow-web-e2e-hbjJri`、`/tmp/bridgeflow-web-e2e-yFfZws`、`/tmp/bridgeflow-web-e2e-1upgJY`、`/tmp/bridgeflow-web-e2e-LvIqeA`。每个证据场景保留最近 **2** 轮，历史图片链接改为 Git 提交固定引用；用户真机会话未清理。
+
+中间失败未计作通过：沙箱内 tsx 创建 IPC socket 被 EPERM 拒绝，Python 异步接口测试停住；清理该测试后，在获准的沙箱外跑隔离测试。合入主分支双语实现后，旧测试查找未渲染的「决定内容」、隔着数据模态点击设置，以及假设刷新后移动侧栏仍展开；分别改为核对实际结构化参数、关闭所属窗口后操作、断言点击前后状态与真实面板一致。没有放宽审批超时、跳过失败场景或使用强制点击。最终原生 Web 使用 PATH 中锁定 npm CLI，临时 DSH_HOME 未复现历史 preload 错误；不据此宣称已查明所有环境差异。
+
+**费用：真实业务模型调用 0 次、计费 tokens 0、模型费用 0。** 浏览器的模拟请求与模拟 usage 只验证官方协议，不验证真实模型质量。真实合同抽取、企业政策、在途恢复、完整期限、partial 宿主限制和并发备注结算仍未完成。
 
 ### 2026-09-07 · 主表弹窗与来源预览补缺
 
@@ -98,9 +144,9 @@
 行前后分页与首末页禁用边界，展开预览也能双向翻页。原测试已有向后翻页的内容断言，漏掉的是返回、单页说明，
 以及收起侧栏后从主表入口进来的组合。
 
-证据：[主表可见且可关闭](evidence/quotation-ui/runs/1788723465966/master-modal.png) ·
-[有标签的来源信息](evidence/quotation-ui/runs/1788723465966/source-provenance.png) ·
-[功能检查](evidence/quotation-ui/runs/1788723465966/functional-check.json)。截图保留最近 **2** 轮。
+证据：[主表可见且可关闭](https://github.com/EricWang1358/BridgeFlow-AI/blob/4e885db/docs/evidence/quotation-ui/runs/1788723465966/master-modal.png) ·
+[有标签的来源信息](https://github.com/EricWang1358/BridgeFlow-AI/blob/4e885db/docs/evidence/quotation-ui/runs/1788723465966/source-provenance.png) ·
+[功能检查](https://github.com/EricWang1358/BridgeFlow-AI/blob/4e885db/docs/evidence/quotation-ui/runs/1788723465966/functional-check.json)。截图保留最近 **2** 轮。
 本轮没有新增付费模型调用，费用 **0**。
 
 > 上表三条 smoke 记的是「通过」，本机复跑为红，见第二节。
@@ -183,17 +229,17 @@ storage-domain，原生标题与领域存储都确认落盘后才显示保存成
 partial `/tmp/bridgeflow-web-e2e-WFyjT5`；审批 `/tmp/bridgeflow-web-e2e-c8vP5T`。
 截图按场景最多保留 **2** 轮，未清理用户真机会话。
 
-证据：[保存与离开](evidence/quotation-ui/runs/1788722008993/notebook-save.png) ·
-[笔记本历史](evidence/quotation-ui/runs/1788722008993/notebook-history.png) ·
-[示例来源](evidence/quotation-ui/runs/1788722008993/notebook-sample.png) ·
-[三栏空笔记本](evidence/quotation-ui/runs/1788722008993/notebook-empty.png) ·
-[深色报价预览](evidence/quotation-ui/runs/1788722008993/quotation-dark.png) ·
-[原件分页预览](evidence/quotation-ui/runs/1788722008993/source-preview.png) ·
-[工具下方的产物及预览](evidence/quotation-ui/runs/1788722008993/artifact-preview.png) ·
-[窄屏](evidence/quotation-ui/runs/1788722008993/quotation-narrow.png) ·
-[英文](evidence/quotation-ui/runs/1788722008993/quotation-en.png) ·
-[本机工作面](evidence/quotation-ui/runs/1788722008993/live-notebook.png) /
-[检查记录](evidence/quotation-ui/runs/1788722008993/live-check.json)。
+证据：[保存与离开](https://github.com/EricWang1358/BridgeFlow-AI/blob/4e885db/docs/evidence/quotation-ui/runs/1788722008993/notebook-save.png) ·
+[笔记本历史](https://github.com/EricWang1358/BridgeFlow-AI/blob/4e885db/docs/evidence/quotation-ui/runs/1788722008993/notebook-history.png) ·
+[示例来源](https://github.com/EricWang1358/BridgeFlow-AI/blob/4e885db/docs/evidence/quotation-ui/runs/1788722008993/notebook-sample.png) ·
+[三栏空笔记本](https://github.com/EricWang1358/BridgeFlow-AI/blob/4e885db/docs/evidence/quotation-ui/runs/1788722008993/notebook-empty.png) ·
+[深色报价预览](https://github.com/EricWang1358/BridgeFlow-AI/blob/4e885db/docs/evidence/quotation-ui/runs/1788722008993/quotation-dark.png) ·
+[原件分页预览](https://github.com/EricWang1358/BridgeFlow-AI/blob/4e885db/docs/evidence/quotation-ui/runs/1788722008993/source-preview.png) ·
+[工具下方的产物及预览](https://github.com/EricWang1358/BridgeFlow-AI/blob/4e885db/docs/evidence/quotation-ui/runs/1788722008993/artifact-preview.png) ·
+[窄屏](https://github.com/EricWang1358/BridgeFlow-AI/blob/4e885db/docs/evidence/quotation-ui/runs/1788722008993/quotation-narrow.png) ·
+[英文](https://github.com/EricWang1358/BridgeFlow-AI/blob/4e885db/docs/evidence/quotation-ui/runs/1788722008993/quotation-en.png) ·
+[本机工作面](https://github.com/EricWang1358/BridgeFlow-AI/blob/4e885db/docs/evidence/quotation-ui/runs/1788722008993/live-notebook.png) /
+[检查记录](https://github.com/EricWang1358/BridgeFlow-AI/blob/4e885db/docs/evidence/quotation-ui/runs/1788722008993/live-check.json)。
 
 本机最终入口：同一 Web 端口 **3082** 更新后保留 **12** 份已有会话文件，没有删除、剪裁或改写历史日志。
 已保存「业务演示 · 月度对账」可直接展示，实际含 **4** 份可预览来源与规则主表；完整宿主重启、历史打开、

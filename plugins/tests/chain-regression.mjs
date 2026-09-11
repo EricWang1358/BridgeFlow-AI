@@ -42,6 +42,31 @@ export async function auditChain(page, root, scratch, report) {
     assert.match(await state.innerText(), /审批.*会话|会话.*审批/)
     assert(!/当前会话审计 · 4 Spawn/.test(await state.innerText()))
   })
+  await check('notebook purpose selects real workflows without hidden monthly requests', async () => {
+    const purpose = page.getByRole('combobox', { name: '笔记本用途' })
+    const business = page.locator('.bf-business-state')
+    await purpose.selectOption('quotation')
+    await business.getByRole('region', { name: '报价进度', exact: true }).waitFor()
+    assert.equal(await state.count(), 0, 'Monthly workflow must unmount, not merely hide')
+    const requests = []
+    const record = request => {
+      if (/\/bridgeflow\/batches\/[^/]+\/review(?:\?|$)/.test(request.url())) requests.push(request.url())
+    }
+    page.on('request', record)
+    try {
+      const loaded = page.waitForResponse(response => response.url().endsWith(`/bridgeflow/batches/${report.batch_id}`) && response.ok())
+      await page.evaluate(id => { location.hash = `bridgeflow?batch=${id}&view=state&kind=quotation` }, report.batch_id)
+      await loaded
+      await page.waitForFunction(id => document.querySelector('.bf-source-batch code')?.textContent === id, report.batch_id)
+      assert.deepEqual(requests, [], 'Quotation status must not fetch a hidden monthly report')
+    } finally { page.off('request', record) }
+    await purpose.selectOption('monthly')
+    await state.getByRole('region', { name: '四部门研判报告' }).waitFor()
+    assert.equal(await business.getByRole('region', { name: '报价进度', exact: true }).count(), 0)
+    await purpose.selectOption('mixed')
+    await business.getByRole('region', { name: '报价进度', exact: true }).waitFor()
+    await state.getByRole('region', { name: '四部门研判报告' }).waitFor()
+  })
   await check('bad batch link clears old batch content and does not spin forever', async () => {
     await page.evaluate(() => { location.hash = `bridgeflow?batch=${'f'.repeat(32)}&view=master` })
     await dialog.getByRole('alert').waitFor()

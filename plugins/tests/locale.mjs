@@ -18,6 +18,10 @@ export async function assertDefaultEnglish(page) {
 
 /** Switch via the native Settings → Language row. target: '中文' | 'English'. */
 export async function switchLanguage(page, target) {
+  // Native modality correctly blocks Settings behind a data workspace. Dismiss
+  // that read-only workspace through its own control, never force-click through it.
+  const workspace = page.getByRole('dialog', { name: /^BridgeFlow (数据工作区|data workspace)$/ })
+  if (await workspace.isVisible()) await workspace.getByRole('button', { name: /^(关闭|Close)$/, exact: true }).click()
   const toggle = page.getByRole('button', { name: /^(Sessions & settings|会话与设置)$/, exact: true })
   if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click()
   const sidebar = page.locator('[data-slot="sidebar"]')

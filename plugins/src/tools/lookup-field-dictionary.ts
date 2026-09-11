@@ -1,3 +1,4 @@
+import { withAccess } from '../tool-catalogue.ts'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
 import { callBackend, type BackendConfig } from '../backend.ts'
@@ -23,7 +24,7 @@ export interface ColumnMeaning {
 }
 
 export function lookupFieldDictionary(config: BackendConfig) {
-  return defineTool({
+  return withAccess(defineTool({
     name: 'lookup_field_dictionary',
     description:
       'Look up what a department column means according to the OA field dictionary. ' +
@@ -70,5 +71,5 @@ export function lookupFieldDictionary(config: BackendConfig) {
         exec.signal,
       )
     },
-  })
+  }), { kind: 'read' })
 }

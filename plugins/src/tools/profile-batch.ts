@@ -1,3 +1,4 @@
+import { withAccess } from '../tool-catalogue.ts'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
 import { callBackend, type BackendConfig } from '../backend.ts'
@@ -11,7 +12,7 @@ import { callBackend, type BackendConfig } from '../backend.ts'
  * Stopping there is the failure mode this product exists to remove — a person
  * staring at a dead end is exactly what they were doing before we showed up.
  *
- * So this hands the model the structural facts it needs to *propose* a declaration:
+ * So this hands the model the structural facts it needs to match an existing human declaration:
  * how unique each column is, how much of it is filled, whether it is
  * identifier-shaped, and — the load-bearing signal — how far one department's values
  * overlap another's, computed over hashes.
@@ -51,7 +52,7 @@ export interface BatchProfile {
 }
 
 export function profileBatch(config: BackendConfig) {
-  return defineTool({
+  return withAccess(defineTool({
     name: 'profile_batch',
     description:
       'Describe column counts, ratios and hashed value overlap without returning cell values. ' +
@@ -130,5 +131,5 @@ export function profileBatch(config: BackendConfig) {
     async execute(args, exec) {
       return callBackend<BatchProfile>(config, '/tools/profile-batch', { batch_id: args.batch_id }, exec.signal)
     },
-  })
+  }), { kind: 'read' })
 }
