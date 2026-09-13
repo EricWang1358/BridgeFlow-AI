@@ -61,6 +61,7 @@
 | [`26-erp-comparison.md`](26-erp-comparison.md) | 参考 | 中 | 团队、写 PPT 的人 | 与 ERP 定制化三痛点逐条对比，每条指向已合并实现；列出值得借鉴但未做的 |
 | [`25-workflow-foundation.md`](25-workflow-foundation.md) | 参考 | 中 | 开发 | 三个 Agent 共用的工作流基座：分层、设计模式及理由、状态机、未完成项 |
 | [`24-meeting-2026-09-13.md`](24-meeting-2026-09-13.md) | 参考 | 中 | 团队 | 9/13 讨论：不自建数据平台；飞书只做上传下载快捷调用，权限是远景；样例数据 2+1 是主线阻塞 |
+| [`27-login-portal.md`](27-login-portal.md) | 参考 | 中 | 开发、接手认证的人 | 统一登录门户与飞书 RBAC：JWT/JWKS 为什么是形态、权限映射为什么应用自持、本期粒度与明确不做 |
 
 两份 README 是同一套图文操作指引的中英版本（顶部可切换）：[`../README.md`](../README.md)（English）
 与 [`../README.zh.md`](../README.zh.md)（简体中文）。截图是 `../docs/images/` 里的稳定副本，

@@ -15,15 +15,17 @@ from typing import Annotated
 import openpyxl
 import pandas as pd
 import yaml
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 
 from bridgeflow import column_matches
+from bridgeflow.access import departments_for
 from bridgeflow.agents import DataSanitizerAgent, SanitizerInput
 from bridgeflow.agents.semantic_resolver import FieldDictionary, SemanticResolverAgent
 from bridgeflow.agents.sop_flow import MissingRollup, SOPFlowEngine, SOPInput, UnjoinableTables
 from bridgeflow.column_matches import AppliedMatch
 from bridgeflow.config import REPO_ROOT, settings
+from bridgeflow.identity import UserIdentity, require_user
 from bridgeflow.metrics import dictionary_path
 from bridgeflow.schemas import Department, PipelineResult
 from bridgeflow.store import _root, _write
@@ -58,6 +60,20 @@ class BatchSnapshot(PipelineResult):
     #: The frozen batch this one was derived from by applying quarantine decisions (#88).
     derived_from: str | None = None
     dispositions: list[dict] = Field(default_factory=list)
+    #: Portal union_id of whoever imported it; "" = system/tool import or predates
+    #: the identity layer. Visibility: the batch's departments ⊆ the viewer's
+    #: authorized departments, or the viewer is the owner (docs/27).
+    owner: str = ""
+
+
+def _visible(batch: BatchSnapshot, user: UserIdentity | None) -> BatchSnapshot:
+    """The batch if this identity may see it. Invisible means 404, never 403:
+    whether a batch exists is itself information."""
+    if user is None or batch.owner == user.sub:
+        return batch
+    if {table.department for table in batch.clean_tables} <= departments_for(user.sub):
+        return batch
+    raise HTTPException(404, "Batch not found")
 
 
 def load_batch(batch_id: str) -> BatchSnapshot:
@@ -162,17 +178,29 @@ def _relative_dictionary() -> str:
         return str(path)
 
 
+def _check_upload_scope(departments: list[Department], user: UserIdentity | None) -> None:
+    """With the identity layer on, you may only upload departments you may also see."""
+    if user is None:
+        return
+    denied = set(departments) - departments_for(user.sub)
+    if denied:
+        raise HTTPException(403, f"Not authorized for departments: {sorted(denied)}")
+
+
 @router.post("", response_model=BatchSummary)
 async def upload_batch(
     period: Annotated[str, Form(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")],
     departments: Annotated[list[Department], Form()],
     files: Annotated[list[UploadFile], File()],
+    user: Annotated[UserIdentity | None, Depends(require_user)],
     sheets: Annotated[list[str] | None, Form(description="Per file, the worksheet to read; empty uses the declaration")] = None,
     header_rows: Annotated[list[str] | None, Form(description="Per file, the 1-based header row; empty uses the declaration")] = None,
 ) -> BatchSummary:
+    _check_upload_scope(departments, user)
     choices = [Layout.from_form(sheet, header) for sheet, header in
                zip(_aligned(sheets, len(files)), _aligned(header_rows, len(files)), strict=True)]
-    return await _import_batch(period, departments, files, choices=choices)
+    return await _import_batch(period, departments, files, choices=choices,
+                               owner=user.sub if user else "")
 
 
 def _aligned(values: list[str] | None, count: int) -> list[str]:
@@ -255,7 +283,7 @@ def _read_xlsx(payload: bytes, filename: str, layout: Layout) -> tuple[str, pd.D
 
 
 @router.post("/demo", response_model=BatchSummary)
-async def demo_batch() -> BatchSummary:
+async def demo_batch(user: Annotated[UserIdentity | None, Depends(require_user)]) -> BatchSummary:
     """Explicit sample notebook; freeze its dictionary without replacing deployment policy.
 
     The sample is the fictional concrete supplier in `data/mock_business/demo`, filed on the
@@ -265,10 +293,12 @@ async def demo_batch() -> BatchSummary:
     folder = REPO_ROOT / "data/mock_business/demo"
     departments: list[Department] = ["production", "procurement", "finance", "marketing"]
     labels = {"production": "生产部", "procurement": "物资部", "finance": "财务部", "marketing": "市场部"}
+    _check_upload_scope(departments, user)
     files = [UploadFile(io.BytesIO((folder / f"{department}.xlsx").read_bytes()),
                         filename=f"模拟-{labels[department]}-2024-07.xlsx") for department in departments]
     try:
-        return await _import_batch("2024-07", departments, files, folder / "dictionary.yaml", "mock-company-2024-07")
+        return await _import_batch("2024-07", departments, files, folder / "dictionary.yaml",
+                                   "mock-company-2024-07", owner=user.sub if user else "")
     finally:
         for upload in files:
             await upload.close()
@@ -276,7 +306,7 @@ async def demo_batch() -> BatchSummary:
 
 async def _import_batch(period: str, departments: list[Department], files: list[UploadFile],
                         source_dictionary: Path | None = None, demo_case: str | None = None,
-                        choices: list[Layout] | None = None) -> BatchSummary:
+                        choices: list[Layout] | None = None, owner: str = "") -> BatchSummary:
     if len(files) != len(departments) or not 1 <= len(files) <= 4:
         raise HTTPException(422, "Provide one file per department (1–4 departments)")
     if len(set(departments)) != len(departments):
@@ -354,7 +384,7 @@ async def _import_batch(period: str, departments: list[Department], files: list[
             correction.source.source_row = correction.row + header_row + 1
         tables.append(table)
     result = BatchSnapshot(period=period, clean_tables=tables, dictionary_snapshot=dictionary_raw or {},
-                           integration_snapshot=integration_snapshot)
+                           integration_snapshot=integration_snapshot, owner=owner)
     if not dictionary.is_empty:
         # Before anything reads the tables: a remembered match makes this upload look
         # the way the dictionary already describes it. Frozen batches are never redone.
@@ -388,16 +418,18 @@ async def assemble(result: BatchSnapshot, dictionary: FieldDictionary) -> None:
 
 
 @router.get("/{batch_id}", response_model=BatchSummary)
-async def get_summary(batch_id: str) -> BatchSummary:
-    return summary(batch_id, load_batch(batch_id))
+async def get_summary(batch_id: str,
+                      user: Annotated[UserIdentity | None, Depends(require_user)]) -> BatchSummary:
+    return summary(batch_id, _visible(load_batch(batch_id), user))
 
 
 @router.get("/{batch_id}/view")
 async def view(
-    batch_id: str, section: str = "master", offset: int = Query(0, ge=0),
+    batch_id: str, user: Annotated[UserIdentity | None, Depends(require_user)],
+    section: str = "master", offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
 ) -> dict:
-    result = load_batch(batch_id)
+    result = _visible(load_batch(batch_id), user)
     if section == "master":
         rows = result.master_table.rows if result.master_table else []
     elif section == "mappings":
@@ -429,21 +461,25 @@ async def view(
 
 
 @router.get("/{batch_id}/review")
-async def review(batch_id: str, report_id: str | None = None) -> dict:
+async def review(batch_id: str, user: Annotated[UserIdentity | None, Depends(require_user)],
+                 report_id: str | None = None) -> dict:
     from bridgeflow.api.reviews import saved_review
+    _visible(load_batch(batch_id), user)
     return saved_review(batch_id, report_id)
 
 
 @router.get("/{batch_id}/review-notes/{report_id}")
-async def review_notes(batch_id: str, report_id: str) -> dict:
-    load_batch(batch_id)
+async def review_notes(batch_id: str, report_id: str,
+                       user: Annotated[UserIdentity | None, Depends(require_user)]) -> dict:
+    _visible(load_batch(batch_id), user)
     from bridgeflow.api.reviews import review_notes as notes
     return notes(batch_id, report_id)
 
 
 @router.get("/{batch_id}/sources")
-async def list_sources(batch_id: str) -> dict:
-    batch = load_batch(batch_id)
+async def list_sources(batch_id: str,
+                       user: Annotated[UserIdentity | None, Depends(require_user)]) -> dict:
+    batch = _visible(load_batch(batch_id), user)
     sources = []
     folder = batch_path(batch_id).parent / "sources" / batch_id
     manifest_path = folder / "index.json"
@@ -461,8 +497,9 @@ async def list_sources(batch_id: str) -> dict:
 
 @router.get("/{batch_id}/sources/{source_id}")
 async def source_preview(batch_id: str, source_id: Department,
+                         user: Annotated[UserIdentity | None, Depends(require_user)],
                          offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100)) -> dict:
-    batch = load_batch(batch_id)
+    batch = _visible(load_batch(batch_id), user)
     if source_id not in {table.department for table in batch.clean_tables}:
         raise HTTPException(404, "Source not found in this batch")
     path = batch_path(batch_id).parent / "sources" / batch_id / f"{source_id}.json"
@@ -476,9 +513,10 @@ async def source_preview(batch_id: str, source_id: Department,
 
 
 @router.get("/{batch_id}/artifacts")
-async def list_artifacts(batch_id: str, offset: int = Query(0, ge=0),
+async def list_artifacts(batch_id: str, user: Annotated[UserIdentity | None, Depends(require_user)],
+                         offset: int = Query(0, ge=0),
                          limit: int = Query(50, ge=1, le=100)) -> dict:
-    load_batch(batch_id)
+    _visible(load_batch(batch_id), user)
     folder = batch_path(batch_id).parent / "reviews" / batch_id
     paths = sorted(folder.glob("*.json"), key=lambda p: p.stat().st_mtime_ns, reverse=True)
     artifacts = []

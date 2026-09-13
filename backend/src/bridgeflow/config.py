@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     feishu_app_id: str = ""
     feishu_app_secret: str = ""
     feishu_base_url: str = "https://open.feishu.cn"
+    # Login portal (docs/27). Empty = identity layer off and browser routes behave
+    # as before; set = every browser data route needs a portal-signed user token.
+    portal_base_url: str = ""
+    portal_audience: str = "bridgeflow"
+    # Who may see which departments — human-preset, same rule as the field dictionary.
+    access_control_path: str = "data/mappings/access-control.yaml"
     bridgeflow_max_upload_bytes: int = 25 * 1024 * 1024
     bridgeflow_max_batch_rows: int = 200_000
 

@@ -4,7 +4,7 @@ import { notebookKinds, notebookPurposes, isNotebookKind } from '../notebook-cap
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
-import { api, formatDateTime, navigate, route, startReview, takeRouteError, useUI, type Summary, describeError } from './ui.ts'
+import { api, formatDateTime, navigate, portalLoginUrl, route, startReview, takeRouteError, useUI, type Summary, describeError } from './ui.ts'
 import { ImportForm, Chip } from './workspace.tsx'
 import { Quotation } from './quotation.tsx'
 import { Handoff } from './handoff.tsx'
@@ -181,7 +181,7 @@ function RouteNotice() {
   }, [])
   if (!key) return null
   return <div className="bf-state bf-route-notice bf-callout" data-tone="danger" role="alert">
-    <p>{t(key)}</p><button onClick={() => setKey('')}>{t('close')}</button>
+    <p>{t(key)}{key === 'loginRequired' && portalLoginUrl() && <> <a className="bf-login-link" href={portalLoginUrl()}>{t('loginWithFeishu')}</a></>}</p><button onClick={() => setKey('')}>{t('close')}</button>
   </div>
 }
 

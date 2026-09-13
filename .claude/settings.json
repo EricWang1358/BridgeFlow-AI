@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Users/losgai/codes/mix/.venv/bin/python -m pytest -q)",
+      "Bash(/Users/losgai/codes/mix/.venv/bin/python -c ' *)",
+      "Bash(/Users/losgai/codes/mix/.venv/bin/python -m ruff check src tests)",
+      "Bash(/Users/losgai/codes/mix/.venv/bin/python -m pytest -q tests/test_identity.py)",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm build *)",
+      "Bash(git stash *)",
+      "Bash(git -C /Users/losgai/codes/mix/BridgeFlow-AI status --short)",
+      "Bash(python3 -)",
+      "Read(//Users/losgai/codes/mix/**)"
+    ]
+  }
+}

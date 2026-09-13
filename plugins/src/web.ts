@@ -33,6 +33,11 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
         }
         const url = new URL(req.url ?? '/', 'http://localhost')
         const path = url.pathname.slice('/bridgeflow'.length)
+        // The login portal's token (docs/27) rides beside the DSH session fence; the
+        // backend verifies its signature against the portal's JWKS. Absent token =
+        // absent identity — never invented here.
+        const portalToken = req.headers['x-portal-token']
+        const portalUser = typeof portalToken === 'string' && portalToken ? {'x-bridgeflow-user': portalToken} : {}
         if (path === '/approval-note-audit' && req.method === 'GET') {
           const id=url.searchParams.get('session_id')
           const rows=[...noteTable.entries()].map(([,value])=>value).filter(value=>value.sessionId===id).sort((a,b)=>b.time-a.time)
@@ -59,7 +64,7 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
             const notebook = parseNotebook(JSON.parse(body))
             if (notebook.batch) {
               const check = await fetch(`${backend.baseUrl}/batches/${notebook.batch}`, {
-                headers: {authorization: `Bearer ${process.env.BRIDGEFLOW_SERVICE_TOKEN ?? ''}`},
+                headers: {authorization: `Bearer ${process.env.BRIDGEFLOW_SERVICE_TOKEN ?? ''}`, ...portalUser},
                 signal: AbortSignal.timeout(backend.timeoutMs),
               })
               if (!check.ok) { res.writeHead(422).end(JSON.stringify({detail:'Batch is unavailable; notebook was not saved'})); return }
@@ -73,6 +78,7 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
         if (path === '/config' && req.method === 'GET') {
           res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' }).end(JSON.stringify({
             workspaceId: workspace.id,
+            portalUrl: process.env.PORTAL_BASE_URL ?? '',
             maxUploadBytes: Math.min(Number(process.env.BRIDGEFLOW_MAX_UPLOAD_BYTES) || 25 * 1024 * 1024, 25 * 1024 * 1024),
             maxRequestBytes: 26 * 1024 * 1024, noteLimit: 240, decisionTimeoutMs,
           }))
@@ -159,6 +165,7 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
             headers: {
               authorization: `Bearer ${process.env.BRIDGEFLOW_SERVICE_TOKEN ?? ''}`,
               'content-type': req.headers['content-type'] ?? 'application/json',
+              ...portalUser,
             },
             ...(upload ? { body: Buffer.concat(chunks) } : {}),
             signal: AbortSignal.any([abort.signal, AbortSignal.timeout(120_000)]),
