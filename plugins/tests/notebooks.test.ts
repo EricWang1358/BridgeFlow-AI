@@ -32,3 +32,7 @@ test('missing or unavailable persistence never returns a saved acknowledgement',
   ctx.sessionController.resolveAgent=async()=>({error:{message:'not found'}}) as never
   await assert.rejects(saveNotebook(ctx,'missing' as SessionId,{title:'Draft'},{} as NotebookTable),/not found/)
 })
+
+test('the combined table and handoff are valid durable notebook destinations', () => {
+  for (const view of ['integration','handoff']) assert.equal(parseNotebook({title:'Guided task',batch:'a'.repeat(32),view}).view,view)
+})

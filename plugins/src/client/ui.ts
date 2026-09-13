@@ -1,3 +1,4 @@
+import { tourLabels } from './tour/copy.ts'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace'
 import { useSyncExternalStore } from 'react'
 import type { SubagentListEntry } from '@deepseek-ai/dsh-subagent/client'
@@ -11,6 +12,7 @@ export function configureLocale(value: Context['locale']) { locale = value }
 const subscribe = (fn: () => void) => locale.subscribe(fn)
 const current = () => locale.getSnapshot().active.startsWith('zh') ? 'zh' : 'en'
 const labels = {
+  ...tourLabels,
   notebookKind: ['笔记本用途', 'Notebook purpose'], monthlyNotebook: ['月度对账', 'Monthly review'], quotationNotebook: ['报价', 'Quotation'], mixedNotebook: ['综合工作', 'Combined work'],
   monthlyProgress: ['月度对账进度', 'Monthly review progress'], quotationProgress: ['报价进度', 'Quotation progress'],
   notStarted: ['尚未开始', 'Not started'], quotationNext: ['查看声明与待补依据', 'View declaration and missing evidence'],

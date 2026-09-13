@@ -7,6 +7,14 @@ Six minutes, one question: "what does this month's reconciliation say, and where
 > The concrete clicking sequence, prerequisites and the answer key are in
 > [`17`](17-business-mvp-acceptance.md) and the [one-stop demo](../demo-walkthrough/README.md).
 
+## Self-guided first visit
+
+For an unfamiliar visitor, the native interface now offers **Help & guided tours**. Its core task uses the
+[retained fictional concrete supplier case](../data/mock_business/demo/README.md): combine the actual department files,
+inspect a discrepancy, follow a cell to its source, download the workbook and save the notebook.
+It makes no model calls. Use this as an interactive entry, with the agent rehearsal below clearly identified as a separate path.
+See [implementation and replay](29-interactive-onboarding.md) and [measured verification](00-status.md).
+
 ## What runs today
 
 The stage path is the native DSH Web demo with the generated 2025-11 business case: four department

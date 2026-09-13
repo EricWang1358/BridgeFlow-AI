@@ -9,6 +9,13 @@
 这是制造企业 **2025-11** 的公开合成案例。两个场景各有四部门 CSV，标准答案由独立显式算术生成。
 核对点是每份 `report.json` 里的 `manager_decision`，不是模型最后一段话说得好不好。
 
+## 首次体验的新入口
+
+当前 **Open sample notebook** 使用 [长期保留的商砼模板案例](../data/mock_business/demo/README.md)。
+启动 `python scripts/start_web.py --demo` 后，可从 **Help & guided tours** 在真实界面内完成整合、差异核对、原件追溯、下载与保存，
+详见 [页面内引导](../docs/29-interactive-onboarding.md)。这条无模型调用的路径与下方旧 CSV 四角色彩排分开记证据。
+下方 CSV 复演需要明确使用它自己的字典；不要用当前 `--demo` 的商砼字典导入旧 CSV。
+
 ## 六步
 
 1. 看 [dictionary.yaml](data/dictionary.yaml)：单位、成本正数约定、公式、关注阈值、责任人。

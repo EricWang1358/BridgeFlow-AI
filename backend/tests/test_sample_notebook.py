@@ -44,3 +44,14 @@ def test_undeclared_several_dates_do_not_pick_the_first_as_the_month():
     assert _period_column(table("完工时间", "报表年月"), FieldDictionary({})) is None
     assert _period_column(table("报表年月"), FieldDictionary({})) == "报表年月"
     assert _period_column(table("完工时间", "报表年月"), FieldDictionary({"period_columns": {"marketing": "报表年月"}})) == "报表年月"
+
+
+def test_retained_onboarding_case_matches_its_reviewed_manifest():
+    import hashlib
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / 'data/mock_business/demo/manifest.json').read_text())
+    for relative, expected in manifest['files'].items():
+        assert hashlib.sha256((root / relative).read_bytes()).hexdigest() == expected, relative

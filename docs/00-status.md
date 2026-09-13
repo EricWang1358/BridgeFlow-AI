@@ -11,6 +11,50 @@
 
 ---
 
+## 页面内引导与案例留档（2026-09-14）
+
+基于已合并的 `b434ac6`（#175），在 `feat/product-tour-delivery` 实现。新增 React 页面内 Product Tour，
+复用官方客户端插件与项目对话框；不新增依赖、不修改 DSH。案例原件、字典、模板／声明指纹与预期结果见
+[`data/mock_business/demo`](../data/mock_business/demo/README.md)，实现边界见 [docs/29](29-interactive-onboarding.md)。
+
+核心引导 **12 步**，实际完成导入与书签保存、总表读取、差异展开、单元格依据、对应部门原件、文件来源信息、
+XLSX 下载请求、命名和明确保存。样例总表 **4 行，3 行完整，1 处客户名称分歧**；同批次研判上下文
+**10 项检查，3 项 attention**（`collection_gap`、`material_cost`、`net_margin`）。它们是合成案例计算与契约结果，不是付费模型结论。
+
+浏览器实测暴露并修复了现有缺口：笔记本的服务端导航白名单缺少 `integration` 和 `handoff`，
+导致在新增总表页面保存失败。现已补齐合法目的地，并通过服务端解析测试与真实浏览器保存／刷新验证。
+欢迎卡首次加载的会话切换、补充引导返回核心任务、替换样例批次清除旧操作完成标记，也已覆盖。
+
+| 检查 | 结果 | 复现（仓库根） |
+| --- | --- | --- |
+| Python 全量 | **439 passed，2 warnings，56.69s**；依赖弃用警告 | `../.venv/bin/pytest -q -c backend/pyproject.toml backend/tests` |
+| 样例与最终指纹复查 | **3 passed，2 warnings，2.98s** | `../.venv/bin/pytest -q -c backend/pyproject.toml backend/tests/test_sample_notebook.py` |
+| Python 静态 | 通过 | `../.venv/bin/ruff check backend/src backend/tests scripts/start_web.py` |
+| TypeScript 单测 | **61 passed，0 failed** | `pnpm --dir plugins test` |
+| 类型／客户端构建 | 通过 | `pnpm --dir plugins typecheck`、`pnpm --dir plugins build` |
+| 新手引导真实浏览器 | 通过，原生 DSH＋真实领域接口＋临时存储；引导 **0 次模型调用** | `pnpm --dir plugins smoke:tour` |
+| 原生 Web 与审批 | 通过；离线适配器 **6 次请求**，批准／拒绝／超时、键盘拒绝、冷重启及代理权限 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web` |
+| 既有业务链 | 通过，离线适配器 **8 次请求**、`validated`，四部门重叠执行、跨批次归属与刷新恢复 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:business` |
+| 报价与笔记本交互 | 通过，**0 次模型请求**；含保存、重开、语言和既有响应式布局 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:quotation` |
+
+引导浏览器断言覆盖首次欢迎、稍后再说和刷新、上一步、Escape 退出与继续、导入失败重试、
+实际总表与原件、下载事件、持久化失败不完成、完成后刷新、重播不自动导入／保存、目标消失与超时恢复、
+接口延迟、403 与重试、配置拒绝时无欢迎遮罩、**390×844** 布局、可视视口 **1.25 倍**缩放、内部滚动、
+未保存修改对话框、补充模块和重置。纯状态回归覆盖不同笔记本、存储被禁用、过期／损坏记录和跨批次事件拒绝。
+
+关键截图：[欢迎](evidence/onboarding/welcome.png)、[真实总表](evidence/onboarding/master.png)、
+[单元格原件入口](evidence/onboarding/evidence.png)、[小屏](evidence/onboarding/mobile.png)、
+[实际保存后的完成卡](evidence/onboarding/complete.png)。[断言记录](evidence/onboarding/checks.json) 由脚本生成。
+已实际检查截图；它们不是静态教程的业务替身。
+
+本轮付费调用 **0 次**。既有回归的 scripted adapter 请求不是 DeepSeek 真实研判证据；未验证新案例的付费四角色连续彩排、
+真实企业账户、业务审批、飞书、部署或正式报告签发。未做 Safari／Firefox、真实移动设备、屏幕阅读器人工验收和跨安装迁移验收。
+引导只保留标签页级导航状态；关闭标签页不保证恢复。原件／结果与 DSH 数据目录应独立备份。
+
+既有报价／业务 smoke 首次冷重启后被新欢迎卡遮挡；已更新脚本从真实 **Maybe later** 操作关闭，而非强制穿过遮罩。
+报价 smoke 会轮换其历史截图，本轮恢复了原有仓库截图，临时新图保留在 `/tmp/bridgeflow-tour-quotation-evidence-1789324413462`。
+其他本机日志为 `/tmp/bridgeflow-tour-*.log`；临时数据会清理，可复现代码与上方引导截图在仓库长期保留。
+
 ## 新增进度复审与总表边界修复（2026-09-14）
 
 基线 `4816e95`（#166–#173 之后），用户要求审查新增进度，并授权直接修复问题。

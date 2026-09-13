@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "mode": "offline",
+  "model_calls": 0,
+  "cases": [
+    "welcome",
+    "later-refresh",
+    "import-failure-retry",
+    "real-source-and-master",
+    "back",
+    "escape-resume",
+    "download",
+    "save",
+    "replay-no-automatic-writes",
+    "save-failure-retry",
+    "completion-refresh",
+    "missing-target-timeout-retry",
+    "390px-layout",
+    "visual-viewport-zoom",
+    "delayed-load",
+    "403-retry",
+    "config-denied-no-welcome",
+    "unsaved-dialog",
+    "supplementary-tours",
+    "reset"
+  ],
+  "sample_batch": "5198dd978d3b42d2ac947e210a6bdbd9"
+}

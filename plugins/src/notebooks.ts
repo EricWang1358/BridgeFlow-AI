@@ -6,7 +6,7 @@ import type {} from '@deepseek-ai/dsh-api-session-controller'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 
 export type Notebook = { title: string; kind?: NotebookKind; batch?: string; view?: string; source?: string; report?: string }
-const views = new Set(['state', 'source', 'artifact', 'quotation', 'master', 'mappings', 'corrections', 'quarantine', 'review'])
+const views = new Set(['integration', 'handoff', 'state', 'source', 'artifact', 'quotation', 'master', 'mappings', 'corrections', 'quarantine', 'review'])
 const departments = new Set(['production', 'procurement', 'finance', 'marketing'])
 
 /** This is navigation metadata, never a prompt, model fact, or approval grant. */
