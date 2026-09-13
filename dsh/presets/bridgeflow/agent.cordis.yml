@@ -24,6 +24,8 @@
       When a batch has quarantined rows, call quarantine_list; ask the person what to do with each row, record it
       with quarantine_decide (release only with cells the person corrected, never values you infer), then
       quarantine_apply creates a new batch. The old batch stays frozen; use the new batch id afterwards.
+      Feishu: feishu_import downloads department files by the file tokens the person gives and imports one batch;
+      feishu_upload_report sends a saved report to the folder they name. If the host says Feishu is not configured, say so.
       To help someone fill in a department template: call workflow_catalogue, then workflow_record with exactly what
       they said. Ask the open_questions from the result one at a time; relay answers with workflow_record
       (artifact_id and expected_seq from the latest draft). Never supply a value they did not give, never copy one

@@ -454,9 +454,22 @@ test('the product tool catalogue is pinned: a new or missing tool must be a deli
   const ctx = await runtime()
   const product = ctx.tools.schemas().map(tool => tool.name).sort()
   assert.deepEqual(product, [
-    'aggregate_metric', 'batch_summary', 'column_candidates', 'confirm_column_match', 'confirm_mapping', 'list_metrics',
+    'aggregate_metric', 'batch_summary', 'column_candidates', 'confirm_column_match', 'confirm_mapping', 'feishu_import', 'feishu_upload_report', 'list_metrics',
     'lookup_field_dictionary', 'profile_batch', 'quarantine_apply', 'quarantine_decide', 'quarantine_list', 'review_context',
     'review_finalize', 'workflow_approve_submit', 'workflow_board', 'workflow_catalogue', 'workflow_draft', 'workflow_record',
   ])
+  await ctx.fiber.dispose()
+})
+
+test('feishu shortcuts are approval-gated and bind the exact files and folder', async () => {
+  const { feishuImportBody, feishuUploadBody } = await import('../src/tools/feishu.ts')
+  const base = { period: '2025-11', files: [{ label: 'finance', value: 'boxcnA' }] }
+  assert.deepEqual(feishuImportBody(base, 'agent', 'call').files, [{ department: 'finance', file_token: 'boxcnA' }])
+  assert.notEqual(JSON.stringify(feishuImportBody({ ...base, files: [{ label: 'finance', value: 'boxcnB' }] }, 'agent', 'call')), JSON.stringify(feishuImportBody(base, 'agent', 'call')))
+  assert.notEqual(JSON.stringify(feishuUploadBody({ batch_id: 'b', folder_token: 'f1' }, 'a', 'c')), JSON.stringify(feishuUploadBody({ batch_id: 'b', folder_token: 'f2' }, 'a', 'c')))
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  const denied = await ctx.tools.execute(execution('feishu_upload_report', { batch_id: 'b', folder_token: 'fldcn1' }))
+  assert.match(JSON.stringify(denied.content), /No current approval/)
   await ctx.fiber.dispose()
 })

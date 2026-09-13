@@ -10,6 +10,7 @@ import { aggregateMetric } from './tools/aggregate-metric.ts'
 import { confirmMapping } from './tools/confirm-mapping.ts'
 import { columnCandidates } from './tools/column-candidates.ts'
 import { confirmColumnMatch } from './tools/confirm-column-match.ts'
+import { feishuImport, feishuUploadReport } from './tools/feishu.ts'
 import { quarantineApply, quarantineDecide, quarantineList } from './tools/quarantine.ts'
 import { workflowApproveSubmit, workflowBoard, workflowCatalogue, workflowDraft, workflowRecord } from './tools/workflow.ts'
 import { listMetrics } from './tools/list-metrics.ts'
@@ -80,6 +81,8 @@ export function apply(ctx: Context, config: Config): void {
   if (config.allowWorkflowWrite) {
     catalogue.register(ctx, workflowRecord(backend, receipts))
     catalogue.register(ctx, workflowApproveSubmit(backend, receipts))
+    catalogue.register(ctx, feishuImport(backend, receipts))
+    catalogue.register(ctx, feishuUploadReport(backend, receipts))
   }
 
   // Final deny applies even when a preset or a later policy exposes another tool.

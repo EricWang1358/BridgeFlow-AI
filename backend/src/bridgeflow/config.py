@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     bridgeflow_enable_legacy_pipeline: bool = False
     bridgeflow_allow_mapping_write: bool = True
     bridgeflow_allow_workflow_write: bool = True
+    # Feishu Drive shortcuts (#140). Exported by the launching shell, never committed.
+    feishu_app_id: str = ""
+    feishu_app_secret: str = ""
+    feishu_base_url: str = "https://open.feishu.cn"
     bridgeflow_max_upload_bytes: int = 25 * 1024 * 1024
     bridgeflow_max_batch_rows: int = 200_000
 
