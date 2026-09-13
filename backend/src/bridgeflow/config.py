@@ -87,6 +87,8 @@ class Settings(BaseSettings):
     # Approved workflow declarations (#143–#145). Unset means the workflow API reports
     # "not configured" rather than running on guessed stages or templates.
     workflow_catalogue_path: str = ""
+    # The business dictionary transcribed for the 跨部门业务整合总表 (2026-09-13 templates).
+    integration_spec_path: str = "data/company_templates/integration.yaml"
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -1,0 +1,561 @@
+# 跨部门业务整合声明（由字典 v2 逐行转写，人工核对后生效）
+#
+# 来源：data/company_templates/source/dictionary-v2.xlsx（业务方提供）。fields 段逐字段对应字典的「来源表字段」列；
+# derived 段对应字典「详细含义与用途描述」里写明的公式；checks 对应字典写明的跨部门核对。
+# 字典没有写的规则（增值税税率、缺口公式、合作状态判定阈值）不在这里补——由业务方确认后再声明。
+# 测试会逐字段比对本文件与字典、与各模板表头、与总表模板列序，不一致即失败。
+version: 字典 v2（业务方 2026-09-13 提供）
+source_dictionary: source/dictionary-v2.xlsx
+master_template: source/master-v2.xlsx
+departments:
+  finance:
+    label: 财务部
+    template: source/finance-v2.xlsx
+  marketing:
+    label: 市场部
+    template: source/marketing-v2.xlsx
+  production:
+    label: 生产部
+    template: source/production-v2.xlsx
+  procurement:
+    label: 物资部
+    template: source/procurement-v2.xlsx
+grain:
+- 项目编号
+- 客户代码
+- 报表年月
+agree:
+- 项目名称
+- 客户名称
+- 产品名称
+- 产品代码
+constants:
+  增值税税率: null
+fields:
+  项目名称:
+    type: string
+    sources:
+      finance:
+        column: 项目名称
+      marketing:
+        column: 项目名称
+      production:
+        column: 项目名称
+      procurement:
+        column: 项目名称
+  客户名称:
+    type: string
+    sources:
+      finance:
+        column: 客户名称
+      marketing:
+        column: 客户名称
+      production:
+        column: 客户单位
+      procurement:
+        column: 客户名称
+  项目编号:
+    type: string
+    sources:
+      finance:
+        column: 项目编号
+      marketing:
+        column: 项目编号
+      production:
+        column: 项目编号
+      procurement:
+        column: 项目编号
+  客户代码:
+    type: string
+    sources:
+      finance:
+        column: 客户代码
+      marketing:
+        column: 客户代码
+      production:
+        column: 客户代码
+      procurement:
+        column: 客户代码
+  报表年月:
+    type: string
+    sources:
+      finance:
+        column: 报表年月
+      marketing:
+        column: 报表年月
+      procurement:
+        column: 报表年月
+      production:
+        period_from:
+        - 年份
+        - 报表月
+  产品名称:
+    type: string
+    sources:
+      marketing:
+        column: 产品名称
+      production:
+        column: 货品名称
+      procurement:
+        column: 产品名称
+  产品代码:
+    type: string
+    sources:
+      production:
+        column: 货品代码
+      procurement:
+        column: 产品代码
+  财务_期初金额:
+    type: number
+    sources:
+      finance:
+        column: 期初金额
+  财务_期初方向:
+    type: string
+    sources:
+      finance:
+        column: 期初方向
+  财务_本期借方金额:
+    type: number
+    sources:
+      finance:
+        column: 本期借方金额
+  财务_本期贷方金额:
+    type: number
+    sources:
+      finance:
+        column: 本期贷方金额
+  财务_本年累计借方金额:
+    type: number
+    sources:
+      finance:
+        column: 本年累计借方金额
+  财务_本年累计贷方金额:
+    type: number
+    sources:
+      finance:
+        column: 本年累计贷方金额
+  财务_期末余额:
+    type: number
+    sources:
+      finance:
+        column: 期末余额
+  财务_期末方向:
+    type: string
+    sources:
+      finance:
+        column: 期末方向
+  财务_本期实现收入:
+    type: number
+    sources:
+      finance:
+        column: 本期实现收入
+  财务_本期实际成本:
+    type: number
+    sources:
+      finance:
+        column: 本期实际成本
+  财务_资金占用利息成本:
+    type: number
+    sources:
+      finance:
+        column: 资金占用利息成本
+  财务_项目财务净利润:
+    type: number
+    sources:
+      finance:
+        column: 项目财务净利润
+  市场_负责人:
+    type: string
+    sources:
+      marketing:
+        column: 负责人
+  市场_付款比例:
+    type: string
+    sources:
+      marketing:
+        column: 付款比例
+  市场_在供完工状态:
+    type: string
+    sources:
+      marketing:
+        column: 在供/完工
+  市场_完工时间:
+    type: string
+    sources:
+      marketing:
+        column: 完工时间
+  市场_合同条款:
+    type: string
+    sources:
+      marketing:
+        column: 合同条款
+  市场_累计产值:
+    type: number
+    sources:
+      marketing:
+        column: 累计产值
+  市场_累计结算:
+    type: number
+    sources:
+      marketing:
+        column: 累计结算
+  市场_累计收款:
+    type: number
+    sources:
+      marketing:
+        column: 累计收款
+  市场_合同欠款:
+    type: number
+    sources:
+      marketing:
+        column: 合同欠款
+  市场_总欠款:
+    type: number
+    sources:
+      marketing:
+        column: 总欠款
+  市场_已到账:
+    type: number
+    sources:
+      marketing:
+        column: 已到账
+  市场_已落实:
+    type: number
+    sources:
+      marketing:
+        column: 已落实
+  市场_有把握:
+    type: number
+    sources:
+      marketing:
+        column: 有把握
+  市场_可争取:
+    type: number
+    sources:
+      marketing:
+        column: 可争取
+  市场_收款计划合计:
+    type: number
+    sources:
+      marketing:
+        column: 合计
+  市场_缺口:
+    type: number
+    sources:
+      marketing:
+        column: 缺口
+  市场_产值收款率:
+    type: number
+    sources:
+      marketing:
+        column: 产值收款率
+  市场_结算收款率:
+    type: number
+    sources:
+      marketing:
+        column: 结算收款率
+  市场_合同销售单价:
+    type: number
+    sources:
+      marketing:
+        column: 合同销售单价
+  市场_当前垫资额:
+    type: number
+    sources:
+      marketing:
+        column: 当前垫资额
+  市场_垫资比例:
+    type: number
+    sources:
+      marketing:
+        column: 垫资比例
+  生产_厂站:
+    type: string
+    sources:
+      production:
+        column: 厂站
+  生产_生产量:
+    type: number
+    sources:
+      production:
+        column: 生产量
+  生产_出厂量:
+    type: number
+    sources:
+      production:
+        column: 出厂量
+  生产_实际量:
+    type: number
+    sources:
+      production:
+        column: 实际量
+  生产_备注:
+    type: string
+    sources:
+      production:
+        column: 备注
+  生产_上月实际量:
+    type: number
+    sources:
+      production:
+        column: 上月实际量
+  生产_实际签收率:
+    type: number
+    sources:
+      production:
+        column: 实际签收率
+  生产_产量环比增长率:
+    type: number
+    sources:
+      production:
+        column: 产量环比增长率
+  生产_客户合作状态诊断:
+    type: string
+    sources:
+      production:
+        column: 客户合作状态诊断
+  物资_付款比例:
+    type: string
+    sources:
+      procurement:
+        column: 付款比例
+  物资_材料A:
+    type: string
+    sources:
+      procurement:
+        column: 材料A
+  物资_材料A单价:
+    type: number
+    sources:
+      procurement:
+        column: 单价
+        occurrence: 1
+  物资_材料A含量:
+    type: number
+    sources:
+      procurement:
+        column: 材料含量
+        occurrence: 1
+  物资_材料B:
+    type: string
+    sources:
+      procurement:
+        column: 材料B
+  物资_材料B单价:
+    type: number
+    sources:
+      procurement:
+        column: 单价
+        occurrence: 2
+  物资_材料B含量:
+    type: number
+    sources:
+      procurement:
+        column: 材料含量
+        occurrence: 2
+  物资_材料C:
+    type: string
+    sources:
+      procurement:
+        column: 材料C
+  物资_材料C单价:
+    type: number
+    sources:
+      procurement:
+        column: 单价
+        occurrence: 3
+  物资_材料C含量:
+    type: number
+    sources:
+      procurement:
+        column: 材料含量
+        occurrence: 3
+  物资_材料D:
+    type: string
+    sources:
+      procurement:
+        column: 材料D
+  物资_材料D单价:
+    type: number
+    sources:
+      procurement:
+        column: 单价
+        occurrence: 4
+  物资_材料D含量:
+    type: number
+    sources:
+      procurement:
+        column: 材料含量
+        occurrence: 4
+  物资_材料E:
+    type: string
+    sources:
+      procurement:
+        column: 材料E
+  物资_材料E单价:
+    type: number
+    sources:
+      procurement:
+        column: 单价
+        occurrence: 5
+  物资_材料E含量:
+    type: number
+    sources:
+      procurement:
+        column: 材料含量
+        occurrence: 5
+  物资_材料F:
+    type: string
+    sources:
+      procurement:
+        column: 材料F
+  物资_材料F单价:
+    type: number
+    sources:
+      procurement:
+        column: 单价
+        occurrence: 6
+  物资_材料F含量:
+    type: number
+    sources:
+      procurement:
+        column: 材料含量
+        occurrence: 6
+  物资_容重:
+    type: number
+    sources:
+      procurement:
+        column: 容重
+  物资_不含税成本:
+    type: number
+    sources:
+      procurement:
+        column: 不含税成本
+  物资_含税成本:
+    type: number
+    sources:
+      procurement:
+        column: 含税成本
+  物资_预付款含税成本:
+    type: number
+    sources:
+      procurement:
+        column: 预付款含税成本
+  物资_备注:
+    type: string
+    sources:
+      procurement:
+        column: 备注
+  物资_当月生产量:
+    type: number
+    sources:
+      procurement:
+        column: 当月生产量
+  物资_当月物资总成本:
+    type: number
+    sources:
+      procurement:
+        column: 当月物资总成本
+  物资_单方不含税毛利:
+    type: number
+    sources:
+      procurement:
+        column: 单方不含税毛利
+derived:
+  财务_项目财务净利润:
+    op: subtract
+    args:
+    - op: subtract
+      args:
+      - op: input
+        key: 财务_本期实现收入
+      - op: input
+        key: 财务_本期实际成本
+    - op: input
+      key: 财务_资金占用利息成本
+  市场_产值收款率:
+    op: divide
+    args:
+    - op: input
+      key: 市场_累计收款
+    - op: input
+      key: 市场_累计产值
+  市场_结算收款率:
+    op: divide
+    args:
+    - op: input
+      key: 市场_累计收款
+    - op: input
+      key: 市场_累计结算
+  市场_收款计划合计:
+    op: add
+    args:
+    - op: add
+      args:
+      - op: input
+        key: 市场_已到账
+      - op: input
+        key: 市场_已落实
+    - op: add
+      args:
+      - op: input
+        key: 市场_有把握
+      - op: input
+        key: 市场_可争取
+  市场_垫资比例:
+    op: divide
+    args:
+    - op: input
+      key: 市场_当前垫资额
+    - op: input
+      key: 市场_累计产值
+  生产_实际签收率:
+    op: divide
+    args:
+    - op: input
+      key: 生产_实际量
+    - op: input
+      key: 生产_出厂量
+  生产_产量环比增长率:
+    op: divide
+    args:
+    - op: subtract
+      args:
+      - op: input
+        key: 生产_实际量
+      - op: input
+        key: 生产_上月实际量
+    - op: input
+      key: 生产_上月实际量
+  物资_当月物资总成本:
+    op: multiply
+    args:
+    - op: input
+      key: 物资_当月生产量
+    - op: input
+      key: 物资_不含税成本
+  物资_单方不含税毛利:
+    op: subtract
+    args:
+    - op: divide
+      args:
+      - op: input
+        key: 市场_合同销售单价
+      - op: add
+        args:
+        - op: constant
+          value: 1
+        - op: declared
+          key: 增值税税率
+    - op: input
+      key: 物资_不含税成本
+checks:
+- id: production_volume_matches
+  title: 物资部当月生产量与生产部生产量一致
+  left: 物资_当月生产量
+  right: 生产_生产量
+  tolerance: 0
+undeclared_rules:
+  市场_缺口: 字典未给出「目标」字段，缺口只能原样传递，不能计算
+  生产_客户合作状态诊断: 字典未给出签收率与环比的判定阈值，只能原样传递

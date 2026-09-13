@@ -10,7 +10,9 @@ import pandas as pd
 from bridgeflow.agents.base import Agent
 from bridgeflow.schemas import CleanTable, ColumnSpec, Correction, Department, SourceRef
 
-_HEADER_NOISE = re.compile(r"[^0-9a-z]+")
+#: Anything that is not a letter or digit in any script. CJK headers keep their characters:
+#: stripping them turned `单价.1` and `材料含量.1` into the same key `1` and merged two columns.
+_HEADER_NOISE = re.compile(r"[\W_]+")
 
 
 DateOrder = Literal["day_first", "month_first"]
@@ -114,9 +116,15 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
     ) -> tuple[pd.DataFrame, list[Correction]]:
         fixes: list[Correction] = []
         renames: dict[Any, str] = {}
+        taken: set[str] = set()
         for column in frame.columns:
             clean = _HEADER_NOISE.sub("_", str(column).strip().lower()).strip("_")
-            if clean and clean != column:
+            if not clean or clean in taken:
+                # Normalising must never make two columns one; keep the header as written.
+                taken.add(str(column))
+                continue
+            taken.add(clean)
+            if clean != column:
                 renames[column] = clean
                 fixes.append(
                     Correction(
