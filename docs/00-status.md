@@ -11,7 +11,17 @@
 
 ---
 
+## 字典未写口径按通用做法补齐，带数据调优样例与留出生成（2026-09-13，#141 / #23）
+
+业务方授权「按最佳实践处理」的五项写入 `integration.yaml`，每项在 `assumptions` 里写明做法与依据（见 `data/company_templates/README.md`）：增值税 13%、缺口 = 累计结算 − 收款计划合计、合作状态诊断规则表（签收率 95%、环比 ±5% / −20%）、生产部按日多行汇总（数量求和、厂站与备注去重拼接、比率与诊断用汇总数重算、其余字段须一致）。
+业务方样例在新口径下 **76 列全部一致、0 条待确认**，缺口与诊断均核对通过；样例拆成按日两行汇总后仍逐列一致。依赖假设的单元格在出处里带上该条说明，xlsx 另有「口径假设」页，总控摘要列出假设。
+`scripts/integration_cases.py` 按声明生成带数据样例并用独立的分数运算给出答案：调优两组（种子 1、2，各 **7** 个干净键、**8** 个故意错误）评分全过；留出 **30** 组（系统随机种子，不落盘）**30/30** 通过，干净键 **268/268** 逐列精确，7 类错误各 **30/30**（同键多行类 **60/60**），五种诊断各有覆盖（稳定增长 84、平稳合作 70、签收异常 50、需求下滑 45、合作萎缩 19）。
+评分的反向验证：汇总只取首行、诊断恒为兜底、拼接只取首行、忽略按日多行冲突，**4** 处各被评分抓到。仍是合成数据，不代替真实导出的留出验收。
+Python **400 passed**，TS **55 passed**，typecheck 通过。真实模型调用 **0 次**。
+
 ## 业务方模板与字典接入：四部门 → 跨部门业务整合总表（2026-09-13，#23 / #141 / #143 / #47 / #92）
+
+> 以下为补齐口径之前的记录：当时「单方不含税毛利」未核对、同键多行一律拒绝。
 
 业务方提供的字典 v2、四部门 v2 模板与总表模板收入 `data/company_templates/`，字典逐行转写为 `integration.yaml`（76 字段、9 条字典写明的公式、1 条跨部门核对）。
 用总表里业务方自己的样例行拆回四部门模板后整合：**76 列全部与样例一致**，部门填写的 8 个派生值均按字典公式核对通过；「单方不含税毛利」因字典未声明增值税税率而标「未核对」（声明 0.13 后核对通过）。
@@ -35,6 +45,31 @@ Python **391 passed**，TS **55 passed**，离线三条浏览器 smoke 通过；
 ② 财务子代理在否定句中写出了声明禁用的话题词，被校验拒绝导致 partial——保留严格校验，指令改为「禁用词连否定也不写」；
 ③ `smoke:web` 的叙述检查两次误判模型正确的保留说法，改为逐句判断并识别否定/不确定表达。
 局限：每个场景只跑一次，不是统计意义上的质量评估；用的是可见合成案例，不是留出集；业务负责人逐项核对与报价样板仍待业务方。
+
+## 提交准备度复核（2026-09-13）
+
+本地代码基线 `06cc1ab`（在下方 #166–#168 之前）；本次只做评估与文档更新，没有修改业务实现。之后的实测以本节以上的记录为准。普通测试使用隔离配置，浏览器显式设置
+`BRIDGEFLOW_LIVE=0`。本次付费模型调用 **0 次**；未重跑真实模型、真实飞书、部署或新的留出验收。
+
+| 检查 | 本次结果 | 复现命令（仓库根） |
+| --- | --- | --- |
+| Python 全量 | **372 passed，2 warnings，9.40s**；警告来自 Starlette/httpx 与 AnyIO 弃用 | `../.venv/bin/pytest -q -c backend/pyproject.toml backend/tests` |
+| Python 静态 | 通过 | `../.venv/bin/ruff check backend/src backend/tests scripts/start_web.py` |
+| TS 全量 | **54 passed，0 failed** | `pnpm --dir plugins test` |
+| TS 类型／构建 | 均通过；本次未重新安装依赖 | `pnpm --dir plugins typecheck`、`pnpm --dir plugins build` |
+| 原生 Web／审批 | 通过；允许、拒绝、无人应答，备注、重试、键盘操作及冷读取 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web` |
+| 月度正常链 | 通过；**4** 个部门子会话，报告 `validated`，验证并行重叠与跨批次状态 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:business` |
+| 月度故障链 | 通过；财务无有效检查，报告 `partial`，其他部门保留结果 | `BRIDGEFLOW_LIVE=0 BRIDGEFLOW_TEST_FAULT=step-limit pnpm --dir plugins smoke:business` |
+| 报价／Notebook | 通过 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:quotation` |
+
+首次浏览器启动在沙箱内因 `listen EPERM: operation not permitted 127.0.0.1` 退出；在允许监听本地端口的环境
+重跑上述浏览器套件后全部通过。这是执行权限边界，不能记为产品回归，也不能据此推断所有机器都能启动。
+浏览器使用离线适配器：其请求数、合成 token 与亚秒级研判时间都不是付费模型效果或延迟证据。
+
+本机临时日志在 `/tmp/bridgeflow-assessment-{web,business,partial,quotation}.log`；本次临时产物分别在
+`/tmp/bridgeflow-web-e2e-PuFhnq`、`/tmp/bridgeflow-web-e2e-oe2sjN`、`/tmp/bridgeflow-web-e2e-bU3Gcz`、
+`/tmp/bridgeflow-web-e2e-eDew9h`，清理 `/tmp` 后不保证保留。报价 smoke 自动轮换了仓库截图；本次已恢复原有归档，
+新截图保存在临时目录，未把原始会话与凭证归档进仓库。提交建议见 [HANDOFF](../HANDOFF.md#提交准备度评估2026-09-13)。
 
 ## 真实 captain 列匹配全流程（2026-09-13，#102，**已计费**）
 
@@ -168,30 +203,19 @@ SSH_HOST／SSH_USER／SSH_PRIVATE_KEY 与 PUBLIC_DOMAIN。缺项追踪 [#138](ht
 
 **可以对外说：**
 
-- 月度对账闭环能在原生 DSH Web 上跑通：导入 → 冻结字典的规则计算 → 官方四角色子会话 → 原生审批 → 可重开报告。
-- 报价路径的样板前第一步已完成：`quotation:` 人工声明 + 通用文档求值器 + 点名缺项的聚合拒绝，全程不调模型。
-- 离线回归 Python 全量 **302 passed**（2 条依赖弃用提示），TS **32 passed**，typecheck / build / frozen-lockfile 通过。
-- 报价契约复验 **28 passed**：成本变更、全缺项、来源、范围、单位、阈值、循环、除零、纯常量伪报价、改名、鉴权、有界返回。
-- 最近一轮（2026-09-11）真实模型调用 **0 次**、计费 tokens **0**、模型费用 **0**。
+- 月度对账可在原生 DSH Web 上完成导入、冻结字典的规则计算、官方四角色研判和保存后重开；映射写入另经原生审批。
+- 列匹配已完成一次真实 captain 提议、人工批准与重新导入验收，详见上方对应记录；该次没有继续跑新批次研判。
+- 研判期限、幂等汇总、重启回收、人工意见 guard、隔离处置与日期声明已有实现和对应回归。
+- 报价完成样板前的人工声明、通用求值器与缺项拒绝；飞书代码有模拟测试，尚未真实联调。
+- 本次离线完整复核通过，最新计数、命令与验证范围见 [提交准备度复核](#提交准备度复核2026-09-13)。
 
 **还不能说：**
 
-- 「稳定业务展示 MVP」还不成立：人工意见不触发宿主级禁重跑、端到端超时、重启后恢复三处仍有实现缺口
-  （清单见 [19 的未收尾链路](19-chain-audit.md)）。
-- 「真实企业验收」不成立：目前是真实模型在**可见合成案例**上的验收，不是留出集，也不是客户数据。
-- 「员工身份、角色、租户隔离」不成立：当前认证表示共享 DSH 会话，记录为 `dsh-authenticated-session`。
-
-### 当前状态快照
-
-| 检查 | 结果 | 复现 |
-| --- | --- | --- |
-| Python 全量 | **302 passed**，2 条依赖弃用提示 | `pytest -q -c backend/pyproject.toml backend/tests` |
-| Python 聚焦（报价契约） | **28 passed** | `pytest -q -c backend/pyproject.toml backend/tests/test_declared_documents.py` |
-| TS 单测 | **32 passed** | `pnpm --dir plugins test` |
-| 类型 / 产物 / 锁文件 | 通过 | `pnpm --dir plugins typecheck` / `build` / `install --frozen-lockfile` |
-| Python 静态 | 通过 | `ruff check backend scripts` |
-| 浏览器 smoke 三条 | 本轮隔离验收通过，退出码 **0**；历史环境差异见第二节 | `pnpm --dir plugins smoke:web` / `smoke:quotation` / `smoke:business` |
-| 本轮模型费用 | **0** | 浏览器测试用进程内离线适配器 |
+- 最终录制版本的真实模型连续彩排已经完成，或已证明稳定性 SLA。#167 的真实彩排跑在当时的 main 上，录制版本冻结后需要再跑一次；生命周期的浏览器超时／重启故障注入尚待补证据。
+- 已通过真实企业验收：现有真实模型记录基于可见合成案例；新的业务留出集与人工效率基线仍缺。
+- `validated` 意味着跨部门映射已全部确认或报表已正式签发；当前报告汇总声明列，不消费待确认关系。
+- 已实现员工身份、角色、租户隔离或已部署上线。当前认证是共享 DSH 会话，生产部署仍待外部配置与验收。
+- 多 Agent 比单 Agent／纯规则更准确或节省工时：本次未见支持该比较的效果实验。
 
 ---
 

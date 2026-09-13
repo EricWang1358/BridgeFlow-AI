@@ -67,6 +67,7 @@ const labels = {
   approval_feishu_upload_report: ['上传到飞书审批', 'Feishu upload approval'], approvalTitle_feishu_upload_report: ['把这份研判报告上传到飞书文件夹', 'Upload this review report to the Feishu folder'],
   feishu_import: ['从飞书导入', 'Import from Feishu'], feishu_upload_report: ['上传报告到飞书', 'Upload report to Feishu'],
   integrationMaster: ['跨部门总表', 'Cross-department master'], downloadMaster: ['下载总表 xlsx', 'Download master xlsx'],
+  integrationAssumptions: ['按通用做法补的口径（业务方确认后可在声明里替换）', 'Conventions filled in where the dictionary is silent (replaceable once the business side confirms)'],
   integrationHelp: ['按业务字典对齐四部门模板生成；悬停单元格可看出处（部门、文件、行、表头，或公式），✓ 表示部门填写值已按字典公式核对。', 'Built from the four department templates by the business dictionary; hover a cell for its source (department, file, row, header, or formula); ✓ means a department value was checked against the dictionary formula.'],
   integrationNoRows: ['没有可对齐的行。请检查待确认项，通常是模板缺连接键列。', 'No rows could be placed. Check the open items; usually a template lacks a join key column.'],
   integrationRowState: ['行状态', 'Row'], integration_summary: ['跨部门总表摘要', 'Master table summary'],

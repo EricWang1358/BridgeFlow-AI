@@ -399,11 +399,10 @@ BRIDGEFLOW_TEST_FAULT=step-limit pnpm run smoke:business
 
 Expect the Python and TypeScript unit tests to pass offline, with no model calls and no cost.
 
-**Known red.** The three browser smokes currently fail on the development machine with
-`client-modules: HTML did not preload @deepseek-ai/dsh-client-modules/client.js`, tracked in
-[#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97). It is not the product: the same patch
-and the same `dsh web` command render fine against a real `DSH_HOME`. Until it is fixed, look at
-the interface with `pnpm --dir plugins shots` and do not conclude you broke something.
+**Browser smokes.** The historical `client-modules` preload failure ([#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97))
+is closed: the launcher now selects the pinned npm CLI and checks the official client module before it
+opens a browser. If it ever reappears, the diagnostic names the missing module; look at the interface
+with `pnpm --dir plugins shots` while you investigate.
 
 [`docs/00-status.md`](docs/00-status.md) is the source of truth for what has been measured, what it
 cost, and what is still unverified.
@@ -418,7 +417,7 @@ cost, and what is still unverified.
 | An old session log refuses to open (`bridgeflow/review`, `bridgeflow/approval-note`) | Legacy informational events the native cold reader will not ignore | Stop the launcher, run `python scripts/repair_session_metadata.py --root ../.dsh-bridgeflow/sessions` to inspect, then add `--apply` if you agree. It keeps a byte-for-byte backup |
 | A Windows browser cannot reach the service | It is bound to `127.0.0.1` inside WSL, or you used the wrong host | Check `ss -tlnp` first, then [`docs/14` step 10](docs/14-wsl-setup.md) |
 | Everything is slow and watch mode never reloads | You are under `/mnt` | Move the repo, the venv and `DSH_HOME` into the Linux filesystem |
-| A browser smoke fails with the client-modules line | Known open issue, not your change | See [#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97); use `shots` to look at the UI |
+| A browser smoke fails with the client-modules line | The shell picked a runtime other than the pinned npm CLI (usually an activated venv first on PATH) | Restart `scripts/start_web.py`; the history is in [#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97) |
 | You expected a number and got a refusal | The data is incomplete and the system refuses to guess | Work the four cases in [section 16, example 5](#16-worked-examples) before touching the dictionary |
 | Two panels disagree about one number | a specification conflict is possible; it has happened before | Re-derive it from the citations, then record the measurement in `docs/00` |
 
@@ -572,9 +571,10 @@ child count is still 4 (four sessions really started; one failed).
 Then submit a human review note from the partial page. It reaches the captain as an ordinary chat
 message, the report stays `partial`, and the note does not sign for finance.
 
-**The known gap, stated plainly:** "do not re-run" is a text requirement today, not a host-enforced
-one, and end-to-end timeout plus restart recovery are unfinished
-([docs/19](docs/19-chain-audit.md) lists them as P0). Do not present a partial report as "handled".
+**What the host enforces:** a turn that carries a human note is guarded by the plugin — it cannot start,
+rerun or finalize a review, dispatch departments or call an approval tool. Every review is registered with
+one deadline when it opens; a late success cannot overwrite `deadline_exceeded`, and a restart closes open
+runs as `host_restarted`. Do not present a partial report as "handled".
 
 **The trap.** Filling the missing department with a plausible sentence makes the report look complete
 and is the single most damaging thing this product could do: the approver signs a number nobody
@@ -619,5 +619,6 @@ Status: a business-use-case demonstration MVP with live-model and browser eviden
 data and enterprise deployment still need validation. Work is tracked on the
 [project board](https://github.com/users/EricWang1358/projects/1).
 
-Deployment is deliberately unconfigured: no Dockerfiles, no CI. The target is undecided, and adding
-either before it is settled is a mistake this repository has already made once.
+There are no Dockerfiles. One CI file (`.github/workflows/deploy.yml`) runs the offline checks on every
+pull request and deploys merges to the Lightsail instance ([docs/22](docs/22-lightsail-deploy.md)); browser
+smokes and billed model runs are not part of CI.
