@@ -116,6 +116,7 @@ export function gate(ctx: Context, details: PendingDetails, receipts: ApprovalRe
         signal: AbortSignal.any([exec.signal, AbortSignal.timeout(decisionTimeoutMs)]),
       })
       nativeNote = exec.callId ? notes.get(agent.id, exec.callId) : undefined
+      if (exec.callId) await notes.settle(agent.id, exec.callId, outcome).catch(() => undefined)
     } catch (error) {
       // The service will not ask without committing the audit pair, so an exception
       // here means no logged decision exists. Deny, and say that rather than
