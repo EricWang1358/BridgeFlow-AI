@@ -473,3 +473,17 @@ test('feishu shortcuts are approval-gated and bind the exact files and folder', 
   assert.match(JSON.stringify(denied.content), /No current approval/)
   await ctx.fiber.dispose()
 })
+
+test('batch_summary accepts the full host summary, including absent optional values', async (t) => {
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  t.mock.method(globalThis, 'fetch', async () => Response.json({
+    demo_case: null, batch_id: 'a'.repeat(32), period: '2025-11', master_rows: 4, unresolved: 2, status: 'needs_review', refusal: '',
+    departments: [{ department: 'finance', rows: 2, quarantined: 0, corrections: 0 }], dictionary: 'data/business_demo/dictionary.yaml',
+    declared_entities: { finance: ['project'] }, matched_columns: ['finance.project_code → project'], stale_matches: [], column_questions: 0, derived_from: null,
+  }))
+  try {
+    const result = await ctx.tools.execute(execution('batch_summary', { batch_id: 'a'.repeat(32) }))
+    assert.equal(result.isError, false, JSON.stringify(result.content))
+  } finally { await ctx.fiber.dispose() }
+})

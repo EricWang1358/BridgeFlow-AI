@@ -13,6 +13,14 @@ export function batchSummary(config: BackendConfig) {
           batch_id: { type: 'string', required: true }, period: { type: 'string', required: true },
           master_rows: { type: 'number', required: true }, unresolved: { type: 'number', required: true },
           status: { type: 'string', required: true }, refusal: { type: 'string', required: true },
+          // Every field the host returns is declared: a strict schema that lags the host
+          // turns a correct answer into an invalid tool result, which only a real captain
+          // ever hit (#41 live run). A contract test on the Python side keeps them in step.
+          demo_case: { type: 'string' }, dictionary: { type: 'string' },
+          declared_entities: { type: 'object', additionalProperties: true },
+          matched_columns: { type: 'array', items: { type: 'string' } },
+          stale_matches: { type: 'array', items: { type: 'string' } },
+          column_questions: { type: 'number' }, derived_from: { type: 'string' },
           departments: { type: 'array', required: true, items: { type: 'object', properties: {
             department: { type: 'string', required: true }, rows: { type: 'number', required: true },
             corrections: { type: 'number', required: true }, quarantined: { type: 'number', required: true },
@@ -23,7 +31,9 @@ export function batchSummary(config: BackendConfig) {
       presentationMeta: (_args, value) => value,
     },
     async execute(args, exec) {
-      return callBackend(config, '/tools/batch-summary', args, exec.signal)
+      const summary = await callBackend<Record<string, unknown>>(config, '/tools/batch-summary', args, exec.signal)
+      // JSON null means "absent" here; the declared schema has no null type.
+      return Object.fromEntries(Object.entries(summary).filter(([, value]) => value !== null)) as never
     },
   }), { kind: 'read' })
 }
