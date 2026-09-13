@@ -55,7 +55,7 @@
 | [`20-quotation-brief.md`](20-quotation-brief.md) | 权威 | 中 | 接手报价的人 | 报价功能任务书：并列的第二条路径，分三步，第一步现在可做 |
 | [`21-quotation-design.md`](21-quotation-design.md) | 参考 | 中 | 接手报价的人 | 报价声明与自由文本证据边界，设计先于实现写定 |
 | [`22-lightsail-deploy.md`](22-lightsail-deploy.md) | 参考 | 中 | 开发、运维 | Lightsail 部署 runbook：实例引导、GitHub Actions 流水线、Caddy 反代与回滚 |
-| [`24-meeting-2026-09-13.md`](24-meeting-2026-09-13.md) | 参考 | 中 | 团队 | 9/13 讨论：不自建数据平台，协同与权限交给飞书类平台，样例数据 2+1 是主线阻塞 |
+| [`24-meeting-2026-09-13.md`](24-meeting-2026-09-13.md) | 参考 | 中 | 团队 | 9/13 讨论：不自建数据平台；飞书只做上传下载快捷调用，权限是远景；样例数据 2+1 是主线阻塞 |
 
 两份 README 是同一套图文操作指引的中英版本（顶部可切换）：[`../README.md`](../README.md)（English）
 与 [`../README.zh.md`](../README.zh.md)（简体中文）。截图是 `../docs/images/` 里的稳定副本，
