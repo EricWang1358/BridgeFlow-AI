@@ -16,7 +16,7 @@ import { shellStyle } from './shell-style.ts'
 
 type Source = { id: string; filename: string; sheet: string; preview_available: boolean; total?: number; sha256?: string }
 type Artifact = { report_id: string; period: string; status: string; created_at: number }
-type Preview = { filename: string; sheet: string; sha256: string; columns: string[]; rows: unknown[][]; total: number; offset: number }
+type Preview = { filename: string; sheet: string; sha256: string; columns: string[]; rows: unknown[][]; row_numbers?: number[]; total: number; offset: number }
 const emptyWindow: SessionEventWindow = { entries: [], hasMore: false, revision: 0, change: { kind: 'replace', entries: [] } }
 const viewportSubscribe = (fn: () => void) => { window.addEventListener('resize', fn); return () => window.removeEventListener('resize', fn) }
 const hashSubscribe = (fn: () => void) => { window.addEventListener('hashchange', fn); return () => window.removeEventListener('hashchange', fn) }
@@ -89,7 +89,7 @@ function Shell({ ctx }: { ctx: Context }) {
   const previewContent = selected.view === 'quotation' ? <Quotation /> : selected.view === 'handoff' ? <Handoff /> : selected.view === 'integration' && batchId ? <MasterTable batchId={batchId} /> : preview ? <section aria-label={t('sourcePreview')}>
     <h3>{preview.filename}</h3><p className="bf-hint">{t('parsedOriginal')} {preview.sheet}</p>
     <div className="bf-source-table"><table><thead><tr><th>{t('sourceRow')}</th>{preview.columns.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>
-      <tbody>{preview.rows.map((row, i) => <tr key={preview.offset + i}><th>{preview.offset + i + 2}</th>{row.map((cell, j) => <td key={j}>{cell === null ? '—' : String(cell)}</td>)}</tr>)}</tbody></table></div>
+      <tbody>{preview.rows.map((row, i) => <tr key={preview.offset + i}><th>{preview.row_numbers?.[i] ?? preview.offset + i + 2}</th>{row.map((cell, j) => <td key={j}>{cell === null ? '—' : String(cell)}</td>)}</tr>)}</tbody></table></div>
     {preview.total > 50 ? <nav className="bf-actions" aria-label={t('sourcePagination')}>
       <button disabled={preview.offset === 0} onClick={() => setOffset(Math.max(0, preview.offset - 50))}>{t('previous')}</button>
       <span role="status">{t('pageLabel')} {Math.floor(preview.offset / 50) + 1} / {Math.ceil(preview.total / 50)} · {preview.offset + 1}–{preview.offset + preview.rows.length} / {preview.total} {t('rows')}</span>

@@ -47,6 +47,7 @@ def batch_path(batch_id: str):
 
 class BatchSnapshot(PipelineResult):
     dictionary_snapshot: dict | None = None
+    integration_snapshot: dict | None = None
     refusal: str = ""
     demo_case: str | None = None
     dictionary_source: str | None = None
@@ -209,7 +210,7 @@ class Layout:
         return Layout(self.sheet or declared.sheet, self.header_row or declared.header_row)
 
 
-def _read_xlsx(payload: bytes, filename: str, layout: Layout) -> tuple[str, pd.DataFrame]:
+def _read_xlsx(payload: bytes, filename: str, layout: Layout) -> tuple[str, pd.DataFrame, int]:
     """One worksheet as a table. Ambiguity is refused with what a person needs to choose."""
     workbook = openpyxl.load_workbook(io.BytesIO(payload), read_only=True, data_only=False)
     names = workbook.sheetnames
@@ -250,7 +251,7 @@ def _read_xlsx(payload: bytes, filename: str, layout: Layout) -> tuple[str, pd.D
         header_row = 1
     frame = pd.read_excel(io.BytesIO(payload), sheet_name=sheet, header=header_row - 1,
                           nrows=settings.bridgeflow_max_batch_rows + 1)
-    return sheet, frame
+    return sheet, frame, header_row
 
 
 @router.post("/demo", response_model=BatchSummary)
@@ -291,6 +292,11 @@ async def _import_batch(period: str, departments: list[Department], files: list[
         layouts = [Layout.declared(dictionary_raw.get("sheet_layout"), d) for d in departments]
     except (yaml.YAMLError, OSError, UnicodeError, ValueError, TypeError, AttributeError, KeyError) as exc:
         raise HTTPException(503, "Field dictionary configuration is invalid; ask the administrator to correct it before importing") from exc
+    # Imported locally because the evaluator also uses BatchSnapshot for its arithmetic.
+    from bridgeflow import integration
+
+    integration_snapshot = (integration.load_spec().model_dump(mode="json")
+                            if integration.spec_path().is_file() else None)
     tables = []
     sources = []
     byte_count = row_count = 0
@@ -301,12 +307,13 @@ async def _import_batch(period: str, departments: list[Department], files: list[
             raise HTTPException(413, "Batch exceeds configured upload size limit")
         filename = (upload.filename or "").replace("\\", "/").rsplit("/", 1)[-1]
         sheet = ""
+        header_row = 1
         try:
             if filename.lower().endswith(".xlsx"):
                 with zipfile.ZipFile(io.BytesIO(payload)) as archive:
                     if sum(i.file_size for i in archive.infolist()) > 100 * 1024 * 1024:
                         raise HTTPException(413, "Expanded workbook exceeds 100 MiB")
-                sheet, frame = _read_xlsx(payload, filename, chosen.over(declared))
+                sheet, frame, header_row = _read_xlsx(payload, filename, chosen.over(declared))
             elif filename.lower().endswith(".csv"):
                 frame = pd.read_csv(io.BytesIO(payload), skip_blank_lines=False, nrows=settings.bridgeflow_max_batch_rows + 1)
             else:
@@ -328,16 +335,20 @@ async def _import_batch(period: str, departments: list[Department], files: list[
                   for row in frame.astype(object).where(frame.notna(), None).values.tolist()]}
         sources.append({"id": department, "filename": filename, "sheet": sheet,
                         "sha256": hashlib.sha256(payload).hexdigest(), "bytes": len(payload),
-                        "columns": parsed["columns"], "rows": parsed["data"]})
+                        "columns": parsed["columns"], "rows": parsed["data"],
+                        "header_row": header_row,
+                        "row_numbers": list(range(header_row + 1, header_row + 1 + len(frame)))})
         table = await DataSanitizerAgent().run(SanitizerInput(department, period, frame, date_orders.get(department)))
         table.filename, table.sheet, table.batch = filename, sheet, batch_id
+        table.source_rows = [n + header_row - 1 for n in table.source_rows]
         for correction in table.corrections:
             correction.source.filename = filename
             correction.source.sheet = sheet
             correction.source.batch = batch_id
-            correction.source.source_row = correction.row + 2
+            correction.source.source_row = correction.row + header_row + 1
         tables.append(table)
-    result = BatchSnapshot(period=period, clean_tables=tables, dictionary_snapshot=dictionary_raw or {})
+    result = BatchSnapshot(period=period, clean_tables=tables, dictionary_snapshot=dictionary_raw or {},
+                           integration_snapshot=integration_snapshot)
     if not dictionary.is_empty:
         # Before anything reads the tables: a remembered match makes this upload look
         # the way the dictionary already describes it. Frozen batches are never redone.
@@ -453,8 +464,9 @@ async def source_preview(batch_id: str, source_id: Department,
         raise HTTPException(404, "Original preview was not retained for this batch; import a new batch")
     source = json.loads(path.read_text(encoding="utf-8"))
     rows = source.pop("rows")
+    numbers = source.pop("row_numbers", list(range(2, len(rows) + 2)))
     return {**source, "batch_id": batch_id, "total": len(rows), "offset": offset,
-            "rows": rows[offset:offset + limit]}
+            "rows": rows[offset:offset + limit], "row_numbers": numbers[offset:offset + limit]}
 
 
 @router.get("/{batch_id}/artifacts")
