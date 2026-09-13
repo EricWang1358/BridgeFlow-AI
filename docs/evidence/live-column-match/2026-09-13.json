@@ -1,0 +1,40 @@
+{
+  "decisions": [
+    {
+      "allow": true,
+      "detail": "确认上传列对应的已声明字段\n审批期限 300 秒\n\n此操作记录的决定将在下个月复用并进入审计。它会改变已存数据；未经批准不会写入。\n\n工具\nconfirm_column_match\n决定\n接受映射\nbatch_id\nad7944ac24b741539925e241cc8fc317\ncolumn\nproject_code\ndepartment\nfinance\n目标实体\nproject\nreason\n代码型列名与已声明 sku 引用 finance.project 类型相符；与其他部门同类列 marketing.product 哈希值重合比例 100%；字典已声明 finance.project 为 sku。重合比例仅为结构证据，最终…\n拒绝理由（可选，最多 240 字符）\n0/240\n\n批准才写映射；拒绝不写入，以后仍可能询问。\n\n拒绝\n允许一次"
+    }
+  ],
+  "errors": [],
+  "sessions": [
+    {
+      "path": "--home-eric-Hackathon2026-BridgeFlow-AI--/session-9d237ef1-66f4-42f9-aada-6ad3ed1de247/session.jsonl",
+      "steps": 4,
+      "calls": [
+        "column_candidates",
+        "lookup_field_dictionary",
+        "lookup_field_dictionary",
+        "confirm_column_match"
+      ],
+      "usage": {
+        "input": 7876,
+        "output": 1890,
+        "total": 24102,
+        "cacheRead": 14336
+      },
+      "turn_end": [
+        "completed"
+      ],
+      "narration": "已提交并通过审批确认。\n\n## 结果\n\n- **确认的匹配**：`finance.project_code` → 字典已声明的 `finance.project`（实体：sku），依据为类型相符 + 与 marketing.product 哈希值 100% 重合 + 字典声明。\n- 该决定已被原生审批接受并记住（以后导入不再询问此列）。\n\n## 重要说明\n\n- **当前批次 `ad7944ac24b741539925e241cc8fc317` 保持冻结不变**——这次确认不会改写已导入的数据。\n- 需要**重新导入文件**（或由负责人重新提交该期间的文件）后，`project_code` 才会被当作已声明的 `project` 列读取，生成新的批次再使用。\n- 除 `confirm_column_match` 外未执行任何写入；未创建任何字段、实体或字典条目，也未经你许可读取任何数据行。\n\n如果重新导入后仍存在不被认识的列（例如其他部门或新列），告诉我新批次 id，我再走同样的流程。"
+    }
+  ],
+  "reimport": {
+    "status": "needs_review",
+    "master_rows": 4,
+    "matched_columns": [
+      "finance.project_code → project"
+    ],
+    "original_batch_status": "needs_configuration (frozen)"
+  },
+  "model": "configured DSH model (deepseek), live"
+}
