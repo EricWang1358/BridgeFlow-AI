@@ -43,8 +43,8 @@ def test_backend_death_and_web_exit_are_not_silent_success():
 def test_demo_flag_points_at_the_dictionary_the_walkthrough_needs():
     """`docs/17` step 2 is impossible without it, and step 1 gives no sign.
 
-    Only `data/business_demo/dictionary.yaml` declares a joinable column for finance
-    (`project`) and a `business_review` contract. Under the default dictionary the
+    Only the sample case's dictionary (`data/mock_business/demo/dictionary.yaml`) declares
+    joinable columns for the v2 templates and a `business_review` contract. Under the default dictionary the
     import succeeds, the batch comes back `needs_configuration`, and `review_context`
     refuses — measured once, on stage-shaped data. A prerequisite a person has to
     remember is a prerequisite that fails when it matters.
@@ -52,13 +52,13 @@ def test_demo_flag_points_at_the_dictionary_the_walkthrough_needs():
     source = (REPO_ROOT / "scripts/start_web.py").read_text(encoding="utf-8")
 
     assert '"--demo" in sys.argv' in source
-    assert 'data/business_demo/dictionary.yaml' in source
+    assert 'data/mock_business/demo/dictionary.yaml' in source
     assert 'BridgeFlow field dictionary:' in source, "the launcher must say which one is in force"
 
 
 def test_the_demo_dictionary_declares_what_the_review_requires():
     """If either of these is dropped, the walkthrough dies at step 2 again."""
-    demo = yaml.safe_load((REPO_ROOT / "data/business_demo/dictionary.yaml").read_text(encoding="utf-8"))
+    demo = yaml.safe_load((REPO_ROOT / "data/mock_business/demo/dictionary.yaml").read_text(encoding="utf-8"))
 
     assert demo["columns"]["finance"], "finance needs a joinable entity column"
     assert "business_review" in demo, "review_context refuses a batch with no contract"

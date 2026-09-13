@@ -40,6 +40,10 @@ _RELATIONS: tuple[tuple[EntityKind, EntityKind, Relation], ...] = (
 _ALIAS_SIMILARITY = 88
 
 
+def _digits(label: str) -> str:
+    return "".join(ch for ch in label if ch.isdigit())
+
+
 class _Adjudication(BaseModel):
     confidence: float
     justification: str
@@ -189,10 +193,15 @@ class SemanticResolverAgent(Agent[list[CleanTable], EntityGraph]):
                 for other in group[i + 1 :]:
                     if other.id not in entities:
                         continue
+                    # Digits carry identity: PRJ2024011 and PRJ2024017 look 89% alike
+                    # and are two different projects. Only labels whose digit sequences
+                    # agree may be folded, whatever their letters and separators do.
                     score = max(
-                        fuzz.token_set_ratio(a, b)
-                        for a in keeper.aliases
-                        for b in other.aliases
+                        (fuzz.token_set_ratio(a, b)
+                         for a in keeper.aliases
+                         for b in other.aliases
+                         if _digits(a) == _digits(b)),
+                        default=0,
                     )
                     if score >= _ALIAS_SIMILARITY:
                         keeper.aliases.extend(
@@ -418,6 +427,11 @@ class FieldDictionary:
         # a quantity sums, a price averages, a stock level takes the closing value.
         # Choosing wrong produces a plausible number, so it is declared, not guessed.
         self.rollups: dict[str, str] = dict(raw.get("rollups") or {})
+
+        # {department: column}. Which date says what month a row belongs to. A sheet
+        # can carry several dates (a report month and a completion date); taking the
+        # first one filed rows under the month a project finishes.
+        self.period_columns: dict[str, str] = dict(raw.get("period_columns") or {})
 
         # {measure: [factor, ...]}. A measurement the sheet never states but that
         # follows from ones it does: a purchase line's amount is its unit price

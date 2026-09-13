@@ -99,3 +99,14 @@ def test_cross_department_identifiers_do_not_resemble_each_other(a: str, b: str)
     from rapidfuzz import fuzz
 
     assert fuzz.token_set_ratio(a, b) < 55
+
+
+def test_codes_that_differ_in_a_digit_are_different_entities():
+    """PRJ2024011 and PRJ2024017 score 89 on token similarity; merging them mixed two projects."""
+    from bridgeflow.schemas import Entity
+    agent = SemanticResolverAgent()
+    entities = {f"project:{c}": Entity(id=f"project:{c}", kind="project", label=c, aliases=[c])
+                for c in ("PRJ2024011", "PRJ2024017", "PRJ2024011A")}
+    agent._merge_aliases(entities)
+    assert sorted(entities) == ["project:PRJ2024011", "project:PRJ2024017"]
+    assert entities["project:PRJ2024011"].aliases == ["PRJ2024011", "PRJ2024011A"]  # same digits still fold

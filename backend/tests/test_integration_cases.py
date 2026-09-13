@@ -66,4 +66,5 @@ def test_the_mock_monthly_exports_grade_as_their_readme_says():
     assert june["issues_by_kind"].get("missing_department") == 1 and june["exact_rows"] == 3
     july = cases.real(folder / "2024-07-模拟留出")
     assert {"disagreement", "check_failed", "invalid_number"} <= set(july["issues_by_kind"])
-    assert set(july["columns_with_differences"]) == {"市场_可争取", "物资_当月生产量", "物资_当月物资总成本"}
+    # every withheld cell is one a department got wrong; nothing else differs
+    assert set(july["columns_with_differences"]) == {"客户名称", "市场_可争取", "物资_当月生产量", "物资_当月物资总成本"}
