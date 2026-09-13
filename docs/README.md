@@ -55,6 +55,7 @@
 | [`20-quotation-brief.md`](20-quotation-brief.md) | 权威 | 中 | 接手报价的人 | 报价功能任务书：并列的第二条路径，分三步，第一步现在可做 |
 | [`21-quotation-design.md`](21-quotation-design.md) | 参考 | 中 | 接手报价的人 | 报价声明与自由文本证据边界，设计先于实现写定 |
 | [`22-lightsail-deploy.md`](22-lightsail-deploy.md) | 参考 | 中 | 开发、运维 | Lightsail 部署 runbook：实例引导、GitHub Actions 流水线、Caddy 反代与回滚 |
+| [`28-rehearsal-authorization.md`](28-rehearsal-authorization.md) | 交接 | 高 | 项目负责人 | 录制版本复跑彩排的付费授权书草案：命令、预算硬上限、停止条件，签署前不运行 |
 | [`27-external-inputs.md`](27-external-inputs.md) | 交接 | 高 | 业务方、部署与飞书负责人 | 剩余 issue 所需的外部输入：要什么、怎么安全交付、到手后跑哪条验收命令 |
 | [`26-erp-comparison.md`](26-erp-comparison.md) | 参考 | 中 | 团队、写 PPT 的人 | 与 ERP 定制化三痛点逐条对比，每条指向已合并实现；列出值得借鉴但未做的 |
 | [`25-workflow-foundation.md`](25-workflow-foundation.md) | 参考 | 中 | 开发 | 三个 Agent 共用的工作流基座：分层、设计模式及理由、状态机、未完成项 |

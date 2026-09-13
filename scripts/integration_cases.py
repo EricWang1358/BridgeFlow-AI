@@ -432,12 +432,21 @@ def real(directory: Path) -> dict:
             continue
         report["matched_rows"] += 1
         report["complete_rows"] += row.complete
-        differing = [c for c in spec.fields if values.get(c) not in (None, "") and not _same(_comparable(row.values.get(c)), _comparable(values.get(c)))]
+        differing = [c for c in spec.fields if values.get(c) not in (None, "") and not _written_same(row.values.get(c), values.get(c))]
         report["exact_rows"] += not differing
         for column in differing:
             columns.setdefault(column, []).append(1)
     report["columns_with_differences"] = {c: len(v) for c, v in sorted(columns.items(), key=lambda i: -len(i[1]))}
     return report
+
+
+def _written_same(produced, expected) -> bool:
+    """Equal at the precision the person filling the expected master wrote."""
+    a, b = _comparable(produced), _comparable(expected)
+    if isinstance(a, int | float) and isinstance(b, int | float):
+        from decimal import Decimal
+        return abs(Decimal(str(a)) - Decimal(str(b))) <= integration._written_tolerance(b, a)
+    return a == b
 
 
 def _comparable(value):

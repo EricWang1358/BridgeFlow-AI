@@ -1,0 +1,112 @@
+# 商砼报价声明（模拟样板，#7 / #20 / #104）。
+# 输入、价格带、检查与审批人一一对应 05-定价与信用政策.md；每个输入的原件位置见 extraction.yaml。
+# 数值口径是模拟政策，真实业务方确认后替换。与 data/quotation_demo/dictionary.yaml 的通用合成示例并存。
+quotation:
+  title: 商品混凝土报价草稿
+  description: 模拟样板。按定价与信用政策从询价记录、成本与产能依据测算价格带，检查产能、交期、回款与付款条件；未经政策规定的审批人批准不得外发。
+  roles:
+    marketing:
+      responsibility: 记录客户需求与商务条件，按审批结果报出，不自行承诺价格与账期。
+      decision_owner: 销售总监（模拟）
+    procurement:
+      responsibility: 按当月到厂价与配合比测算材料成本，提供运输泵送及制造费用口径。
+      decision_owner: 物资部经理（模拟）
+    production:
+      responsibility: 确认可承接方量与新项目准备周期。
+      decision_owner: 生产部经理（模拟）
+    finance:
+      responsibility: 核实客户历史回款、确定信用等级与资金占用成本。
+      decision_owner: 财务总监（模拟）
+    management:
+      responsibility: 审批低于底价或付款条件低于信用等级下限的报价。
+      decision_owner: 总经理（模拟）
+  inputs:
+    order_volume: {title: 预计总方量, unit: 方, owner: marketing, exclusive_minimum: 0}
+    peak_monthly_volume: {title: 月峰值需求, unit: 方/月, owner: marketing, exclusive_minimum: 0}
+    requested_price: {title: 客户期望含税单价, unit: 元/方, owner: marketing, exclusive_minimum: 0}
+    requested_payment_ratio: {title: 客户要求的次月付款比例, unit: 比例, owner: marketing, minimum: 0}
+    requested_first_pour_days: {title: 距首次浇筑天数, unit: 天, owner: marketing, exclusive_minimum: 0}
+    material_cost: {title: 配合比材料成本（不含税）, unit: 元/方, owner: procurement, minimum: 0}
+    processing_cost: {title: 运输泵送及制造费用, unit: 元/方, owner: procurement, minimum: 0}
+    available_capacity: {title: 拌站可承接方量, unit: 方/月, owner: production, minimum: 0}
+    preparation_days: {title: 新项目准备周期, unit: 天, owner: production, minimum: 0}
+    payment_days: {title: 历史平均回款天数, unit: 天, owner: finance, minimum: 0}
+    capital_cost: {title: 资金占用成本, unit: 元/方, owner: finance, minimum: 0}
+  metrics:
+    unit_cost:
+      title: 单方成本（不含税）
+      unit: 元/方
+      formula: material_cost + processing_cost + capital_cost
+      expression:
+        op: add
+        args:
+          - {op: add, args: [{op: input, key: material_cost}, {op: input, key: processing_cost}]}
+          - {op: input, key: capital_cost}
+    floor_price:
+      title: 含税底价（单方毛利 15 元）
+      unit: 元/方
+      formula: ceil_currency((unit_cost + 15) × 1.13)
+      expression: {op: multiply, args: [{op: add, args: [{op: metric, key: unit_cost}, {op: constant, value: '15'}]}, {op: constant, value: '1.13'}]}
+      rounding: {places: 2, mode: ceiling}
+    target_price:
+      title: 含税目标价（单方毛利 30 元）
+      unit: 元/方
+      formula: ceil_currency((unit_cost + 30) × 1.13)
+      expression: {op: multiply, args: [{op: add, args: [{op: metric, key: unit_cost}, {op: constant, value: '30'}]}, {op: constant, value: '1.13'}]}
+      rounding: {places: 2, mode: ceiling}
+    stretch_price:
+      title: 含税争取价（单方毛利 40 元）
+      unit: 元/方
+      formula: ceil_currency((unit_cost + 40) × 1.13)
+      expression: {op: multiply, args: [{op: add, args: [{op: metric, key: unit_cost}, {op: constant, value: '40'}]}, {op: constant, value: '1.13'}]}
+      rounding: {places: 2, mode: ceiling}
+    customer_price:
+      title: 客户期望含税单价
+      unit: 元/方
+      formula: requested_price
+      expression: {op: input, key: requested_price}
+    target_total:
+      title: 目标价总额（含税）
+      unit: 元
+      formula: target_price × order_volume
+      expression: {op: multiply, args: [{op: metric, key: target_price}, {op: input, key: order_volume}]}
+      rounding: {places: 2, mode: half_up}
+    peak_demand:
+      title: 月峰值需求
+      unit: 方/月
+      formula: peak_monthly_volume
+      expression: {op: input, key: peak_monthly_volume}
+    capacity:
+      title: 可承接方量
+      unit: 方/月
+      formula: available_capacity
+      expression: {op: input, key: available_capacity}
+    payment_days_verified:
+      title: 历史平均回款天数
+      unit: 天
+      formula: payment_days
+      expression: {op: input, key: payment_days}
+    payment_ratio:
+      title: 次月付款比例
+      unit: 比例
+      formula: requested_payment_ratio
+      expression: {op: input, key: requested_payment_ratio}
+    first_pour_days:
+      title: 距首次浇筑天数
+      unit: 天
+      formula: requested_first_pour_days
+      expression: {op: input, key: requested_first_pour_days}
+    preparation:
+      title: 准备周期
+      unit: 天
+      formula: preparation_days
+      expression: {op: input, key: preparation_days}
+  checks:
+    - {id: below_floor, title: 客户期望价低于底价，报出须总经理审批, owner: management, metric: customer_price, attention_when: below, threshold_metric: floor_price, block_on_attention: false}
+    - {id: below_target, title: 客户期望价低于目标价，报出须销售总监审批, owner: marketing, metric: customer_price, attention_when: below, threshold_metric: target_price, block_on_attention: false}
+    - {id: capacity, title: 月峰值超过可承接方量，须生产部重新排产后再报价, owner: production, metric: peak_demand, attention_when: above, threshold_metric: capacity, block_on_attention: true}
+    - {id: credit_grade_c, title: 历史回款超过 75 天（C 级），须款到发货或财务总监审批, owner: finance, metric: payment_days_verified, attention_when: above, threshold: 75, block_on_attention: true}
+    - {id: payment_ratio, title: 付款比例低于 B 级下限 70%，须总经理审批, owner: management, metric: payment_ratio, attention_when: below, threshold: '0.70', block_on_attention: true}
+    - {id: lead_time, title: 准备周期长于客户首次浇筑时间，须重新协商供货日, owner: production, metric: preparation, attention_when: above, threshold_metric: first_pour_days, block_on_attention: true}
+  outputs: [unit_cost, floor_price, target_price, stretch_price, customer_price, target_total, payment_ratio]
+  manager_decision: 内部报价草稿。价格低于底价须总经理审批，介于底价与目标价之间须销售总监审批；审批前不得外发，外发须复用原生审批并取得针对本报价的批准。

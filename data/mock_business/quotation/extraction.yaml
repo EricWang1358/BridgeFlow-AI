@@ -1,0 +1,15 @@
+# 人工核对过的抽取记录（模拟样板）：每个声明输入取自哪份原件的哪个位置。
+# Markdown 原件按「章节 + 原文片段」定位；表格原件按「工作表!单元格」定位，测试会打开原件核对片段与数值。
+document_id: BJ-2024-0715
+facts:
+  order_volume: {file: 01-客户询价记录.md, paragraph: 二、需求, excerpt: 预计总方量：12000 方, value: '12000', department: marketing}
+  peak_monthly_volume: {file: 01-客户询价记录.md, paragraph: 二、需求, excerpt: 月峰值约 3000 方, value: '3000', department: marketing}
+  requested_price: {file: 01-客户询价记录.md, paragraph: 三、客户商务条件, excerpt: 期望含税单价：不高于 415 元/方, value: '415', department: marketing}
+  requested_payment_ratio: {file: 01-客户询价记录.md, paragraph: 三、客户商务条件, excerpt: 次月底前支付当月结算额的 70%, value: '0.70', department: marketing}
+  requested_first_pour_days: {file: 01-客户询价记录.md, paragraph: 二、需求, excerpt: 距询价日 24 天, value: '24', department: marketing}
+  material_cost: {file: 04-成本与产能依据.xlsx, cell: 配合比与材料成本!G9, value: '298.47', department: procurement}
+  processing_cost: {file: 04-成本与产能依据.xlsx, cell: 运输泵送与制造费用!B5, value: '50', department: procurement}
+  available_capacity: {file: 04-成本与产能依据.xlsx, cell: 产能与在手订单!B6, value: '3200', department: production}
+  preparation_days: {file: 04-成本与产能依据.xlsx, cell: 产能与在手订单!B7, value: '7', department: production}
+  payment_days: {file: 04-成本与产能依据.xlsx, cell: 客户回款记录!F8, value: '57.8', department: finance}
+  capital_cost: {file: 04-成本与产能依据.xlsx, cell: 客户回款记录!F10, value: '8', department: finance}
