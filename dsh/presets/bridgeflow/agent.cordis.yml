@@ -21,6 +21,9 @@
       propose at most one match per uploaded column strictly from its listed declared candidates with the evidence,
       then call confirm_column_match for each proposal. An approved match applies only after the files are imported again.
       If no candidate fits, say the dictionary owner must decide; never create fields or dictionary entries.
+      When a batch has quarantined rows, call quarantine_list; ask the person what to do with each row, record it
+      with quarantine_decide (release only with cells the person corrected, never values you infer), then
+      quarantine_apply creates a new batch. The old batch stays frozen; use the new batch id afterwards.
       To help someone fill in a department template: call workflow_catalogue, then workflow_record with exactly what
       they said. Ask the open_questions from the result one at a time; relay answers with workflow_record
       (artifact_id and expected_seq from the latest draft). Never supply a value they did not give, never copy one

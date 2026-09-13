@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Any
+from datetime import date
+from typing import Any, Literal
 
 import pandas as pd
 
@@ -12,11 +13,18 @@ from bridgeflow.schemas import CleanTable, ColumnSpec, Correction, Department, S
 _HEADER_NOISE = re.compile(r"[^0-9a-z]+")
 
 
+DateOrder = Literal["day_first", "month_first"]
+
+
 class SanitizerInput:
-    def __init__(self, department: Department, period: str, frame: pd.DataFrame) -> None:
+    def __init__(self, department: Department, period: str, frame: pd.DataFrame,
+                 date_order: DateOrder | None = None) -> None:
         self.department = department
         self.period = period
         self.frame = frame
+        #: How this department writes `03/11/2025`, as the dictionary declares it (#79).
+        #: Absent means undeclared, and a date that parses both ways stays quarantined.
+        self.date_order = date_order
 
 
 class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
@@ -66,7 +74,7 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
             corrections.extend(fixes)
             columns.append(ColumnSpec(name=column, dtype=dtype))
 
-        ambiguous = [c for c in corrections if c.rule == "date_parse_ambiguous"]
+        ambiguous = [c for c in corrections if c.rule in _BLOCKING_DATE_RULES]
         # Preserve the original cell for human review instead of persisting a guess.
         for correction in ambiguous:
             frame.at[correction.row, correction.column] = correction.before
@@ -145,7 +153,23 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
         voting = deciding.notna() & (deciding.astype(str).str.strip() != "")
         as_date = pd.to_datetime(series, errors="coerce", format="mixed")
         if not vote[voting].empty and vote[voting].notna().mean() > 0.8:
+            written = as_date.dt.strftime("%Y-%m-%d")
             for idx, before in series.items():
+                if payload.date_order and _SLASHED_DATE.match(str(before)):
+                    declared = _read_declared(str(before), payload.date_order)
+                    written.loc[idx] = declared
+                    if declared is None or declared != str(before):
+                        fixes.append(Correction(
+                            source=_ref(payload, idx, column), row=idx, column=column, before=str(before),
+                            after=declared,
+                            rule="date_parse_declared" if declared else "date_conflicts_declared_order",
+                            confidence=1.0 if declared else 0.0,
+                            reason=(f"read as {payload.date_order.replace('_', '-')} per the dictionary's date_order"
+                                    if declared else
+                                    f"not a valid date when read {payload.date_order.replace('_', '-')} as declared; "
+                                    "quarantined rather than read the other way"),
+                        ))
+                    continue
                 after = as_date.loc[idx]
                 if pd.notna(after) and str(before) != after.strftime("%Y-%m-%d"):
                     ambiguous = _is_ambiguous_date(str(before))
@@ -172,7 +196,7 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
                             ),
                         )
                     )
-            return as_date.dt.strftime("%Y-%m-%d"), "date", fixes
+            return written, "date", fixes
 
         numeric = self._coerce_number(series, column, fixes, deciding, payload)
         if numeric is not None:
@@ -335,6 +359,23 @@ def _ref(payload: SanitizerInput, row: int, column: str) -> SourceRef:
 
 
 _SLASHED_DATE = re.compile(r"^\s*(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})\s*$")
+#: Date outcomes that must not reach totals: the original cell is kept for review.
+_BLOCKING_DATE_RULES = frozenset({"date_parse_ambiguous", "date_conflicts_declared_order"})
+
+
+def _read_declared(text: str, order: str) -> str | None:
+    """`03/11/2025` read strictly in the declared order, or None if that is not a date."""
+    match = _SLASHED_DATE.match(text)
+    if not match:
+        return None
+    first, second, year = int(match.group(1)), int(match.group(2)), int(match.group(3))
+    day, month = (first, second) if order == "day_first" else (second, first)
+    if year < 100:
+        year += 2000
+    try:
+        return date(year, month, day).isoformat()
+    except ValueError:
+        return None
 
 
 def _is_ambiguous_date(text: str) -> bool:

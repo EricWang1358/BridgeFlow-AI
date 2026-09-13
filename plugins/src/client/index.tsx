@@ -74,7 +74,7 @@ function ImageNotice({ input }: InputZone) {
 }
 
 /** Every approval-gated product tool gets the same decision card: summary, reason, reject first. */
-const APPROVAL_CARD_TOOLS = new Set(['confirm_mapping', 'confirm_column_match', 'workflow_record', 'workflow_approve_submit'])
+const APPROVAL_CARD_TOOLS = new Set(['confirm_mapping', 'confirm_column_match', 'workflow_record', 'workflow_approve_submit', 'quarantine_decide', 'quarantine_apply'])
 
 function Welcome() {
   const { t } = useUI()
@@ -157,7 +157,7 @@ export function apply(ctx: Context): void {
     const navigateSession = () => { const value = route(); if (value.parent) void openSession(value.parent, value.child).catch(e => { ctx.logger.warn('Session route unavailable: %s', String(e)); reportRouteError(value.child ? 'routeChildUnavailable' : 'routeParentUnavailable') }) }
     navigateSession(); window.addEventListener('hashchange', navigateSession); return () => window.removeEventListener('hashchange', navigateSession)
   }, 'bridgeflow: native session routes')
-  for (const key of ['aggregate_metric', 'confirm_mapping', 'column_candidates', 'confirm_column_match', 'workflow_catalogue', 'workflow_draft', 'workflow_board', 'workflow_record', 'workflow_approve_submit', 'batch_summary', 'list_metrics', 'lookup_field_dictionary', 'review_context', 'review_finalize']) {
+  for (const key of ['aggregate_metric', 'confirm_mapping', 'column_candidates', 'confirm_column_match', 'workflow_catalogue', 'workflow_draft', 'workflow_board', 'workflow_record', 'workflow_approve_submit', 'quarantine_list', 'quarantine_decide', 'quarantine_apply', 'batch_summary', 'list_metrics', 'lookup_field_dictionary', 'review_context', 'review_finalize']) {
     ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({ name: 'tool.call.toolview', key }, ToolCard))
   }
 }
