@@ -16,9 +16,11 @@ import yaml
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 
+from bridgeflow import column_matches
 from bridgeflow.agents import DataSanitizerAgent, SanitizerInput
 from bridgeflow.agents.semantic_resolver import FieldDictionary, SemanticResolverAgent
 from bridgeflow.agents.sop_flow import MissingRollup, SOPFlowEngine, SOPInput, UnjoinableTables
+from bridgeflow.column_matches import AppliedMatch
 from bridgeflow.config import REPO_ROOT, settings
 from bridgeflow.metrics import dictionary_path
 from bridgeflow.schemas import Department, PipelineResult
@@ -38,6 +40,10 @@ class BatchSnapshot(PipelineResult):
     refusal: str = ""
     demo_case: str | None = None
     dictionary_source: str | None = None
+    #: Uploaded columns renamed onto declared columns at import, from human decisions.
+    column_matches: list[AppliedMatch] = Field(default_factory=list)
+    #: Decisions not applied because the uploaded column's shape changed.
+    stale_matches: list[str] = Field(default_factory=list)
 
 
 def load_batch(batch_id: str) -> BatchSnapshot:
@@ -85,6 +91,12 @@ class BatchSummary(BaseModel):
     #: force — so the walkthrough's step 1 passed and step 2 was impossible.
     dictionary: str = ""
     declared_entities: dict[str, list[str]] = Field(default_factory=dict)
+    #: `department.column → declared column`, applied from remembered decisions.
+    matched_columns: list[str] = Field(default_factory=list)
+    stale_matches: list[str] = Field(default_factory=list)
+    #: Uploaded columns the dictionary does not know that might be a declared column
+    #: this department is missing. Non-zero means the captain has something to propose.
+    column_questions: int = 0
 
 
 def _declared_entities(snapshot: dict | None) -> dict[str, list[str]]:
@@ -119,6 +131,9 @@ def summary(batch_id: str, result: BatchSnapshot) -> BatchSummary:
         demo_case=result.demo_case,
         dictionary=result.dictionary_source or _relative_dictionary(),
         declared_entities=_declared_entities(result.dictionary_snapshot),
+        matched_columns=[f"{m.department}.{m.column} → {m.target}" for m in result.column_matches],
+        stale_matches=result.stale_matches,
+        column_questions=column_matches.count_questions(result.dictionary_snapshot, result.clean_tables),
     )
 
 
@@ -219,6 +234,10 @@ async def _import_batch(period: str, departments: list[Department], files: list[
             correction.source.source_row = correction.row + 2
         tables.append(table)
     result = BatchSnapshot(period=period, clean_tables=tables, dictionary_snapshot=dictionary_raw or {})
+    if not dictionary.is_empty:
+        # Before anything reads the tables: a remembered match makes this upload look
+        # the way the dictionary already describes it. Frozen batches are never redone.
+        result.column_matches, result.stale_matches = column_matches.apply(tables, dictionary_raw)
     if dictionary.is_empty:
         result.refusal = "Field dictionary is not configured; declare fields and import a new batch"
     else:

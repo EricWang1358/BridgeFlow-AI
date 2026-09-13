@@ -124,8 +124,11 @@ const labels = {
   next_needs_configuration: ['字段字典没有声明可用于连接的列，所以主表没有建，研判也起不来。核对下面这份字典是不是你以为的那份，补齐后重新导入一次——旧批次不会被改。',
                              'The dictionary declares no joinable column, so no Master Table was built and the review cannot start. Check the dictionary below is the one you think it is, complete it, and import again — the old batch is left alone.'],
   askCaptain: ['让 captain 看这批数据', 'Ask the captain to look'],
-  askCaptainHint: ['它会查看列形状和重合统计，在人工字典已声明的字段中提出匹配及理由；没有候选时请负责人补充配置。',
-                   'It reads column shapes and cross-department overlap — never the rows — then proposes matches to fields already declared by people. Missing candidates need an administrator.'],
+  askCaptainHint: ['它会找出字典不认识的上传列，只在本部门字典已声明的列里提出匹配和依据；每个匹配都要你在审批里决定，批准后重新导入即生效。没有候选时需要字典负责人决定。',
+                   'It finds uploaded columns the dictionary does not know and proposes matches only to columns already declared for that department, with evidence. You decide each one in the approval; re-import to apply. No candidate means the dictionary owner decides.'],
+  columnQuestions: ['个上传列可能对应字典已声明的列', 'uploaded column(s) may match a declared column'],
+  matchedColumns: ['按已批准的决定匹配的列', 'Columns matched by approved decisions'],
+  staleMatches: ['列的形状变了，之前的决定没有沿用，需要重新确认', 'Column shape changed, so these earlier decisions were not reused and need confirming again'],
   dictionaryInForce: ['本批次冻结的字典', 'Dictionary frozen into this batch'],
   declaresEntities: ['它为各部门声明的可连接列', 'Joinable columns it declares'],
   declaresNothing: ['未声明任何可连接列', 'declares none'],
@@ -149,7 +152,7 @@ const labels = {
   columnsFrom: ['来自', 'from'],
   moreValues: ['项', 'values'],
 
-  aggregate_metric: ['可追溯指标', 'Traceable metric'], confirm_mapping: ['映射决定', 'Mapping decision'], batch_summary: ['批次检查', 'Batch summary'], list_metrics: ['可用指标', 'Metric catalogue'], lookup_field_dictionary: ['字段口径', 'Field dictionary'], review_context: ['队长派活准备', 'Captain dispatch preparation'], review_finalize: ['队长汇总', 'Captain finalization'],
+  aggregate_metric: ['可追溯指标', 'Traceable metric'], confirm_mapping: ['映射决定', 'Mapping decision'], column_candidates: ['列匹配候选', 'Column match candidates'], confirm_column_match: ['列匹配决定', 'Column match decision'], batch_summary: ['批次检查', 'Batch summary'], list_metrics: ['可用指标', 'Metric catalogue'], lookup_field_dictionary: ['字段口径', 'Field dictionary'], review_context: ['队长派活准备', 'Captain dispatch preparation'], review_finalize: ['队长汇总', 'Captain finalization'],
 
   // --- approval body: business semantics, not button labels (#110) ---------------
   // The prose mirrors askReason in ../approval/gate.ts; the reason string stays in
@@ -212,11 +215,13 @@ export function navigate(value: Route) {
  * sentence.
  */
 export function diagnoseRequest(batch: string, period = '') {
-  return `批次 ${batch}（${period}）没有可连接的列。请调用 profile_batch 查看列形状，` +
-    `并用 lookup_field_dictionary 查询本批次冻结的人工字典。只在已声明字段的封闭候选集中提出上传列匹配，` +
-    `列出出处、统计依据、不确定项和需要确认的部门负责人。重合比例不是跨实体关系的证明。` +
-    `字典没有对应候选时明确报未配置，请负责人补充人工声明；禁止创造字段、实体或字典，` +
-    `禁止读取数据行或执行写入。`
+  return `批次 ${batch}（${period}）没有可连接的列。请先调用 column_candidates 查看字典不认识的上传列，` +
+    `以及每列只能匹配到的、本部门字典已声明的候选列。每个上传列至多提出一个匹配，` +
+    `说明依据（类型是否相符、与其他部门同类列的值重合比例）和不确定项；重合比例不是跨实体关系的证明。` +
+    `然后对每个提议调用 confirm_column_match，由人通过原生审批决定，不要替人决定。` +
+    `批准后告诉用户：当前批次保持冻结，需要重新导入文件才会生效。` +
+    `没有合适候选时明确说需要字典负责人决定；禁止创造字段、实体或字典，禁止读取数据行，` +
+    `除 confirm_column_match 外不执行任何写入。`
 }
 
 export function reviewRequest(batch: string, period = '') {
@@ -226,7 +231,11 @@ export type Summary = { demo_case?: string | null; batch_id: string; period: str
   departments: { department: string; rows: number; quarantined: number; corrections: number }[]
   /** The dictionary this batch was frozen against, and what it declares per department. */
   dictionary?: string
-  declared_entities?: Record<string, string[]> }
+  declared_entities?: Record<string, string[]>
+  /** `department.column → declared column`, applied from remembered human decisions. */
+  matched_columns?: string[]
+  stale_matches?: string[]
+  column_questions?: number }
 
 let runtime: { sessions: ISessions; conversation: Context['conversation'] }
 export function configureRuntime(ctx: Context) { runtime = ctx as unknown as typeof runtime; configureLocale(ctx.locale) }

@@ -8,6 +8,8 @@ import { DEFAULT_BACKEND, type BackendConfig } from './backend.ts'
 import * as untrustedInput from './guards/untrusted-input.ts'
 import { aggregateMetric } from './tools/aggregate-metric.ts'
 import { confirmMapping } from './tools/confirm-mapping.ts'
+import { columnCandidates } from './tools/column-candidates.ts'
+import { confirmColumnMatch } from './tools/confirm-column-match.ts'
 import { listMetrics } from './tools/list-metrics.ts'
 import { profileBatch } from './tools/profile-batch.ts'
 import { lookupFieldDictionary } from './tools/lookup-field-dictionary.ts'
@@ -51,6 +53,7 @@ export function apply(ctx: Context, config: Config): void {
   // Registration is effect-based: disposing this plugin unregisters every tool.
   catalogue.register(ctx, listMetrics(backend))
   catalogue.register(ctx, profileBatch(backend))
+  catalogue.register(ctx, columnCandidates(backend))
   catalogue.register(ctx, aggregateMetric(backend))
   catalogue.register(ctx, lookupFieldDictionary(backend))
   const receipts = new ApprovalReceipts()
@@ -59,7 +62,10 @@ export function apply(ctx: Context, config: Config): void {
   const reviews = new ReviewPolicy()
   mountReview(ctx, backend, reviews, catalogue)
   catalogue.register(ctx, batchSummary(backend))
-  if (config.allowMappingWrite) catalogue.register(ctx, confirmMapping(backend, receipts))
+  if (config.allowMappingWrite) {
+    catalogue.register(ctx, confirmMapping(backend, receipts))
+    catalogue.register(ctx, confirmColumnMatch(backend, receipts))
+  }
 
   // Final deny applies even when a preset or a later policy exposes another tool.
   const nativeTools = new Set(['subagent', 'ask_user_question'])

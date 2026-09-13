@@ -21,7 +21,7 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from bridgeflow import mappings, metrics, store
+from bridgeflow import column_matches, mappings, metrics, store
 from bridgeflow.agents import DataSanitizerAgent, SanitizerInput
 from bridgeflow.agents.semantic_resolver import load_field_dictionary
 from bridgeflow.api.batches import BatchRef, BatchSummary, batch_dictionary, load_batch, summary
@@ -315,3 +315,98 @@ async def confirm_mapping(request: ConfirmRequest, http_request: Request) -> Con
 @router.post("/batch-summary", response_model=BatchSummary)
 async def batch_summary(request: BatchRef) -> BatchSummary:
     return summary(request.batch_id, load_batch(request.batch_id))
+
+
+# --- matching uploaded columns onto declared ones ------------------------------------
+
+
+# `entity_overlap` is omitted rather than null when nothing is comparable.
+@router.post("/column-candidates", response_model=column_matches.CandidateList,
+             response_model_exclude_none=True)
+async def column_candidates(request: BatchRef) -> column_matches.CandidateList:
+    """For each uploaded column the dictionary does not know, the declared columns it
+    could be — and only those. Structural evidence only; no cell leaves the batch."""
+    batch = load_batch(request.batch_id)
+    return column_matches.candidates(
+        request.batch_id, batch.period, batch.clean_tables, batch.dictionary_snapshot,
+        applied=batch.column_matches,
+    )
+
+
+class ColumnMatchRequest(BaseModel):
+    batch_id: str
+    department: str
+    column: str
+    target: str
+    accepted: bool
+    #: Why, in the person's or the proposal's words. Kept with the decision.
+    reason: str = Field("", max_length=500)
+    confirmed_by: str = "unknown-agent"
+    call_id: str | None = None
+
+
+class ColumnMatchResult(BaseModel):
+    department: str
+    column: str
+    target: str
+    accepted: bool
+    confirmed_at: str
+    authorised_by: str
+    #: What happens now, so a rejection is never a dead end.
+    next_step: str
+    remaining_candidates: list[str] = Field(default_factory=list)
+
+
+@router.post("/confirm-column-match", response_model=ColumnMatchResult)
+async def confirm_column_match(request: ColumnMatchRequest, http_request: Request) -> ColumnMatchResult:
+    """Record one person's decision that an uploaded column is, or is not, a declared one.
+
+    The closed candidate set is enforced here, not trusted from the prompt: a target
+    that the batch's frozen dictionary does not declare for this department, or that
+    the upload already carries, is refused before any approval is spent.
+    """
+    if not settings.bridgeflow_allow_mapping_write:
+        raise HTTPException(403, "Mapping writes disabled by deployment policy")
+    batch = load_batch(request.batch_id)
+    tables = [t for t in batch.clean_tables if t.department == request.department]
+    if len(tables) != 1:
+        raise HTTPException(409, "That department is not in this batch")
+    unknown, missing = column_matches.open_columns(batch.dictionary_snapshot, tables[0])
+    if request.column not in unknown:
+        raise HTTPException(409, "That column is already declared or is not in this upload")
+    if request.target not in missing:
+        raise HTTPException(
+            409,
+            "Not a declared candidate: a match can only name a column the dictionary already "
+            "declares for this department and the upload lacks. Creating fields is the "
+            "dictionary owner's decision.",
+        )
+    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body())
+
+    profile = next(p for p in column_matches.profiling.profile_table(tables[0])[0]
+                   if p.column == request.column)
+    memory = column_matches.decide(column_matches.ColumnMatch(
+        department=request.department, column=request.column, target=request.target,
+        accepted=request.accepted, evidence=column_matches.fingerprint(profile),
+        reason=request.reason, period=batch.period, batch_id=request.batch_id,
+        confirmed_by=request.confirmed_by, authorised_by="dsh-authenticated-session",
+    ))
+    recorded = column_matches.memory_for(memory, request.department, request.column, request.target)
+    assert recorded is not None  # just written
+
+    rejected = {m.target for m in memory.matches
+                if not m.accepted and m.department == request.department and m.column == request.column}
+    remaining = [t for t in missing if t != request.target and t not in rejected]
+    if request.accepted:
+        step = ("Remembered. This batch stays as it was frozen; import the files again and "
+                "this column will be read as the declared one.")
+    elif remaining:
+        step = "Rejected and remembered. Other declared candidates remain for this column."
+    else:
+        step = ("Rejected and remembered. No declared column is left for this upload column; "
+                "the dictionary owner must decide whether it should be declared.")
+    return ColumnMatchResult(
+        department=recorded.department, column=recorded.column, target=recorded.target,
+        accepted=recorded.accepted, confirmed_at=recorded.confirmed_at,
+        authorised_by=recorded.authorised_by, next_step=step, remaining_candidates=remaining,
+    )
