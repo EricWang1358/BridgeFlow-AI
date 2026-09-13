@@ -11,6 +11,12 @@
 
 ---
 
+## 真实 captain 列匹配全流程（2026-09-13，#102，**已计费**）
+
+真实模型、演示服务、浏览器扮演操作者（`plugins/tests/column-match-live.mjs`）：finance 表头改名的四部门批次导入受阻（`needs_configuration`，主表 **0** 行）→ 数据工作区「让 captain 看这批数据」→ captain 依次调用 `column_candidates`、`lookup_field_dictionary` ×2、`confirm_column_match`，提议 `finance.project_code → project`（依据：类型相符、与 marketing.product 值重合 100%）→ 审批卡核对后批准 → 回合 `completed`，叙述写明当前批次冻结、需重新导入 → 重新导入主表 **4** 行、`matched_columns` 含该匹配；原批次仍为 `needs_configuration`。
+模型用量（单个会话 **4** 步）：输入 **7,876** token、输出 **1,890** token、缓存读取 **14,336** token，合计 **24,102** token；只做了这一次真实调用。浏览器页面错误 **0**。证据：`docs/evidence/live-column-match/`（摘要与审批卡截图，不含原始会话）。
+未做：本次没有在新批次上继续跑四部门研判（研判的真实模型验收见 `17`）。
+
 ## 飞书上传下载快捷调用（代码就绪，待凭据联调）（2026-09-13，#140）
 
 新增 `feishu_import`（按文件 token 下载部门文件并导入为一个批次）与 `feishu_upload_report`（把已保存的研判报告传到指定文件夹），均需审批；凭据只从 shell 导出的 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` 读取，缺失时返回「未配置」。
