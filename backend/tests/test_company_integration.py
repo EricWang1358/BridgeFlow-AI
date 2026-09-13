@@ -277,3 +277,13 @@ def test_an_imported_batch_of_the_templates_produces_the_master_table_over_http(
         workbook = client.get(f"/integration/batches/{batch_id}/xlsx").json()
         book = openpyxl.load_workbook(io.BytesIO(base64.b64decode(workbook["base64"])))
         assert [c.value for c in book["总表"][2]] == list(expected_row().values())
+
+
+def test_a_rounded_department_figure_is_checked_at_the_precision_it_was_written():
+    def rounded(value):
+        def edit(sheet):
+            sheet[f"{column(sheet, '实际签收率')}2"] = value
+        return integration.integrate(SPEC, sheets(production=(edit, 0)))
+    assert rounded(0.9940).rows[0].provenance["生产_实际签收率"]["verified_by_formula"] is True   # 0.993976 → 99.40%
+    assert rounded("99.4%").rows[0].complete
+    assert "derived_mismatch" in kinds(rounded(0.9930))                                           # off by a full unit

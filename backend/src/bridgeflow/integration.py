@@ -420,7 +420,7 @@ def integrate(spec: IntegrationSpec, sheets: list[Sheet]) -> MasterResult:
             if supplied is None:
                 values[name] = computed
                 provenance[name] = {"formula": name, "inputs": formula_inputs}
-            elif abs(Decimal(str(supplied)) - Decimal(str(computed))) > Decimal("1e-6") * max(Decimal(1), abs(Decimal(str(computed)))):
+            elif abs(Decimal(str(supplied)) - Decimal(str(computed))) > _written_tolerance(supplied, computed):
                 complete = False
                 issues.append(Issue(kind="derived_mismatch", field=name, key=list(key), departments=[provenance[name]["department"]],
                                     message=f"{name}: department wrote {supplied}, the dictionary formula gives {computed}"))
@@ -524,6 +524,17 @@ def _assumptions_behind(spec: IntegrationSpec, name: str, cell: dict[str, Any]) 
     if "rollup" in cell:
         keys.append(f"rollup.{cell['department']}")
     return [f"{k}: {spec.assumptions[k]}" for k in dict.fromkeys(keys) if k in spec.assumptions]
+
+
+def _written_tolerance(supplied: Any, computed: Any) -> Decimal:
+    """How far a department's figure may sit from the formula: half a unit of the last digit it wrote.
+
+    People round — a sign-off rate written as 99.12% is right if the formula gives 0.991234.
+    A figure written to full precision is held to a relative 1e-6.
+    """
+    exponent = Decimal(str(supplied)).normalize().as_tuple().exponent
+    written = Decimal(5).scaleb(exponent - 1) if isinstance(exponent, int) and -8 <= exponent <= 0 else Decimal(0)
+    return max(written, Decimal("1e-6") * max(Decimal(1), abs(Decimal(str(computed)))))
 
 
 def _derive(spec: IntegrationSpec, name: str, tree: dict, values: dict[str, Any]) -> tuple[int | float, list[str]] | Issue:

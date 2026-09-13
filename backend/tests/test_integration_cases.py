@@ -56,3 +56,14 @@ def test_real_exports_are_graded_against_the_business_master_without_printing_va
     book.active.cell(2, headers.index("市场_缺口") + 1, 1)
     book.save(tmp_path / "expected.xlsx")
     assert cases.real(tmp_path)["columns_with_differences"] == {"市场_缺口": 1}
+
+
+def test_the_mock_monthly_exports_grade_as_their_readme_says():
+    folder = REPO_ROOT / "data/mock_business/monthly"
+    clean = cases.real(folder / "2024-05-调优A")
+    assert (clean["matched_rows"], clean["complete_rows"], clean["exact_rows"], clean["issues_by_kind"]) == (4, 4, 4, {})
+    june = cases.real(folder / "2024-06-调优B")
+    assert june["issues_by_kind"].get("missing_department") == 1 and june["exact_rows"] == 3
+    july = cases.real(folder / "2024-07-模拟留出")
+    assert {"disagreement", "check_failed", "invalid_number"} <= set(july["issues_by_kind"])
+    assert set(july["columns_with_differences"]) == {"市场_可争取", "物资_当月生产量", "物资_当月物资总成本"}
