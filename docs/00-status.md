@@ -15,9 +15,9 @@
 
 研判开启即登记（`review_runs`，含统一期限）；汇总按 review_id 幂等；超时后迟到的成功不能覆盖超时终态；
 宿主启动回收未结束的研判并落「host_restarted」报告；人工意见由宿主先落盘、带标记的回合被宿主 guard 拒绝研判与写工具。
-Python **350 passed**（新增 `test_review_runs.py` **6** 条），TS **41 passed**（新增 **2** 条），typecheck、build、ruff 通过；
+Python **350 passed**（新增 `test_review_runs.py` **6** 条），TS **43 passed**（新增 **4** 条：意见回合 guard、派活前登记、父模型不派活到期由宿主结束、汇总失败可重试），typecheck、build、ruff 通过；
 离线 `smoke:business` 正常与 `BRIDGEFLOW_TEST_FAULT=step-limit` 两种均通过（validated / partial）。真实模型调用 **0 次**。
-未做：浏览器层面的「父模型卡住 / 汇总卡住 / 最终回复卡住」逐项故障注入；模型用量按阶段记账。
+后两条做过反向验证（去掉重试复位、去掉到期结束，各 1 条失败）。未做：浏览器层面的故障注入；最终叙述回复本身不受期限约束（报告终态已先落盘）；模型用量按阶段记账。
 
 ## 填报与流转界面（2026-09-13，#144 / #145）
 

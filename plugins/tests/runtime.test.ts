@@ -282,3 +282,50 @@ test('a review is registered with its deadline before any department can be disp
     assert.match(JSON.stringify(result.content), new RegExp(String(opened.body.review_id)))
   } finally { await ctx.fiber.dispose() }
 })
+
+async function reviewHarness(t: import('node:test').TestContext, finalize: (attempt: number) => Response | Promise<Response>) {
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  const finals: Record<string, unknown>[] = []
+  t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+    const body = JSON.parse(String(init.body ?? '{}'))
+    if (String(url).endsWith('/tools/review-context')) {
+      return Response.json({ batch_id: body.batch_id, period: '2025-11', roles: ['production', 'procurement', 'finance', 'marketing'].map(role => ({ role, responsibility: 'r' })) })
+    }
+    if (String(url).endsWith('/tools/review-finalize')) { finals.push(body); return finalize(finals.length) }
+    return Response.json({ status: 'open' })
+  })
+  const agent = captain('请研判')
+  const opened = await ctx.tools.execute({ ...execution('review_context', { batch_id: 'a'.repeat(32) }), agent })
+  const reviewId = String(JSON.parse((opened.content[0] as { text: string }).text).review_id)
+  return { ctx, agent, finals, reviewId }
+}
+
+test('a captain that never dispatches is ended by the host at the deadline', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] })
+  const { ctx, finals } = await reviewHarness(t, () => Response.json({ report_id: 'r1', status: 'partial', terminal_reason: 'deadline_exceeded' }))
+  try {
+    t.mock.timers.tick(180_000)
+    await new Promise(resolve => setImmediate(resolve))
+    assert.equal(finals.length, 1)
+    assert.equal(finals[0]!.terminal_reason, 'deadline_exceeded')
+    assert.deepEqual((finals[0]!.runs as { status: string }[]).map(r => r.status), ['not-dispatched', 'not-dispatched', 'not-dispatched', 'not-dispatched'])
+  } finally { t.mock.timers.reset(); await ctx.fiber.dispose() }
+})
+
+test('a finalize that fails is not cached and can be retried to the same review', async (t) => {
+  const { ctx, agent, finals, reviewId } = await reviewHarness(t, attempt => attempt === 1
+    ? new Response('backend unavailable', { status: 503 })
+    : Response.json({ report_id: 'r1', status: 'partial', terminal_reason: 'completed' }))
+  try {
+    const first = await ctx.tools.execute({ ...execution('review_finalize', { review_id: reviewId }), agent })
+    assert.equal(first.isError, true)
+    const second = await ctx.tools.execute({ ...execution('review_finalize', { review_id: reviewId }), agent })
+    assert.equal(second.isError, false, JSON.stringify(second.content))
+    assert.equal(finals.length, 2)
+    assert.equal(finals[1]!.review_id, reviewId)
+    const third = await ctx.tools.execute({ ...execution('review_finalize', { review_id: reviewId }), agent })
+    assert.equal(third.isError, false)
+    assert.equal(finals.length, 2, 'a finished review answers from its report, not a new request')
+  } finally { await ctx.fiber.dispose() }
+})
