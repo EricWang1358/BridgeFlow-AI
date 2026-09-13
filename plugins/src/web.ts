@@ -6,7 +6,7 @@ import type {} from '@deepseek-ai/dsh-client-connection'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-workspace'
 import { callBackend, type BackendConfig } from './backend.ts'
-import type { ApprovalNotes } from './approval/notes.ts'
+import { settledNote, type ApprovalNotes } from './approval/notes.ts'
 import type { PendingDetails } from './approval/detail.ts'
 
 /** The browser reuses DSH's cookie and Host/Origin fence; no second login/token. */
@@ -18,6 +18,11 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
     const domain=await ctx.storageDomain.open(notebookDomain)
     ctx.effect(()=>()=>domain.close(), 'bridgeflow: close notebook store')
     const notebookTable=domain.table('notebooks'), noteTable=domain.table('approval_notes')
+    const noteKey=(sessionId:string,callId:string)=>createHash('sha256').update(JSON.stringify([sessionId,callId])).digest('hex')
+    notes.onSettled=async (sessionId,callId,outcome)=>{
+      const key=noteKey(sessionId,callId), entry=noteTable.get(key)
+      if (entry) await noteTable.put(key,settledNote(entry,outcome))
+    }
     ctx.effect(() => ctx.webServer.register({
       kind: 'prefix', path: '/bridgeflow',
       async handler(req, res) {
@@ -101,7 +106,7 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
             if (['session_id', 'call_id', 'ticket', 'note'].some(key => typeof data[key] !== 'string')) {
               res.writeHead(422).end('{}'); return
             }
-            const saved = await notes.record(data.session_id, data.call_id, data.ticket, data.note, entry=>noteTable.put(createHash('sha256').update(JSON.stringify([entry.sessionId,entry.callId])).digest('hex'),entry))
+            const saved = await notes.record(data.session_id, data.call_id, data.ticket, data.note, entry=>noteTable.put(noteKey(entry.sessionId,entry.callId),entry))
             res.writeHead(saved ? 200 : 409).end(JSON.stringify(saved ? { saved: true } : { detail: 'Note too long or approval expired; decision not submitted' }))
           } catch (error) { ctx.logger.warn('Approval note persistence failed: %s', String(error)); res.writeHead(422).end(JSON.stringify({ detail: 'Could not record approval note' })) }
           return

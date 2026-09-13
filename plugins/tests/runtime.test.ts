@@ -12,7 +12,7 @@ import { columnMatchBody } from '../src/tools/confirm-column-match.ts'
 import { approveBody, recordBody } from '../src/tools/workflow.ts'
 import { decideBody } from '../src/tools/quarantine.ts'
 import { summarise } from '../src/approval/detail.ts'
-import { ApprovalNotes } from '../src/approval/notes.ts'
+import { ApprovalNotes, settledNote } from '../src/approval/notes.ts'
 import { PendingDetails } from '../src/approval/detail.ts'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 
@@ -405,4 +405,24 @@ test('quarantine decisions are approval-gated, bound to their row, and read-only
   assert.equal(denied.isError, true)
   assert.match(JSON.stringify(denied.content), /No current approval/)
   await ctx.fiber.dispose()
+})
+
+test('a saved approval note is a draft until the official decision, and only a rejection makes it final', async () => {
+  const notes = new ApprovalNotes()
+  const settled: [string, string, string][] = []
+  notes.onSettled = async (session, call, outcome) => { settled.push([session, call, outcome]) }
+  const agent = { id: 'session-1' } as unknown as Agent
+  const close = notes.open(agent, 'call-1')
+  const ticket = notes.ticket('session-1', 'call-1')!
+  const saved: unknown[] = []
+  assert.equal(await notes.record('session-1', 'call-1', ticket, '  编码 未核实 ', async entry => { saved.push(entry) }), true)
+  assert.equal((saved[0] as { status: string }).status, 'draft')
+  await notes.settle('session-1', 'call-1', 'allowed-once')
+  await notes.settle('session-1', 'other-call', 'rejected')
+  close()
+  assert.deepEqual(settled, [['session-1', 'call-1', 'allowed-once']], 'only a call that has a note settles, once per decision')
+  assert.equal(await notes.record('session-1', 'call-1', ticket, 'late', async () => undefined), false, 'a closed request takes no more notes')
+  const entry = { sessionId: 's', callId: 'c', note: 'n', author: 'a', time: 1, status: 'draft' as const }
+  assert.equal(settledNote(entry, 'rejected').status, 'final')
+  for (const outcome of ['allowed-once', 'cancelled', 'unavailable']) assert.equal(settledNote(entry, outcome).status, 'unused')
 })

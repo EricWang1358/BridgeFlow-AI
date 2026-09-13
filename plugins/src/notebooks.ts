@@ -39,10 +39,10 @@ export function parseNotebook(value: unknown): Notebook {
 const notebookSchema = z.custom<Notebook>(value => {
   try { parseNotebook(value); return true } catch { return false }
 })
-export type ApprovalNote = {sessionId:string; callId:string; note:string; author:string; time:number}
+export type ApprovalNote = {sessionId:string; callId:string; note:string; author:string; time:number; status?:'draft'|'final'|'unused'|undefined; outcome?:string|undefined}
 export const notebookDomain = defineDomain({name:'bridgeflow_notebooks',version:1,layout:'per-record',tables:{
   notebooks:domainTable<string,Notebook>(notebookSchema),
-  approval_notes:domainTable<string,ApprovalNote>(z.object({sessionId:z.string(),callId:z.string(),note:z.string().max(240),author:z.string(),time:z.number()})),
+  approval_notes:domainTable<string,ApprovalNote>(z.object({sessionId:z.string(),callId:z.string(),note:z.string().max(240),author:z.string(),time:z.number(),status:z.enum(['draft','final','unused']).optional(),outcome:z.string().optional()})),
 }})
 export type NotebookTable = KvTable<string,Notebook>
 

@@ -188,6 +188,9 @@ try {
   const noteEvents=noteAudit.notes.map(data=>({type:'bridgeflow/approval-note',data}))
   assert.equal(noteEvents.length, 1)
   assert.equal(noteEvents[0].data.note, '客户编码未核实，请销售负责人确认后再提交。')
+  // #87: the note is attributed to the final decision only because that decision was a rejection.
+  assert.equal(noteEvents[0].data.status, 'final')
+  assert.equal(noteEvents[0].data.outcome, 'rejected')
   assert(events.some(event => event.type === 'tool/result' && JSON.stringify(event).includes(noteEvents[0].data.note))
     || events.some(event => event.type.includes('tool') && JSON.stringify(event).includes('The reviewer said')))
   assert.equal(asks.length, 3)

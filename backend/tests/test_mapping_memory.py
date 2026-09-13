@@ -100,3 +100,22 @@ def test_every_confirmation_is_versioned(memory_file):
     versions = list((memory_file / "versions").glob("mappings--*.json"))
 
     assert versions
+
+
+def test_the_same_facts_in_other_words_are_not_asked_again(memory_file):
+    """Wording is not evidence (#82): reordering or rephrasing keeps the decision."""
+    mappings.confirm(_link("marketing 2025-11 row 2"), by="ops@example.com", accepted=True)
+
+    settled, still_open = mappings.apply([_link("Row 2 of the marketing sheet, 2025-11")])
+
+    assert settled and not still_open
+    assert mappings.load().confirmations[0].evidence_facts == ["2", "2025-11", "marketing"]
+
+
+@pytest.mark.parametrize("changed", ["finance 2025-11 row 2", "marketing 2025-11 row 3", "marketing 2025-11 row 2 and 5"])
+def test_any_changed_fact_makes_the_decision_stale(memory_file, changed):
+    mappings.confirm(_link("marketing 2025-11 row 2"), by="ops@example.com", accepted=True)
+
+    settled, still_open = mappings.apply([_link(changed)])
+
+    assert not settled and still_open

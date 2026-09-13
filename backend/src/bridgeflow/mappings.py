@@ -12,6 +12,7 @@ that requires knowing which version a batch was computed under.
 
 from __future__ import annotations
 
+import re
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
@@ -43,10 +44,30 @@ class ConfirmedMapping(BaseModel):
     #: let it. Empty when the record predates the console (#30) or the join failed —
     #: which is itself worth seeing, rather than filling in a plausible name.
     authorised_by: str = ""
+    #: The facts the decision rested on, normalised (see `evidence_facts`). Stored so an
+    #: auditor can see exactly what "the same evidence" was compared against.
+    evidence_facts: list[str] = Field(default_factory=list)
 
     @property
     def key(self) -> tuple[str, str, str]:
         return (self.source, self.target, self.relation)
+
+
+_FACT = re.compile(r"[a-z0-9][a-z0-9_.:/-]*")
+#: Connective wording that may change without changing what the evidence says.
+_WORDING = frozenset({"row", "rows", "in", "on", "at", "of", "the", "and", "from", "per", "sheet", "see", "for", "a", "an"})
+
+
+def evidence_facts(text: str) -> list[str]:
+    """What evidence asserts, independent of how the sentence is phrased (#82).
+
+    The rule is deliberately simple enough to audit: identifiers, periods, row numbers
+    and department names are facts; connective words and word order are wording. The
+    same facts in another sentence still match; any fact added, removed or changed —
+    another period, another row, another department — makes the decision stale.
+    """
+    tokens = {t.strip(".:/-") for t in _FACT.findall(text.casefold())}
+    return sorted(t for t in tokens if t and t not in _WORDING)
 
 
 class MappingMemory(BaseModel):
@@ -90,6 +111,7 @@ def confirm(
         evidence=link.justification,
         period=period,
         authorised_by=authorised_by,
+        evidence_facts=evidence_facts(link.justification),
     )
     memory.confirmations = [c for c in memory.confirmations if c.key != entry.key] + [entry]
     memory.version = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -113,7 +135,8 @@ def apply(links: list[Link], memory: MappingMemory | None = None) -> tuple[list[
         if confirmation is None:
             open_questions.append(link)
             continue
-        if confirmation.evidence and confirmation.evidence != link.justification:
+        recorded = confirmation.evidence_facts or evidence_facts(confirmation.evidence)
+        if confirmation.evidence and recorded != evidence_facts(link.justification):
             open_questions.append(
                 link.model_copy(
                     update={
