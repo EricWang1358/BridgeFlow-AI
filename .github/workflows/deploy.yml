@@ -67,7 +67,10 @@ jobs:
           pnpm --dir plugins test
 
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    # Temporarily gated off: the Lightsail instance isn't provisioned yet.
+    # Re-enable without a commit by adding repo variable DEPLOY_ENABLED=true
+    # (Settings → Secrets and variables → Actions → Variables).
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.DEPLOY_ENABLED == 'true'
     needs: test
     runs-on: ubuntu-latest
     environment: production
