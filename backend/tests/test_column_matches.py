@@ -173,3 +173,16 @@ def test_no_field_name_is_written_into_the_module():
     code = ast.unparse(tree).lower()
     for name in ("sku", "gl_account", "customer", "material", "project"):
         assert name not in code, f"{name} must not appear in the code"
+
+
+def test_the_browser_wizard_view_lists_candidates_decisions_and_no_cells(client):
+    batch = upload(client)
+    rows = client.get(f"/batches/{batch['batch_id']}/view?section=columns&limit=100").json()["rows"]
+    mine = [r for r in rows if r["department"] == "finance" and r["column"] == RENAMED]
+    assert FINANCE_KEY in {r["candidate"] for r in mine} and {r["decision"] for r in mine} == {"open"}
+    decide(client, batch["batch_id"], FINANCE_KEY, accepted=False)
+    rows = client.get(f"/batches/{batch['batch_id']}/view?section=columns&limit=100").json()["rows"]
+    assert next(r for r in rows if r["candidate"] == FINANCE_KEY and r["column"] == RENAMED)["decision"] == "rejected"
+    text = str(rows)
+    for cell in {c for line in (CASES / "risk" / "finance.csv").read_text(encoding="utf-8").splitlines()[1:] for c in line.split(",") if len(c) > 3}:
+        assert cell not in text

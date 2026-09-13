@@ -58,3 +58,10 @@ test('zero is a figure, not an absence', () => {
   assert.equal(cell.text, '0')
   assert.equal(cell.empty, false)
 })
+
+test('our own view keys translate while business field names stay as declared', () => {
+  const t = (key: string) => ({ view_candidate: '已声明候选列', finance: '财务' } as Record<string, string>)[key] ?? key
+  assert.deepEqual(columnLabel('candidate', t), { group: '', label: '已声明候选列' })
+  assert.deepEqual(columnLabel('finance.ar_days', t), { group: '财务', label: 'ar days' })
+  assert.deepEqual(columnLabel('output_qty', t), { group: '', label: 'output qty' })
+})

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { BusinessReview, type Review } from './review.tsx'
 import { api, cellText, columnLabel, navigate, route, reviewRequest, startDiagnosis, startReview, useUI, type Summary } from './ui.ts'
 export const departments = ['production', 'procurement', 'finance', 'marketing'] as const
-export const sections = ['master', 'corrections', 'mappings', 'quarantine', 'review'] as const
+export const sections = ['master', 'corrections', 'mappings', 'columns', 'quarantine', 'review'] as const
 export function Chip({ status }: { status: string }) { const { t } = useUI(); return <span className="bf-chip" data-status={status}>{t(status.replaceAll('-', '_'))}</span> }
 export type Limits = { maxUploadBytes: number; maxRequestBytes: number; noteLimit: number; decisionTimeoutMs: number }
 export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
@@ -133,7 +133,7 @@ export function DataWorkspace() {
   async function copy(text: string, message: string) { try { await navigator.clipboard.writeText(text); setNotice(message) } catch (e) { setError(String(e)) } }
   const columns = Array.from(new Set(view?.rows.flatMap(row => Object.keys(row)) ?? []))
   const counts: Record<string, number | string> = batch ? { master: batch.master_rows, mappings: batch.unresolved,
-    corrections: batch.departments.reduce((n, d) => n + d.corrections, 0), quarantine: batch.departments.reduce((n, d) => n + d.quarantined, 0), review: review ? `${review.roles.filter(r => r.status === 'validated').length}/4` : '—' } : {}
+    corrections: batch.departments.reduce((n, d) => n + d.corrections, 0), columns: batch.column_questions ?? 0, quarantine: batch.departments.reduce((n, d) => n + d.quarantined, 0), review: review ? `${review.roles.filter(r => r.status === 'validated').length}/4` : '—' } : {}
   function tab(key: string) { setSection(key); setOffset(0); if (batch) navigate({ batch: batch.batch_id, view: key, ...(key === 'review' && reportId ? { report: reportId } : {}) }) }
   return <>
     <dialog className="bf-panel" ref={dialog} onCancel={close} aria-label={t('workspace')}>
@@ -218,7 +218,7 @@ export function DataWorkspace() {
         </div>
         <p className="bf-hint">{t('startReviewHint')}</p>
         <nav className="bf-tabs" aria-label={t('tabs')}>{sections.map(key => <button key={key} aria-label={t(key)} aria-pressed={section === key} onClick={() => tab(key)}>{t(key)} <span className="bf-badge">{counts[key]}</span></button>)}</nav>
-        {section === 'mappings' && <p className="bf-hint">{t('mappingHelp')}</p>}{section === 'quarantine' && <p className="bf-hint">{t('quarantineHelp')}</p>}
+        {section === 'mappings' && <p className="bf-hint">{t('mappingHelp')}</p>}{section === 'columns' && <p className="bf-hint">{t('columnsHelp')}</p>}{section === 'quarantine' && <p className="bf-hint">{t('quarantineHelp')}</p>}
         {section === 'review' ? review ? <BusinessReview report={review} /> : !error && <p role="status">{t('loading')}</p> : view ? <>
           {view.rows.length > 0 && <div className="bf-scroll"><table><thead><tr>{columns.map(c => {
             const { group, label } = columnLabel(c, t)

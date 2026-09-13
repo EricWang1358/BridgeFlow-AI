@@ -290,6 +290,18 @@ async def view(
         rows = result.master_table.rows if result.master_table else []
     elif section == "mappings":
         rows = [x.model_dump() for x in result.graph.unresolved] if result.graph else []
+    elif section == "columns":
+        # The column-match wizard's view (#46): each unknown uploaded column against the
+        # declared columns it could be, with the evidence and any decision on file.
+        listed = column_matches.candidates(batch_id, result.period, result.clean_tables, result.dictionary_snapshot,
+                                           applied=result.column_matches)
+        rows = [{"department": q.department, "column": q.column, "original": q.original, "candidate": c.target,
+                 "role": c.role, "type_fits": c.type_fits,
+                 "shared_values": None if c.entity_overlap is None else f"{round(c.entity_overlap * 100)}% · {c.overlap_with}",
+                 "decision": c.decided or "open"}
+                for q in listed.questions for c in q.candidates]
+        rows += [{"department": d, "column": "", "original": "", "candidate": "", "role": "", "type_fits": None,
+                  "shared_values": None, "decision": "needs_dictionary_owner"} for d in listed.needs_dictionary_owner]
     elif section == "corrections":
         rows = [c.model_dump() for t in result.clean_tables for c in t.corrections]
     elif section == "quarantine":
