@@ -136,7 +136,7 @@ function Shell({ ctx }: { ctx: Context }) {
         <div className="bf-studio-tools" aria-label={t('tools')}>
           <button data-tone="blue" disabled={!summary || busy} onClick={async () => { if (!summary) return; setBusy(true); setError(''); try { await startReview(batchId, summary.period) } catch (e) { setError(String(e)) } finally { setBusy(false) } }}><span aria-hidden="true">◈</span>{t('startReview')}<span aria-hidden="true">›</span></button>
           <button data-tone="gold" aria-pressed={selected.view === 'quotation'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'quotation' })}><span aria-hidden="true">▧</span>{t('quotationWorkspace')}<span aria-hidden="true">›</span></button>
-          <button data-tone="green" aria-pressed={selected.view === 'handoff'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'handoff' })}><span aria-hidden="true">⇄</span>{t('handoffWorkspace')}<span aria-hidden="true">›</span></button>
+          <button data-tone="teal" aria-pressed={selected.view === 'handoff'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'handoff' })}><span aria-hidden="true">⇄</span>{t('handoffWorkspace')}<span aria-hidden="true">›</span></button>
           <button data-tone="green" aria-pressed={selected.view === 'master'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'master' })}><span aria-hidden="true">▦</span>{t('master')}<span aria-hidden="true">›</span></button>
           <button data-tone="pink" aria-pressed={showState && !viewing} onClick={() => { closePreview(); setHiddenStudio(false); setPanel('studio') }}><span aria-hidden="true">◷</span>{t('state')}<span aria-hidden="true">›</span></button>
         </div>

@@ -56,6 +56,26 @@ function Orientation({ session, input }: InputZone) {
   </aside>
 }
 
+/**
+ * An image in the composer meets a text-only model, and the native message points to a
+ * model selector this deployment removes on purpose (#99). Another package owns that
+ * copy, so we add the way forward beside it instead: tables come in as sources, where
+ * every number stays traceable to a cell.
+ */
+function ImageNotice({ input }: InputZone) {
+  const { t } = useUI()
+  if (!input.imageIds.length) return null
+  return <aside className="bf-callout" data-tone="warn" role="status" aria-label={t('imageNoticeTitle')}>
+    <h3>{t('imageNoticeTitle')}</h3><p>{t('imageNotice')}</p>
+    <div className="bf-actions" style={{ marginBottom: 0 }}>
+      <button className="bf-primary" onClick={() => window.dispatchEvent(new Event('bridgeflow:add-sources'))}>{t('addSources')}</button>
+    </div>
+  </aside>
+}
+
+/** Every approval-gated product tool gets the same decision card: summary, reason, reject first. */
+const APPROVAL_CARD_TOOLS = new Set(['confirm_mapping', 'confirm_column_match', 'workflow_record', 'workflow_approve_submit'])
+
 function Welcome() {
   const { t } = useUI()
   return <div className="bf-welcome"><span aria-hidden="true">✦</span><h2>{t('welcomeTitle')}</h2><p>{t('welcomeHelp')}</p></div>
@@ -118,7 +138,7 @@ export function apply(ctx: Context): void {
     ctx.effect(() => stop, 'bridgeflow: default locale')
   })
   ctx.slots.inject('conversation.composer', () => ctx.slots.register({ name: 'conversation.composer', priority: 0,
-    select: ({ pendingInteraction }: ComposerChainProps) => pendingInteraction?.kind === 'approval' && pendingInteraction.toolName === 'confirm_mapping' ? pendingInteraction : null,
+    select: ({ pendingInteraction }: ComposerChainProps) => pendingInteraction?.kind === 'approval' && APPROVAL_CARD_TOOLS.has(pendingInteraction.toolName) ? pendingInteraction : null,
   }, MappingApproval))
   ctx.effect(() => { const tag = document.createElement('style'); tag.textContent = style; document.head.append(tag); return () => tag.remove() }, 'bridgeflow: styles')
   ctx.slots.inject('conversation.hero.brand.mark', () => ctx.slots.register({ name: 'conversation.hero.brand.mark', priority: -10 }, Welcome))
@@ -129,6 +149,7 @@ export function apply(ctx: Context): void {
   // Above the composer card, so the orientation reads before the prompt box rather
   // than competing with it.
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({ name: 'conversation.input.dock', id: 'bridgeflow-orientation', order: -10 }, Orientation))
+  ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({ name: 'conversation.input.dock', id: 'bridgeflow-image-notice', order: -20 }, ImageNotice))
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'bridgeflow-data-dialog' }, DataWorkspace))
   mountState(ctx)
   mountShell(ctx)
