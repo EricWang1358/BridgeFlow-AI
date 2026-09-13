@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { BusinessReview, type Review } from './review.tsx'
-import { api, cellText, columnLabel, navigate, route, reviewRequest, startDiagnosis, startReview, useUI, type Summary } from './ui.ts'
+import { api, cellText, columnLabel, navigate, route, reviewRequest, startDiagnosis, startReview, useUI, type Summary, describeError } from './ui.ts'
 export const departments = ['production', 'procurement', 'finance', 'marketing'] as const
 export const sections = ['master', 'corrections', 'mappings', 'columns', 'quarantine', 'review'] as const
 export function Chip({ status }: { status: string }) { const { t } = useUI(); return <span className="bf-chip" data-status={status}>{t(status.replaceAll('-', '_'))}</span> }
@@ -9,7 +9,7 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
   const { t } = useUI()
   const [limits, setLimits] = useState<Limits | null>(null)
   const [busy, setBusy] = useState(false), [error, setError] = useState('')
-  useEffect(() => { const controller = new AbortController(); void api<Limits>('/config', { signal: controller.signal }).then(setLimits).catch(e => { if (!controller.signal.aborted) setError(String(e)) }); return () => controller.abort() }, [])
+  useEffect(() => { const controller = new AbortController(); void api<Limits>('/config', { signal: controller.signal }).then(setLimits).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) }); return () => controller.abort() }, [])
   async function upload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError('')
     const form = new FormData(event.currentTarget), body = new FormData()
@@ -25,7 +25,7 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
     if (!count || !limits || total > limits.maxUploadBytes) { setError(t('invalidUpload')); return }
     setBusy(true)
     try { onSaved(await api<Summary>('/batches', { method: 'POST', body })) }
-    catch (e) { setError(String(e)) } finally { setBusy(false) }
+    catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
   }
   return <form onSubmit={upload} className="bf-steps">
     <div className="bf-step">
@@ -114,7 +114,7 @@ export function DataWorkspace() {
       setError('')
       if (currentBatch.current?.batch_id === value.batch) return
       setNotice(''); setBatch(null); setView(null); setReview(null); setBusy(true)
-      void api<Summary>(`/batches/${value.batch}`, { signal }).then(result => { if (!signal.aborted) setBatch(result) }).catch(e => { if (!signal.aborted) setError(String(e)) }).finally(() => { if (!signal.aborted) setBusy(false) })
+      void api<Summary>(`/batches/${value.batch}`, { signal }).then(result => { if (!signal.aborted) setBatch(result) }).catch(e => { if (!signal.aborted) setError(describeError(e, t)) }).finally(() => { if (!signal.aborted) setBusy(false) })
     }
     const open = () => { if (!dialog.current?.open) dialog.current?.showModal() }
     window.addEventListener('bridgeflow:open-data', open)
@@ -126,11 +126,11 @@ export function DataWorkspace() {
     const abort = new AbortController(); setView(null); setReview(null); setError('')
     if (section === 'review') {
       void api<Review>(`/batches/${batch.batch_id}/review${reportId ? `?report_id=${encodeURIComponent(reportId)}` : ''}`, { signal: abort.signal }).then(setReview)
-        .catch(e => { if (!abort.signal.aborted) setError(String(e).includes('no saved review') ? t('noReport') : String(e)) })
-    } else void api<View>(`/batches/${batch.batch_id}/view?section=${section}&offset=${offset}`, { signal: abort.signal }).then(setView).catch(e => { if (!abort.signal.aborted) setError(String(e)) })
+        .catch(e => { if (!abort.signal.aborted) setError(String(e).includes('no saved review') ? t('noReport') : describeError(e, t)) })
+    } else void api<View>(`/batches/${batch.batch_id}/view?section=${section}&offset=${offset}`, { signal: abort.signal }).then(setView).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
     return () => abort.abort()
   }, [batch, section, offset, reportId, revision])
-  async function copy(text: string, message: string) { try { await navigator.clipboard.writeText(text); setNotice(message) } catch (e) { setError(String(e)) } }
+  async function copy(text: string, message: string) { try { await navigator.clipboard.writeText(text); setNotice(message) } catch (e) { setError(describeError(e, t)) } }
   const columns = Array.from(new Set(view?.rows.flatMap(row => Object.keys(row)) ?? []))
   const counts: Record<string, number | string> = batch ? { master: batch.master_rows, mappings: batch.unresolved,
     corrections: batch.departments.reduce((n, d) => n + d.corrections, 0), columns: batch.column_questions ?? 0, quarantine: batch.departments.reduce((n, d) => n + d.quarantined, 0), review: review ? `${review.roles.filter(r => r.status === 'validated').length}/4` : '—' } : {}
@@ -172,7 +172,7 @@ export function DataWorkspace() {
               <button className="bf-primary" disabled={busy} onClick={async () => {
                 setError(''); setBusy(true)
                 try { await startDiagnosis(batch.batch_id, batch.period); close() }
-                catch (e) { setError(String(e)) } finally { setBusy(false) }
+                catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
               }}>{t(busy ? 'busy' : 'askCaptain')}</button>
             </div>
           </>}
@@ -211,7 +211,7 @@ export function DataWorkspace() {
           <button className="bf-primary" disabled={busy} onClick={async () => {
             setError(''); setBusy(true)
             try { await startReview(batch.batch_id, batch.period); close() }
-            catch (e) { setError(String(e)) } finally { setBusy(false) }
+            catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
           }}>{t(busy ? 'busy' : 'startReview')}</button>
           <button onClick={() => void copy(reviewRequest(batch.batch_id, batch.period), t('copiedRequest'))}>{t('copy')}</button>
           <button onClick={() => setRevision(r => r + 1)}>{t('refresh')}</button>

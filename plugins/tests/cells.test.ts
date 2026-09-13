@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { cellText, columnLabel } from '../src/client/ui.ts'
+import { cellText, columnLabel, describeError } from '../src/client/ui.ts'
 
 const t = (key: string) => ({ finance: '财务', production: '生产' }[key] ?? key)
 
@@ -64,4 +64,17 @@ test('our own view keys translate while business field names stay as declared', 
   assert.deepEqual(columnLabel('candidate', t), { group: '', label: '已声明候选列' })
   assert.deepEqual(columnLabel('finance.ar_days', t), { group: '财务', label: 'ar days' })
   assert.deepEqual(columnLabel('output_qty', t), { group: '', label: 'output qty' })
+})
+
+test('a figure shortened for display is marked approximate and keeps its exact value', () => {
+  assert.deepEqual(cellText(97.5), { text: (97.5).toLocaleString(undefined, { maximumFractionDigits: 4 }), numeric: true, empty: false })
+  const long = cellText(0.123456789)
+  assert.equal(long.text.startsWith('≈'), true)
+  assert.equal(long.full, '0.123456789')
+})
+
+test('an error reads in the person\'s language and keeps the service\'s words', () => {
+  const t = (key: string) => ({ requestFailed: '操作未完成', networkFailed: '连接不上服务' } as Record<string, string>)[key] ?? key
+  assert.equal(describeError(new Error('Batch not found'), t), '操作未完成：Batch not found')
+  assert.equal(describeError(new TypeError('Failed to fetch'), t), '连接不上服务')
 })

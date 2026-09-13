@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, useUI } from './ui.ts'
+import { api, useUI, describeError } from './ui.ts'
 import type { Limits } from './workspace.tsx'
 import type { PendingApproval } from '@deepseek-ai/dsh-client-ui-approval/client'
 
@@ -30,7 +30,7 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
     void fetch(`/bridgeflow/approval-notes?${query}`, { signal: abort.signal })
       .then(async response => { if (!response.ok) throw new Error(t('expired')); return response.json() })
       .then(value => setTicket(value.ticket))
-      .catch(e => { if (!abort.signal.aborted) setError(String(e)) })
+      .catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
     setDetailFailed(false)
     void fetch(`/bridgeflow/approval-detail?${query}`, { signal: abort.signal })
       .then(async response => { if (!response.ok) throw new Error(String(response.status)); return response.json() })
@@ -62,7 +62,7 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
         if (!response.ok) throw new Error(t('noteFail'))
       }
       await pending.answer(outcome)
-    } catch (e) { setError(String(e)); setBusy(false) }
+    } catch (e) { setError(describeError(e, t)); setBusy(false) }
   }
   // Each tool's decision is named for what it decides; the mapping wording is kept for mappings.
   const kind = pending.toolName === 'confirm_mapping' ? '' : `_${pending.toolName}`

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, useUI } from './ui.ts'
+import { api, useUI, describeError } from './ui.ts'
 import { Notebook } from './notebook.tsx'
 import { Chip } from './workspace.tsx'
 
@@ -46,7 +46,7 @@ export function Handoff() {
       api<{ rows: Row[] }>('/workflow/board', { signal }), api<Catalogue>('/workflow/catalogue', { signal }),
       api<Finding[]>('/workflow/adoption', { signal }),
     ]).then(([board, declared, signals]) => { setRows(board.rows); setCatalogue(declared); setFindings(signals) })
-      .catch(e => { if (!signal.aborted) setError(String(e)) })
+      .catch(e => { if (!signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
   }, [revision])
 
@@ -54,7 +54,7 @@ export function Handoff() {
     if (!selected) { setDraft(null); return }
     const controller = new AbortController()
     void api<Draft>(`/workflow/artifacts/${selected}`, { signal: controller.signal }).then(setDraft)
-      .catch(e => { if (!controller.signal.aborted) setError(String(e)) })
+      .catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
   }, [selected, revision])
 

@@ -4,7 +4,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type { Notebook } from '../notebooks.ts'
-import { api, createNotebookSession, formatDateTime, navigate, route, useUI, type Route, type Summary } from './ui.ts'
+import { api, createNotebookSession, formatDateTime, navigate, route, useUI, type Route, type Summary, describeError } from './ui.ts'
 
 function bookmark(title: string, selected: Route, batch: string, kind: NonNullable<Notebook['kind']>): Notebook {
   return { title, kind, ...(batch ? { batch } : {}), view: selected.view ?? 'state',
@@ -52,7 +52,7 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
           const {title: _title, ...destination} = draft ?? {title:''}
           navigate(Object.keys(destination).length ? destination : {view:'state'})
         }
-      }).catch(e => { if (!controller.signal.aborted) setError(String(e)) })
+      }).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
   }, [id, revision])
   useEffect(() => {
@@ -71,7 +71,7 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
   }
   async function perform(next: () => Promise<void>) {
     setBusy(true); setError('')
-    try { await next() } catch (e) { setError(String(e)) } finally { setBusy(false) }
+    try { await next() } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
   }
   function leave(next: () => Promise<void>) {
     if (dirty) { action.current = next; confirm.current?.showModal() }
@@ -85,7 +85,7 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
       confirm.current?.close()
       const next = action.current; action.current = null
       if (next) await next()
-    } catch (e) { setError(String(e)) } finally { setBusy(false) }
+    } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
   }
   const create = () => leave(async () => { const fresh = await createNotebookSession(sessions); sessions.open(fresh); navigate({view:'state'}) })
   const exit = () => leave(async () => { sessions.clear(); navigate({view:'state'}); history.current?.showModal(); await sessions.refresh() })

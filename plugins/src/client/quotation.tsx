@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, navigate, route, useUI } from './ui.ts'
+import { api, navigate, route, useUI, describeError } from './ui.ts'
 import { Notebook } from './notebook.tsx'
 
 type Contract = {
@@ -15,7 +15,7 @@ export function Quotation() {
   const [catalogue, setCatalogue] = useState<Catalogue | null>(null), [error, setError] = useState(''), [revision, setRevision] = useState(0)
   useEffect(() => {
     const controller = new AbortController(); setCatalogue(null); setError('')
-    void api<Catalogue>('/quotation/contract', { signal: controller.signal }).then(setCatalogue).catch(e => { if (!controller.signal.aborted) setError(String(e)) })
+    void api<Catalogue>('/quotation/contract', { signal: controller.signal }).then(setCatalogue).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
   }, [revision])
   const contract = catalogue?.contract
