@@ -2,7 +2,7 @@ import { notebookKinds, notebookPurposes, isNotebookKind } from '../notebook-cap
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
-import { api, formatDateTime, navigate, route, startReview, takeRouteError, useUI, type Summary } from './ui.ts'
+import { api, formatDateTime, navigate, route, startReview, takeRouteError, useUI, type Summary, describeError } from './ui.ts'
 import { ImportForm, Chip } from './workspace.tsx'
 import { Quotation } from './quotation.tsx'
 import { Handoff } from './handoff.tsx'
@@ -67,7 +67,7 @@ function Shell({ ctx }: { ctx: Context }) {
       api<{ sources: Source[] }>(`/batches/${batchId}/sources`, { signal }),
       api<{ artifacts: Artifact[]; total: number }>(`/batches/${batchId}/artifacts?offset=${artifactOffset}`, { signal }),
     ]).then(([batch, files, outputs]) => { setSummary(batch); setSources(files.sources); setArtifacts(outputs.artifacts); setArtifactTotal(outputs.total) })
-      .catch(e => { if (!signal.aborted) setError(String(e)) })
+      .catch(e => { if (!signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
   }, [batchId, revision, audit.review?.status, audit.review?.report_id, artifactOffset])
   useEffect(() => {
@@ -78,7 +78,7 @@ function Shell({ ctx }: { ctx: Context }) {
       ? api<Preview>(`/batches/${batchId}/sources/${encodeURIComponent(selected.source)}?offset=${offset}`, { signal }).then(setPreview)
       : selected.view === 'artifact' && selected.report
         ? api<Review>(`/batches/${batchId}/review?report_id=${encodeURIComponent(selected.report)}`, { signal }).then(setReport) : undefined
-    void task?.catch(e => { if (!signal.aborted) setError(String(e)) })
+    void task?.catch(e => { if (!signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
   }, [batchId, selected.source, selected.report, selected.view, offset, revision])
   const viewing = ['quotation', 'handoff', 'source', 'artifact'].includes(selected.view ?? '')
@@ -122,7 +122,7 @@ function Shell({ ctx }: { ctx: Context }) {
       <header><h2>{t('sources')}</h2><button className="bf-mobile-close" onClick={() => setPanel('')}>{t('close')}</button></header>
       <div className="bf-shell-scroll"><label className="bf-notebook-purpose">{t('notebookKind')}<select disabled={notebook.busy || !notebook.loaded} value={notebook.kind} onChange={e=>{if(isNotebookKind(e.target.value))notebook.setKind(e.target.value)}}>{notebookKinds.map(kind=><option key={kind} value={kind}>{t(notebookPurposes[kind].label)}</option>)}</select></label><p className="bf-hint">{t('notebookPurposeHelp')}</p><button className="bf-add-source" onClick={() => importer.current?.showModal()}>＋ {t('addSources')}</button>
         <p className="bf-hint">{t('sourceUploadHelp')}</p>{summary?.demo_case && <p className="bf-sample-notice">{t('sampleNotebookTitle')} · {t('sampleNotebookHelp')}</p>}
-        {summary && <div className="bf-source-batch"><span>{summary.period}</span><Chip status={summary.status}/><button title={batchId} onClick={() => void navigator.clipboard.writeText(batchId).then(() => setCopied(true)).catch(e => setError(String(e)))}>{t(copied ? 'copied' : 'copyId')}</button><code>{batchId}</code></div>}
+        {summary && <div className="bf-source-batch"><span>{summary.period}</span><Chip status={summary.status}/><button title={batchId} onClick={() => void navigator.clipboard.writeText(batchId).then(() => setCopied(true)).catch(e => setError(describeError(e, t)))}>{t(copied ? 'copied' : 'copyId')}</button><code>{batchId}</code></div>}
         <ul className="bf-resource-list">{sources.map(source => <li key={source.id}><button aria-pressed={selected.source === source.id && selected.view === 'source'} onClick={() => openSource(source)} disabled={!source.preview_available}>
           <span className="bf-file-icon" aria-hidden="true">▤</span><span><strong>{source.filename}</strong><small>{t(source.id)} · {source.preview_available ? `${source.total} ${t('rows')}` : t('originalUnavailable')}</small></span><span aria-hidden="true">↗</span>
         </button></li>)}</ul>
@@ -134,7 +134,7 @@ function Shell({ ctx }: { ctx: Context }) {
       <header><h2>{t('studio')}</h2><button className="bf-mobile-close" onClick={() => setPanel('')}>{t('close')}</button></header>
       <div className="bf-shell-scroll">
         <div className="bf-studio-tools" aria-label={t('tools')}>
-          <button data-tone="blue" disabled={!summary || busy} onClick={async () => { if (!summary) return; setBusy(true); setError(''); try { await startReview(batchId, summary.period) } catch (e) { setError(String(e)) } finally { setBusy(false) } }}><span aria-hidden="true">◈</span>{t('startReview')}<span aria-hidden="true">›</span></button>
+          <button data-tone="blue" disabled={!summary || busy} onClick={async () => { if (!summary) return; setBusy(true); setError(''); try { await startReview(batchId, summary.period) } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) } }}><span aria-hidden="true">◈</span>{t('startReview')}<span aria-hidden="true">›</span></button>
           <button data-tone="gold" aria-pressed={selected.view === 'quotation'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'quotation' })}><span aria-hidden="true">▧</span>{t('quotationWorkspace')}<span aria-hidden="true">›</span></button>
           <button data-tone="teal" aria-pressed={selected.view === 'handoff'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'handoff' })}><span aria-hidden="true">⇄</span>{t('handoffWorkspace')}<span aria-hidden="true">›</span></button>
           <button data-tone="green" aria-pressed={selected.view === 'master'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'master' })}><span aria-hidden="true">▦</span>{t('master')}<span aria-hidden="true">›</span></button>

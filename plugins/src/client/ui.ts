@@ -62,6 +62,7 @@ const labels = {
   quarantine_list: ['隔离行清单', 'Quarantined rows'], quarantine_decide: ['隔离行处置', 'Quarantine decision'], quarantine_apply: ['应用隔离处置', 'Apply quarantine decisions'],
   view_department: ['部门', 'Department'], view_column: ['上传列', 'Uploaded column'], view_original: ['原始表头', 'Header as written'], view_candidate: ['已声明候选列', 'Declared candidate'], view_role: ['声明角色', 'Declared role'], view_type_fits: ['类型相符', 'Type fits'], view_shared_values: ['值重合', 'Shared values'], view_decision: ['决定', 'Decision'], view_index: ['序号', 'Index'],
   columns: ['列匹配', 'Column matches'], columnsHelp: ['字典不认识的上传列，以及它们只能对应的本部门已声明列和依据（类型、与其他部门同类列的值重合）。请在对话中让队长提议，你在审批里逐列决定；决定只对之后的新导入生效，本批次保持不变。原始数据可在来源预览中查看。', 'Uploaded columns the dictionary does not know, the declared columns of that department they could be, and the evidence (type, shared values with the same kind elsewhere). Ask the captain in chat to propose; you decide each in the approval. Decisions apply to later imports only; this batch stays unchanged. Original data is in the source preview.'],
+  requestFailed: ['操作未完成', 'Not completed'], networkFailed: ['连接不上服务，请检查服务是否在运行后重试。', 'Could not reach the service. Check that it is running, then retry.'],
   approvalDetailFailed: ['决定摘要加载失败。下面是工具给出的原始说明；可以重试加载摘要后再决定。', 'The decision summary failed to load. The tool\'s raw reason is shown below; retry loading the summary before deciding.'],
   imageNoticeTitle: ['这里读不了图片里的数字', 'Numbers in images cannot be read here'],
   imageNotice: ['本部署的模型只读文字，且图片里的数字无法追溯到单元格。表格请通过「添加来源」导入；说明性文字可以直接粘贴。移除图片后即可发送。', 'This deployment\'s model reads text only, and numbers in an image cannot be traced to a cell. Import tables with Add sources; paste explanatory text directly. Remove the image to send.'],
@@ -224,6 +225,17 @@ export function formatTime(value: number | string | Date, language: string): str
 export function formatNumber(value: number, language: string, options?: Intl.NumberFormatOptions): string {
   return value.toLocaleString(language === 'zh' ? 'zh-CN' : 'en', options)
 }
+/**
+ * A failure as a person reads it (#110): what went wrong in their language, then the
+ * service's own words verbatim, because those name the field or rule and must not be
+ * paraphrased away. A lost connection gets an actionable sentence instead of a stack.
+ */
+export function describeError(error: unknown, t: (key: string) => string): string {
+  const detail = error instanceof Error ? error.message : String(error)
+  if (/failed to fetch|networkerror|load failed/i.test(detail)) return t('networkFailed')
+  return `${t('requestFailed')}：${detail.replace(/^Error:\s*/, '')}`
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/bridgeflow${path}`, { ...init, credentials: 'same-origin' })
   if (!response.ok) {
@@ -375,7 +387,13 @@ export function columnLabel(column: string, t: (key: string) => string): { group
  */
 export function cellText(value: unknown): { text: string; note?: string; full?: string; numeric: boolean; empty: boolean } {
   if (value == null || value === '') return { text: '—', numeric: false, empty: true }
-  if (typeof value === 'number') return { text: value.toLocaleString(undefined, { maximumFractionDigits: 4 }), numeric: true, empty: false }
+  if (typeof value === 'number') {
+    const text = value.toLocaleString(undefined, { maximumFractionDigits: 4 })
+    // Display may shorten a figure; it must never silently change it (#110). When the
+    // shown digits are not the value, say so and keep the exact value one hover away.
+    const exact = Number(value.toFixed(4)) === value
+    return exact ? { text, numeric: true, empty: false } : { text: `≈${text}`, full: String(value), numeric: true, empty: false }
+  }
   if (typeof value === 'boolean') return { text: String(value), numeric: false, empty: false }
   if (Array.isArray(value)) {
     const parts = value.map(item => cellText(item).text)
