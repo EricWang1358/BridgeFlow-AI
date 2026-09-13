@@ -52,8 +52,8 @@ class MetricSpec(BaseModel):
     role: str
     #: sum | ratio | signed_sum | change_mom | spend
     op: str = "sum"
-    #: For `signed_sum`: only rows whose account code matches this prefix count.
-    account_prefix: str = ""
+    #: For `signed_sum`: only rows whose account code the dictionary classes as this count.
+    account_class: str = ""
     #: For `change_mom`: the period to compare against, as an offset in months.
     compare_months_back: int = 1
 
@@ -129,7 +129,7 @@ CATALOGUE: tuple[MetricSpec, ...] = (
         requires=["revenue_amount"],
         role="finance",
         op="signed_sum",
-        account_prefix="sales",
+        account_class="sales",
     ),
     MetricSpec(
         name="cost_of_sales",
@@ -138,7 +138,7 @@ CATALOGUE: tuple[MetricSpec, ...] = (
         requires=["revenue_amount"],
         role="finance",
         op="signed_sum",
-        account_prefix="cost",
+        account_class="cost_of_sales",
     ),
     MetricSpec(
         name="gross_margin",
@@ -159,17 +159,6 @@ CATALOGUE: tuple[MetricSpec, ...] = (
         op="change_mom",
     ),
 )
-
-
-#: Which account-code fragments mark a line as revenue or as cost. Declared here
-#: rather than parsed out of the code string, because chart-of-accounts conventions
-#: differ per customer and the real one is still being negotiated. When the OA export
-#: lands this moves into the dictionary alongside everything else.
-ACCOUNT_MARKERS = {
-    "sales": ("sales", "rev", "销售", "收入"),
-    "cost": ("cogs", "cos", "cost", "成本"),
-}
-
 
 def dictionary_path() -> Path:
     configured = Path(settings.field_dictionary_path)
@@ -234,7 +223,25 @@ def compute(
     sources: list[SourceRef] = []
     unreadable: list[str] = []
 
+    classed = [t.department for t in tables if dictionary.account_classes.get(t.department)
+               and any(dictionary.columns_measuring(t.department, m) for m in spec.requires)]
+    if spec.name == "revenue" and classed:
+        # The declared amount column carries both sales and cost lines here, so its plain
+        # sum is a net movement. Calling that revenue is the misreading #92 is about.
+        raise MetricRefused(
+            f"{', '.join(classed)}: amount lines mix declared account classes, so their sum is a net, "
+            "not revenue. Use sales and cost_of_sales."
+        )
+
     for table in tables:
+        markers: list[str] = []
+        if spec.account_class and any(dictionary.columns_measuring(table.department, m) for m in spec.requires):
+            markers = dictionary.account_classes.get(table.department, {}).get(spec.account_class, [])
+            if not markers:
+                raise MetricRefused(
+                    f"{table.department}: the dictionary declares no account_classes.{spec.account_class}, "
+                    f"so {spec.name} cannot be told apart from other lines. Nothing is guessed from account names."
+                )
         # What this department's rows are *about*, as the dictionary declares it.
         # Both filters below read identity, and reading it off the whole row let the
         # figures themselves decide which figures to include.
@@ -248,7 +255,7 @@ def compute(
                 for index, row in enumerate(table.rows):
                     if entity and entity.lower() not in _identity_text(row, identity_columns):
                         continue
-                    if spec.account_prefix and not _account_matches(row, spec.account_prefix, identity_columns):
+                    if spec.account_class and not _account_matches(row, markers, identity_columns):
                         continue
                     raw = row.get(column)
                     if raw is None or raw == "":
@@ -327,8 +334,8 @@ def _identity_text(row: dict, columns: list[str]) -> str:
     return " ".join(str(row.get(column, "")) for column in columns).lower()
 
 
-def _account_matches(row: dict, kind: str, identity_columns: list[str]) -> bool:
-    """Whether this row's account code marks it as `kind`.
+def _account_matches(row: dict, markers: list[str], identity_columns: list[str]) -> bool:
+    """Whether this row's account code carries one of the declared markers.
 
     Sales and cost lines live in the same column and are told apart by their account
     code. Summing them together is arithmetically fine and semantically wrong: it
@@ -338,7 +345,6 @@ def _account_matches(row: dict, kind: str, identity_columns: list[str]) -> bool:
     "Cost Cutters Ltd" must not turn a sales line into a cost line, and before this
     it did — the marker was searched for anywhere in the row.
     """
-    markers = ACCOUNT_MARKERS.get(kind, ())
     text = _identity_text(row, identity_columns)
     return any(marker in text for marker in markers)
 

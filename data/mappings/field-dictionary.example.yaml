@@ -40,6 +40,15 @@ relations:
 # 真实字段还在与公司协商中。见 CLAUDE.md 第八条硬约束。
 #
 # 注意列名是 sanitizer 归一之后的形态（snake_case），不是表头原文。
+# 哪些科目算销售、哪些算销售成本，是客户的科目表决定的（#92）。标记写在这里，不写进代码；
+# 匹配只看字典声明的实体列（例如科目编码），不看客户名称等其他列。没有声明时，
+# sales / cost_of_sales / gross_margin 一律拒绝，不从科目名称猜。
+# 示例标记，不是客户确认的科目口径。
+account_classes:
+  finance:
+    sales: [sales, rev, 销售, 收入]
+    cost_of_sales: [cogs, cos, cost, 成本]
+
 measures:
   production:
     output_qty: output_quantity

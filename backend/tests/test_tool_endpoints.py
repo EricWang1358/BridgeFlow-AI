@@ -129,7 +129,7 @@ def test_evidence_is_a_bounded_sample_not_the_whole_table(client):
     from bridgeflow.api.tools import EVIDENCE_SAMPLE
 
     body = client.post(
-        "/tools/aggregate-metric", json={"metric": "revenue", "period": "2025-11"}
+        "/tools/aggregate-metric", json={"metric": "sales", "period": "2025-11"}
     ).json()
 
     assert len(body["evidence"]) <= EVIDENCE_SAMPLE

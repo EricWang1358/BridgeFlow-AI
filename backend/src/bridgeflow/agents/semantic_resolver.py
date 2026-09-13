@@ -436,6 +436,16 @@ class FieldDictionary:
             if factors:
                 self.derived[measure] = [str(f) for f in factors]
 
+        # {department: {class: [marker, ...]}}. Which account codes are sales and which
+        # are cost is the customer's chart of accounts, so the markers are declared
+        # here rather than written into code (#92). Absent means the lines cannot be
+        # told apart, and anything that needs them apart is refused.
+        self.account_classes: dict[str, dict[str, list[str]]] = {
+            str(department): {str(kind): [str(m).casefold() for m in markers] for kind, markers in classes.items()}
+            for department, classes in (raw.get("account_classes") or {}).items()
+            if isinstance(classes, dict)
+        }
+
     @property
     def is_empty(self) -> bool:
         return not self.columns and not self.relations and not self.measures

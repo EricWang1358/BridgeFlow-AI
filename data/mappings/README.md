@@ -139,9 +139,26 @@ derived:
 
 缺价的采购行：`material_spend` 整条拒绝并点名那一行，因为少算一行就是把支出报小；
 `material_price_change` 只把那一行同时移出分子与分母，比率仍然成立，公式里写明覆盖几行。
+### `account_classes` 段
+
+同一列金额里既有销售行也有成本行时，靠科目编码把它们分开。哪些编码算销售、哪些算销售成本是客户科目表决定的，
+所以标记写在字典里，代码里没有任何科目关键词（#92）：
+
+```yaml
+account_classes:
+  finance:
+    sales: [sales, rev, 销售, 收入]
+    cost_of_sales: [cogs, cos, cost, 成本]
+```
+
+- 只在字典声明的**实体列**（如科目编码）里找标记，客户名称等其他列不参与，避免「Cost Cutters Ltd」把销售行算成成本。
+- 没有声明时，`sales`、`cost_of_sales`、`gross_margin` 一律拒绝，不从名称猜。
+- 声明了分类的部门，金额列的简单合计是**净发生额**，`revenue` 指标会拒绝并提示改用 `sales` 与 `cost_of_sales`，不把净额当收入展示。
+- 示例里的标记是演示用，真实口径由业务方在 #23 确认后替换。
+
 ## 待 OA 字段到位后要做的事
 
-1. 用真实字段名填 `columns`，替换掉现在的关键词猜测
+1. 用真实字段名填 `columns`，替换掉现在的关键词猜测；用真实科目表填 `account_classes`
 2. 从物料清单和财务科目对照表导出 `relations`
 3. 跑一遍 pipeline，确认 `links accepted` 不再是 0
 4. 剩下的进 `unresolved` 的，人工确认一次，之后持久化成规则
