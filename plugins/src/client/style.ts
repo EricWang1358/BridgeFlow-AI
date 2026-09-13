@@ -219,11 +219,18 @@ export const style = `
   background: var(--bf-surface-2); color: var(--bf-muted);
   white-space: nowrap;
 }
-.bf-chip[data-status=attention], .bf-chip[data-status=partial],
-.bf-chip[data-status=needs_review], .bf-chip[data-status=unvalidated] { color: var(--bf-warn); background: var(--bf-warn-bg) }
+.bf-handoff-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px }
+.bf-handoff-head .bf-chip { width: auto; flex: none }
+.bf-handoff-draft { display: grid; gap: 10px; margin-top: 10px }
+.bf-chip[data-status=attention], .bf-chip[data-status=partial], .bf-chip[data-status=upstream_revised],
+.bf-chip[data-status=needs_review], .bf-chip[data-status=unvalidated],
+.bf-chip[data-status=needs_input], .bf-chip[data-status=ready_for_review], .bf-chip[data-status=waiting], .bf-chip[data-status=inferred],
+.bf-chip[data-status=proposed], .bf-chip[data-status=draft], .bf-chip[data-status=notice_pending], .bf-chip[data-status=notice_failed] { color: var(--bf-warn); background: var(--bf-warn-bg) }
 .bf-chip[data-status=validated], .bf-chip[data-status=ready],
-.bf-chip[data-status=ok], .bf-chip[data-status=allowed_once] { color: var(--bf-ok); background: var(--bf-ok-bg) }
-.bf-chip[data-status=rejected], .bf-chip[data-status=needs_configuration] { color: var(--bf-danger); background: var(--bf-danger-bg) }
+.bf-chip[data-status=ok], .bf-chip[data-status=allowed_once],
+.bf-chip[data-status=data_ready], .bf-chip[data-status=completed], .bf-chip[data-status=approved], .bf-chip[data-status=confirmed], .bf-chip[data-status=notice_sent] { color: var(--bf-ok); background: var(--bf-ok-bg) }
+.bf-chip[data-status=rejected], .bf-chip[data-status=needs_configuration],
+.bf-chip[data-status=submit_failed], .bf-chip[data-status=returned], .bf-chip[data-status=conflict], .bf-chip[data-status=missing], .bf-chip[data-status=notice_abandoned] { color: var(--bf-danger); background: var(--bf-danger-bg) }
 
 /* ---- tables ------------------------------------------------------------ */
 

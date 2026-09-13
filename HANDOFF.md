@@ -30,7 +30,7 @@
 三个新 Agent（流程梳理、模板辅助填报与交接、落地咨询）共用的底层已在 `backend/src/bridgeflow/workflow/`：
 声明目录、补问式填报、状态机、事件日志、发件箱通知、看板和落地信号。结构与理由见
 [`docs/25`](docs/25-workflow-foundation.md)。`python scripts/start_web.py --demo` 会加载合成的
-`data/workflow_demo/catalogue.yaml`。captain 已可通过 `workflow_*` 工具带人补问、确认并提交（写入均需审批）；界面尚未做。
+`data/workflow_demo/catalogue.yaml`。captain 已可通过 `workflow_*` 工具带人补问、确认并提交（写入均需审批）；工作室「填报与流转」只读展示看板、草稿待补项与落地信号。
 
 ## 报价路径做到哪了
 

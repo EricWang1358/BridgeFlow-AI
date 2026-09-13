@@ -106,7 +106,9 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           } catch (error) { ctx.logger.warn('Approval note persistence failed: %s', String(error)); res.writeHead(422).end(JSON.stringify({ detail: 'Could not record approval note' })) }
           return
         }
-        const read = req.method === 'GET' && (path === '/quotation/contract' || /^\/batches\/[a-f0-9]{32}(\/(view|review|artifacts|sources(?:\/(?:production|procurement|finance|marketing))?))?$/.test(path))
+        const read = req.method === 'GET' && (path === '/quotation/contract' || /^\/batches\/[a-f0-9]{32}(\/(view|review|artifacts|sources(?:\/(?:production|procurement|finance|marketing))?))?$/.test(path)
+          // Workflow views are read-only here; recording and approving go through the captain and approval.
+          || /^\/workflow\/(board|catalogue|adoption|artifacts\/[a-f0-9]{32})$/.test(path))
         const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo')
         // No generic proxy. Browser requests cannot mint approval receipts or call writes.
         if (!read && !upload) { res.writeHead(403).end('Route not authorized'); return }
