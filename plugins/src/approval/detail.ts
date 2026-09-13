@@ -53,8 +53,22 @@ export function summarise(args: unknown): ApprovalDetail[] {
   if (!args || typeof args !== 'object' || Array.isArray(args)) return []
   return Object.entries(args)
     .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .flatMap(([label, value]) => labelled(value)
+      ? value.map(item => ({
+        label: clip(`${label} · ${item.label}`, MAX_LABEL),
+        value: show(item.evidence ? `${show(item.value)} (${show(item.evidence)})` : item.value),
+      }))
+      : [{ label: clip(label, MAX_LABEL), value: show(value) }])
     .slice(0, MAX_ITEMS)
-    .map(([label, value]) => ({ label: clip(label, MAX_LABEL), value: show(value) }))
+}
+
+/**
+ * A list of `{label, value}` pairs is what a person is being asked to confirm, so it is
+ * shown item by item instead of as "3 item(s)". Still bounded by `MAX_ITEMS` overall.
+ */
+function labelled(value: unknown): value is { label: string; value: unknown; evidence?: unknown }[] {
+  return Array.isArray(value) && value.length > 0 &&
+    value.every(item => item && typeof item === 'object' && typeof (item as { label?: unknown }).label === 'string')
 }
 
 /**

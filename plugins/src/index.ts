@@ -10,6 +10,7 @@ import { aggregateMetric } from './tools/aggregate-metric.ts'
 import { confirmMapping } from './tools/confirm-mapping.ts'
 import { columnCandidates } from './tools/column-candidates.ts'
 import { confirmColumnMatch } from './tools/confirm-column-match.ts'
+import { workflowApproveSubmit, workflowBoard, workflowCatalogue, workflowDraft, workflowRecord } from './tools/workflow.ts'
 import { listMetrics } from './tools/list-metrics.ts'
 import { profileBatch } from './tools/profile-batch.ts'
 import { lookupFieldDictionary } from './tools/lookup-field-dictionary.ts'
@@ -32,6 +33,8 @@ export interface Config {
   decisionTimeoutMs: number
   approvalMode: 'native' | 'console'
   allowMappingWrite: boolean
+  /** Recording people's answers and approving drafts (#144). Reads stay available when off. */
+  allowWorkflowWrite: boolean
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -40,6 +43,7 @@ export const Config: Schema<Config> = Schema.object({
   decisionTimeoutMs: Schema.number().default(DEFAULT_ANSWERER.decisionTimeoutMs),
   approvalMode: Schema.union(['native', 'console']).default('native'),
   allowMappingWrite: Schema.boolean().default(true),
+  allowWorkflowWrite: Schema.boolean().default(true),
 })
 
 export function apply(ctx: Context, config: Config): void {
@@ -65,6 +69,13 @@ export function apply(ctx: Context, config: Config): void {
   if (config.allowMappingWrite) {
     catalogue.register(ctx, confirmMapping(backend, receipts))
     catalogue.register(ctx, confirmColumnMatch(backend, receipts))
+  }
+  catalogue.register(ctx, workflowCatalogue(backend))
+  catalogue.register(ctx, workflowDraft(backend))
+  catalogue.register(ctx, workflowBoard(backend))
+  if (config.allowWorkflowWrite) {
+    catalogue.register(ctx, workflowRecord(backend, receipts))
+    catalogue.register(ctx, workflowApproveSubmit(backend, receipts))
   }
 
   // Final deny applies even when a preset or a later policy exposes another tool.

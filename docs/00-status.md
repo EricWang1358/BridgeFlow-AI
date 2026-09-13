@@ -11,6 +11,12 @@
 
 ---
 
+## 工作流 DSH 工具层（2026-09-13，#144）
+
+新增 `workflow_catalogue` / `workflow_draft` / `workflow_board`（读）与 `workflow_record` / `workflow_approve_submit`（审批写）。
+离线回归：Python **344 passed**（新增 `test_workflow_tools.py` **5** 条），TS **39 passed**，typecheck、build、ruff 通过；
+离线 `smoke:business` 通过。真实模型调用 **0 次**，费用 **0**；真实 captain 带人填报的连续对话未验收。
+
 ## 工作流基座（2026-09-13，#143 / #144 / #145 / #147）
 
 新增 `bridgeflow/workflow/` 与 `/workflow/*`，设计见 [`25`](25-workflow-foundation.md)。离线回归：Python **339 passed**

@@ -91,9 +91,25 @@ data_ready ──answer_provided（修订）──► 版本 +1，重新复核�
 - **不猜**：无单位的数、两种解析的日期、没有自带依据的数量、互相矛盾的来源，全部变成问题。
 - **状态以真实结果为准**：没有写入回执不算就绪；通知发出不等于已读或已完成。
 
+## DSH 工具层（Agent 2 的对话入口）
+
+插件 `plugins/src/tools/workflow.ts`，主机端 `backend/src/bridgeflow/api/workflow_tools.py`：
+
+| 工具 | 类型 | 作用 |
+| --- | --- | --- |
+| `workflow_catalogue` | 读 | 已批准模板、字段（必填、单位、是否需依据）、接收阶段 |
+| `workflow_draft` | 读 | 一份草稿的状态、未解决问题、该记录的值与核对、下一步 |
+| `workflow_board` | 读 | 看板摘要，最多 30 行 |
+| `workflow_record` | 审批 | 转述对方说的话：新建草稿或回答问题。审批卡逐项列出每个值，由本人确认模型没听错 |
+| `workflow_approve_submit` | 审批 | 复核人批准当前值（按 digest 绑定）并提交；值变了即拒绝 |
+
+两条主机侧保证：模型提交的值**出处一律记为本次对话**（`reply` / `dsh-call:<调用 id>`），模型无法声称它来自某个文件；
+写入需要与请求逐字节绑定的一次性审批回执，部署时可用 `allowWorkflowWrite` 关闭写工具而保留读工具。
+captain 提示词要求逐个问 `open_questions`、只转述不代填、不跨字段抄值、不计算，只有结果为 `data_ready` 才说数据就绪。
+
 ## 还没做
 
-- DSH 工具层（给 Agent 调用的读工具与带审批的写工具）和 Web 界面。
+- Web 界面（草稿、看板、落地信号的可视化）；真实模型下的连续对话验收。
 - 图片 / OCR / 模型抽取：目前观测值由调用方提供，抽取路径需先定是否允许外发原件。
 - 飞书或公司平台的 `RecordSink` / `Notifier` 适配器（#140 当前只到上传下载）。
 - MVP 投票记录的录入界面：现在只能在声明里写 `decision_record` 出处。

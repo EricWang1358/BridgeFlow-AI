@@ -35,6 +35,7 @@
         backendUrl: http://127.0.0.1:8000
         approvalMode: native
         allowMappingWrite: true
+        allowWorkflowWrite: true
 - id: ui-cordis
   name: '@deepseek-ai/dsh-client-ui-cordis'
   disabled: true
