@@ -10,6 +10,7 @@ import * as bridgeflow from '../src/index.ts'
 import { ApprovalReceipts, mappingBody } from '../src/approval/receipts.ts'
 import { columnMatchBody } from '../src/tools/confirm-column-match.ts'
 import { approveBody, recordBody } from '../src/tools/workflow.ts'
+import { decideBody } from '../src/tools/quarantine.ts'
 import { summarise } from '../src/approval/detail.ts'
 import { ApprovalNotes } from '../src/approval/notes.ts'
 import { PendingDetails } from '../src/approval/detail.ts'
@@ -352,6 +353,7 @@ const carriers: [string, (text: string) => Record<string, unknown>][] = [
   ['lookup_field_dictionary', text => ({ department: 'finance', column: text })],
   ['confirm_column_match', text => ({ batch_id: 'a'.repeat(32), department: 'finance', column: 'x', target: 'y', accepted: true, reason: text })],
   ['workflow_record', text => ({ template: 't', said: [{ label: 'note', value: text }] })],
+  ['quarantine_decide', text => ({ batch_id: 'a'.repeat(32), department: 'production', index: 0, action: 'discard', reason: text })],
 ]
 
 test('every poisoned value is refused at real dispatch for every text-carrying tool, before Python is contacted', async (t) => {
@@ -384,4 +386,23 @@ test('ordinary business text is not refused by the injection guard', async (t) =
       assert.doesNotMatch(JSON.stringify(result.content), /instruction-shaped/, `refused ordinary text: ${text}`)
     }
   } finally { await ctx.fiber.dispose() }
+})
+
+test('quarantine decisions are approval-gated, bound to their row, and read-only deployments keep only the listing', async () => {
+  const readOnly = await runtime(false)
+  const names = readOnly.tools.schemas().map(tool => tool.name)
+  assert(names.includes('quarantine_list') && !names.includes('quarantine_decide') && !names.includes('quarantine_apply'))
+  await readOnly.fiber.dispose()
+  const base = { batch_id: 'b', department: 'production', index: 1, action: 'release', reason: 'r', fixes: [{ label: 'date', value: '2025-11-03' }] }
+  const approved = JSON.stringify(decideBody(base, 'agent', 'call'))
+  for (const change of [{ index: 2 }, { action: 'discard' }, { fixes: [{ label: 'date', value: '2025-11-04' }] }]) {
+    assert.notEqual(JSON.stringify(decideBody({ ...base, ...change }, 'agent', 'call')), approved)
+  }
+  assert.deepEqual(decideBody(base, 'agent', 'call').fixes, [{ column: 'date', value: '2025-11-03' }])
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  const denied = await ctx.tools.execute(execution('quarantine_apply', { batch_id: 'b' }))
+  assert.equal(denied.isError, true)
+  assert.match(JSON.stringify(denied.content), /No current approval/)
+  await ctx.fiber.dispose()
 })

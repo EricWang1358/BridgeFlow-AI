@@ -10,6 +10,7 @@ import { aggregateMetric } from './tools/aggregate-metric.ts'
 import { confirmMapping } from './tools/confirm-mapping.ts'
 import { columnCandidates } from './tools/column-candidates.ts'
 import { confirmColumnMatch } from './tools/confirm-column-match.ts'
+import { quarantineApply, quarantineDecide, quarantineList } from './tools/quarantine.ts'
 import { workflowApproveSubmit, workflowBoard, workflowCatalogue, workflowDraft, workflowRecord } from './tools/workflow.ts'
 import { listMetrics } from './tools/list-metrics.ts'
 import { profileBatch } from './tools/profile-batch.ts'
@@ -69,7 +70,10 @@ export function apply(ctx: Context, config: Config): void {
   if (config.allowMappingWrite) {
     catalogue.register(ctx, confirmMapping(backend, receipts))
     catalogue.register(ctx, confirmColumnMatch(backend, receipts))
+    catalogue.register(ctx, quarantineDecide(backend, receipts))
+    catalogue.register(ctx, quarantineApply(backend, receipts))
   }
+  catalogue.register(ctx, quarantineList(backend))
   catalogue.register(ctx, workflowCatalogue(backend))
   catalogue.register(ctx, workflowDraft(backend))
   catalogue.register(ctx, workflowBoard(backend))

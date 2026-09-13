@@ -57,6 +57,9 @@ const labels = {
   approval_workflow_approve_submit: ['复核提交审批', 'Review and submit approval'], approvalTitle_workflow_approve_submit: ['批准这些值并提交到目标系统', 'Approve these values and submit them'],
   routeParentUnavailable: ['链接指向的队长会话不存在或已不可用，已停留在当前页面。', 'The linked captain session does not exist or is unavailable; you stayed on the current page.'],
   routeChildUnavailable: ['链接指向的部门子会话不存在或不属于该队长会话，已停留在当前页面。', 'The linked department session does not exist or does not belong to that captain session; you stayed on the current page.'],
+  approval_quarantine_decide: ['隔离行处置审批', 'Quarantine decision approval'], approvalTitle_quarantine_decide: ['确认这一隔离行放行或丢弃', 'Confirm releasing or discarding this quarantined row'],
+  approval_quarantine_apply: ['隔离处置应用审批', 'Apply quarantine decisions'], approvalTitle_quarantine_apply: ['按已记录的决定生成新批次（原批次不变）', 'Create a new batch from the recorded decisions (this batch stays unchanged)'],
+  quarantine_list: ['隔离行清单', 'Quarantined rows'], quarantine_decide: ['隔离行处置', 'Quarantine decision'], quarantine_apply: ['应用隔离处置', 'Apply quarantine decisions'],
   approvalDetailFailed: ['决定摘要加载失败。下面是工具给出的原始说明；可以重试加载摘要后再决定。', 'The decision summary failed to load. The tool\'s raw reason is shown below; retry loading the summary before deciding.'],
   imageNoticeTitle: ['这里读不了图片里的数字', 'Numbers in images cannot be read here'],
   imageNotice: ['本部署的模型只读文字，且图片里的数字无法追溯到单元格。表格请通过「添加来源」导入；说明性文字可以直接粘贴。移除图片后即可发送。', 'This deployment\'s model reads text only, and numbers in an image cannot be traced to a cell. Import tables with Add sources; paste explanatory text directly. Remove the image to send.'],
@@ -118,7 +121,7 @@ const labels = {
   noRows: ['此视图暂无记录。检查其他视图，或修正源文件后导入新批次。', 'No records here. Check another view or correct the source and import a new batch.'],
   noReport: ['此批次尚无研判报告。复制研判请求到会话，完成后刷新。', 'No report yet. Copy a review request into the conversation, then refresh.'], refresh: ['刷新', 'Refresh'],
   mappingHelp: ['通过 confirm_mapping 和原生审批确认关系；决定用于后续导入，旧批次不改。', 'Use confirm_mapping and native approval. Decisions apply to later imports; old batches remain unchanged.'],
-  quarantineHelp: ['隔离行未进入计算。修正源表后重新导入，不自动放行。', 'Quarantined rows are excluded. Correct the source and import again; no automatic release.'],
+  quarantineHelp: ['隔离行未进入计算，也不会自动放行。可以请队长逐行处置：放行必须通过重新校验（可附上你确认的更正值），丢弃需写明理由；应用后生成新批次，本批次及其报告保持不变。也可以修正源表后重新导入。', 'Quarantined rows are excluded and never released automatically. Ask the captain to decide each row: release must pass revalidation (with any corrected cells you confirm), discard needs a reason; applying creates a new batch and leaves this batch and its reports unchanged. You can also correct the source and import again.'], derivedFrom: ['由批次派生（已应用隔离处置）', 'Derived from batch (quarantine decisions applied)'],
   evidenceHint: ['引用 N 次不等于 N 个不同单元格；展示封顶不等于只算样本。', 'N references do not mean N distinct cells. Capped display does not mean sampled arithmetic.'],
   reportRegion: ['四部门研判报告', 'Four-department review report'], roleReview: ['研判', ' review'], responsibility: ['职责', 'Responsibility'], owner: ['决策负责人', 'Decision owner'],
   operations_director: ['运营负责人', 'Operations director'], procurement_manager: ['采购负责人', 'Procurement manager'], finance_controller: ['财务负责人', 'Finance controller'], sales_director: ['销售负责人', 'Sales director'],
@@ -270,7 +273,8 @@ export type Summary = { demo_case?: string | null; batch_id: string; period: str
   /** `department.column → declared column`, applied from remembered human decisions. */
   matched_columns?: string[]
   stale_matches?: string[]
-  column_questions?: number }
+  column_questions?: number
+  derived_from?: string | null }
 
 let runtime: { sessions: ISessions; conversation: Context['conversation'] }
 export function configureRuntime(ctx: Context) { runtime = ctx as unknown as typeof runtime; configureLocale(ctx.locale) }

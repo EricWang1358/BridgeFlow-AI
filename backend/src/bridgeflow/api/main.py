@@ -11,6 +11,7 @@ from bridgeflow import __version__, store
 from bridgeflow.api.approvals import router as approvals_router
 from bridgeflow.api.batches import router as batches_router
 from bridgeflow.api.documents import router as documents_router
+from bridgeflow.api.quarantine_tools import router as quarantine_tools_router
 from bridgeflow.api.reviews import router as reviews_router
 from bridgeflow.api.tools import router as tools_router
 from bridgeflow.api.workflow import router as workflow_router
@@ -41,6 +42,7 @@ app.include_router(documents_router, dependencies=[Depends(require_host)])
 app.include_router(approvals_router, dependencies=[Depends(require_host)])
 app.include_router(workflow_router, dependencies=[Depends(require_host)])
 app.include_router(workflow_tools_router, dependencies=[Depends(require_host)])
+app.include_router(quarantine_tools_router, dependencies=[Depends(require_host)])
 
 orchestrator = Orchestrator()
 

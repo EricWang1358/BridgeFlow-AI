@@ -200,6 +200,7 @@ export function DataWorkspace() {
           <h3>{t('staleMatches')}</h3><p className="bf-mono">{batch.stale_matches.join(' · ')}</p>
         </div>}
 
+        {batch.derived_from && <p className="bf-hint">{t('derivedFrom')}: <code className="bf-mono">{batch.derived_from}</code></p>}
         <div className="bf-stats">{batch.departments.map(d => <div className="bf-stat" key={d.department}>
           <b>{d.rows}</b><span>{t(d.department)} · {d.corrections} {t('corrections')} / {d.quarantined} {t('quarantine')}</span>
         </div>)}</div>

@@ -44,6 +44,9 @@ class BatchSnapshot(PipelineResult):
     column_matches: list[AppliedMatch] = Field(default_factory=list)
     #: Decisions not applied because the uploaded column's shape changed.
     stale_matches: list[str] = Field(default_factory=list)
+    #: The frozen batch this one was derived from by applying quarantine decisions (#88).
+    derived_from: str | None = None
+    dispositions: list[dict] = Field(default_factory=list)
 
 
 def load_batch(batch_id: str) -> BatchSnapshot:
@@ -97,6 +100,7 @@ class BatchSummary(BaseModel):
     #: Uploaded columns the dictionary does not know that might be a declared column
     #: this department is missing. Non-zero means the captain has something to propose.
     column_questions: int = 0
+    derived_from: str | None = None
 
 
 def _declared_entities(snapshot: dict | None) -> dict[str, list[str]]:
@@ -134,6 +138,7 @@ def summary(batch_id: str, result: BatchSnapshot) -> BatchSummary:
         matched_columns=[f"{m.department}.{m.column} → {m.target}" for m in result.column_matches],
         stale_matches=result.stale_matches,
         column_questions=column_matches.count_questions(result.dictionary_snapshot, result.clean_tables),
+        derived_from=result.derived_from,
     )
 
 
@@ -184,6 +189,10 @@ async def _import_batch(period: str, departments: list[Department], files: list[
         if not isinstance(dictionary_raw, dict):
             raise TypeError("Dictionary root must be a mapping")
         dictionary = FieldDictionary(dictionary_raw)
+        # How each department writes a slashed date is the dictionary owner's declaration (#79).
+        date_orders = dictionary_raw.get("date_order") or {}
+        if not isinstance(date_orders, dict) or not set(date_orders.values()) <= {"day_first", "month_first"}:
+            raise ValueError("date_order must map departments to day_first or month_first")
     except (yaml.YAMLError, OSError, UnicodeError, ValueError, TypeError, AttributeError, KeyError) as exc:
         raise HTTPException(503, "Field dictionary configuration is invalid; ask the administrator to correct it before importing") from exc
     tables = []
@@ -225,7 +234,7 @@ async def _import_batch(period: str, departments: list[Department], files: list[
         sources.append({"id": department, "filename": filename, "sheet": sheet,
                         "sha256": hashlib.sha256(payload).hexdigest(), "bytes": len(payload),
                         "columns": parsed["columns"], "rows": parsed["data"]})
-        table = await DataSanitizerAgent().run(SanitizerInput(department, period, frame))
+        table = await DataSanitizerAgent().run(SanitizerInput(department, period, frame, date_orders.get(department)))
         table.filename, table.sheet, table.batch = filename, sheet, batch_id
         for correction in table.corrections:
             correction.source.filename = filename
@@ -238,17 +247,7 @@ async def _import_batch(period: str, departments: list[Department], files: list[
         # Before anything reads the tables: a remembered match makes this upload look
         # the way the dictionary already describes it. Frozen batches are never redone.
         result.column_matches, result.stale_matches = column_matches.apply(tables, dictionary_raw)
-    if dictionary.is_empty:
-        result.refusal = "Field dictionary is not configured; declare fields and import a new batch"
-    else:
-        result.graph = await SemanticResolverAgent().run(tables, adjudicate=False, dictionary=dictionary)
-        try:
-            assembled = await SOPFlowEngine().run(
-                SOPInput(period=period, tables=tables, graph=result.graph), dictionary=dictionary,
-            )
-            result.master_table = assembled.master_table
-        except (UnjoinableTables, MissingRollup) as exc:
-            result.refusal = str(exc)
+    await assemble(result, dictionary)
     result.demo_case = demo_case
     result.dictionary_source = str(path.relative_to(REPO_ROOT)) if path.is_relative_to(REPO_ROOT) else str(path)
     manifest = [{key: source[key] for key in ("id", "filename", "sheet", "sha256", "bytes")}
@@ -258,6 +257,22 @@ async def _import_batch(period: str, departments: list[Department], files: list[
         _write(batch_path(batch_id).parent / "sources" / batch_id / f"{source['id']}.json", source)
     _write(batch_path(batch_id), result.model_dump(mode="json"))
     return summary(batch_id, result)
+
+
+async def assemble(result: BatchSnapshot, dictionary: FieldDictionary) -> None:
+    """Resolve entities and build the master table from cleaned tables, or record why not."""
+    result.refusal = ""
+    if dictionary.is_empty:
+        result.refusal = "Field dictionary is not configured; declare fields and import a new batch"
+        return
+    result.graph = await SemanticResolverAgent().run(result.clean_tables, adjudicate=False, dictionary=dictionary)
+    try:
+        assembled = await SOPFlowEngine().run(
+            SOPInput(period=result.period, tables=result.clean_tables, graph=result.graph), dictionary=dictionary,
+        )
+        result.master_table = assembled.master_table
+    except (UnjoinableTables, MissingRollup) as exc:
+        result.refusal = str(exc)
 
 
 @router.get("/{batch_id}", response_model=BatchSummary)
@@ -278,8 +293,11 @@ async def view(
     elif section == "corrections":
         rows = [c.model_dump() for t in result.clean_tables for c in t.corrections]
     elif section == "quarantine":
-        rows = [{"department": t.department, "values": row}
-                for t in result.clean_tables for row in t.quarantine]
+        from bridgeflow import quarantine as dispositions
+        decided = dispositions.decisions_by_row(batch_id)
+        rows = [{"department": t.department, "index": index, "values": row,
+                 "decision": decided.get((t.department, index), {}).get("action", "")}
+                for t in result.clean_tables for index, row in enumerate(t.quarantine)]
     else:
         raise HTTPException(422, "Unknown batch view")
     return {"batch_id": batch_id, "total": len(rows), "offset": offset,
