@@ -14,6 +14,7 @@ from bridgeflow.api.documents import router as documents_router
 from bridgeflow.api.reviews import router as reviews_router
 from bridgeflow.api.tools import router as tools_router
 from bridgeflow.api.workflow import router as workflow_router
+from bridgeflow.api.workflow_tools import router as workflow_tools_router
 from bridgeflow.config import settings
 from bridgeflow.pipeline import Orchestrator
 from bridgeflow.schemas import Department, PipelineResult, QuoteRecommendation, QuoteRequest
@@ -39,6 +40,7 @@ app.include_router(documents_router, dependencies=[Depends(require_host)])
 # — correct for an unattended run, and not a human in the loop.
 app.include_router(approvals_router, dependencies=[Depends(require_host)])
 app.include_router(workflow_router, dependencies=[Depends(require_host)])
+app.include_router(workflow_tools_router, dependencies=[Depends(require_host)])
 
 orchestrator = Orchestrator()
 

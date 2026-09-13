@@ -152,7 +152,7 @@ const labels = {
   columnsFrom: ['来自', 'from'],
   moreValues: ['项', 'values'],
 
-  aggregate_metric: ['可追溯指标', 'Traceable metric'], confirm_mapping: ['映射决定', 'Mapping decision'], column_candidates: ['列匹配候选', 'Column match candidates'], confirm_column_match: ['列匹配决定', 'Column match decision'], batch_summary: ['批次检查', 'Batch summary'], list_metrics: ['可用指标', 'Metric catalogue'], lookup_field_dictionary: ['字段口径', 'Field dictionary'], review_context: ['队长派活准备', 'Captain dispatch preparation'], review_finalize: ['队长汇总', 'Captain finalization'],
+  aggregate_metric: ['可追溯指标', 'Traceable metric'], confirm_mapping: ['映射决定', 'Mapping decision'], column_candidates: ['列匹配候选', 'Column match candidates'], confirm_column_match: ['列匹配决定', 'Column match decision'], workflow_catalogue: ['模板目录', 'Template catalogue'], workflow_draft: ['填报草稿', 'Draft record'], workflow_board: ['流转看板', 'Handoff board'], workflow_record: ['记录填报内容', 'Record answers'], workflow_approve_submit: ['复核并提交', 'Approve and submit'], batch_summary: ['批次检查', 'Batch summary'], list_metrics: ['可用指标', 'Metric catalogue'], lookup_field_dictionary: ['字段口径', 'Field dictionary'], review_context: ['队长派活准备', 'Captain dispatch preparation'], review_finalize: ['队长汇总', 'Captain finalization'],
 
   // --- approval body: business semantics, not button labels (#110) ---------------
   // The prose mirrors askReason in ../approval/gate.ts; the reason string stays in

@@ -1,0 +1,246 @@
+import { withAccess, type ProductTool } from '../tool-catalogue.ts'
+import { defineTool } from '@deepseek-ai/dsh-tools'
+
+import { callBackend, type BackendConfig } from '../backend.ts'
+import type { ApprovalReceipts } from '../approval/receipts.ts'
+
+/**
+ * Tools for helping a person turn what they have into an approved standard record (#144).
+ *
+ * The captain's job here is a conversation, not a calculation: read which questions a
+ * draft still has, ask the person, relay their answers, show them the result and let
+ * them approve it. Everything that decides — normalisation, conflicts, required
+ * evidence, state, submission, who downstream is told — happens on the host
+ * (`backend/src/bridgeflow/workflow/`, `docs/25`).
+ *
+ * Two writes, both approval-gated, because both put words in the record:
+ *
+ * - `workflow_record` relays what the person said. The approval card lists each value,
+ *   so the person confirms the model heard them right. The host records the source
+ *   as this conversation whatever the model claims.
+ * - `workflow_approve_submit` is the reviewer's decision on exact values, bound by
+ *   digest; if the values changed since they were shown, it is refused.
+ */
+
+/** Draft as the host shapes it for a model: state, open questions, one record's values. */
+export interface WorkflowDraft {
+  artifact_id: string
+  template: string
+  title: string
+  department: string
+  state: string
+  version: number
+  seq: number
+  digest: string
+  values: Record<string, string>
+  open_questions: { kind: string; field: string; question: string; why: string; candidates: { value: string; from: string }[] }[]
+  notices: string[]
+  checks: { title: string; value: string; unit: string; attention: boolean }[]
+  /** Present once the target system accepted the record. */
+  receipt?: Record<string, string | boolean>
+  next_step: string
+}
+
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
+
+const draftSchema = {
+  type: 'object',
+  properties: {
+    artifact_id: { type: 'string', required: true },
+    template: { type: 'string' }, title: { type: 'string' }, department: { type: 'string' },
+    state: { type: 'string', required: true },
+    version: { type: 'number' }, seq: { type: 'number', required: true }, digest: { type: 'string', required: true },
+    values: { type: 'object', additionalProperties: true },
+    open_questions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          kind: { type: 'string' }, field: { type: 'string' }, question: { type: 'string' }, why: { type: 'string' },
+          candidates: {
+            type: 'array',
+            items: { type: 'object', properties: { value: { type: 'string' }, from: { type: 'string' } }, additionalProperties: false },
+          },
+        },
+        additionalProperties: false,
+      },
+    },
+    notices: { type: 'array', items: { type: 'string' } },
+    checks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { title: { type: 'string' }, value: { type: 'string' }, unit: { type: 'string' }, attention: { type: 'boolean' } },
+        additionalProperties: false,
+      },
+    },
+    receipt: { type: 'object', additionalProperties: true },
+    next_step: { type: 'string' },
+  },
+  additionalProperties: false,
+} as const
+
+/** What rendering reads; structural so it accepts the schema-inferred value. */
+interface DraftText {
+  department?: string; title?: string; version?: number; state?: string; next_step?: string
+  open_questions?: { field?: string; kind?: string; question?: string; why?: string }[]
+  checks?: { title?: string; value?: string; unit?: string; attention?: boolean }[]
+}
+
+function renderDraft(value: DraftText) {
+  const questions = value.open_questions ?? []
+  const checks = (value.checks ?? []).filter(c => c.attention).map(c => `${c.title} ${c.value}${c.unit}`)
+  return [{
+    type: 'text' as const,
+    text:
+      `${value.department ?? ''}「${value.title ?? ''}」v${value.version ?? 1}: ${value.state}. ` +
+      (questions.length
+        ? `Open questions: ${questions.map(q => `${q.field || q.kind} — ${q.question || q.why}`).join('; ')}. `
+        : 'No open questions. ') +
+      (checks.length ? `Needs attention: ${checks.join('; ')}. ` : '') +
+      (value.next_step ?? ''),
+  }]
+}
+
+const saidParameter = {
+  type: 'array',
+  required: true,
+  description: 'Exactly what the person said, one field per item. Never a value you inferred or computed.',
+  items: {
+    type: 'object',
+    properties: {
+      label: { type: 'string', required: true, description: 'The field label or the wording the person used' },
+      value: { type: 'string', required: true, description: 'The value as the person gave it, units included' },
+      evidence: { type: 'string', description: 'A reference the person gave for this value, if any' },
+    },
+    additionalProperties: false,
+  },
+} as const
+
+type Said = { label: string; value: string; evidence: string }
+
+function said(value: unknown): Said[] {
+  return (Array.isArray(value) ? value : []).map((item: Record<string, unknown>) => ({
+    label: String(item?.label ?? ''), value: String(item?.value ?? ''), evidence: String(item?.evidence ?? ''),
+  }))
+}
+
+/** Identical bodies at approval and dispatch; changing one value invalidates the receipt. */
+export function recordBody(args: Record<string, unknown>, agentId: string, callId: string | undefined) {
+  return args.artifact_id
+    ? { artifact_id: args.artifact_id, expected_seq: args.expected_seq, said: said(args.said), confirmed_by: agentId, call_id: callId ?? null }
+    : { template: args.template, said: said(args.said), confirmed_by: agentId, call_id: callId ?? null }
+}
+
+export function approveBody(args: Record<string, unknown>, agentId: string, callId: string | undefined) {
+  return { artifact_id: args.artifact_id, digest: args.digest, expected_seq: args.expected_seq, confirmed_by: agentId, call_id: callId ?? null }
+}
+
+export function workflowCatalogue(config: BackendConfig): ProductTool {
+  return withAccess(defineTool({
+    name: 'workflow_catalogue',
+    description:
+      'List the approved templates people fill in, their fields (label, required, unit, whether evidence is needed) ' +
+      'and the stages that receive them. Use it to know which template applies before recording anything. ' +
+      'Only templates with status approved accept data.',
+    parameters: {},
+    output: {
+      schema: { type: 'object', additionalProperties: true },
+      render: (_args, value) => [{
+        type: 'text',
+        text: `Templates: ${((value as { templates?: { template: string; title: string; status: string }[] }).templates ?? [])
+          .map(t => `${t.template} (${t.title}, ${t.status})`).join('; ')}`,
+      }],
+    },
+    async execute(_args, exec) {
+      return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-catalogue', {}, exec.signal)
+    },
+  }), { kind: 'read' })
+}
+
+export function workflowDraft(config: BackendConfig): ProductTool {
+  return withAccess(defineTool({
+    name: 'workflow_draft',
+    description: 'Read one draft: its state, the questions still open, its values and checks, and the next step.',
+    parameters: { artifact_id: { type: 'string', required: true, description: 'Draft id from workflow_record' } },
+    output: { schema: draftSchema, render: (_args, value) => renderDraft(value) },
+    async execute(args, exec) {
+      return callBackend<WorkflowDraft>(config, '/tools/workflow-draft', { artifact_id: args.artifact_id }, exec.signal)
+    },
+  }), { kind: 'read' })
+}
+
+export function workflowBoard(config: BackendConfig): ProductTool {
+  return withAccess(defineTool({
+    name: 'workflow_board',
+    description:
+      'Status summaries: what each department has submitted, what is ready, who it waits on, and whether ' +
+      'downstream was notified. Received is not ready, ready is not notified, notified is not done.',
+    parameters: {},
+    output: {
+      schema: { type: 'object', additionalProperties: true },
+      render: (_args, value) => {
+        const board = value as { rows?: { summary: string }[]; truncated?: boolean }
+        return [{ type: 'text', text: (board.rows ?? []).map(r => r.summary).join(' | ') || 'Nothing recorded yet.' }]
+      },
+    },
+    async execute(_args, exec) {
+      return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-board', {}, exec.signal)
+    },
+  }), { kind: 'read' })
+}
+
+export function workflowRecord(config: BackendConfig, receipts: ApprovalReceipts): ProductTool {
+  return withAccess(defineTool({
+    name: 'workflow_record',
+    description:
+      'Record what the person told you. Without artifact_id it starts a draft for `template`; with artifact_id ' +
+      'it answers that draft\'s open questions (pass expected_seq from the draft you read). ' +
+      'Relay their words only — never a value you guessed, copied from another field, or calculated. ' +
+      'The person confirms each value in the approval. Returns the updated draft and its open questions.',
+    parameters: {
+      template: { type: 'string', description: 'Template to start a draft for (from workflow_catalogue)' },
+      artifact_id: { type: 'string', description: 'Existing draft to answer' },
+      expected_seq: { type: 'number', description: 'seq of the draft you last read; required with artifact_id' },
+      said: saidParameter,
+    },
+    output: { schema: draftSchema, render: (_args, value) => renderDraft(value) },
+    async execute(args, exec) {
+      const path = args.artifact_id ? '/tools/workflow-answer' : '/tools/workflow-receive'
+      return callBackend<WorkflowDraft>(
+        config, path, recordBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec.signal,
+        receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+    },
+  }), {
+    kind: 'approval',
+    reason: 'Record these values as what the person said. Check each one; nothing is written without approval.',
+    denialEffect: 'Nothing was recorded. Ask the person to restate the values; do NOT claim they were saved',
+    body: recordBody,
+  })
+}
+
+export function workflowApproveSubmit(config: BackendConfig, receipts: ApprovalReceipts): ProductTool {
+  return withAccess(defineTool({
+    name: 'workflow_approve_submit',
+    description:
+      'The reviewer approves the draft\'s current values (identified by digest) and they are submitted to the ' +
+      'target system. Only call after showing the person the values and checks from workflow_draft. ' +
+      'If the values changed since, this is refused; read the draft again.',
+    parameters: {
+      artifact_id: { type: 'string', required: true, description: 'Draft to approve' },
+      digest: { type: 'string', required: true, description: 'digest from the draft that was shown' },
+      expected_seq: { type: 'number', required: true, description: 'seq from the draft that was shown' },
+    },
+    output: { schema: draftSchema, render: (_args, value) => renderDraft(value) },
+    async execute(args, exec) {
+      return callBackend<WorkflowDraft>(
+        config, '/tools/workflow-approve-submit', approveBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId),
+        exec.signal, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+    },
+  }), {
+    kind: 'approval',
+    reason: 'Approve these exact values and submit them to the target system.',
+    denialEffect: 'Nothing was approved or submitted; the draft is unchanged. Do NOT tell anyone the data is ready',
+    body: approveBody,
+  })
+}

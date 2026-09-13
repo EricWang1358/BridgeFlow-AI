@@ -8,17 +8,19 @@ import ToolRuntime, { defineTool } from '@deepseek-ai/dsh-tools'
 import * as bridgeflow from '../src/index.ts'
 import { ApprovalReceipts, mappingBody } from '../src/approval/receipts.ts'
 import { columnMatchBody } from '../src/tools/confirm-column-match.ts'
+import { approveBody, recordBody } from '../src/tools/workflow.ts'
+import { summarise } from '../src/approval/detail.ts'
 import { ApprovalNotes } from '../src/approval/notes.ts'
 import { PendingDetails } from '../src/approval/detail.ts'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 
-async function runtime(allowMappingWrite = true) {
+async function runtime(allowMappingWrite = true, allowWorkflowWrite = allowMappingWrite) {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
   await ctx.plugin(ToolRuntime)
   await ctx.plugin(bridgeflow, {
     backendUrl: 'http://127.0.0.1:1', backendTimeoutMs: 100,
-    decisionTimeoutMs: 100, approvalMode: 'native', allowMappingWrite,
+    decisionTimeoutMs: 100, approvalMode: 'native', allowMappingWrite, allowWorkflowWrite,
   })
   return ctx
 }
@@ -201,4 +203,38 @@ test('column match receipt binds batch, column, target and decision', () => {
   for (const change of [{ target: 'y' }, { accepted: false }, { column: 'z' }, { batch_id: 'c' }]) {
     assert.notEqual(JSON.stringify(columnMatchBody({ ...base, ...change }, 'agent-1', 'call-1')), approved)
   }
+})
+
+test('workflow reads stay available when workflow writes are switched off', async () => {
+  const ctx = await runtime(true, false)
+  const names = ctx.tools.schemas().map(tool => tool.name)
+  for (const name of ['workflow_catalogue', 'workflow_draft', 'workflow_board']) assert(names.includes(name))
+  assert(!names.includes('workflow_record') && !names.includes('workflow_approve_submit'))
+  await ctx.fiber.dispose()
+})
+
+test('recording answers cannot be written without a current approval', async () => {
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  const result = await ctx.tools.execute(execution('workflow_record', {
+    template: 't', said: [{ label: 'a', value: '1' }],
+  }))
+  assert.equal(result.isError, true)
+  assert.match(JSON.stringify(result.content), /No current approval/)
+  await ctx.fiber.dispose()
+})
+
+test('workflow receipts bind every value the person confirms and the digest reviewed', () => {
+  const base = { artifact_id: 'a'.repeat(32), expected_seq: 3, said: [{ label: 'x', value: '1', evidence: 'D-1' }] }
+  const approved = JSON.stringify(recordBody(base, 'agent', 'call'))
+  for (const change of [{ said: [{ label: 'x', value: '2', evidence: 'D-1' }] }, { said: [{ label: 'x', value: '1', evidence: '' }] }, { expected_seq: 4 }]) {
+    assert.notEqual(JSON.stringify(recordBody({ ...base, ...change }, 'agent', 'call')), approved)
+  }
+  const review = { artifact_id: 'a'.repeat(32), digest: 'd'.repeat(64), expected_seq: 3 }
+  assert.notEqual(JSON.stringify(approveBody({ ...review, digest: 'e'.repeat(64) }, 'agent', 'call')), JSON.stringify(approveBody(review, 'agent', 'call')))
+})
+
+test('the approval card lists each relayed value instead of an item count', () => {
+  const detail = summarise({ template: 't', said: [{ label: 'qty', value: '97.5 m3', evidence: 'D-1' }, { label: 'site', value: 'A' }] })
+  assert.deepEqual(detail.slice(1), [{ label: 'said · qty', value: '97.5 m3 (D-1)' }, { label: 'said · site', value: 'A' }])
 })
