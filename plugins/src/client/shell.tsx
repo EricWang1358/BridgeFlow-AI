@@ -2,7 +2,7 @@ import { notebookKinds, notebookPurposes, isNotebookKind } from '../notebook-cap
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
-import { api, formatDateTime, navigate, route, startReview, useUI, type Summary } from './ui.ts'
+import { api, formatDateTime, navigate, route, startReview, takeRouteError, useUI, type Summary } from './ui.ts'
 import { ImportForm, Chip } from './workspace.tsx'
 import { Quotation } from './quotation.tsx'
 import { Handoff } from './handoff.tsx'
@@ -157,7 +157,27 @@ function Shell({ ctx }: { ctx: Context }) {
   </>
 }
 
+/**
+ * A session link that cannot be opened fails visibly (#40), wherever the page is. It is
+ * its own overlay so no pane, tab or dialog state can hide or clear it.
+ */
+function RouteNotice() {
+  const { t } = useUI()
+  const [key, setKey] = useState('')
+  useEffect(() => {
+    const show = () => { const next = takeRouteError(); if (next) setKey(next) }
+    window.addEventListener('bridgeflow:route-error', show)
+    show()
+    return () => window.removeEventListener('bridgeflow:route-error', show)
+  }, [])
+  if (!key) return null
+  return <div className="bf-state bf-route-notice bf-callout" data-tone="danger" role="alert">
+    <p>{t(key)}</p><button onClick={() => setKey('')}>{t('close')}</button>
+  </div>
+}
+
 export function mountShell(ctx: Context) {
+  ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'bridgeflow-route-notice' }, RouteNotice))
   ctx.effect(() => { const tag = document.createElement('style'); tag.textContent = shellStyle; document.head.append(tag); document.body.setAttribute('data-bf-notebook', ''); return () => { tag.remove(); document.body.removeAttribute('data-bf-notebook') } }, 'bridgeflow: notebook skin')
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'bridgeflow-notebook' }, () => <Shell ctx={ctx}/>))
 }

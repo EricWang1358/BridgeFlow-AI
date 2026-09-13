@@ -55,6 +55,8 @@ const labels = {
   approval_confirm_column_match: ['列匹配审批', 'Column match approval'], approvalTitle_confirm_column_match: ['确认上传列对应的已声明字段', 'Confirm which declared column this upload column is'],
   approval_workflow_record: ['填报内容确认', 'Confirm recorded answers'], approvalTitle_workflow_record: ['确认这些值就是你说的', 'Confirm these values are what you said'],
   approval_workflow_approve_submit: ['复核提交审批', 'Review and submit approval'], approvalTitle_workflow_approve_submit: ['批准这些值并提交到目标系统', 'Approve these values and submit them'],
+  routeParentUnavailable: ['链接指向的队长会话不存在或已不可用，已停留在当前页面。', 'The linked captain session does not exist or is unavailable; you stayed on the current page.'],
+  routeChildUnavailable: ['链接指向的部门子会话不存在或不属于该队长会话，已停留在当前页面。', 'The linked department session does not exist or does not belong to that captain session; you stayed on the current page.'],
   approvalDetailFailed: ['决定摘要加载失败。下面是工具给出的原始说明；可以重试加载摘要后再决定。', 'The decision summary failed to load. The tool\'s raw reason is shown below; retry loading the summary before deciding.'],
   imageNoticeTitle: ['这里读不了图片里的数字', 'Numbers in images cannot be read here'],
   imageNotice: ['本部署的模型只读文字，且图片里的数字无法追溯到单元格。表格请通过「添加来源」导入；说明性文字可以直接粘贴。移除图片后即可发送。', 'This deployment\'s model reads text only, and numbers in an image cannot be traced to a cell. Import tables with Add sources; paste explanatory text directly. Remove the image to send.'],
@@ -227,6 +229,10 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   }
   return response.json() as Promise<T>
 }
+/** The last session-link failure, kept until the shell shows it (it may mount after the failure). */
+let routeError = ''
+export function reportRouteError(key: string) { routeError = key; window.dispatchEvent(new CustomEvent('bridgeflow:route-error', { detail: key })) }
+export function takeRouteError() { const key = routeError; routeError = ''; return key }
 export type Route = { kind?: string; source?: string; batch?: string; view?: string; report?: string; parent?: string; child?: string }
 export function route(): Route { return location.hash.startsWith('#bridgeflow?') ? Object.fromEntries(new URLSearchParams(location.hash.slice(12))) : {} }
 export function navigate(value: Route) {
@@ -275,7 +281,12 @@ export async function openSession(parent: string, child?: string) {
     const entry = runtime.sessions.list.getSnapshot().subagentsByParent[parent as SessionId]?.entries.find((e: SubagentListEntry) => e.kind === 'child' && e.id === child)
     if (!entry || entry.kind !== 'child') throw new Error('Child is absent from the native parent catalogue')
     runtime.sessions.openSubagent({ parentSessionId: parent as SessionId, childSessionId: child as SessionId, mode: entry.mode })
-  } else runtime.sessions.open(parent as SessionId)
+  } else {
+    // Opening an id nobody has would otherwise do nothing, silently (#40).
+    const known = runtime.sessions.list.getSnapshot().byId[parent as SessionId] ?? runtime.sessions.binding(parent as SessionId)
+    if (!known) throw new Error('Parent is absent from the native session catalogue')
+    runtime.sessions.open(parent as SessionId)
+  }
 }
 /**
  * Start the review from the panel the batch is already open in.

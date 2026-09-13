@@ -239,6 +239,11 @@ try {
   await enPage.screenshot({ path: `${scratch}/business-state-en.png`, fullPage: true })
   await enPage.evaluate(({ parent, child }) => { location.hash = `bridgeflow?parent=${parent}&child=${child}` }, { parent: report.parent_session_id, child: report.roles[0].session_id })
   await enPage.getByText('One-shot subagent record', { exact: true }).waitFor()
+  // #40: a link to a department session that is not this captain's child fails visibly.
+  await enPage.evaluate(({ parent }) => { location.hash = `bridgeflow?parent=${parent}` }, { parent: report.parent_session_id })
+  await enPage.waitForTimeout(1500)
+  await enPage.evaluate(({ parent }) => { location.hash = `bridgeflow?parent=${parent}&child=00000000-0000-4000-8000-000000000000` }, { parent: report.parent_session_id })
+  await enPage.getByRole('alert').filter({ hasText: 'The linked department session does not exist' }).waitFor()
   await english.close()
   // The preference is shared and durable; hand Chinese back to the main flow.
   await switchLanguage(page, '中文')

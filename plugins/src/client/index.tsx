@@ -7,7 +7,7 @@ import type { ToolCallViewProps } from '@deepseek-ai/dsh-client-ui-tool/client'
 import type { ComposerChainProps, InputZone } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { MappingApproval } from './approval.tsx'
 import { BusinessReview, type Review } from './review.tsx'
-import { configureRuntime, navigate, openSession, route, useUI } from './ui.ts'
+import { configureRuntime, navigate, openSession, reportRouteError, route, useUI } from './ui.ts'
 import { DataWorkspace, DataWorkspaceButton, ImportForm } from './workspace.tsx'
 import { QuotationButton } from './quotation.tsx'
 import { mountShell } from './shell.tsx'
@@ -154,7 +154,7 @@ export function apply(ctx: Context): void {
   mountState(ctx)
   mountShell(ctx)
   ctx.effect(() => {
-    const navigateSession = () => { const value = route(); if (value.parent) void openSession(value.parent, value.child).catch(e => ctx.logger.warn('Session route unavailable: %s', String(e))) }
+    const navigateSession = () => { const value = route(); if (value.parent) void openSession(value.parent, value.child).catch(e => { ctx.logger.warn('Session route unavailable: %s', String(e)); reportRouteError(value.child ? 'routeChildUnavailable' : 'routeParentUnavailable') }) }
     navigateSession(); window.addEventListener('hashchange', navigateSession); return () => window.removeEventListener('hashchange', navigateSession)
   }, 'bridgeflow: native session routes')
   for (const key of ['aggregate_metric', 'confirm_mapping', 'column_candidates', 'confirm_column_match', 'workflow_catalogue', 'workflow_draft', 'workflow_board', 'workflow_record', 'workflow_approve_submit', 'batch_summary', 'list_metrics', 'lookup_field_dictionary', 'review_context', 'review_finalize']) {
