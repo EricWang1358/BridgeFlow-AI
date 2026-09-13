@@ -53,6 +53,7 @@ const labels = {
   sourceHelp: ['依据与归属', 'Evidence and ownership'], studioHelp: ['状态、责任与下一步', 'Status, owners and next steps'],
   handoffWorkspace: ['填报与流转', 'Filling & handoff'],
   reviewEnded: ['本次研判未正常完成', 'This review did not complete'],
+  openSource: ['打开这份来源的原件预览', 'Open this source preview'], reviewUsage: ['本次研判用量（按阶段）', 'Review usage by stage'], orchestration: ['队长编排', 'Captain orchestration'], steps: ['步', 'steps'],
   ended_deadline_exceeded: ['超过统一期限（派活、部门研判与汇总共用），已停止并保存为未完成。', 'The single deadline for dispatch, departments and finalization passed; the review was stopped and saved as incomplete.'],
   ended_captain_ended: ['队长回合在汇总前结束，已保存为未完成。', 'The captain turn ended before finalization; saved as incomplete.'],
   ended_captain_disposed: ['会话在汇总前关闭，已保存为未完成。', 'The session closed before finalization; saved as incomplete.'],

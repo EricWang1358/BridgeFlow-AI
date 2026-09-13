@@ -4,6 +4,7 @@ import { Chip } from './workspace.tsx'
 type Source = { department: string; filename: string; sheet: string; source_row: number | null; original_column: string; column: string }
 type Check = { check_id: string; title: string; value: number; unit: string; expected_status: string; threshold: number; attention_when: string; formula: string; action: string; explanation: string; sources: Source[]; source_count: number; truncated: boolean }
 export type Review = { report_id: string; batch_id: string; parent_session_id: string; period: string; status: string; manager_decision: string; limitations: string[]; terminal_reason?: string;
+  usage?: { orchestration?: Record<string, number>; departments?: Record<string, Record<string, number>>; step_limit_per_department?: number };
   roles: { role: string; status: string; responsibility: string; decision_owner: string; session_id: string; error?: string; checks: Check[] }[] }
 export function BusinessReview({ report }: { report: Review }) {
   const { t, language } = useUI()
@@ -37,11 +38,15 @@ export function BusinessReview({ report }: { report: Review }) {
           <p>{t('modelAdvice')}: {check.explanation}</p>
           <p>{t('refs')}: {check.source_count} · {t('shown')}: {check.sources.length}{check.truncated ? ' (cap)' : ''}</p>
           <p className="bf-hint">{t('evidenceHint')}</p>
-          <ul>{check.sources.map((source, i) => <li key={i}>{t(source.department)} · {source.filename}{source.sheet ? ` / ${source.sheet}` : ''} · {t('sourceRow')} {source.source_row ?? '—'} · {source.original_column || source.column}</li>)}</ul>
+          <ul>{check.sources.map((source, i) => <li key={i}><button className="bf-quiet" title={t('openSource')} onClick={() => { root.current?.closest('dialog')?.close(); navigate({ batch: report.batch_id, view: 'source', source: source.department }) }}>{t(source.department)} · {source.filename}{source.sheet ? ` / ${source.sheet}` : ''} · {t('sourceRow')} {source.source_row ?? '—'} · {source.original_column || source.column} ↗</button></li>)}</ul>
         </details>
       </section>)}
       {role.session_id && <button onClick={() => void session(role.session_id)} title={role.session_id}>{t('child')} ↗</button>}
     </article>)}</div>
+    {report.usage?.orchestration && <details className="bf-formulas"><summary>{t('reviewUsage')}</summary>
+      <p className="bf-hint">{t('orchestration')}: {report.usage.orchestration.steps ?? 0} {t('steps')} · {report.usage.orchestration.total_tokens ?? 0} tokens</p>
+      {Object.entries(report.usage.departments ?? {}).map(([role, u]) => <p className="bf-hint" key={role}>{t(role)}: {u.steps ?? 0}/{report.usage?.step_limit_per_department ?? '—'} {t('steps')} · {u.total_tokens ?? 0} tokens</p>)}
+    </details>}
     <div className="bf-actions"><button onClick={() => void session()}>{t('parent')} ↗</button><button onClick={() => navigate({ batch: report.batch_id, view: 'review', report: report.report_id })}>{t('reportId')}: {report.report_id.slice(0, 8)} ↗</button></div>
     <details><summary>{t('scope')}</summary><ul>{report.limitations.map((item, i) => <li key={i}>{item}</li>)}</ul><p>{t('reportId')}: {report.report_id}</p></details>
   </section>
