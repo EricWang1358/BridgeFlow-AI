@@ -11,6 +11,11 @@
 
 ---
 
+## 飞书上传下载快捷调用（代码就绪，待凭据联调）（2026-09-13，#140）
+
+新增 `feishu_import`（按文件 token 下载部门文件并导入为一个批次）与 `feishu_upload_report`（把已保存的研判报告传到指定文件夹），均需审批；凭据只从 shell 导出的 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` 读取，缺失时返回「未配置」。
+协议用模拟租户测试（令牌复用、下载文件名取自飞书、拒绝原样上报、上传内容即保存的报告）：Python **372 passed**（新增 **4** 条），TS **54 passed**。**未连接真实飞书**：免费版接口能力与真实上传下载尚未验证。
+
 ## 科目分类改为字典声明（2026-09-13，#92）
 
 `metrics.py` 里硬编码的科目关键词（sales / rev / 销售 / 收入、cogs / cos / cost / 成本）移到字典 `account_classes`；未声明时 `sales`、`cost_of_sales`、`gross_margin` 拒绝；声明了分类的部门，金额简单合计是净额，`revenue` 拒绝并提示改用 `sales` 与 `cost_of_sales`。测试解析源码确认代码里不再有科目关键词。
