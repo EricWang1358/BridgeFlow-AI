@@ -55,6 +55,7 @@
 | [`20-quotation-brief.md`](20-quotation-brief.md) | 权威 | 中 | 接手报价的人 | 报价功能任务书：并列的第二条路径，分三步，第一步现在可做 |
 | [`21-quotation-design.md`](21-quotation-design.md) | 参考 | 中 | 接手报价的人 | 报价声明与自由文本证据边界，设计先于实现写定 |
 | [`22-lightsail-deploy.md`](22-lightsail-deploy.md) | 参考 | 中 | 开发、运维 | Lightsail 部署 runbook：实例引导、GitHub Actions 流水线、Caddy 反代与回滚 |
+| [`25-workflow-foundation.md`](25-workflow-foundation.md) | 参考 | 中 | 开发 | 三个 Agent 共用的工作流基座：分层、设计模式及理由、状态机、未完成项 |
 | [`24-meeting-2026-09-13.md`](24-meeting-2026-09-13.md) | 参考 | 中 | 团队 | 9/13 讨论：不自建数据平台；飞书只做上传下载快捷调用，权限是远景；样例数据 2+1 是主线阻塞 |
 
 两份 README 是同一套图文操作指引的中英版本（顶部可切换）：[`../README.md`](../README.md)（English）
@@ -69,7 +70,7 @@
 ## 语言规则
 
 对外可读或在台上讲的用英文：`01` `02` `03` `04` `10` `12`，以及根 README 与插件 README。
-内部工程与决策记录用中文：`00` `06`–`09` `11` `13`–`24`，以及 `CLAUDE.md`、`HANDOFF.md`。
+内部工程与决策记录用中文：`00` `06`–`09` `11` `13`–`25`，以及 `CLAUDE.md`、`HANDOFF.md`。
 代码、注释、commit message、issue 标题一律英文。新增文档先定读者，再定语言。
 
 ## 写作约定

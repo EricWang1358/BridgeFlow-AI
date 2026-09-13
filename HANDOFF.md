@@ -25,6 +25,13 @@
    [#7](https://github.com/EricWang1358/BridgeFlow-AI/issues/7)（价格带要有真实成本算术）因此从「演示砍掉的一拍」
    升级成这条路径的核心输出。
 
+## 工作流基座（#143–#145）
+
+三个新 Agent（流程梳理、模板辅助填报与交接、落地咨询）共用的底层已在 `backend/src/bridgeflow/workflow/`：
+声明目录、补问式填报、状态机、事件日志、发件箱通知、看板和落地信号。结构与理由见
+[`docs/25`](docs/25-workflow-foundation.md)。`python scripts/start_web.py --demo` 会加载合成的
+`data/workflow_demo/catalogue.yaml`。给 Agent 的 DSH 工具层和界面尚未做。
+
 ## 报价路径做到哪了
 
 样板前阶段已实现，与月度对账并列；设计先于代码，记录在 [`docs/21`](docs/21-quotation-design.md)。
