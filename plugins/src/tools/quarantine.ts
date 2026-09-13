@@ -18,7 +18,7 @@ type Json = string | number | boolean | null | Json[] | { [key: string]: Json }
 export function decideBody(args: Record<string, unknown>, agentId: string, callId: string | undefined) {
   const fixes = (Array.isArray(args.fixes) ? args.fixes : []).map((f: Record<string, unknown>) => ({ column: String(f?.label ?? f?.column ?? ''), value: String(f?.value ?? '') }))
   return { batch_id: args.batch_id, department: args.department, index: args.index, action: args.action,
-    reason: args.reason, fixes, confirmed_by: agentId, call_id: callId ?? null }
+    reason: args.reason, fixes, shift: args.shift === 'left' || args.shift === 'right' ? args.shift : '', confirmed_by: agentId, call_id: callId ?? null }
 }
 
 export function applyBody(args: Record<string, unknown>, agentId: string, callId: string | undefined) {
@@ -33,9 +33,9 @@ export function quarantineList(config: BackendConfig): ProductTool {
     description: 'List quarantined rows of a batch: department, row index, the checks each row still fails (by column name) and any decision. No cell values.',
     parameters: { batch_id: { type: 'string', required: true } },
     output: { ...anyObject, render: (_args, value) => {
-      const list = value as { total?: number; entries?: { department: string; index: number; failing_checks: string[]; decision: string }[] }
+      const list = value as { total?: number; entries?: { department: string; index: number; failing_checks: string[]; decision: string; shift_suggestion?: string }[] }
       return [{ type: 'text', text: `${list.total ?? 0} quarantined row(s). ` + (list.entries ?? []).slice(0, 10)
-        .map(e => `${e.department}#${e.index}: ${e.decision || (e.failing_checks.join('; ') || 'releasable')}`).join(' | ') }]
+          .map(e => `${e.department}#${e.index}: ${e.decision || (e.failing_checks.join('; ') || 'releasable')}${e.shift_suggestion ? ` (passes if shifted ${e.shift_suggestion})` : ''}`).join(' | ') }]
     } },
     async execute(args, exec) {
       return callBackend<Record<string, Json>>(config, '/tools/quarantine-list', { batch_id: args.batch_id }, exec.signal)
@@ -53,6 +53,7 @@ export function quarantineDecide(config: BackendConfig, receipts: ApprovalReceip
       index: { type: 'number', required: true, description: 'Row index from quarantine_list' },
       action: { type: 'string', required: true, enum: ['release', 'discard'] },
       reason: { type: 'string', required: true, description: 'The person\'s reason' },
+      shift: { type: 'string', enum: ['left', 'right'], description: 'Release with every cell moved one column, only when quarantine_list suggested that direction and the person agreed' },
       fixes: { type: 'array', description: 'Cells the person corrected, releasing only. Never a value you inferred.',
         items: { type: 'object', properties: { label: { type: 'string', required: true, description: 'Column name as listed' }, value: { type: 'string', required: true } }, additionalProperties: false } },
     },
