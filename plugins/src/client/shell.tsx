@@ -5,6 +5,7 @@ import type { ISessions, SessionEventWindow } from '@deepseek-ai/dsh-api-session
 import { api, formatDateTime, navigate, route, startReview, useUI, type Summary } from './ui.ts'
 import { ImportForm, Chip } from './workspace.tsx'
 import { Quotation } from './quotation.tsx'
+import { Handoff } from './handoff.tsx'
 import { BusinessReview, type Review } from './review.tsx'
 import { projectAudit, type AuditEvent } from './audit.ts'
 import { WorkflowProgress } from './workflow-progress.tsx'
@@ -80,11 +81,11 @@ function Shell({ ctx }: { ctx: Context }) {
     void task?.catch(e => { if (!signal.aborted) setError(String(e)) })
     return () => controller.abort()
   }, [batchId, selected.source, selected.report, selected.view, offset, revision])
-  const viewing = ['quotation', 'source', 'artifact'].includes(selected.view ?? '')
+  const viewing = ['quotation', 'handoff', 'source', 'artifact'].includes(selected.view ?? '')
   useEffect(() => { if (viewing) { setPanel('studio'); setHiddenStudio(false); ctx.layout.closeDetails() } else viewer.current?.close() }, [viewing, selected.source, selected.report, selected.view, ctx])
   const openSource = (source: Source) => { setError(''); navigate({ batch: batchId, view: 'source', source: source.id }) }
   const closePreview = () => { viewer.current?.close(); navigate({ ...(batchId ? { batch: batchId } : {}), kind:notebook.kind, view: 'state' }) }
-  const previewContent = selected.view === 'quotation' ? <Quotation /> : preview ? <section aria-label={t('sourcePreview')}>
+  const previewContent = selected.view === 'quotation' ? <Quotation /> : selected.view === 'handoff' ? <Handoff /> : preview ? <section aria-label={t('sourcePreview')}>
     <h3>{preview.filename}</h3><p className="bf-hint">{t('parsedOriginal')} {preview.sheet}</p>
     <div className="bf-source-table"><table><thead><tr><th>{t('sourceRow')}</th>{preview.columns.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>
       <tbody>{preview.rows.map((row, i) => <tr key={preview.offset + i}><th>{preview.offset + i + 2}</th>{row.map((cell, j) => <td key={j}>{cell === null ? '—' : String(cell)}</td>)}</tr>)}</tbody></table></div>
@@ -135,6 +136,7 @@ function Shell({ ctx }: { ctx: Context }) {
         <div className="bf-studio-tools" aria-label={t('tools')}>
           <button data-tone="blue" disabled={!summary || busy} onClick={async () => { if (!summary) return; setBusy(true); setError(''); try { await startReview(batchId, summary.period) } catch (e) { setError(String(e)) } finally { setBusy(false) } }}><span aria-hidden="true">◈</span>{t('startReview')}<span aria-hidden="true">›</span></button>
           <button data-tone="gold" aria-pressed={selected.view === 'quotation'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'quotation' })}><span aria-hidden="true">▧</span>{t('quotationWorkspace')}<span aria-hidden="true">›</span></button>
+          <button data-tone="green" aria-pressed={selected.view === 'handoff'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'handoff' })}><span aria-hidden="true">⇄</span>{t('handoffWorkspace')}<span aria-hidden="true">›</span></button>
           <button data-tone="green" aria-pressed={selected.view === 'master'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'master' })}><span aria-hidden="true">▦</span>{t('master')}<span aria-hidden="true">›</span></button>
           <button data-tone="pink" aria-pressed={showState && !viewing} onClick={() => { closePreview(); setHiddenStudio(false); setPanel('studio') }}><span aria-hidden="true">◷</span>{t('state')}<span aria-hidden="true">›</span></button>
         </div>

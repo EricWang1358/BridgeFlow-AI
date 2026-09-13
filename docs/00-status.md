@@ -11,6 +11,11 @@
 
 ---
 
+## 填报与流转界面（2026-09-13，#144 / #145）
+
+工作室新增只读「填报与流转」视图。Python **344 passed**、TS **39 passed**，typecheck、build、ruff 通过。
+在本机 3082 演示服务上用合成记录（一条已就绪、一条待补）经无头浏览器截图核对，页面错误 **0**；真实模型调用 **0 次**。
+
 ## 工作流 DSH 工具层（2026-09-13，#144）
 
 新增 `workflow_catalogue` / `workflow_draft` / `workflow_board`（读）与 `workflow_record` / `workflow_approve_submit`（审批写）。

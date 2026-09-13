@@ -98,9 +98,9 @@ class Draft(BaseModel):
 
 
 def _question(spec: FieldSpec) -> str:
-    if spec.question:
-        return spec.question
-    return f"Please provide {spec.label}" + (f": {spec.definition}" if spec.definition else "")
+    """The declared question, or nothing. Wording in the reader's language belongs to
+    whoever presents the issue, which has the field label to build it from."""
+    return spec.question
 
 
 def _resolver(template: TemplateSpec) -> dict[str, str]:
