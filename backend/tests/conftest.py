@@ -35,6 +35,7 @@ def isolated_environment(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "field_dictionary_path", str(REPO_ROOT / "data/mappings/field-dictionary.example.yaml"))
     monkeypatch.setattr(settings, "result_store_path", str(tmp_path / "outputs"))
     monkeypatch.setattr(settings, "mapping_memory_path", str(tmp_path / "mappings.json"))
+    monkeypatch.setattr(settings, "column_match_path", str(tmp_path / "column-matches.json"))
     monkeypatch.setattr(settings, "bridgeflow_service_token", TEST_SECRET)
     # Existing sample/console tests opt into their compatibility path here. The new
     # enterprise tests explicitly restore production flags and exercise refusals.

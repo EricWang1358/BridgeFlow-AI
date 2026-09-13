@@ -136,7 +136,7 @@ export function apply(ctx: Context): void {
     const navigateSession = () => { const value = route(); if (value.parent) void openSession(value.parent, value.child).catch(e => ctx.logger.warn('Session route unavailable: %s', String(e))) }
     navigateSession(); window.addEventListener('hashchange', navigateSession); return () => window.removeEventListener('hashchange', navigateSession)
   }, 'bridgeflow: native session routes')
-  for (const key of ['aggregate_metric', 'confirm_mapping', 'batch_summary', 'list_metrics', 'lookup_field_dictionary', 'review_context', 'review_finalize']) {
+  for (const key of ['aggregate_metric', 'confirm_mapping', 'column_candidates', 'confirm_column_match', 'batch_summary', 'list_metrics', 'lookup_field_dictionary', 'review_context', 'review_finalize']) {
     ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({ name: 'tool.call.toolview', key }, ToolCard))
   }
 }

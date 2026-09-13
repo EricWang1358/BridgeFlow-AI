@@ -77,6 +77,8 @@ class Settings(BaseSettings):
     # Confirmed mappings, kept between months. A confirmation that does not survive
     # its run means every month asks the same questions.
     mapping_memory_path: str = "data/outputs/mappings.json"
+    # Uploaded columns a person matched onto declared columns. Never the dictionary.
+    column_match_path: str = "data/outputs/column-matches.json"
 
     @property
     def cors_origin_list(self) -> list[str]:

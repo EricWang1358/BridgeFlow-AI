@@ -165,7 +165,9 @@ export function DataWorkspace() {
               sheets and the same question the machine could not answer; leaving them
               to work it out alone is the thing this product exists to remove. */}
           {batch.status === 'needs_configuration' && <>
-            <p className="bf-hint" style={{ marginTop: 8 }}>{t('askCaptainHint')}</p>
+            <p className="bf-hint" style={{ marginTop: 8 }}>
+              {batch.column_questions ? <><b>{batch.column_questions}</b> {t('columnQuestions')}。</> : null}{t('askCaptainHint')}
+            </p>
             <div className="bf-actions" style={{ marginBottom: 0 }}>
               <button className="bf-primary" disabled={busy} onClick={async () => {
                 setError(''); setBusy(true)
@@ -187,6 +189,15 @@ export function DataWorkspace() {
           </p>}
           {batch.declared_entities && <p className="bf-hint">{t('declaresEntities')}: {departments.map(name =>
             `${t(name)} → ${batch.declared_entities?.[name]?.join('、') || t('declaresNothing')}`).join(' · ')}</p>}
+        </div>}
+
+        {/* A match that changed how this batch was read must be visible on it, and so
+            must a decision that was deliberately not reused. */}
+        {!!batch.matched_columns?.length && <div className="bf-callout" data-tone="ok">
+          <h3>{t('matchedColumns')}</h3><p className="bf-mono">{batch.matched_columns.join(' · ')}</p>
+        </div>}
+        {!!batch.stale_matches?.length && <div className="bf-callout" data-tone="warn">
+          <h3>{t('staleMatches')}</h3><p className="bf-mono">{batch.stale_matches.join(' · ')}</p>
         </div>}
 
         <div className="bf-stats">{batch.departments.map(d => <div className="bf-stat" key={d.department}>

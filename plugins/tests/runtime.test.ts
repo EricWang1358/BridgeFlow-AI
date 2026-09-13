@@ -7,6 +7,7 @@ import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime, { defineTool } from '@deepseek-ai/dsh-tools'
 import * as bridgeflow from '../src/index.ts'
 import { ApprovalReceipts, mappingBody } from '../src/approval/receipts.ts'
+import { columnMatchBody } from '../src/tools/confirm-column-match.ts'
 import { ApprovalNotes } from '../src/approval/notes.ts'
 import { PendingDetails } from '../src/approval/detail.ts'
 import type { Agent } from '@deepseek-ai/dsh-agent'
@@ -173,4 +174,31 @@ test('batch diagnosis dispatches its registered read tool without a second allow
     assert.deepEqual(requests, ['http://127.0.0.1:1/tools/profile-batch'])
     assert.match(JSON.stringify(result.content), /No declared joinable column in: production/)
   } finally { await ctx.fiber.dispose() }
+})
+
+test('column match decision cannot be written without a current approval', async () => {
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  const result = await ctx.tools.execute(execution('confirm_column_match', {
+    batch_id: 'a'.repeat(32), department: 'finance', column: 'x_code', target: 'x', accepted: true,
+  }))
+  assert.equal(result.isError, true)
+  assert.match(JSON.stringify(result.content), /No current approval/)
+  await ctx.fiber.dispose()
+})
+
+test('read-only deployment keeps column candidates but removes the column match write', async () => {
+  const ctx = await runtime(false)
+  const names = ctx.tools.schemas().map(tool => tool.name)
+  assert(names.includes('column_candidates'))
+  assert(!names.includes('confirm_column_match'))
+  await ctx.fiber.dispose()
+})
+
+test('column match receipt binds batch, column, target and decision', () => {
+  const base = { batch_id: 'b', department: 'finance', column: 'x_code', target: 'x', accepted: true }
+  const approved = JSON.stringify(columnMatchBody(base, 'agent-1', 'call-1'))
+  for (const change of [{ target: 'y' }, { accepted: false }, { column: 'z' }, { batch_id: 'c' }]) {
+    assert.notEqual(JSON.stringify(columnMatchBody({ ...base, ...change }, 'agent-1', 'call-1')), approved)
+  }
 })
