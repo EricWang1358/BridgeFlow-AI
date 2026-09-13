@@ -200,12 +200,12 @@ def test_explicit_demo_freezes_its_own_dictionary_without_changing_deployment(cl
     assert response.status_code == 200
     value = response.json()
     assert value["master_rows"] > 0
-    assert value["dictionary"] == "data/business_demo/dictionary.yaml"
+    assert value["dictionary"] == "data/mock_business/demo/dictionary.yaml"
     assert settings.field_dictionary_path == path
     batch = load_batch(value["batch_id"])
-    assert batch.demo_case == "risk"
+    assert batch.demo_case == "mock-company-2024-07"
     assert "business_review" in batch.dictionary_snapshot
     sources = client.get(f"/batches/{value['batch_id']}/sources").json()["sources"]
     assert len(sources) == 4
-    assert all(source["filename"].startswith("sample-") and source["preview_available"] for source in sources)
+    assert all(source["filename"].startswith("模拟-") and source["preview_available"] for source in sources)
     assert client.post("/batches/demo", headers={"authorization":"Bearer invalid"}).status_code == 401

@@ -93,7 +93,7 @@ class SOPFlowEngine(Agent[SOPInput, SOPOutput]):
                 # No declared join key. Merging on a guess would corrupt every row.
                 unjoinable.append(table.department)
                 continue
-            date_column = next((c.name for c in table.columns if c.dtype == "date"), None)
+            date_column = _period_column(table, dictionary)
 
             for index, row in enumerate(table.rows):
                 written = str(row.get(key.column, "")).strip()
@@ -338,8 +338,21 @@ def _dictionary_path():
     return configured if configured.is_absolute() else REPO_ROOT / configured
 
 
+def _period_column(table: CleanTable, dictionary: FieldDictionary) -> str | None:
+    """The date that files a row under a month: declared, or the only date the sheet has.
+
+    Several date columns and no declaration is not resolved by taking the first one —
+    the row keeps the batch label and says it carries no readable period.
+    """
+    declared = dictionary.period_columns.get(table.department)
+    dates = [c.name for c in table.columns if c.dtype == "date"]
+    if declared:
+        return declared if declared in {c.name for c in table.columns} else None
+    return dates[0] if len(dates) == 1 else None
+
+
 #: Entity kinds that can serve as a join key, in the order we prefer them.
-_JOIN_KINDS: tuple[str, ...] = ("sku", "customer", "raw_material", "gl_account")
+_JOIN_KINDS: tuple[str, ...] = ("project", "sku", "customer", "raw_material", "gl_account")
 
 
 def _primary_key_column(table: CleanTable, dictionary: FieldDictionary) -> EntityKey | None:

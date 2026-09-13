@@ -256,13 +256,19 @@ def _read_xlsx(payload: bytes, filename: str, layout: Layout) -> tuple[str, pd.D
 
 @router.post("/demo", response_model=BatchSummary)
 async def demo_batch() -> BatchSummary:
-    """Explicit synthetic notebook; freeze its dictionary without replacing deployment policy."""
-    folder = REPO_ROOT / "data/business_demo"
+    """Explicit sample notebook; freeze its dictionary without replacing deployment policy.
+
+    The sample is the fictional concrete supplier in `data/mock_business/demo`, filed on the
+    business side's v2 department templates, so the notebook shows the templates, the
+    cross-department master table and the declared review together.
+    """
+    folder = REPO_ROOT / "data/mock_business/demo"
     departments: list[Department] = ["production", "procurement", "finance", "marketing"]
-    files = [UploadFile(io.BytesIO((folder / "risk" / f"{department}.csv").read_bytes()),
-                        filename=f"sample-{department}.csv") for department in departments]
+    labels = {"production": "生产部", "procurement": "物资部", "finance": "财务部", "marketing": "市场部"}
+    files = [UploadFile(io.BytesIO((folder / f"{department}.xlsx").read_bytes()),
+                        filename=f"模拟-{labels[department]}-2024-07.xlsx") for department in departments]
     try:
-        return await _import_batch("2025-11", departments, files, folder / "dictionary.yaml", "risk")
+        return await _import_batch("2024-07", departments, files, folder / "dictionary.yaml", "mock-company-2024-07")
     finally:
         for upload in files:
             await upload.close()

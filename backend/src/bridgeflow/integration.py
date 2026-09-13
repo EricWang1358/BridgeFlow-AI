@@ -370,6 +370,7 @@ def integrate(spec: IntegrationSpec, sheets: list[Sheet]) -> MasterResult:
         provenance: dict[str, dict[str, Any]] = {}
         complete = True
         present = []
+        variants: dict[str, dict[str, list[str]]] = {}
         for department, groups in by_department.items():
             group = groups.get(key)
             if not group:
@@ -397,13 +398,21 @@ def integrate(spec: IntegrationSpec, sheets: list[Sheet]) -> MasterResult:
                                             message=f"{name}: {where['file']} row {where['row']} is not a number"))
                         continue
                     value = _plain(number)
+                variants.setdefault(name, {}).setdefault(str(value).strip(), []).append(department)
                 if values[name] is None:
                     values[name], provenance[name] = value, where
-                elif str(values[name]).strip() != str(value).strip():
-                    complete = False
-                    issues.append(Issue(kind="disagreement", field=name, key=list(key),
-                                        departments=[provenance[name]["department"], department],
-                                        message=f"{name} differs between departments; confirm which is right"))
+        for name, written in variants.items():
+            if len(written) > 1:
+                # One question per field, whatever order the departments arrived in, and
+                # no department's spelling is picked for the cell.
+                complete = False
+                values[name] = None
+                provenance[name] = {"conflict": written}
+                issues.append(Issue(kind="disagreement", field=name, key=list(key),
+                                    departments=sorted({d for ds in written.values() for d in ds}),
+                                    message=f"{name} differs between departments ("
+                                            + "; ".join(f"{'/'.join(ds)}: {v}" for v, ds in written.items())
+                                            + "); confirm which is right"))
         absent = [d for d in spec.departments if d not in present]
         if absent:
             complete = False

@@ -233,12 +233,18 @@ PLANTED = {
 }
 
 
-def _write_department(spec, department: str, month: str, projects: dict, headers: list[str], path: Path) -> None:
+#: 演示笔记本用 2024-07：只留一处无害的填报差异（客户简称），让跨部门总表有一条待确认，研判仍可进行。
+DEMO_MONTH = "2024-07"
+DEMO_PLANTED = [("production", "PRJ2024017", "客户名称", "示例城建集团", "生产部客户单位写了简称")]
+
+
+def _write_department(spec, department: str, month: str, projects: dict, headers: list[str], path: Path,
+                      planted_list: list | None = None) -> None:
     book = openpyxl.Workbook()
     sheet = book.active
     sheet.title = "Sheet1"
     sheet.append(headers)
-    planted = [p for p in PLANTED.get(month, []) if p[0] == department]
+    planted = [p for p in (PLANTED.get(month, []) if planted_list is None else planted_list) if p[0] == department]
     for code, record in projects.items():
         if any(p[1] == code and p[2] == "row" for p in planted):
             continue
@@ -295,6 +301,13 @@ def main() -> None:
             book.active.append([plain(v) if isinstance(v, Decimal) else v for v in (record["master"][h] for h in master_headers)])
         book.save(folder / "expected.xlsx")
         print(f"wrote {folder.relative_to(ROOT)}")
+    demo = ROOT / "data" / "mock_business" / "demo"
+    demo.mkdir(parents=True, exist_ok=True)
+    for department, decl in spec.departments.items():
+        template = openpyxl.load_workbook(TEMPLATES / decl.template).active
+        headers = [str(c.value or "").strip() for c in template[1]]
+        _write_department(spec, department, DEMO_MONTH, months[DEMO_MONTH], headers, demo / f"{department}.xlsx", DEMO_PLANTED)
+    print(f"wrote {demo.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":
