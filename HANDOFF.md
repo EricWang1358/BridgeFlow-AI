@@ -238,7 +238,9 @@ Python 测试由 `conftest.py` 隔离 provider、字典、输出与记忆。浏�
 
 模拟样板全部是虚构数据，只能演示流程，不能当作业务结论；「模拟留出」开发看得见，不证明泛化。报价抽取记录是人工核对的，自动抽取仍等真实样板。
 
-### 要跟商科同学要的材料（其余三项）
+### 要跟商科同学要的材料
+
+部署（#138）已由团队另行安排，不在此列；基建脚本见 `deploy/bootstrap.sh`、`preflight.sh`。
 
 **1. 业务口径确认（#23、#19）** —— 最优先，决定数字对不对。请他们对着 `data/company_templates/integration.yaml` 的 `assumptions` 和下面的问题逐条回复：
 
@@ -257,14 +259,6 @@ Python 测试由 `conftest.py` 隔离 provider、字典、输出与记忆。浏�
 - 建一个测试文件夹并共享给该应用，给出文件夹 token（链接里 `/folder/` 后面那段）；
 - 确认公司飞书是否免费版，免费版的云文档接口额度是否够演示。
 - 到手后运行 `python scripts/feishu_live_check.py`。
-
-**3. 部署（#138）** —— AWS 还没配，基建已就绪（`deploy/bootstrap.sh`、`preflight.sh`），需要的是：
-
-- 谁出 AWS 账号与费用（Lightsail 2 GB 实例约每月 12 美元），由谁创建实例、绑定静态 IP；
-- 一个可以加 A 记录的域名（或子域名），以及管理 DNS 的人；
-- 演示用的 basic auth 共享密码由谁保管、发给哪些评委或同学；
-- 生产用 DeepSeek API key 由谁提供、消费上限多少（只放实例上的 `env.sh`）。
-- 到手顺序见 [`docs/27`](docs/27-external-inputs.md) §2。
 
 仍需真人参与、模拟不了的：三 Agent 试点与组织落地（#127、#143、#144、#145），以及与业务负责人逐项核对部门责任（#41 后半）。
 
