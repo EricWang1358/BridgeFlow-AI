@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "mode": "live",
+  "case": "balanced",
+  "chain_checked": true,
+  "poisoned": false
+}

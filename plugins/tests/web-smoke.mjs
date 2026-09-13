@@ -168,7 +168,12 @@ try {
   if (live) {
     assert(refusalNarration.includes('客户编码未核实'), refusalNarration)
     assert(/拒绝|未.*(写入|保存|确认|执行)/.test(refusalNarration), refusalNarration)
-    assert(!/不会.{0,12}(询问|再问)|不再.{0,6}(询问|问)/.test(refusalNarration), refusalNarration)
+    // An overclaim is a sentence promising the question is gone. A sentence that says the
+    // opposite ("不能说以后不再询问", "未来仍可能再次询问") is the correct narration, so it is
+    // judged per sentence and qualified sentences are not violations.
+    const overclaims = refusalNarration.split(/[。\n；;]/).filter(sentence =>
+      /不会.{0,12}(询问|再问)|不再.{0,6}(询问|问)/.test(sentence) && !/不能|无法|没法|不保证|不代表|未必|不一定|可能|仍|并不/.test(sentence))
+    assert.deepEqual(overclaims, [], refusalNarration)
   }
   assert.equal(await page.getByRole('button', { name: /Workspace Write|Full Access|工作区写入|完全访问/ }).count(), 0)
   assert.equal(await readFile(`${scratch}/mappings.json`, 'utf8'), acceptedMemory)
