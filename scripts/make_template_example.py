@@ -19,11 +19,11 @@ from bridgeflow.integration import load_spec  # noqa: E402
 BASE = ROOT / "data" / "company_templates"
 
 
-def main() -> None:
+def main(out: Path | None = None) -> None:
     spec = load_spec(BASE / "integration.yaml")
     master = openpyxl.load_workbook(BASE / spec.master_template).active
     example = dict(zip([c.value for c in master[1]], [c.value for c in master[2]], strict=True))
-    out = BASE / "example"
+    out = out or BASE / "example"
     out.mkdir(exist_ok=True)
     for department, decl in spec.departments.items():
         template = openpyxl.load_workbook(BASE / decl.template).active
@@ -46,8 +46,8 @@ def main() -> None:
         sheet.append(headers)
         sheet.append(row)
         book.save(out / f"{department}.xlsx")
-    print(f"wrote {len(spec.departments)} department sheets to {out.relative_to(ROOT)}")
+    print(f"wrote {len(spec.departments)} department sheets to {out}")
 
 
 if __name__ == "__main__":
-    main()
+    main(Path(sys.argv[1]) if len(sys.argv) > 1 else None)

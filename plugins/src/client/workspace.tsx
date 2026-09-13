@@ -20,6 +20,7 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
       if (file instanceof File && file.size) {
         if (!/\.(csv|xlsx)$/i.test(file.name)) { setError(t('invalidUpload')); return }
         total += file.size; count++; body.append('departments', name); body.append('files', file)
+        body.append('sheets', String(form.get(`${name}-sheet`) ?? '')); body.append('header_rows', String(form.get(`${name}-header`) ?? ''))
       }
     }
     if (!count || !limits || total > limits.maxUploadBytes) { setError(t('invalidUpload')); return }
@@ -56,7 +57,8 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
 function FileRow({ name }: { name: string }) {
   const { t } = useUI()
   const [chosen, setChosen] = useState('')
-  return <label className="bf-file" data-filled={Boolean(chosen)}>
+  return <div>
+  <label className="bf-file" data-filled={Boolean(chosen)}>
     <input type="file" name={name} accept=".csv,.xlsx" aria-label={t(name)}
       onChange={e => setChosen(e.target.files?.[0]?.name ?? '')} />
     <span style={{ minWidth: 0 }}>
@@ -64,6 +66,12 @@ function FileRow({ name }: { name: string }) {
       <span className="bf-file-name">{chosen || t('noFile')}</span>
     </span>
   </label>
+  {/\.xlsx$/i.test(chosen) && <details className="bf-hint">
+    <summary>{t('sheetLayout')}</summary>
+    <input name={`${name}-sheet`} aria-label={`${t(name)} · ${t('sheetName')}`} placeholder={t('sheetName')} />
+    <input name={`${name}-header`} type="number" min={1} aria-label={`${t(name)} · ${t('headerRow')}`} placeholder={t('headerRow')} />
+  </details>}
+  </div>
 }
 type View = { total: number; offset: number; rows: Record<string, unknown>[] }
 

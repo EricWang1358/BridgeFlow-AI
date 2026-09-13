@@ -237,8 +237,8 @@ def test_the_example_generator_is_reproducible(tmp_path):
     import subprocess
     import sys
     before = {p.name: p.read_bytes() for p in (BASE / "example").glob("*.xlsx")}
-    subprocess.run([sys.executable, str(REPO_ROOT / "scripts" / "make_template_example.py")], check=True, capture_output=True)
-    after = {p.name: openpyxl.load_workbook(BASE / "example" / p.name).active for p in (BASE / "example").glob("*.xlsx")}
+    subprocess.run([sys.executable, str(REPO_ROOT / "scripts" / "make_template_example.py"), str(tmp_path)], check=True, capture_output=True)
+    after = {name: openpyxl.load_workbook(tmp_path / name).active for name in before}
     for name, sheet in after.items():
         original = openpyxl.load_workbook(io.BytesIO(before[name])).active
         assert [[c.value for c in r] for r in sheet.iter_rows()] == [[c.value for c in r] for r in original.iter_rows()]

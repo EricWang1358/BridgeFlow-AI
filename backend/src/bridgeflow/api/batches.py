@@ -8,9 +8,11 @@ import json
 import re
 import uuid
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
 
+import openpyxl
 import pandas as pd
 import yaml
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
@@ -164,8 +166,91 @@ async def upload_batch(
     period: Annotated[str, Form(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")],
     departments: Annotated[list[Department], Form()],
     files: Annotated[list[UploadFile], File()],
+    sheets: Annotated[list[str] | None, Form(description="Per file, the worksheet to read; empty uses the declaration")] = None,
+    header_rows: Annotated[list[str] | None, Form(description="Per file, the 1-based header row; empty uses the declaration")] = None,
 ) -> BatchSummary:
-    return await _import_batch(period, departments, files)
+    choices = [Layout.from_form(sheet, header) for sheet, header in
+               zip(_aligned(sheets, len(files)), _aligned(header_rows, len(files)), strict=True)]
+    return await _import_batch(period, departments, files, choices=choices)
+
+
+def _aligned(values: list[str] | None, count: int) -> list[str]:
+    if not values:
+        return [""] * count
+    if len(values) != count:
+        raise HTTPException(422, "sheets and header_rows need one entry per file (empty for none)")
+    return values
+
+
+@dataclass
+class Layout:
+    """Which worksheet holds the table and which row is its header — declared or chosen, never guessed."""
+    sheet: str = ""
+    header_row: int | None = None
+
+    @classmethod
+    def from_form(cls, sheet: str, header: str) -> Layout:
+        if header.strip() and not (header.strip().isdigit() and int(header) >= 1):
+            raise HTTPException(422, "header_rows entries must be positive row numbers")
+        return cls(sheet.strip(), int(header) if header.strip() else None)
+
+    @classmethod
+    def declared(cls, raw: object, department: str) -> Layout:
+        entry = raw.get(department) if isinstance(raw, dict) else None
+        if entry is None:
+            return cls()
+        if not isinstance(entry, dict) or set(entry) - {"sheet", "header_row"} \
+                or not isinstance(entry.get("sheet", ""), str) \
+                or not (entry.get("header_row") is None or (isinstance(entry["header_row"], int) and entry["header_row"] >= 1)):
+            raise ValueError("sheet_layout entries declare sheet (text) and header_row (positive integer)")
+        return cls(entry.get("sheet", ""), entry.get("header_row"))
+
+    def over(self, declared: Layout) -> Layout:
+        return Layout(self.sheet or declared.sheet, self.header_row or declared.header_row)
+
+
+def _read_xlsx(payload: bytes, filename: str, layout: Layout) -> tuple[str, pd.DataFrame]:
+    """One worksheet as a table. Ambiguity is refused with what a person needs to choose."""
+    workbook = openpyxl.load_workbook(io.BytesIO(payload), read_only=True, data_only=False)
+    names = workbook.sheetnames
+    if layout.sheet:
+        if layout.sheet not in names:
+            raise HTTPException(422, f"{filename}: no worksheet named {layout.sheet!r}; it has {names}")
+        sheet = layout.sheet
+    elif len(names) == 1:
+        sheet = names[0]
+    else:
+        raise HTTPException(422, f"{filename}: multiple sheets {names}; choose one per file (sheets) or declare sheet_layout")
+    # A formula written by a program and never opened in a spreadsheet app has no saved
+    # result; reading it would silently turn every such cell into a blank.
+    formulas = workbook[sheet].iter_rows(values_only=True)
+    cached = openpyxl.load_workbook(io.BytesIO(payload), read_only=True, data_only=True)
+    top: list[int] = []
+    unsaved: list[str] = []
+    for index, (written, stored) in enumerate(zip(formulas, cached[sheet].iter_rows(values_only=True), strict=False)):
+        if index < 10:
+            top.append(sum(c not in (None, "") for c in stored))
+        if any(isinstance(f, str) and f.startswith("=") and c is None for f, c in zip(written, stored, strict=False)):
+            unsaved.append(f"row {index + 1}")
+            if len(unsaved) == 3:
+                break
+    workbook.close()
+    cached.close()
+    if unsaved:
+        raise HTTPException(422, f"{filename}: formulas without saved results ({', '.join(unsaved)}); "
+                                 "open and save the file in Excel or WPS so their values are stored, then upload again")
+    header_row = layout.header_row
+    if header_row is None:
+        # Row 1 is the header only when it looks like one; a title or blank row above the
+        # table is not resolved by guessing which later row is meant.
+        if top and top[0] <= 1 and any(n > 1 for n in top[1:]):
+            candidate = next(i for i, n in enumerate(top) if n > 1) + 1
+            raise HTTPException(422, f"{filename}: row 1 is not a header (row {candidate} looks like one); "
+                                     "confirm the header row per file (header_rows) or declare sheet_layout")
+        header_row = 1
+    frame = pd.read_excel(io.BytesIO(payload), sheet_name=sheet, header=header_row - 1,
+                          nrows=settings.bridgeflow_max_batch_rows + 1)
+    return sheet, frame
 
 
 @router.post("/demo", response_model=BatchSummary)
@@ -183,7 +268,8 @@ async def demo_batch() -> BatchSummary:
 
 
 async def _import_batch(period: str, departments: list[Department], files: list[UploadFile],
-                        source_dictionary: Path | None = None, demo_case: str | None = None) -> BatchSummary:
+                        source_dictionary: Path | None = None, demo_case: str | None = None,
+                        choices: list[Layout] | None = None) -> BatchSummary:
     if len(files) != len(departments) or not 1 <= len(files) <= 4:
         raise HTTPException(422, "Provide one file per department (1–4 departments)")
     if len(set(departments)) != len(departments):
@@ -201,12 +287,14 @@ async def _import_batch(period: str, departments: list[Department], files: list[
         date_orders = dictionary_raw.get("date_order") or {}
         if not isinstance(date_orders, dict) or not set(date_orders.values()) <= {"day_first", "month_first"}:
             raise ValueError("date_order must map departments to day_first or month_first")
+        # Where each department's table sits in its workbook, declared by the dictionary owner (#47).
+        layouts = [Layout.declared(dictionary_raw.get("sheet_layout"), d) for d in departments]
     except (yaml.YAMLError, OSError, UnicodeError, ValueError, TypeError, AttributeError, KeyError) as exc:
         raise HTTPException(503, "Field dictionary configuration is invalid; ask the administrator to correct it before importing") from exc
     tables = []
     sources = []
     byte_count = row_count = 0
-    for department, upload in zip(departments, files, strict=True):
+    for department, upload, declared, chosen in zip(departments, files, layouts, choices or [Layout()] * len(files), strict=True):
         payload = await upload.read(settings.bridgeflow_max_upload_bytes + 1)
         byte_count += len(payload)
         if byte_count > settings.bridgeflow_max_upload_bytes:
@@ -218,15 +306,11 @@ async def _import_batch(period: str, departments: list[Department], files: list[
                 with zipfile.ZipFile(io.BytesIO(payload)) as archive:
                     if sum(i.file_size for i in archive.infolist()) > 100 * 1024 * 1024:
                         raise HTTPException(413, "Expanded workbook exceeds 100 MiB")
-                with pd.ExcelFile(io.BytesIO(payload)) as workbook:
-                    if len(workbook.sheet_names) != 1:
-                        raise HTTPException(422, "Multiple sheets require explicit sheet selection")
-                    sheet = workbook.sheet_names[0]
-                    frame = workbook.parse(sheet, nrows=settings.bridgeflow_max_batch_rows + 1)
+                sheet, frame = _read_xlsx(payload, filename, chosen.over(declared))
             elif filename.lower().endswith(".csv"):
                 frame = pd.read_csv(io.BytesIO(payload), skip_blank_lines=False, nrows=settings.bridgeflow_max_batch_rows + 1)
             else:
-                raise HTTPException(415, "Use CSV or a single-sheet XLSX workbook")
+                raise HTTPException(415, "Use CSV or an XLSX workbook")
         except HTTPException:
             raise
         except (ValueError, OSError, zipfile.BadZipFile, UnicodeError) as exc:
