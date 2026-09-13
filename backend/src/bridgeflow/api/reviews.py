@@ -72,6 +72,8 @@ class ReviewSubmission(BaseModel):
     runs: list[RoleRun] = Field(min_length=4, max_length=4)
     review_id: str = ""
     terminal_reason: review_runs.TerminalReason = "completed"
+    #: Token accounting per stage, from the host's session records. Kept as reported.
+    usage: dict[str, Any] = Field(default_factory=dict)
 
 
 @router.post("/review-finalize")
@@ -128,7 +130,21 @@ def _report(request: ReviewSubmission, context: dict, reason: str) -> dict:
             "本报告直接汇总声明列，不消费待确认的跨部门映射；判断通过不代表主表已签发"],
         "manager_decision": context["manager_decision"] if complete else "Review incomplete; do not authorize a business decision",
         "execution_status": "analysis_only_no_business_action_executed",
+        "usage": _usage(request.usage),
         "finalized_at": datetime.now(UTC).isoformat()}
+
+
+def _usage(raw: dict[str, Any]) -> dict[str, Any]:
+    """Numbers only, one level of departments: accounting, never content."""
+    def counts(value: Any) -> dict[str, int]:
+        if not isinstance(value, dict):
+            return {}
+        return {k: int(v) for k, v in value.items() if k in ("steps", "input_tokens", "output_tokens", "total_tokens")
+                and isinstance(v, int | float) and v >= 0}
+    departments = raw.get("departments") if isinstance(raw.get("departments"), dict) else {}
+    return {"orchestration": counts(raw.get("orchestration")),
+            "departments": {role: counts(departments.get(role)) for role in business.ROLES if role in departments},
+            "step_limit_per_department": int(raw.get("step_limit_per_department") or 0)}
 
 
 @router.post("/review-recover")

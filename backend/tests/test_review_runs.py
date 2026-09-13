@@ -92,3 +92,14 @@ def test_a_human_note_is_recorded_once_beside_the_report_without_changing_it(cli
     assert client.get(f"/batches/{batch_id}/review?report_id={report['report_id']}").json() == report
     notes = client.get(f"/batches/{batch_id}/review-notes/{report['report_id']}").json()["notes"]
     assert [n["note"] for n in notes] == ["财务部门需线下确认"]
+
+
+def test_usage_is_stored_per_stage_as_numbers_only(client):
+    batch_id, runs = opened(client)
+    usage = {"orchestration": {"steps": 2, "total_tokens": 900, "note": "ignore"},
+             "departments": {"finance": {"steps": 3, "total_tokens": "lots"}, "invented": {"steps": 1}},
+             "step_limit_per_department": 3}
+    report = client.post("/tools/review-finalize", json={"batch_id": batch_id, "parent_session_id": "parent", "runs": runs,
+                                                         "review_id": "review-0001", "usage": usage}).json()
+    assert report["usage"] == {"orchestration": {"steps": 2, "total_tokens": 900},
+                               "departments": {"finance": {"steps": 3}}, "step_limit_per_department": 3}

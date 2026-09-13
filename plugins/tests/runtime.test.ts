@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { createHash, createHmac } from 'node:crypto'
 import test from 'node:test'
 import { Context } from '@deepseek-ai/cordis'
@@ -327,5 +328,60 @@ test('a finalize that fails is not cached and can be retried to the same review'
     const third = await ctx.tools.execute({ ...execution('review_finalize', { review_id: reviewId }), agent })
     assert.equal(third.isError, false)
     assert.equal(finals.length, 2, 'a finished review answers from its report, not a new request')
+  } finally { await ctx.fiber.dispose() }
+})
+
+test('orchestration usage is accounted separately, counting only the review window', async (t) => {
+  const { ctx, agent, finals, reviewId } = await reviewHarness(t, () => Response.json({ report_id: 'r1', status: 'partial' }))
+  try {
+    const events = agent.session.snapshotEvents() as unknown as Record<string, unknown>[]
+    events.push({ type: 'assistant/message', data: { turn: 1, step: 2, message: { role: 'assistant', content: [] }, usage: { inputTokens: 120, outputTokens: 30, totalTokens: 150 } } })
+    await ctx.tools.execute({ ...execution('review_finalize', { review_id: reviewId }), agent })
+    const usage = finals[0]!.usage as { orchestration: Record<string, number>; step_limit_per_department: number; departments: object }
+    assert.deepEqual(usage.orchestration, { steps: 1, input_tokens: 120, output_tokens: 30, total_tokens: 150 })
+    assert.equal(usage.step_limit_per_department, 3)
+    assert.deepEqual(usage.departments, {})
+  } finally { await ctx.fiber.dispose() }
+})
+
+
+const cases = JSON.parse(readFileSync(new URL('../src/guards/untrusted-input.test-cases.json', import.meta.url), 'utf8')) as { must_deny: string[]; must_allow: string[] }
+/** Every product tool that accepts free text, with that text in the argument a poisoned cell would reach. */
+const carriers: [string, (text: string) => Record<string, unknown>][] = [
+  ['aggregate_metric', text => ({ metric: 'total_output', period: '2025-11', entity: text })],
+  ['lookup_field_dictionary', text => ({ department: 'finance', column: text })],
+  ['confirm_column_match', text => ({ batch_id: 'a'.repeat(32), department: 'finance', column: 'x', target: 'y', accepted: true, reason: text })],
+  ['workflow_record', text => ({ template: 't', said: [{ label: 'note', value: text }] })],
+]
+
+test('every poisoned value is refused at real dispatch for every text-carrying tool, before Python is contacted', async (t) => {
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  let contacted = 0
+  t.mock.method(globalThis, 'fetch', async () => { contacted += 1; return Response.json({}) })
+  const outcomes: string[] = []
+  try {
+    for (const text of cases.must_deny) {
+      for (const [name, args] of carriers) {
+        const result = await ctx.tools.execute({ ...execution(name, args(text)), agent: captain('请研判') })
+        assert.equal(result.isError, true, `${name} accepted: ${text}`)
+        assert.match(JSON.stringify(result.content), /instruction-shaped/, `${name} refused for another reason: ${text}`)
+        outcomes.push(`${name}:denied`)
+      }
+    }
+    assert.equal(contacted, 0, 'a refused call must never reach the backend')
+    assert.equal(outcomes.length, cases.must_deny.length * carriers.length)
+  } finally { await ctx.fiber.dispose() }
+})
+
+test('ordinary business text is not refused by the injection guard', async (t) => {
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  t.mock.method(globalThis, 'fetch', async () => Response.json({ department: 'finance', column: 'x', kind: null, declared: false }))
+  try {
+    for (const text of cases.must_allow) {
+      const result = await ctx.tools.execute({ ...execution('lookup_field_dictionary', { department: 'finance', column: text }), agent: captain('请研判') })
+      assert.doesNotMatch(JSON.stringify(result.content), /instruction-shaped/, `refused ordinary text: ${text}`)
+    }
   } finally { await ctx.fiber.dispose() }
 })
