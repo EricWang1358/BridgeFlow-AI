@@ -6,7 +6,7 @@
 | # | 输入 | 谁提供 | 到手后验收 | 状态 |
 | --- | --- | --- | --- | --- |
 | 1 | 飞书自建应用凭据 + 测试文件夹（#140） | 飞书管理员 | `python scripts/feishu_live_check.py` | 未提供 |
-| 2 | AWS Lightsail 实例、静态 IP、域名（#138） | 部署负责人 | `bash deploy/bootstrap.sh <domain>` → `bash deploy/preflight.sh <domain>` | 基建就绪，暂不连接 |
+| 2 | AWS Lightsail 实例、静态 IP、域名（#138） | 部署负责人 | `bash deploy/bootstrap.sh <domain>` → `bash deploy/preflight.sh <domain>` | 基建就绪；账号、域名与密钥已由团队另行安排 |
 | 3 | 报价样板（#104、#7、#20、#40） | 市场部 + 报价负责人 | 见下 | 未提供；已用 `data/mock_business/quotation/` 模拟 |
 | 4 | 真实月度导出 + 手填总表（#141） | 四部门 + 留出评测执行人 | `python scripts/integration_cases.py real <目录>` | 未提供；已用 `data/mock_business/monthly/` 模拟 |
 | 5 | 口径确认（#23、#19） | 各部门负责人 | 改 `integration.yaml` / 字典，跑全量测试 | 已按通用做法补齐，待确认 |
