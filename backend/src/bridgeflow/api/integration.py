@@ -50,8 +50,11 @@ async def integration_summary(request: BatchRef) -> dict:
         "batch_id": request.batch_id, "declaration": result.version,
         "rows": len(result.rows), "complete_rows": sum(1 for r in result.rows if r.complete),
         "columns": len(result.columns), "issues_by_kind": counts,
+        # Declaration text, not sheet data: which gaps rest on a convention rather than the business side's word.
+        "assumptions": result.assumptions,
         "open_items": [{"kind": i.kind, "field": i.field, "departments": i.departments, "message": i.message}
                        for i in result.issues[:20]],
         "next_step": ("Explain the open items to the person and who must decide each; "
-                      "undeclared constants and roll-up rules belong to the dictionary owner."),
+                      "undeclared constants and roll-up rules belong to the dictionary owner. "
+                      "When citing a figure that rests on an assumption, say it follows a convention the business side has not confirmed."),
     }

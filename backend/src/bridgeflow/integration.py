@@ -11,9 +11,12 @@ that declaration and nothing else:
 - **A formula the dictionary states is computed**, and if a department already filled
   that column, the two are compared. A disagreement is reported with both numbers; the
   cell is left empty rather than picking one.
-- **What the dictionary does not state is not invented.** A formula needing an undeclared
-  constant (the VAT rate) is refused with the constant's name; several rows for one key
-  in one department are refused until a roll-up rule is declared.
+- **What the dictionary does not state is not invented by code.** A formula needing an
+  undeclared constant is refused with the constant's name; several rows for one key in one
+  department are refused unless that department declares a roll-up. Where the declaration
+  fills a gap with an industry convention rather than the business side's own words (the
+  VAT rate, the 缺口 formula, the diagnosis thresholds, daily roll-up), it says so under
+  `assumptions`, and every cell that depends on one carries that note.
 - **Every cell says where it came from**: department, file, sheet, row and header, or the
   formula and the fields it used.
 
@@ -69,6 +72,29 @@ class Check(_Strict):
     tolerance: float = 0
 
 
+Comparison = Literal["lt", "lte", "gt", "gte"]
+
+
+class Rule(_Strict):
+    label: str
+    #: All conditions must hold: [field, comparison, number].
+    when: list[tuple[str, Comparison, float]] = Field(min_length=1)
+
+
+class Classification(_Strict):
+    """A text field decided by the first matching rule over numeric fields."""
+    rules: list[Rule] = Field(min_length=1)
+    otherwise: str
+
+
+class Rollup(_Strict):
+    """How one department's several rows for one key become one. Unlisted fields must be identical."""
+    sum: list[str] = Field(default_factory=list)
+    concat: list[str] = Field(default_factory=list)
+    #: Derived or classified fields: row-level values are dropped and recomputed from the rolled-up inputs.
+    recompute: list[str] = Field(default_factory=list)
+
+
 class DepartmentDecl(_Strict):
     label: str
     template: str
@@ -84,7 +110,11 @@ class IntegrationSpec(_Strict):
     constants: dict[str, float | None] = Field(default_factory=dict)
     fields: dict[str, FieldDecl]
     derived: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    classifications: dict[str, Classification] = Field(default_factory=dict)
+    rollup: dict[str, Rollup] = Field(default_factory=dict)
     checks: list[Check] = Field(default_factory=list)
+    #: Gaps filled by convention, keyed by constant, field, or `rollup.<department>`.
+    assumptions: dict[str, str] = Field(default_factory=dict)
     undeclared_rules: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -102,6 +132,26 @@ class IntegrationSpec(_Strict):
             for key in _declared_constants(tree):
                 if key not in self.constants:
                     problems.append(f"derived {name} uses constant {key} not listed in constants")
+        for name, table in self.classifications.items():
+            if self.fields.get(name) is None or self.fields[name].type != "string":
+                problems.append(f"classification {name} is not a declared text field")
+            for rule in table.rules:
+                problems += [f"classification {name} uses non-numeric field {f}" for f, _, _ in rule.when
+                             if self.fields.get(f) is None or self.fields[f].type != "number"]
+        for department, policy in self.rollup.items():
+            if department not in self.departments:
+                problems.append(f"rollup names unknown department {department}")
+            for name in policy.sum + policy.concat + policy.recompute:
+                if self.fields.get(name) is None or department not in self.fields[name].sources:
+                    problems.append(f"rollup.{department} lists {name}, which that department does not supply")
+            problems += [f"rollup.{department} sums text field {n}" for n in policy.sum
+                         if n in self.fields and self.fields[n].type != "number"]
+            problems += [f"rollup.{department} recomputes {n}, which has no formula or rule" for n in policy.recompute
+                         if n not in self.derived and n not in self.classifications]
+            problems += [f"rollup.{department} cannot roll up grain field {n}" for n in policy.sum + policy.concat + policy.recompute
+                         if n in self.grain]
+        known = set(self.constants) | set(self.fields) | {f"rollup.{d}" for d in self.rollup}
+        problems += [f"assumption {k} names nothing declared" for k in self.assumptions if k not in known]
         for check in self.checks:
             problems += [f"check {check.id} uses undeclared field {f}" for f in (check.left, check.right) if f not in self.fields]
         if problems:
@@ -218,6 +268,8 @@ class MasterResult(BaseModel):
     rows: list[MasterRow]
     issues: list[Issue]
     departments_read: dict[str, dict[str, Any]]
+    #: Conventions the declaration relies on in place of a business-confirmed rule.
+    assumptions: dict[str, str] = Field(default_factory=dict)
 
 
 def _period(year: Any, month: Any) -> str | None:
@@ -251,6 +303,9 @@ class _Contribution:
     sheet: Sheet
     row_number: int  # 1-based sheet row
     values: dict[str, Any] = field(default_factory=dict)
+    #: Set when several rows were rolled up: every sheet row used, and each field's policy.
+    rows: list[int] = field(default_factory=list)
+    policies: dict[str, str] = field(default_factory=dict)
 
 
 def integrate(spec: IntegrationSpec, sheets: list[Sheet]) -> MasterResult:
@@ -315,15 +370,20 @@ def integrate(spec: IntegrationSpec, sheets: list[Sheet]) -> MasterResult:
             if not group:
                 continue
             if len(group) > 1:
-                complete = False
-                issues.append(Issue(kind="needs_rollup", key=list(key), departments=[department],
-                                    message=f"{spec.departments[department].label} has {len(group)} rows for this key and no roll-up rule is declared"))
-                continue
+                merged = _roll_up(spec, department, group)
+                if isinstance(merged, Issue):
+                    complete = False
+                    merged.key = list(key)
+                    issues.append(merged)
+                    continue
+                group = [merged]
             present.append(department)
             for name, value in group[0].values.items():
                 decl = spec.fields[name]
                 where = {"department": department, "file": group[0].sheet.filename, "sheet": group[0].sheet.sheet,
                          "row": group[0].row_number, "column": "+".join(decl.sources[department].period_from or [decl.sources[department].column or ""])}
+                if group[0].rows:
+                    where |= {"rows": group[0].rows, "rollup": group[0].policies.get(name, "identical")}
                 if decl.type == "number":
                     number = _number(value)
                     if number is None:
@@ -369,6 +429,33 @@ def integrate(spec: IntegrationSpec, sheets: list[Sheet]) -> MasterResult:
             else:
                 provenance[name] = {**provenance[name], "verified_by_formula": True}
 
+        for name, table in spec.classifications.items():
+            outcome = _classify(name, table, values)
+            supplied = values.get(name)
+            if isinstance(outcome, Issue):
+                outcome.key = list(key)
+                issues.append(outcome)
+                if supplied is not None:
+                    provenance[name] = {**provenance[name], "verified_by_rule": False, "unverified_because": outcome.message}
+                continue
+            label, rule_inputs = outcome
+            if supplied is None:
+                values[name] = label
+                provenance[name] = {"rule": name, "inputs": rule_inputs}
+            elif str(supplied).strip() != label:
+                complete = False
+                issues.append(Issue(kind="derived_mismatch", field=name, key=list(key), departments=[provenance[name]["department"]],
+                                    message=f"{name}: department wrote {supplied}, the declared rule gives {label}"))
+                values[name] = None
+                provenance[name] = {"conflict": {"supplied": supplied, "computed": label}}
+            else:
+                provenance[name] = {**provenance[name], "verified_by_rule": True}
+
+        for name, cell in provenance.items():
+            notes = _assumptions_behind(spec, name, cell)
+            if notes:
+                cell["assumptions"] = notes
+
         for check in spec.checks:
             left, right = values.get(check.left), values.get(check.right)
             if left is None or right is None:
@@ -379,7 +466,64 @@ def integrate(spec: IntegrationSpec, sheets: list[Sheet]) -> MasterResult:
                                     message=f"{check.title}: {check.left}={left}, {check.right}={right}"))
         rows.append(MasterRow(key=list(key), values=values, provenance=provenance, complete=complete))
 
-    return MasterResult(version=spec.version, columns=columns, rows=rows, issues=issues, departments_read=read)
+    return MasterResult(version=spec.version, columns=columns, rows=rows, issues=issues, departments_read=read,
+                        assumptions=spec.assumptions)
+
+
+def _roll_up(spec: IntegrationSpec, department: str, group: list[_Contribution]) -> _Contribution | Issue:
+    label = spec.departments[department].label
+    policy = spec.rollup.get(department)
+    if policy is None:
+        return Issue(kind="needs_rollup", departments=[department],
+                     message=f"{label} has {len(group)} rows for this key and no roll-up rule is declared")
+    merged = _Contribution(group[0].sheet, group[0].row_number, rows=[c.row_number for c in group])
+    conflicting = []
+    for name in dict.fromkeys(n for c in group for n in c.values):
+        present = [c.values[name] for c in group if name in c.values]
+        if name in policy.recompute:
+            merged.policies[name] = "recomputed"
+        elif name in policy.sum:
+            numbers = [_number(v) for v in present]
+            invalid = next((v for v, n in zip(present, numbers, strict=True) if n is None), None)
+            merged.values[name] = invalid if invalid is not None else _plain(sum(numbers, Decimal(0)))
+            merged.policies[name] = "sum"
+        elif name in policy.concat:
+            merged.values[name] = "；".join(dict.fromkeys(str(v).strip() for v in present))
+            merged.policies[name] = "concat"
+        else:
+            numeric = spec.fields[name].type == "number"
+            distinct = {(_number(v) if numeric and _number(v) is not None else str(v).strip()) for v in present}
+            if len(distinct) > 1:
+                conflicting.append(name)
+            merged.values[name] = present[0]
+    if conflicting:
+        return Issue(kind="needs_rollup", field=conflicting[0], departments=[department],
+                     message=f"{label} has {len(group)} rows for this key that differ in {', '.join(conflicting)}, which the roll-up does not sum, join or recompute")
+    return merged
+
+
+_COMPARE = {"lt": lambda a, b: a < b, "lte": lambda a, b: a <= b, "gt": lambda a, b: a > b, "gte": lambda a, b: a >= b}
+
+
+def _classify(name: str, table: Classification, values: dict[str, Any]) -> tuple[str, list[str]] | Issue:
+    needed = list(dict.fromkeys(f for rule in table.rules for f, _, _ in rule.when))
+    missing = [f for f in needed if values.get(f) is None]
+    if missing:
+        return Issue(kind="cannot_compute", field=name, message=f"{name} needs {', '.join(missing)}")
+    for rule in table.rules:
+        if all(_COMPARE[op](Decimal(str(values[f])), Decimal(str(bound))) for f, op, bound in rule.when):
+            return rule.label, needed
+    return table.otherwise, needed
+
+
+def _assumptions_behind(spec: IntegrationSpec, name: str, cell: dict[str, Any]) -> list[str]:
+    keys = [name] if "formula" in cell or "rule" in cell or cell.get("verified_by_formula") is not None \
+        or cell.get("verified_by_rule") is not None else []
+    if name in spec.derived and keys:
+        keys += _declared_constants(spec.derived[name])
+    if "rollup" in cell:
+        keys.append(f"rollup.{cell['department']}")
+    return [f"{k}: {spec.assumptions[k]}" for k in dict.fromkeys(keys) if k in spec.assumptions]
 
 
 def _derive(spec: IntegrationSpec, name: str, tree: dict, values: dict[str, Any]) -> tuple[int | float, list[str]] | Issue:
@@ -420,6 +564,10 @@ def to_xlsx(result: MasterResult) -> bytes:
     notes.append(["类型", "字段", "键", "部门", "说明"])
     for issue in result.issues:
         notes.append([issue.kind, issue.field, " / ".join(issue.key), ", ".join(issue.departments), issue.message])
+    assumed = book.create_sheet("口径假设")
+    assumed.append(["规则", "说明"])
+    for name, text in result.assumptions.items():
+        assumed.append([name, text])
     buffer = io.BytesIO()
     book.save(buffer)
     return buffer.getvalue()

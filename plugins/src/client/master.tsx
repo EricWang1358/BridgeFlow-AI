@@ -9,13 +9,16 @@ import { Chip } from './workspace.tsx'
  */
 type Issue = { kind: string; field: string; key: string[]; departments: string[]; message: string }
 type Row = { key: string[]; values: Record<string, unknown>; provenance: Record<string, Record<string, unknown>>; complete: boolean }
-type Master = { version: string; columns: string[]; rows: Row[]; issues: Issue[] }
+type Master = { version: string; columns: string[]; rows: Row[]; issues: Issue[]; assumptions?: Record<string, string> }
 
 function origin(p: Record<string, unknown> | undefined): string {
   if (!p) return ''
-  if (p.formula) return `= ${String(p.formula)}（${(p.inputs as string[] | undefined)?.join('、') ?? ''}）`
+  const assumed = (p.assumptions as string[] | undefined)?.length ? `\n${(p.assumptions as string[]).join('\n')}` : ''
+  if (p.formula || p.rule) return `= ${String(p.formula ?? p.rule)}（${(p.inputs as string[] | undefined)?.join('、') ?? ''}）${assumed}`
   if (p.conflict) return JSON.stringify(p.conflict)
-  return [p.department, p.file, p.sheet, p.row && `row ${p.row}`, p.column].filter(Boolean).join(' · ') + (p.verified_by_formula === true ? ' ✓' : '')
+  const rows = (p.rows as number[] | undefined)?.length ? `rows ${(p.rows as number[]).join(',')} (${String(p.rollup)})` : p.row && `row ${p.row}`
+  const verified = p.verified_by_formula === true || p.verified_by_rule === true ? ' ✓' : ''
+  return [p.department, p.file, p.sheet, rows, p.column].filter(Boolean).join(' · ') + verified + assumed
 }
 
 export function MasterTable({ batchId }: { batchId: string }) {
@@ -44,6 +47,10 @@ export function MasterTable({ batchId }: { batchId: string }) {
   return <section aria-label={t('integrationMaster')}>
     <div className="bf-card-head"><h3>{t('integrationMaster')}</h3><button onClick={() => void download()}>{t('downloadMaster')}</button></div>
     <p className="bf-hint">{t('integrationHelp')} · {master.version}</p>
+    {Object.keys(master.assumptions ?? {}).length > 0 && <details className="bf-callout" data-tone="info">
+      <summary>{t('integrationAssumptions')}（{Object.keys(master.assumptions!).length}）</summary>
+      <ul>{Object.entries(master.assumptions!).map(([name, text]) => <li key={name}><strong>{name}</strong>：{text}</li>)}</ul>
+    </details>}
     {master.issues.map((issue, i) => <div className="bf-callout" data-tone={issue.kind === 'undeclared_constant' ? 'info' : 'warn'} key={i}>
       <h3>{t(`issue_${issue.kind}`)}{issue.field ? ` · ${issue.field}` : ''}</h3><p>{issue.message}</p>
     </div>)}

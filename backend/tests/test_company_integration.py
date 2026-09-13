@@ -83,17 +83,54 @@ def test_the_business_example_is_reproduced_column_for_column():
     [row] = result.rows
     assert row.values == expected_row()
     assert row.complete
-    assert kinds(result) == ["undeclared_constant"]  # the VAT rate is not in the dictionary
+    assert result.issues == []
     assert row.provenance["生产_实际签收率"]["verified_by_formula"] is True
-    assert row.provenance["物资_单方不含税毛利"]["verified_by_formula"] is False
+    assert row.provenance["物资_单方不含税毛利"]["verified_by_formula"] is True
+    assert row.provenance["市场_缺口"]["verified_by_formula"] is True
+    assert row.provenance["生产_客户合作状态诊断"]["verified_by_rule"] is True
     assert row.provenance["客户名称"]["column"] in {"客户名称", "客户单位"}
 
 
-def test_once_the_vat_rate_is_declared_the_margin_is_verified():
-    declared = SPEC.model_copy(update={"constants": {"增值税税率": 0.13}})
-    result = integration.integrate(declared, sheets())
-    assert result.issues == []
-    assert result.rows[0].provenance["物资_单方不含税毛利"]["verified_by_formula"] is True
+def test_without_a_declared_vat_rate_the_margin_is_kept_but_unverified():
+    undeclared = SPEC.model_copy(update={"constants": {"增值税税率": None}})
+    result = integration.integrate(undeclared, sheets())
+    assert kinds(result) == ["undeclared_constant"]
+    assert result.rows[0].provenance["物资_单方不含税毛利"]["verified_by_formula"] is False
+    assert result.rows[0].values["物资_单方不含税毛利"] == expected_row()["物资_单方不含税毛利"]
+
+
+def test_every_cell_resting_on_a_convention_says_which_one():
+    [row] = integration.integrate(SPEC, sheets()).rows
+    assert any(n.startswith("增值税税率") for n in row.provenance["物资_单方不含税毛利"]["assumptions"])
+    assert any(n.startswith("市场_缺口") for n in row.provenance["市场_缺口"]["assumptions"])
+    assert "assumptions" not in row.provenance["生产_实际签收率"]  # stated by the dictionary itself
+    assert "assumptions" not in row.provenance["财务_期初金额"]
+
+
+def test_the_diagnosis_follows_the_declared_rule_table():
+    def month(signed, previous):
+        def edit(sheet):
+            sheet[f"{column(sheet, '实际签收率')}2"] = None
+            sheet[f"{column(sheet, '产量环比增长率')}2"] = None
+            sheet[f"{column(sheet, '客户合作状态诊断')}2"] = None
+            sheet[f"{column(sheet, '实际量')}2"] = signed
+            sheet[f"{column(sheet, '上月实际量')}2"] = previous
+        [row] = integration.integrate(SPEC, sheets(production=(edit, 0))).rows
+        return row.values["生产_客户合作状态诊断"]
+    # 出厂量 is 4980 in the example.
+    assert month(4500, 4500) == "签收异常"      # 签收率 90.4%
+    assert month(4970, 4800) == "平稳合作"      # +3.5%
+    assert month(4970, 5400) == "需求下滑"      # −8.0%
+    assert month(4970, 6300) == "合作萎缩"      # −21.1%
+    assert month(4970, 4600) == "稳定增长"      # +8.0%
+
+
+def test_a_diagnosis_that_contradicts_the_rule_is_withheld():
+    def wrong(sheet):
+        sheet[f"{column(sheet, '客户合作状态诊断')}2"] = "合作萎缩"
+    result = integration.integrate(SPEC, sheets(production=(wrong, 0)))
+    [issue] = [i for i in result.issues if i.kind == "derived_mismatch"]
+    assert issue.field == "生产_客户合作状态诊断" and result.rows[0].values[issue.field] is None
 
 
 # --- refusing to guess -------------------------------------------------------------------
@@ -131,10 +168,51 @@ def test_a_missing_department_leaves_a_partial_row_that_says_so():
     assert result.rows[0].values["财务_期初金额"] is None
 
 
-def test_several_rows_for_one_key_need_a_declared_rollup():
-    result = integration.integrate(SPEC, sheets(production=(None, 1)))
-    assert "needs_rollup" in kinds(result)
+def daily(splits):
+    """The example's production row split into days; each day carries its own ratios."""
+    def edit(sheet):
+        base = [c.value for c in sheet[2]]
+        headers = [str(c.value or "").strip() for c in sheet[1]]
+        sheet.delete_rows(2)
+        for share, station in splits:
+            row = list(base)
+            for label in ("生产量", "出厂量", "实际量"):
+                row[headers.index(label)] = base[headers.index(label)] * share
+            row[headers.index("实际签收率")] = 0.5  # a day's own ratio, which must not be averaged or kept
+            row[headers.index("厂站")] = station
+            sheet.append(row)
+    return edit
+
+
+def test_daily_production_rows_roll_up_to_the_business_example():
+    result = integration.integrate(SPEC, sheets(production=(daily([(0.4, "A拌站"), (0.6, "A拌站")]), 0)))
+    [row] = result.rows
+    assert result.issues == [] and row.complete
+    assert row.values == expected_row()
+    assert row.provenance["生产_生产量"]["rows"] == [2, 3] and row.provenance["生产_生产量"]["rollup"] == "sum"
+    assert row.provenance["生产_实际签收率"]["formula"] == "生产_实际签收率"
+    assert any(n.startswith("rollup.production") for n in row.provenance["生产_生产量"]["assumptions"])
+
+
+def test_roll_up_joins_distinct_stations():
+    [row] = integration.integrate(SPEC, sheets(production=(daily([(0.5, "A拌站"), (0.5, "B拌站")]), 0))).rows
+    assert row.values["生产_厂站"] == "A拌站；B拌站"
+
+
+def test_rows_that_differ_in_a_field_the_roll_up_does_not_cover_are_refused():
+    def edit(sheet):
+        daily([(0.5, "A拌站"), (0.5, "A拌站")])(sheet)
+        sheet[f"{column(sheet, '上月实际量')}3"] = 1
+    result = integration.integrate(SPEC, sheets(production=(edit, 0)))
+    [issue] = [i for i in result.issues if i.kind == "needs_rollup"]
+    assert issue.field == "生产_上月实际量"
     assert result.rows[0].values["生产_生产量"] is None
+
+
+def test_a_department_without_a_declared_roll_up_still_refuses_several_rows():
+    result = integration.integrate(SPEC, sheets(finance=(None, 1)))
+    assert "needs_rollup" in kinds(result)
+    assert result.rows[0].values["财务_期初金额"] is None
 
 
 def test_the_v1_templates_lack_the_join_keys_the_dictionary_added_in_v2():
@@ -152,6 +230,7 @@ def test_the_master_workbook_keeps_template_columns_and_lists_open_items():
     book = openpyxl.load_workbook(io.BytesIO(integration.to_xlsx(result)))
     assert [c.value for c in book["总表"][1]] == list(SPEC.fields)
     assert book["待确认"].max_row == 1 + len(result.issues)
+    assert book["口径假设"].max_row == 1 + len(SPEC.assumptions)
 
 
 def test_the_example_generator_is_reproducible(tmp_path):
@@ -193,7 +272,7 @@ def test_an_imported_batch_of_the_templates_produces_the_master_table_over_http(
         view = client.get(f"/integration/batches/{batch_id}").json()
         assert view["rows"][0]["values"] == expected_row()
         summary = client.post("/tools/integration-summary", json={"batch_id": batch_id}).json()
-        assert (summary["rows"], summary["complete_rows"], summary["issues_by_kind"]) == (1, 1, {"undeclared_constant": 1})
+        assert (summary["rows"], summary["complete_rows"], summary["issues_by_kind"]) == (1, 1, {})
         assert "项目A" not in str(summary) and "1485000" not in str(summary)
         workbook = client.get(f"/integration/batches/{batch_id}/xlsx").json()
         book = openpyxl.load_workbook(io.BytesIO(base64.b64decode(workbook["base64"])))

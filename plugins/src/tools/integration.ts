@@ -15,7 +15,8 @@ export function integrationSummary(config: BackendConfig): ProductTool {
     description:
       'Summarise the cross-department master table built from the business dictionary for an imported batch: row counts, ' +
       'complete rows, and open items (missing departments, disagreements, formula mismatches, undeclared constants, roll-up rules). ' +
-      'No cell values. Undeclared constants and roll-up rules are for the dictionary owner to declare; never supply them yourself.',
+      'No cell values. Lists the conventions (assumptions) the declaration uses where the dictionary is silent; say so when a figure rests on one. ' +
+      'Undeclared constants and roll-up rules are for the dictionary owner to declare; never supply them yourself.',
     parameters: { batch_id: { type: 'string', required: true } },
     output: {
       schema: { type: 'object', additionalProperties: true },
