@@ -65,6 +65,10 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
         # the mixed formats elsewhere in it went unreported.
         sound = frame.drop(index=[c.row for c in shifted], errors="ignore")
 
+        # Cells as the department wrote them, before any coercion. A row that is held back
+        # must be held back intact: coercing a slid row first turns its date into nothing
+        # and its quantity into nothing, and the person reviewing it has lost the data (#77).
+        written = frame.copy()
         columns: list[ColumnSpec] = []
         for column in frame.columns:
             series, dtype, fixes = self._coerce(
@@ -78,6 +82,10 @@ class DataSanitizerAgent(Agent[SanitizerInput, CleanTable]):
         # Preserve the original cell for human review instead of persisting a guess.
         for correction in ambiguous:
             frame.at[correction.row, correction.column] = correction.before
+        if shifted:
+            frame = frame.astype(object)
+        for correction in shifted:
+            frame.loc[correction.row] = written.loc[correction.row]
         blocked_rows = {c.row for c in [*shifted, *ambiguous]}
         rows, quarantine = self._split_quarantine(frame.drop(index=list(blocked_rows), errors="ignore"))
         threshold = max(1, len(frame.columns) // 2)

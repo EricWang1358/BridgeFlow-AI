@@ -234,7 +234,7 @@ Lead 会话。我们的四个角色读同一份数据、各自独立出结论、
 它是 CI 与无人值守的严格立场。`dsh-tool-bash` 自己就消费这个 outcome：fail closed unless
 `allowed-once`。
 
-推论（待实测）：把 approval policy 设成 `ask` 且不挂任何 answerer，bash 应当被 `unavailable` 拒掉。
+已实测（#55）：policy 为 `ask` 且不挂任何 answerer 时，官方审批返回 `unavailable`，调用方失败关闭（见第八节所列测试）。
 如果成立，这是 #26 的零代码即时缓解手段。这条必须先验证再写进方案，因为我们观测到 bash 畅通无阻，
 说明 `sdk-minimal` 要么配了 answerer，要么 service config 的默认值不是 `ask`。
 
@@ -297,14 +297,19 @@ export function apply(ctx: Context) {
 `docs/subsystems/session-query.md`（只读了纲要，追踪能力 #31 的细节未提取）。
 Client 插件与 `tool.call.toolview` 注册现已实际接入并通过浏览器复演，见第九节。
 
-待实测（这些不能靠读文档定论）：
+待实测清单已逐条结清（#55）。每条要么有测试守着，要么写明为什么不再需要：
 
-- 把 approval policy 设成 `ask` 且不挂 answerer，bash 会不会被拒（见 7.3，#26 的即时手段）；
-- `sdk-minimal` 当前的 approval policy 默认值到底是什么，因为我们观测到 bash 畅通；
-- 禁用 shell 已由原生 Web composition 与终局 guard 实测，后续版本升级仍需回归；
-- `--patch` 是否支持 link / watch（7.8）；
-- WSL2 下 `dsh web` 的端口转发；
-- 官方 spawn 已在独立子会话并行实测，不再把 SDK 同一会话的限制套在子会话上。
+- **无 answerer 时是否失败关闭**：已实测为测试。官方 `@deepseek-ai/dsh-user-approval` 在不挂 answerer 时返回 `unavailable`，
+  并写入 `approval/asked`、`approval/decided` 审计对，另有挂 answerer 的对照组（`plugins/tests/runtime.test.ts`：dsh approval contract）。
+  版本升级后语义一变，测试会失败。
+- **`sdk-minimal` 的 approval policy 默认值**：不再相关。默认入口不是 `sdk-minimal`，而是 `dsh web` 加企业补丁；
+  shell 由 profile 禁用，并由插件的终局 guard 在派发处拒绝（`test_tool_inventory.py`、runtime 测试「enterprise guard blocks a later registered shell」）。
+  官方实现的默认策略是 `ask`，和上一条的测试是同一条路径。
+- **禁用 shell 的升级回归**：由上面两组测试守着；产品工具目录也做了快照（runtime 测试「the product tool catalogue is pinned」），
+  新增或缺失工具必须是有意的改动。
+- **`--patch` 是否支持 link / watch**：不需要。启动器每次都显式传 `--patch dsh/enterprise.patch.yml`，不依赖 watch。
+- **WSL2 下 `dsh web` 的端口转发**：已在使用中验证。WSL 内以 `127.0.0.1:3082` 启动，从 Windows 浏览器直接访问并完成演示操作。
+- **官方 spawn 子会话**：已在独立子会话中并行实测，见 `docs/00` 与离线 `smoke:business`。
 
 与其他文档的冲突已全部就地改完。这一节曾经挂着一张「待同步」表，而各文档顶上挂着「部分已过时」的横幅、
 正文原样保留，等于要求读者做人肉 diff，而横幅拦不住跳读的人。现在的规矩写在

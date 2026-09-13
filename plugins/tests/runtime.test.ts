@@ -426,3 +426,37 @@ test('a saved approval note is a draft until the official decision, and only a r
   assert.equal(settledNote(entry, 'rejected').status, 'final')
   for (const outcome of ['allowed-once', 'cancelled', 'unavailable']) assert.equal(settledNote(entry, outcome).status, 'unused')
 })
+
+async function officialApproval(answer?: (req: unknown) => string) {
+  const { default: ApprovalService } = await import('@deepseek-ai/dsh-user-approval')
+  const ctx = new Context()
+  await ctx.plugin(ApprovalService)
+  if (answer) ctx.on('approval/request', (req: unknown) => answer(req))
+  const events: { type: string; data: unknown }[] = [{ type: 'turn/start', data: {} }]
+  const session = { get seq() { return events.length }, eventAt: (seq: number) => events[seq], append: (type: string, data: unknown) => { events.push({ type, data }) } }
+  const agent = { id: 'captain', session, ctx } as unknown as Agent
+  return { ctx, agent, events }
+}
+
+test('dsh approval contract: no answerer fails closed as unavailable, and both halves of the audit pair are written', async () => {
+  const control = await officialApproval(() => 'allowed-once')
+  assert.equal(await control.ctx.approval.request({ agent: control.agent, toolName: 'confirm_mapping', reason: 'r' }), 'allowed-once', 'harness control: a composed answerer is consulted')
+  await control.ctx.fiber.dispose()
+
+  const { ctx, agent, events } = await officialApproval()
+  assert.equal(await ctx.approval.request({ agent, toolName: 'confirm_mapping', reason: 'r' }), 'unavailable')
+  assert.deepEqual(events.slice(1).map(e => e.type), ['approval/asked', 'approval/decided'])
+  assert.equal((events[2]!.data as { outcome: string }).outcome, 'unavailable')
+  await ctx.fiber.dispose()
+})
+
+test('the product tool catalogue is pinned: a new or missing tool must be a deliberate change', async () => {
+  const ctx = await runtime()
+  const product = ctx.tools.schemas().map(tool => tool.name).sort()
+  assert.deepEqual(product, [
+    'aggregate_metric', 'batch_summary', 'column_candidates', 'confirm_column_match', 'confirm_mapping', 'list_metrics',
+    'lookup_field_dictionary', 'profile_batch', 'quarantine_apply', 'quarantine_decide', 'quarantine_list', 'review_context',
+    'review_finalize', 'workflow_approve_submit', 'workflow_board', 'workflow_catalogue', 'workflow_draft', 'workflow_record',
+  ])
+  await ctx.fiber.dispose()
+})

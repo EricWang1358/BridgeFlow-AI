@@ -33,6 +33,7 @@ class DecideRequest(BaseModel):
     action: Literal["release", "discard"]
     reason: str = Field(min_length=1, max_length=300)
     fixes: list[quarantine.Fix] = Field(default_factory=list, max_length=10)
+    shift: Literal["", "left", "right"] = ""
     confirmed_by: str = "unknown-agent"
     call_id: str | None = None
 
@@ -44,7 +45,7 @@ async def quarantine_decide(request: DecideRequest, http_request: Request) -> di
     consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body())
     book = quarantine.decide(request.batch_id, batch, quarantine.Disposition(
         department=request.department, index=request.index, action=request.action, reason=request.reason,
-        fixes=request.fixes, decided_by=request.confirmed_by, authorised_by="dsh-authenticated-session"))
+        fixes=request.fixes, shift=request.shift, decided_by=request.confirmed_by, authorised_by="dsh-authenticated-session"))
     return {"batch_id": request.batch_id, "decisions": len(book.decisions),
             "next_step": "Decide the remaining rows, then apply to create a new batch; this batch stays frozen."}
 

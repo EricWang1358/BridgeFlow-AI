@@ -53,6 +53,8 @@ class Disposition(BaseModel):
     action: Literal["release", "discard"]
     reason: str = Field(min_length=1, max_length=300)
     fixes: list[Fix] = Field(default_factory=list, max_length=10)
+    #: Release the row with every cell moved one column, as the listing suggested (#77).
+    shift: Literal["", "left", "right"] = ""
     decided_by: str = ""
     authorised_by: str = ""
     decided_at: str = ""
@@ -127,6 +129,14 @@ def revalidate(table: CleanTable, row: dict[str, Any], date_order: str | None,
     return (None, issues) if issues else (cleaned, [])
 
 
+def shifted(table: CleanTable, row: dict[str, Any], direction: str) -> dict[str, Any]:
+    """The row with every value moved one column. Positions only; nothing is inferred."""
+    names = [spec.name for spec in table.columns]
+    values = [row.get(name) for name in names]
+    moved = [*values[1:], None] if direction == "left" else [None, *values[:-1]]
+    return dict(zip(names, moved, strict=True))
+
+
 def _blank(value: Any) -> bool:
     return value is None or (isinstance(value, float) and math.isnan(value)) or str(value).strip() == ""
 
@@ -139,6 +149,9 @@ class Entry(BaseModel):
     index: int
     failing_checks: list[str]
     releasable: bool
+    #: A one-column shift under which the row would pass, if exactly one direction does.
+    #: "Could be repaired" is shown apart from "cannot be"; a person still decides.
+    shift_suggestion: str = ""
     decision: str = ""
 
 
@@ -155,9 +168,12 @@ def entries(batch_id: str, batch) -> dict[str, Any]:
             total += 1
             if len(items) >= MAX_LISTED:
                 continue
-            _, issues = revalidate(table, row, _order(batch, table.department))
-            items.append(Entry(department=table.department, index=index, failing_checks=issues,
-                               releasable=not issues, decision=decided.get((table.department, index), {}).get("action", "")))
+            order = _order(batch, table.department)
+            _, issues = revalidate(table, row, order)
+            passing = [d for d in ("left", "right") if issues and not revalidate(table, shifted(table, row, d), order)[1]]
+            items.append(Entry(department=table.department, index=index, failing_checks=issues, releasable=not issues,
+                               shift_suggestion=passing[0] if len(passing) == 1 else "",
+                               decision=decided.get((table.department, index), {}).get("action", "")))
     return {"batch_id": batch_id, "total": total, "truncated": total > len(items),
             "applied_to": ledger(batch_id).applied_to, "entries": [e.model_dump() for e in items]}
 
@@ -170,12 +186,14 @@ def decide(batch_id: str, batch, decision: Disposition) -> Ledger:
     if len(tables) != 1 or not 0 <= decision.index < len(tables[0].quarantine):
         raise HTTPException(404, "No such quarantined row in this batch")
     if decision.action == "release":
-        _, issues = revalidate(tables[0], tables[0].quarantine[decision.index], _order(batch, decision.department),
-                               decision.fixes)
+        row = tables[0].quarantine[decision.index]
+        if decision.shift:
+            row = shifted(tables[0], row, decision.shift)
+        _, issues = revalidate(tables[0], row, _order(batch, decision.department), decision.fixes)
         if issues:
             raise HTTPException(409, "Row still fails revalidation: " + "; ".join(issues))
-    elif decision.fixes:
-        raise HTTPException(422, "Corrected cells only make sense when releasing a row")
+    elif decision.fixes or decision.shift:
+        raise HTTPException(422, "Corrected cells or a shift only make sense when releasing a row")
     decision.decided_at = datetime.now(UTC).isoformat()
     book.decisions = [d for d in book.decisions if (d.department, d.index) != (decision.department, decision.index)]
     book.decisions.append(decision)
@@ -201,7 +219,8 @@ async def apply(batch_id: str, batch, *, batch_path, load_batch, assemble, summa
                 kept.append(row)
                 continue
             if decision.action == "release":
-                cleaned, issues = revalidate(table, row, _order(batch, table.department), decision.fixes)
+                source = shifted(table, row, decision.shift) if decision.shift else row
+                cleaned, issues = revalidate(table, source, _order(batch, table.department), decision.fixes)
                 if issues:  # the frozen batch cannot have changed, but never trust that silently
                     raise HTTPException(409, f"{table.department} row {index} no longer revalidates: {'; '.join(issues)}")
                 table.rows.append(cleaned)

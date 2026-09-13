@@ -78,3 +78,21 @@ def test_applying_creates_a_derived_batch_and_leaves_the_original_frozen(client)
     assert decide(client, batch_id, 0, "discard").status_code == 409
     view = client.get(f"/batches/{batch_id}/view?section=quarantine").json()["rows"]
     assert [r["decision"] for r in view] == ["discard", "release"]
+
+
+def test_a_row_shifted_by_one_column_is_offered_as_repairable_and_released_only_by_decision(client):
+    def shifted_row(content: bytes) -> bytes:
+        return (content.decode().rstrip("\n") + "\n,SKU-C3,LINE-C,2025-11-05,12,10\n").encode()
+
+    batch_id = upload(client, replacements={"production": shifted_row})
+    [entry] = [e for e in client.post("/tools/quarantine-list", json={"batch_id": batch_id}).json()["entries"]
+               if e["department"] == "production"]
+    assert (entry["releasable"], entry["shift_suggestion"]) == (False, "left")
+    assert decide(client, batch_id, entry["index"], "release").status_code == 409  # as written it still fails
+    response = approved(client, "/tools/quarantine-decide", {"batch_id": batch_id, "department": "production",
+        "index": entry["index"], "action": "release", "reason": "整行右移一格", "fixes": [], "shift": "left",
+        "confirmed_by": "captain", "call_id": "shift"})
+    assert response.status_code == 200, response.text
+    applied = approved(client, "/tools/quarantine-apply", {"batch_id": batch_id, "confirmed_by": "captain", "call_id": "apply"}).json()
+    table = next(t for t in load_batch(applied["batch"]["batch_id"]).clean_tables if t.department == "production")
+    assert any(r.get("sku") == "SKU-C3" and r.get("date") == "2025-11-05" and r.get("available_hrs") is None for r in table.rows)
