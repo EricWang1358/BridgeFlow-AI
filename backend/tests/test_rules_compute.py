@@ -128,6 +128,7 @@ def _finance(rows: list[dict]) -> CleanTable:
 ACCOUNTS = FieldDictionary({
     "columns": {"finance": {"gl_account": "gl_account"}},
     "measures": {"finance": {"amount": "revenue_amount"}},
+    "account_classes": {"finance": {"sales": ["sales"], "cost_of_sales": ["cogs", "cost"]}},
 })
 
 
@@ -169,3 +170,32 @@ async def test_an_entity_filter_reads_identity_not_the_rest_of_the_line():
     # `note` is not declared as identity, so it does not decide which rows are A1's.
     # Under the old rule this returned 5,100.
     assert only_a1.value == 100
+
+
+async def test_undeclared_account_classes_refuse_sales_and_cost_instead_of_guessing():
+    """#92: which codes are sales is the customer's chart of accounts, not a keyword list in code."""
+    tables = await _tables("finance")
+    unclassified = FieldDictionary({"columns": {"finance": {"gl_account": "gl_account"}},
+                                    "measures": {"finance": {"amount": "revenue_amount"}}})
+    for metric in ("sales", "cost_of_sales", "gross_margin"):
+        with pytest.raises(metrics.MetricRefused, match="account_classes"):
+            metrics.compute(metric, "2025-11", tables, dictionary=unclassified)
+
+
+async def test_a_net_of_classified_lines_is_never_reported_as_revenue():
+    tables = await _tables("finance")
+    with pytest.raises(metrics.MetricRefused, match="net"):
+        metrics.compute("revenue", "2025-11", tables, dictionary=ACCOUNTS)
+
+
+def test_no_account_keyword_is_written_into_metrics_code():
+    import ast
+    from pathlib import Path
+    tree = ast.parse(Path(metrics.__file__).read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        holder = isinstance(node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
+        if holder and ast.get_docstring(node) is not None:
+            node.body = node.body[1:] or [ast.Pass()]
+    code = ast.unparse(tree)
+    for marker in ("cogs", "销售", "收入", "成本", "'rev'"):
+        assert marker not in code
