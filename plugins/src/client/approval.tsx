@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, useUI } from './ui.ts'
 import type { Limits } from './workspace.tsx'
 import type { PendingApproval } from '@deepseek-ai/dsh-client-ui-approval/client'
@@ -16,8 +16,13 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
   const [note, setNote] = useState('')
   const [ticket, setTicket] = useState('')
   const [details, setDetails] = useState<Detail[] | null>(null)
+  const [detailFailed, setDetailFailed] = useState(false), [attempt, setAttempt] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const card = useRef<HTMLElement>(null)
+  // A decision that appears must be reachable without a mouse: focus lands on the card,
+  // then Tab reaches the reason, Reject and Allow in that order.
+  useEffect(() => { card.current?.focus() }, [pending])
   useEffect(() => {
     const abort = new AbortController()
     void api<Limits>('/config', { signal: abort.signal }).then(v => setTimeoutValue(v.decisionTimeoutMs / 1000)).catch(() => {})
@@ -26,12 +31,15 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
       .then(async response => { if (!response.ok) throw new Error(t('expired')); return response.json() })
       .then(value => setTicket(value.ticket))
       .catch(e => { if (!abort.signal.aborted) setError(String(e)) })
+    setDetailFailed(false)
     void fetch(`/bridgeflow/approval-detail?${query}`, { signal: abort.signal })
-      .then(async response => (response.ok ? response.json() : { details: [] }))
+      .then(async response => { if (!response.ok) throw new Error(String(response.status)); return response.json() })
       .then(value => { if (!abort.signal.aborted) setDetails(value.details ?? []) })
-      .catch(() => { if (!abort.signal.aborted) setDetails([]) })
+      // A summary that failed to load is not "no summary": say so and offer a retry,
+      // rather than silently falling back to the raw reason (#96).
+      .catch(() => { if (!abort.signal.aborted) { setDetails(null); setDetailFailed(true) } })
     return () => abort.abort()
-  }, [pending])
+  }, [pending, attempt])
   // Argument names are this plugin's own closed set (tools/confirm-mapping.ts), so
   // they translate; a name outside the set shows verbatim rather than as arg_foo.
   // Values are the operator's evidence — shown exactly as declared, never rewritten.
@@ -56,9 +64,11 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
       await pending.answer(outcome)
     } catch (e) { setError(String(e)); setBusy(false) }
   }
-  return <section className="bf-card bf-decision" aria-label={t('approval')}>
+  // Each tool's decision is named for what it decides; the mapping wording is kept for mappings.
+  const kind = pending.toolName === 'confirm_mapping' ? '' : `_${pending.toolName}`
+  return <section ref={card} tabIndex={-1} className="bf-card bf-decision" aria-label={t(`approval${kind}`)}>
     <header>
-      <strong>{t('approvalTitle')}</strong>
+      <strong>{t(`approvalTitle${kind}`)}</strong>
       <span className="bf-hint">{t('timeout')} {timeout ?? '—'} {t('seconds')}</span>
     </header>
     {/* The reason is the whole basis of the decision. Rendered as localized prose
@@ -67,7 +77,10 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
         remains what the native console dialog shows. */}
     <div className="bf-callout" data-tone="info">
       <p>{t('approvalIntro')}</p>
-      {details === null
+      {detailFailed
+        ? <div role="alert"><p className="bf-error">{t('approvalDetailFailed')}</p><p>{pending.reason}</p>
+            <button onClick={() => setAttempt(n => n + 1)}>{t('retry')}</button></div>
+        : details === null
         ? <p className="bf-hint">{t('loading')}</p>
         : details.length
           ? <dl className="bf-approval-detail">

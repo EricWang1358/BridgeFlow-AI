@@ -129,8 +129,13 @@ try {
   await page.getByRole('menuitem', { name: 'BridgeFlow', exact: true }).click()
   const composer = page.locator('[contenteditable=true]').first()
   const request = step => `这是隔离测试目录中的合成映射验收。请只调用一次 confirm_mapping，参数 source="sku:test-${step}", target="customer:test", relation="ordered_by", accepted=true, evidence="合成业务用例的人工作业关系", period="2025-11"。等待操作者审批，随后简短说明实际结果，若拒绝必须原样转述理由。不要重试，不调用其他工具或提问。`
+  // #96: the first summary request fails; the card must say so and offer a working retry.
+  let failDetailOnce = true
+  await page.route('**/bridgeflow/approval-detail**', route => { if (failDetailOnce) { failDetailOnce = false; return route.fulfill({ status: 503, body: 'unavailable' }) } return route.continue() })
   await composer.fill(live ? request(0) : 'Exercise the approved mapping fixture.')
   await composer.press('Enter')
+  await page.getByText(/决定摘要加载失败|decision summary failed to load/).waitFor({ timeout: 30_000 })
+  await page.getByRole('region', { name: '映射审批' }).getByRole('button', { name: /^(重试|Retry)$/ }).click()
   // #110: the approval card renders the structured decision summary localized —
   // labels translated, values verbatim — not just translated buttons.
   const decision = page.getByRole('region', { name: '映射审批' })
@@ -145,9 +150,17 @@ try {
   assert(acceptedMemory.includes('dsh-authenticated-session'))
   await composer.fill(live ? request(2) : 'Exercise the rejected mapping fixture.')
   await composer.press('Enter')
-  await page.getByRole('textbox', { name: '拒绝理由', exact: true }).fill('客户编码未核实，请销售负责人确认后再提交。')
+  // #96: decide with the keyboard only. Focus lands on the card; Tab reaches the reason, then Reject.
+  const reason = page.getByRole('textbox', { name: '拒绝理由', exact: true })
+  await reason.waitFor({ timeout: 30_000 })
+  await page.waitForFunction(() => document.activeElement?.classList.contains('bf-decision'))
+  await page.keyboard.press('Tab')
+  assert.equal(await reason.evaluate(el => el === document.activeElement), true, 'Tab from the card reaches the reason')
+  await page.keyboard.type('客户编码未核实，请销售负责人确认后再提交。')
   await page.screenshot({ path: `${scratch}/rejection-note.png`, fullPage: true })
-  await page.getByRole('button', { name: /^(拒绝|Reject)$/ }).click({ timeout: 30_000 })
+  await page.keyboard.press('Tab')
+  assert.match(await page.evaluate(() => document.activeElement?.textContent ?? ''), /^(拒绝|Reject)$/)
+  await page.keyboard.press('Enter')
   await waitTurn(2)
   const afterRejection = await sessionEvents()
   const refusalNarration = afterRejection.filter(e => e.type === 'assistant/message').at(-1).data.message.content
@@ -183,6 +196,18 @@ try {
   for (const group of await page.getByText(/^(1 tool call|1 次工具调用)$/).all()) await group.click()
   assert.equal(await page.getByRole('region', { name: '映射决定' }).count(), 3)
   await page.screenshot({ path: `${scratch}/native-approval.png`, fullPage: true })
+  // #99: an image in the composer shows our way forward (sources), not only the native
+  // message pointing at a model selector this deployment removes.
+  await composer.click()
+  await page.evaluate(() => {
+    const bytes = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=='), c => c.charCodeAt(0))
+    const data = new DataTransfer()
+    data.items.add(new File([bytes], 'table.png', { type: 'image/png' }))
+    document.querySelector('[contenteditable=true]').dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }))
+  })
+  const imageNotice = page.getByRole('status', { name: /这里读不了图片里的数字|Numbers in images cannot be read here/ })
+  await imageNotice.waitFor({ timeout: 10_000 })
+  assert.equal(await imageNotice.getByRole('button', { name: /^(添加来源|Add sources)$/ }).count(), 1)
   await page.getByRole('tab', { name: '业务状态', exact: true }).click()
   await page.getByRole('main', { name: '业务状态' }).getByRole('button', { name: '已拒绝 1', exact: true }).click()
   await page.getByRole('main', { name: '业务状态' }).getByText('客户编码未核实，请销售负责人确认后再提交。', { exact: true }).waitFor()
@@ -206,7 +231,7 @@ try {
   await writeFile(`${scratch}/approval-note-audit.json`, JSON.stringify(noteAudit, null, 2))
   await writeFile(`${scratch}/approval-events.json`, JSON.stringify(events.filter(e => ['approval/asked', 'approval/decided', 'bridgeflow/approval-note', 'tool/result'].includes(e.type)), null, 2))
   console.log(JSON.stringify({ ...measurement, artifacts: scratch }))
-  console.log(JSON.stringify({ status: 'passed', screenshot: `${scratch}/data-workspace.png`, approvalScreenshot: `${scratch}/native-approval.png`, checks: ['native shell', 'plugin loading', 'upload', 'master table', 'authenticated proxy', 'write proxy denied', `native approval allow/reject/timeout with ${live ? 'live model' : 'offline adapter'}`, 'paired native audit events', 'zero browser errors'] }))
+  console.log(JSON.stringify({ status: 'passed', screenshot: `${scratch}/data-workspace.png`, approvalScreenshot: `${scratch}/native-approval.png`, checks: ['native shell', 'plugin loading', 'upload', 'master table', 'authenticated proxy', 'write proxy denied', `native approval allow/reject/timeout with ${live ? 'live model' : 'offline adapter'}`, 'approval summary retry after failure', 'keyboard-only rejection', 'image paste guidance', 'paired native audit events', 'zero browser errors'] }))
 } catch (error) {
   if (page) { await page.screenshot({path: `${scratch}/failure.png`}); console.error('Screenshot:', `${scratch}/failure.png`); console.error((await page.locator('body').innerText()).slice(0,3000)); await writeFile(`${scratch}/failure.html`, await page.content()); console.error(await page.evaluate(() => ({scripts: [...document.scripts].map(x => x.src), boot: window.__DSH_BOOT__}))) }
   console.error(logs.replace(/([?&]token=)[^\s)]+/g, '$1<redacted>'))

@@ -102,6 +102,7 @@ body[data-bf-notebook] [data-slot="root"] > [data-details-collapsed] > div:has(>
 .bf-studio-tools [data-tone=gold] { background: color-mix(in srgb, #c4b66b 20%, var(--bf-shell-pane)) }
 .bf-studio-tools [data-tone=green] { background: color-mix(in srgb, #809f83 20%, var(--bf-shell-pane)) }
 .bf-studio-tools [data-tone=pink] { background: color-mix(in srgb, #b58cae 20%, var(--bf-shell-pane)) }
+.bf-studio-tools [data-tone=teal] { background: color-mix(in srgb, #6f9fa6 20%, var(--bf-shell-pane)) }
 .bf-shell-pane button:disabled { opacity: .5; cursor: default }
 .bf-artifacts { border-top: 1px solid var(--bf-shell-border); margin-top: 18px; padding-top: 16px }
 .bf-artifacts > header, .bf-inline-preview > header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px }
