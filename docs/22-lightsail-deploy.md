@@ -8,6 +8,9 @@
 
 **每一步都有验证命令。验证不过不要往下走。**
 
+§2–§8 已写成可重复执行的 `deploy/bootstrap.sh <domain>`（不写任何密钥），§12 的机器可查部分写成只读的
+`deploy/preflight.sh <domain>`；下文保留逐步命令，便于排查某一步。deploy job 默认关闭，设仓库变量 `DEPLOY_ENABLED=true` 才会部署。
+
 本文只管一次性引导和已知坑；日常部署是自动的，回滚一行：
 
 ```bash
