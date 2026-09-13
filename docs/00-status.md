@@ -11,6 +11,13 @@
 
 ---
 
+## 工作流基座（2026-09-13，#143 / #144 / #145 / #147）
+
+新增 `bridgeflow/workflow/` 与 `/workflow/*`，设计见 [`25`](25-workflow-foundation.md)。离线回归：Python **339 passed**
+（含新增 `test_workflow_foundation.py` **29** 条），ruff 通过。四处关键行为做了反向验证：去掉依据检查、允许未复核提交、
+部分输入即打开交接、在代码里写入字段标签，各有 **1** 条测试失败。
+真实模型调用 **0 次**，费用 **0**；没有 DSH 工具层与界面，没有接入任何外部系统，通知只写本地发件箱。
+
 ## 上传列匹配闭环（2026-09-13，#102 / #46 / #61）
 
 新增 `column_candidates`（读）与 `confirm_column_match`（原生审批写）。离线回归：Python **310 passed**

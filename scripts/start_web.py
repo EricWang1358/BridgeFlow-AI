@@ -71,6 +71,8 @@ def main() -> None:
     if "--demo" in sys.argv:
         sys.argv.remove("--demo")
         env["FIELD_DICTIONARY_PATH"] = str(ROOT / "data/business_demo/dictionary.yaml")
+        # The synthetic production → marketing handoff (#147); never a company standard.
+        env.setdefault("WORKFLOW_CATALOGUE_PATH", str(ROOT / "data/workflow_demo/catalogue.yaml"))
 
     # Say which dictionary is in force, every time. Which one is loaded decides
     # whether a batch can be joined at all, and it was the one fact neither the

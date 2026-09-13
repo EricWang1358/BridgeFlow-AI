@@ -1,0 +1,104 @@
+# Synthetic workflow catalogue for the production → marketing handoff (#147, #148).
+#
+# NOT company data and NOT an approved business standard. Header labels follow the
+# header-only 生产部.xlsx template discussed in #143; every alias, unit, route, owner
+# role and time limit below is a demonstration setting that the business side still has
+# to confirm. It is marked `approved` only so the demo can accept data; the marketing
+# template stays `draft` to show that unapproved declarations never run.
+version: "2026-09-13.demo-1"
+status: approved
+case: 合成示例：生产部一条生产记录标准化后交市场部处理；非客户数据
+
+templates:
+  production_record:
+    title: 生产记录
+    department: 生产部
+    version: 1
+    status: approved
+    business_key: [project, report_month]
+    fields:
+      report_month: {label: 报表月, dtype: period, aliases: [月份], definition: 记录所属报表月份}
+      plant: {label: 厂站, aliases: [站点]}
+      year: {label: 年份, dtype: number, aliases: [年], minimum: 2000}
+      date: {label: 日期, dtype: date, aliases: [开单日期], formats: ["%Y/%m/%d", "%Y.%m.%d", "%Y年%m月%d日"]}
+      customer: {label: 客户单位, aliases: [客户]}
+      project: {label: 项目名称, aliases: [工程]}
+      product: {label: 货品名称, aliases: [产品]}
+      output_qty:
+        label: 生产量
+        dtype: number
+        aliases: [产量]
+        unit: m3
+        units: {方: m3, m³: m3, m3: m3}
+        minimum: 0
+      shipped_qty:
+        label: 出厂量
+        dtype: number
+        aliases: [发出量]
+        unit: m3
+        units: {方: m3, m³: m3, m3: m3}
+        minimum: 0
+      actual_qty:
+        label: 实际量
+        dtype: number
+        aliases: [确认数量]
+        unit: m3
+        units: {方: m3, m³: m3, m3: m3}
+        minimum: 0
+        evidence_required: true
+        definition: 经确认的实际数量（演示定义，签收口径待业务确认）
+        question: 请提供实际量和确认依据；不能直接用出厂量代填。
+      note: {label: 备注, required: false, aliases: [说明]}
+    checks:
+      - id: shipped_minus_actual
+        title: 出厂量与实际量差异
+        expression: {op: subtract, args: [{op: input, key: shipped_qty}, {op: input, key: actual_qty}]}
+        attention_when: above
+        threshold: 0
+        unit: m3
+
+  settlement_basis:
+    title: 结算依据
+    department: 市场部
+    version: 1
+    status: draft
+    business_key: [project, period]
+    fields:
+      project: {label: 项目名称}
+      period: {label: 期间, dtype: period}
+      settled_qty: {label: 结算量, dtype: number, unit: m3, units: {m3: m3}}
+
+stages:
+  production_reporting:
+    title: 生产填报
+    department: 生产部
+    owner_role: 生产部统计员
+    outputs: [production_record]
+  market_review:
+    title: 市场部接收生产数据
+    department: 市场部
+    owner_role: 市场部负责人
+    inputs: [production_record]
+    outputs: [settlement_basis]
+    action: 核对数量差异并准备结算依据
+    sla_hours: 48
+
+lineage:
+  - source: production_record.actual_qty
+    target: settlement_basis.settled_qty
+    transform: passthrough
+    status: inferred
+    evidence: 结算采用哪种数量尚未确认（#143 访谈问题），此边只是候选
+
+mvp:
+  status: proposed
+  candidates: [production_to_marketing_handoff]
+  selected: production_to_marketing_handoff
+  decision_record: ""
+
+adoption:
+  max_question_rounds: 2
+  max_notification_attempts: 3
+
+sink: {kind: local_sqlite}
+notifier: {kind: local_outbox}
