@@ -60,6 +60,8 @@ const labels = {
   approval_quarantine_decide: ['隔离行处置审批', 'Quarantine decision approval'], approvalTitle_quarantine_decide: ['确认这一隔离行放行或丢弃', 'Confirm releasing or discarding this quarantined row'],
   approval_quarantine_apply: ['隔离处置应用审批', 'Apply quarantine decisions'], approvalTitle_quarantine_apply: ['按已记录的决定生成新批次（原批次不变）', 'Create a new batch from the recorded decisions (this batch stays unchanged)'],
   quarantine_list: ['隔离行清单', 'Quarantined rows'], quarantine_decide: ['隔离行处置', 'Quarantine decision'], quarantine_apply: ['应用隔离处置', 'Apply quarantine decisions'],
+  view_department: ['部门', 'Department'], view_column: ['上传列', 'Uploaded column'], view_original: ['原始表头', 'Header as written'], view_candidate: ['已声明候选列', 'Declared candidate'], view_role: ['声明角色', 'Declared role'], view_type_fits: ['类型相符', 'Type fits'], view_shared_values: ['值重合', 'Shared values'], view_decision: ['决定', 'Decision'], view_index: ['序号', 'Index'],
+  columns: ['列匹配', 'Column matches'], columnsHelp: ['字典不认识的上传列，以及它们只能对应的本部门已声明列和依据（类型、与其他部门同类列的值重合）。请在对话中让队长提议，你在审批里逐列决定；决定只对之后的新导入生效，本批次保持不变。原始数据可在来源预览中查看。', 'Uploaded columns the dictionary does not know, the declared columns of that department they could be, and the evidence (type, shared values with the same kind elsewhere). Ask the captain in chat to propose; you decide each in the approval. Decisions apply to later imports only; this batch stays unchanged. Original data is in the source preview.'],
   approvalDetailFailed: ['决定摘要加载失败。下面是工具给出的原始说明；可以重试加载摘要后再决定。', 'The decision summary failed to load. The tool\'s raw reason is shown below; retry loading the summary before deciding.'],
   imageNoticeTitle: ['这里读不了图片里的数字', 'Numbers in images cannot be read here'],
   imageNotice: ['本部署的模型只读文字，且图片里的数字无法追溯到单元格。表格请通过「添加来源」导入；说明性文字可以直接粘贴。移除图片后即可发送。', 'This deployment\'s model reads text only, and numbers in an image cannot be traced to a cell. Import tables with Add sources; paste explanatory text directly. Remove the image to send.'],
@@ -354,6 +356,10 @@ export function columnLabel(column: string, t: (key: string) => string): { group
   const dot = column.indexOf('.')
   const group = dot > 0 ? column.slice(0, dot) : ''
   const field = dot > 0 ? column.slice(dot + 1) : column
+  // Structural keys of our own views translate; business field names never do (they come
+  // from the customer's dictionary and are shown as declared).
+  const structural = t(`view_${column}`)
+  if (dot < 0 && structural !== `view_${column}`) return { group: '', label: structural }
   return { group: group ? t(group) : '', label: field.replace(/_/g, ' ') }
 }
 
