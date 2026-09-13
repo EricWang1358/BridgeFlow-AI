@@ -52,6 +52,11 @@ const labels = {
   sources: ['来源', 'Sources'], studio: ['工作室', 'Studio'], workArea: ['工作区', 'Workspace'],
   sourceHelp: ['依据与归属', 'Evidence and ownership'], studioHelp: ['状态、责任与下一步', 'Status, owners and next steps'],
   handoffWorkspace: ['填报与流转', 'Filling & handoff'],
+  reviewEnded: ['本次研判未正常完成', 'This review did not complete'],
+  ended_deadline_exceeded: ['超过统一期限（派活、部门研判与汇总共用），已停止并保存为未完成。', 'The single deadline for dispatch, departments and finalization passed; the review was stopped and saved as incomplete.'],
+  ended_captain_ended: ['队长回合在汇总前结束，已保存为未完成。', 'The captain turn ended before finalization; saved as incomplete.'],
+  ended_captain_disposed: ['会话在汇总前关闭，已保存为未完成。', 'The session closed before finalization; saved as incomplete.'],
+  ended_host_restarted: ['服务在汇总前重启，无法继续，已明确结束。请重新发起研判。', 'The host restarted before finalization and could not continue; start a new review.'],
   handoffHelp: ['按已批准模板形成的标准记录、下游交接与通知状态。已收到 ≠ 数据就绪 ≠ 已通知 ≠ 下游已完成。', 'Standard records from approved templates, downstream handoffs and notifications. Received ≠ ready ≠ notified ≠ done.'],
   handoffBoard: ['流转看板', 'Handoff board'], handoffEmpty: ['还没有填报记录', 'No records yet'],
   handoffEmptyHelp: ['在对话里请队长按模板帮你填报：它会逐项补问，你在审批里确认每个值。', 'Ask the captain in chat to help fill a template: it asks for each missing item and you confirm every value in the approval.'],
@@ -302,11 +307,16 @@ async function ask(text: string): Promise<void> {
   runtime.sessions.open(target)
 }
 
-export async function sendHumanNote(parent: string, report: string, note: string) {
+export async function sendHumanNote(parent: string, batch: string, report: string, note: string) {
+  const noteId = crypto.randomUUID()
+  // Recorded by the host first: the note exists even if the turn that follows goes wrong.
+  await api('/human-note', { method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ batch_id: batch, report_id: report, session_id: parent, note_id: noteId, note }) })
   await runtime.sessions.refresh()
   const binding = runtime.sessions.binding(parent as SessionId)
   if (!binding) throw new Error('Captain session unavailable')
-  const result = await binding.session.prompt([{ type: 'text', text: `人工复核意见（报告 ${report}）：${note}。仅记录并说明尚缺哪些部门签核。禁止调用 review_context/subagent/review_finalize，禁止重跑或执行业务动作。` }], 'queue')
+  // The marker is what the host guard reads to keep this turn to recording (#111).
+  const result = await binding.session.prompt([{ type: 'text', text: `[bridgeflow:human-note:${noteId}] 人工复核意见（报告 ${report}）：${note}。意见已由系统记录。请说明尚缺哪些部门签核；不要重跑研判或执行业务动作。` }], 'queue')
   if (!result.ok) throw new Error(result.error.message)
   runtime.sessions.open(parent as SessionId)
 }
