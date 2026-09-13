@@ -38,3 +38,21 @@ def test_the_tuning_sets_are_what_their_seeds_generate(tmp_path):
 def test_a_fresh_holdout_set_grades_clean():
     totals = cases.holdout(2)
     assert totals["passed_sets"] == 2, totals
+
+
+def test_real_exports_are_graded_against_the_business_master_without_printing_values(tmp_path):
+    import shutil
+    for path in (cases.BASE / "example").glob("*.xlsx"):
+        label = cases.integration.load_spec(cases.BASE / "integration.yaml").departments[path.stem].label
+        shutil.copy(path, tmp_path / f"{label}(1).xlsx")  # named the way the business side names files
+    shutil.copy(cases.BASE / "source" / "master-v2.xlsx", tmp_path / "expected.xlsx")
+    report = cases.real(tmp_path)
+    assert (report["expected_rows"], report["matched_rows"], report["exact_rows"], report["complete_rows"]) == (1, 1, 1, 1)
+    assert all(report["department_files"].values()) and report["columns_with_differences"] == {}
+    assert "项目A" not in json.dumps(report, ensure_ascii=False)
+
+    book = openpyxl.load_workbook(tmp_path / "expected.xlsx")
+    headers = [c.value for c in book.active[1]]
+    book.active.cell(2, headers.index("市场_缺口") + 1, 1)
+    book.save(tmp_path / "expected.xlsx")
+    assert cases.real(tmp_path)["columns_with_differences"] == {"市场_缺口": 1}

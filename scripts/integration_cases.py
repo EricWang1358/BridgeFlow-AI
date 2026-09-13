@@ -21,6 +21,7 @@ Two uses:
     python scripts/integration_cases.py tuning            # regenerate the committed tuning sets (seeds 1, 2)
     python scripts/integration_cases.py grade DIR         # grade one generated set
     python scripts/integration_cases.py holdout --sets 5  # fresh sets from unrecorded random seeds
+    python scripts/integration_cases.py real DIR           # real exports against the business side's own master
 
 The holdout draws its seeds from the operating system and never prints or stores them or
 the generated sheets; only the aggregate score is shown. That keeps tuning from fitting the
@@ -391,6 +392,61 @@ def holdout(sets: int) -> dict:
     return totals
 
 
+def _department_file(spec, directory: Path, department: str) -> Path | None:
+    label = spec.departments[department].label
+    return next((p for p in sorted(directory.glob("*.xlsx")) if p.stem in (department, label)
+                 or p.stem.startswith(label)), None)
+
+
+def real(directory: Path) -> dict:
+    """Grade real department exports against `expected.xlsx`, a master the business side filled by hand.
+
+    Only counts, column names and issue kinds are reported, never a cell value, so the person
+    running a real holdout can pass the report to development without passing the data.
+    """
+    spec = integration.load_spec(BASE / "integration.yaml")
+    expected_path = directory / "expected.xlsx"
+    if not expected_path.is_file():
+        raise SystemExit(f"{expected_path} is missing: the master template filled by the business side")
+    files = {d: _department_file(spec, directory, d) for d in spec.departments}
+    sheets = [integration.read_sheet(d, f.name, f.read_bytes()) for d, f in files.items() if f]
+    result = integration.integrate(spec, sheets)
+    expected = integration.read_sheet("", expected_path.name, expected_path.read_bytes())
+    unknown = [h for h in expected.headers if h and h not in spec.fields]
+    wanted = {}
+    for row in expected.rows:
+        values = dict(zip(expected.headers, row, strict=False))
+        wanted[tuple(str(values.get(g) or "").strip() for g in spec.grain)] = values
+    produced = {tuple(r.key): r for r in result.rows}
+    columns: dict[str, list[int]] = {}
+    report = {"department_files": {d: bool(f) for d, f in files.items()}, "expected_rows": len(wanted),
+              "produced_rows": len(produced), "matched_rows": 0, "complete_rows": 0, "exact_rows": 0,
+              "unknown_expected_columns": unknown, "missing_rows": 0, "extra_rows": len(set(produced) - set(wanted)),
+              "issues_by_kind": {}, "columns_with_differences": {}}
+    for issue in result.issues:
+        report["issues_by_kind"][issue.kind] = report["issues_by_kind"].get(issue.kind, 0) + 1
+    for key, values in wanted.items():
+        row = produced.get(key)
+        if row is None:
+            report["missing_rows"] += 1
+            continue
+        report["matched_rows"] += 1
+        report["complete_rows"] += row.complete
+        differing = [c for c in spec.fields if values.get(c) not in (None, "") and not _same(_comparable(row.values.get(c)), _comparable(values.get(c)))]
+        report["exact_rows"] += not differing
+        for column in differing:
+            columns.setdefault(column, []).append(1)
+    report["columns_with_differences"] = {c: len(v) for c, v in sorted(columns.items(), key=lambda i: -len(i[1]))}
+    return report
+
+
+def _comparable(value):
+    if isinstance(value, str):
+        number = integration._number(value)
+        return float(number) if number is not None else value.strip()
+    return value
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -399,6 +455,8 @@ def main() -> None:
     grade_cmd.add_argument("directory", type=Path)
     holdout_cmd = sub.add_parser("holdout")
     holdout_cmd.add_argument("--sets", type=int, default=5)
+    real_cmd = sub.add_parser("real")
+    real_cmd.add_argument("directory", type=Path)
     args = parser.parse_args()
     if args.command == "tuning":
         for seed in TUNING_SEEDS:
@@ -408,6 +466,8 @@ def main() -> None:
         report = grade(args.directory)
         print(json.dumps(report, ensure_ascii=False, indent=1))
         sys.exit(0 if report["passed"] else 1)
+    elif args.command == "real":
+        print(json.dumps(real(args.directory), ensure_ascii=False, indent=1))
     else:
         totals = holdout(args.sets)
         print(json.dumps(totals, ensure_ascii=False))

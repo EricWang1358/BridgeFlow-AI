@@ -10,7 +10,7 @@ from test_business_mvp import CASES, judgement
 from bridgeflow import business, feishu
 from bridgeflow.api import feishu_tools
 from bridgeflow.api.main import app
-from bridgeflow.config import settings
+from bridgeflow.config import REPO_ROOT, settings
 
 
 class Tenant:
@@ -103,3 +103,35 @@ def test_a_saved_report_is_uploaded_as_saved(client, tenant):
     assert response.status_code == 200, response.text
     assert response.json()["file_token"] == "new-file-token"
     assert report["report_id"].encode() in tenant.uploaded["new-file-token"]
+
+
+def test_the_live_check_script_round_trips_against_a_tenant(monkeypatch, capsys):
+    import asyncio
+    import importlib.util
+    import json
+
+    spec = importlib.util.spec_from_file_location("feishu_live_check", REPO_ROOT / "scripts" / "feishu_live_check.py")
+    script = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(script)
+    fake = Tenant()
+
+    class Drive(feishu.FeishuDrive):
+        def __init__(self, app_id, secret, base_url):
+            super().__init__(app_id, secret, base_url, httpx.MockTransport(fake))
+
+        async def upload(self, folder_token, filename, payload):
+            token = await super().upload(folder_token, filename, payload)
+            fake.files[token] = (filename, payload)  # the tenant keeps what was sent
+            return token
+
+    for name in ("FEISHU_APP_ID", "FEISHU_APP_SECRET", "FEISHU_TEST_FOLDER"):
+        monkeypatch.delenv(name, raising=False)
+    assert asyncio.run(script.main()) == 2
+    assert json.loads(capsys.readouterr().out)["status"] == "not_configured"
+
+    monkeypatch.setattr(script.feishu, "FeishuDrive", Drive)
+    for name in ("FEISHU_APP_ID", "FEISHU_APP_SECRET", "FEISHU_TEST_FOLDER"):
+        monkeypatch.setenv(name, "value-" + name.lower())
+    assert asyncio.run(script.main()) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["status"] == "passed" and "value-" not in json.dumps(report)
