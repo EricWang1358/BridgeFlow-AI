@@ -7,9 +7,50 @@
 「每个数字都量过、可追溯」是本项目对评委的核心叙事，评委抓到一处对不上，整个叙事就打折。
 所以改数字只改这一处。
 
-最后更新：2026-09-13。新增一轮时照第三节的格式写，并附上复现命令。
+最后更新：2026-09-14。新增一轮时照第三节的格式写，并附上复现命令。
 
 ---
+
+## 新增进度复审与总表边界修复（2026-09-14）
+
+基线 `4816e95`（#166–#173 之后），用户要求审查新增进度，并授权直接修复问题。
+本轮修改在 `fix/integration-review-20260914` 分支，按 PR 流程提交审阅，合并状态以远端为准。
+
+| 已复现问题 | 修复后的行为 | 验证入口 |
+| --- | --- | --- |
+| 新总表每次读取当前声明，修改政策会改变旧批次 | 导入保存 `integration_snapshot`；总表、摘要与 XLSX 共用冻结声明；旧批次无快照则 409，要求重新导入 | `test_old_master_and_download_do_not_change_when_declaration_changes`、`test_legacy_batch_cannot_silently_borrow_current_integration_policy` |
+| 选择较后的表头后引用仍从原件第二行计数 | 保存原件 `header_row` / `row_numbers`，同步清洗后行号、修正日志、分页预览及 UI | `test_selected_header_keeps_original_locations_in_preview_and_master` |
+| 总表工具摘要把含原始数值的冲突消息交给模型 | 模型只得到声明字段、类型、部门与固定指引；详细原值保留在浏览器 | `test_tool_summary_does_not_forward_numeric_conflict_values` |
+| `NaN` / 正负无穷导致数值转换异常 | 记录 `invalid_number`，行不完整 | `test_nonfinite_numeric_cells_are_reported_not_crashed`（3 种输入） |
+| 无法核对公式的行仍计完整；汇总跳过缺值行 | 未核对公式／分类计不完整；缺数值的按日汇总拒绝部分求和 | `test_unverified_formula_never_counts_as_a_complete_row`、`test_rollup_does_not_sum_only_the_rows_with_values` |
+| 导出以等号开头的文本时会成为 XLSX 公式 | 总表、待确认与假设页的文本均按文字保存 | `test_download_preserves_untrusted_formula_shaped_text_as_text` |
+
+以上 **10 条**新增回归集中在 `backend/tests/test_integration_boundaries.py`。
+将同一测试文件放入 `git archive 4816e95` 的临时副本，指向副本 Python 源码执行，**10 failed**；
+在修复后版本执行 **10 passed**。测试只使用已有的公开业务样例及人为变更，不读取新的业务留出。
+测试隔离同时显式固定 `integration_spec_path`，不继承开发者的私有整合声明。
+
+| 检查 | 本轮结果 | 复现（仓库根） |
+| --- | --- | --- |
+| 修复前 Python 全量 | **425 passed，2 warnings，15.19s** | `../.venv/bin/pytest -q -c backend/pyproject.toml backend/tests` |
+| 修复后 Python 全量 | **435 passed，2 warnings，19.49s**；依赖弃用警告 | 同上 |
+| 新增边界回归 | **10 passed，2.03s** | `../.venv/bin/pytest -q -c backend/pyproject.toml backend/tests/test_integration_boundaries.py` |
+| Python 静态 | 通过 | `../.venv/bin/ruff check backend/src backend/tests scripts/start_web.py` |
+| TS 单测 | 修复后 **55 passed，0 failed** | `pnpm --dir plugins test` |
+| TS 类型与构建 | 修复后通过 | `pnpm --dir plugins typecheck`、`pnpm --dir plugins build` |
+| 原生 Web 与审批 | 修复后通过，批准／拒绝／超时、冷重启、键盘操作 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web` |
+| 正常业务链 | 修复后通过，`validated`，四部门并行和跨批次状态通过 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:business` |
+| 故障业务链 | 修复后通过，财务无有效检查，报告 `partial` | `BRIDGEFLOW_LIVE=0 BRIDGEFLOW_TEST_FAULT=step-limit pnpm --dir plugins smoke:business` |
+
+首次 TS 检查在沙箱中因 IPC `listen EPERM` 无法启动；受限环境内两次 Python 接口检查停住后被中断。
+使用获准的测试执行环境完成上述检查，不能把环境阻塞当作产品失败。最终 TS 回归同样在获准环境通过。
+本机日志 `/tmp/bridgeflow-review-0914-*.log`；修复后 Web、正常业务、故障业务临时产物分别位于
+`/tmp/bridgeflow-web-e2e-C3GLHq`、`/tmp/bridgeflow-web-e2e-EZYTgm`、`/tmp/bridgeflow-web-e2e-CmbqZj`。
+临时目录清理后不保证保留；仓库中的新增回归可复现关键缺陷。
+
+本次付费模型调用 **0 次**。没有重跑随机合成留出、真实业务留出、真实飞书或部署；没有宣称已完成录制版本的真实模型验收。
+本次浏览器回归覆盖既有路径，新总表的声明漂移、表头来源与导出边界由真实 HTTP 接口和工作簿读取回归验证；
+仍需在冻结版本录制新总表的完整浏览器操作。新总表的通过不能替代四角色对同一业务数据的验收。
 
 ## 模拟业务样板：月度导出、报价、彩排授权草案（2026-09-13，#141 / #104 / #7 / #20 / #41）
 
@@ -91,7 +132,7 @@ Python **391 passed**，TS **55 passed**，离线三条浏览器 smoke 通过；
 本机临时日志在 `/tmp/bridgeflow-assessment-{web,business,partial,quotation}.log`；本次临时产物分别在
 `/tmp/bridgeflow-web-e2e-PuFhnq`、`/tmp/bridgeflow-web-e2e-oe2sjN`、`/tmp/bridgeflow-web-e2e-bU3Gcz`、
 `/tmp/bridgeflow-web-e2e-eDew9h`，清理 `/tmp` 后不保证保留。报价 smoke 自动轮换了仓库截图；本次已恢复原有归档，
-新截图保存在临时目录，未把原始会话与凭证归档进仓库。提交建议见 [HANDOFF](../HANDOFF.md#提交准备度评估2026-09-13)。
+新截图保存在临时目录，未把原始会话与凭证归档进仓库。提交建议见 [HANDOFF](../HANDOFF.md#提交准备度评估2026-09-14)。
 
 ## 真实 captain 列匹配全流程（2026-09-13，#102，**已计费**）
 
@@ -228,15 +269,15 @@ SSH_HOST／SSH_USER／SSH_PRIVATE_KEY 与 PUBLIC_DOMAIN。缺项追踪 [#138](ht
 - 月度对账可在原生 DSH Web 上完成导入、冻结字典的规则计算、官方四角色研判和保存后重开；映射写入另经原生审批。
 - 列匹配已完成一次真实 captain 提议、人工批准与重新导入验收，详见上方对应记录；该次没有继续跑新批次研判。
 - 研判期限、幂等汇总、重启回收、人工意见 guard、隔离处置与日期声明已有实现和对应回归。
-- 报价完成样板前的人工声明、通用求值器与缺项拒绝；飞书代码有模拟测试，尚未真实联调。
-- 本次离线完整复核通过，最新计数、命令与验证范围见 [提交准备度复核](#提交准备度复核2026-09-13)。
+- 业务模板总表已有整合、公式与跨部门核对、来源及 XLSX 导出；本轮补齐冻结与边界保护。报价模拟材料已通过人工抽取核对和手算比对，自动抽取未实现；飞书尚未真实联调。
+- 本次离线完整复核通过，最新计数、命令与验证范围见 [新增进度复审与修复](#新增进度复审与总表边界修复2026-09-14)。
 
 **还不能说：**
 
 - 最终录制版本的真实模型连续彩排已经完成，或已证明稳定性 SLA。#167 的真实彩排跑在当时的 main 上，录制版本冻结后需要再跑一次；生命周期的浏览器超时／重启故障注入尚待补证据。
 - 已通过真实企业验收：现有真实模型记录基于可见合成案例；新的业务留出集与人工效率基线仍缺。
 - `validated` 意味着跨部门映射已全部确认或报表已正式签发；当前报告汇总声明列，不消费待确认关系。
-- 已实现员工身份、角色、租户隔离或已部署上线。当前认证是共享 DSH 会话，生产部署仍待外部配置与验收。
+- 已实现员工身份、角色、租户隔离或已部署上线。当前认证是共享 DSH 会话；部署由团队另行安排，本次没有外部验收结果。
 - 多 Agent 比单 Agent／纯规则更准确或节省工时：本次未见支持该比较的效果实验。
 
 ---

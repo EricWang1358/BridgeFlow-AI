@@ -15,7 +15,9 @@ router = APIRouter(tags=["integration"])
 
 def _result(batch_id: str) -> integration.MasterResult:
     batch = load_batch(batch_id)
-    spec = integration.load_spec()
+    if batch.integration_snapshot is None:
+        raise HTTPException(409, "Batch has no frozen integration declaration; import a new batch")
+    spec = integration.IntegrationSpec.model_validate(batch.integration_snapshot)
     folder = batch_path(batch_id).parent / "sources" / batch_id
     sheets = []
     for table in batch.clean_tables:
@@ -52,7 +54,8 @@ async def integration_summary(request: BatchRef) -> dict:
         "columns": len(result.columns), "issues_by_kind": counts,
         # Declaration text, not sheet data: which gaps rest on a convention rather than the business side's word.
         "assumptions": result.assumptions,
-        "open_items": [{"kind": i.kind, "field": i.field, "departments": i.departments, "message": i.message}
+        "open_items": [{"kind": i.kind, "field": i.field, "departments": i.departments,
+                        "message": "Inspect the original source and the detailed conflict in the master-table view."}
                        for i in result.issues[:20]],
         "next_step": ("Explain the open items to the person and who must decide each; "
                       "undeclared constants and roll-up rules belong to the dictionary owner. "

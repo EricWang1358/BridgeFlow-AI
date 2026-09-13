@@ -183,7 +183,10 @@ def load_spec(path: Path | None = None) -> IntegrationSpec:
     target = path or spec_path()
     if not target.is_file():
         raise HTTPException(503, "Integration declaration is not configured")
-    return IntegrationSpec.model_validate(yaml.safe_load(target.read_text(encoding="utf-8")))
+    try:
+        return IntegrationSpec.model_validate(yaml.safe_load(target.read_text(encoding="utf-8")))
+    except (OSError, UnicodeError, yaml.YAMLError, ValueError, TypeError) as exc:
+        raise HTTPException(503, "Integration declaration is invalid; ask its owner to correct it") from exc
 
 
 # --- reading a department sheet ---------------------------------------------------------
@@ -225,9 +228,11 @@ def read_sheet(department: str, filename: str, payload: bytes) -> Sheet:
 
 
 def sheet_from_preview(department: str, source: dict) -> Sheet:
-    """A sheet from a batch's retained parsed original (header already in row 1)."""
-    return Sheet(department, source.get("filename", ""), source.get("sheet", ""), 1,
-                 [_clean(h) for h in source["columns"]], source["rows"], [i + 2 for i in range(len(source["rows"]))])
+    """Keep the original workbook coordinates selected at import, including skipped titles."""
+    header = source.get("header_row", 1)
+    return Sheet(department, source.get("filename", ""), source.get("sheet", ""), header,
+                 [_clean(h) for h in source["columns"]], source["rows"],
+                 source.get("row_numbers", [header + i + 1 for i in range(len(source["rows"]))]))
 
 
 def _locate(sheet: Sheet, ref: SourceColumn) -> list[int] | None:
@@ -283,13 +288,13 @@ def _period(year: Any, month: Any) -> str | None:
 def _number(value: Any) -> Decimal | None:
     if isinstance(value, bool):
         return None
-    if isinstance(value, int | float):
-        return Decimal(str(value))
     text = str(value).strip().replace(",", "")
     percent = text.endswith("%")
     try:
         number = Decimal(text.rstrip("%"))
     except InvalidOperation:
+        return None
+    if not number.is_finite():
         return None
     return number / 100 if percent else number
 
@@ -409,6 +414,7 @@ def integrate(spec: IntegrationSpec, sheets: list[Sheet]) -> MasterResult:
             outcome = _derive(spec, name, tree, values)
             supplied = values.get(name)
             if isinstance(outcome, Issue):
+                complete = False
                 # The formula cannot run. A value the department wrote is kept as written and
                 # marked unverified; nothing is filled in where nobody wrote anything.
                 outcome.key = list(key)
@@ -433,6 +439,7 @@ def integrate(spec: IntegrationSpec, sheets: list[Sheet]) -> MasterResult:
             outcome = _classify(name, table, values)
             supplied = values.get(name)
             if isinstance(outcome, Issue):
+                complete = False
                 outcome.key = list(key)
                 issues.append(outcome)
                 if supplied is not None:
@@ -483,6 +490,9 @@ def _roll_up(spec: IntegrationSpec, department: str, group: list[_Contribution])
         if name in policy.recompute:
             merged.policies[name] = "recomputed"
         elif name in policy.sum:
+            if len(present) != len(group):
+                return Issue(kind="invalid_number", field=name, departments=[department],
+                             message=f"{name}: a row has no value; a partial sum is not a total")
             numbers = [_number(v) for v in present]
             invalid = next((v for v, n in zip(present, numbers, strict=True) if n is None), None)
             merged.values[name] = invalid if invalid is not None else _plain(sum(numbers, Decimal(0)))
@@ -579,6 +589,12 @@ def to_xlsx(result: MasterResult) -> bytes:
     assumed.append(["规则", "说明"])
     for name, text in result.assumptions.items():
         assumed.append([name, text])
+    # This export contains values, never executable formulas, including labels and notes.
+    for worksheet in book:
+        for row in worksheet:
+            for cell in row:
+                if cell.data_type == "f":
+                    cell.data_type = "s"
     buffer = io.BytesIO()
     book.save(buffer)
     return buffer.getvalue()
