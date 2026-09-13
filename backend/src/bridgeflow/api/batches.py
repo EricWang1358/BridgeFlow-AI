@@ -29,6 +29,14 @@ from bridgeflow.store import _root, _write
 router = APIRouter(prefix="/batches", tags=["batches"])
 
 
+def _json_cell(value):
+    if value is None:
+        return None
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return value.item() if hasattr(value, "item") else value
+
+
 def batch_path(batch_id: str):
     if not re.fullmatch(r"[a-f0-9]{32}", batch_id):
         raise HTTPException(422, "Invalid batch id")
@@ -230,7 +238,10 @@ async def _import_batch(period: str, departments: list[Department], files: list[
             raise HTTPException(422, f"{filename} has no data rows")
         # Browser-only originals live outside the model-readable batch snapshot.
         # Capture before sanitation mutates values; this is a parsed table preview.
-        parsed = json.loads(frame.to_json(orient="split", date_format="iso"))
+        # Python's own JSON keeps every double exactly; pandas' writer caps at 15 digits, and
+        # the retained original must not be a rounded copy of the sheet.
+        parsed = {"columns": [str(c) for c in frame.columns], "data": [[_json_cell(v) for v in row]
+                  for row in frame.astype(object).where(frame.notna(), None).values.tolist()]}
         sources.append({"id": department, "filename": filename, "sheet": sheet,
                         "sha256": hashlib.sha256(payload).hexdigest(), "bytes": len(payload),
                         "columns": parsed["columns"], "rows": parsed["data"]})

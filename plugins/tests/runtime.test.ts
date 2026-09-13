@@ -454,7 +454,7 @@ test('the product tool catalogue is pinned: a new or missing tool must be a deli
   const ctx = await runtime()
   const product = ctx.tools.schemas().map(tool => tool.name).sort()
   assert.deepEqual(product, [
-    'aggregate_metric', 'batch_summary', 'column_candidates', 'confirm_column_match', 'confirm_mapping', 'feishu_import', 'feishu_upload_report', 'list_metrics',
+    'aggregate_metric', 'batch_summary', 'column_candidates', 'confirm_column_match', 'confirm_mapping', 'feishu_import', 'feishu_upload_report', 'integration_summary', 'list_metrics',
     'lookup_field_dictionary', 'profile_batch', 'quarantine_apply', 'quarantine_decide', 'quarantine_list', 'review_context',
     'review_finalize', 'workflow_approve_submit', 'workflow_board', 'workflow_catalogue', 'workflow_draft', 'workflow_record',
   ])

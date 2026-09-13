@@ -35,6 +35,8 @@ data/mappings/field-dictionary.yaml
 *.xlsx
 *.xls
 !data/samples/*.csv
+# Business-provided templates (headers only) and their synthetic worked example.
+!data/company_templates/**/*.xlsx
 
 # Logs
 *.log
