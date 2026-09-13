@@ -292,6 +292,13 @@ async def review(batch_id: str, report_id: str | None = None) -> dict:
     return saved_review(batch_id, report_id)
 
 
+@router.get("/{batch_id}/review-notes/{report_id}")
+async def review_notes(batch_id: str, report_id: str) -> dict:
+    load_batch(batch_id)
+    from bridgeflow.api.reviews import review_notes as notes
+    return notes(batch_id, report_id)
+
+
 @router.get("/{batch_id}/sources")
 async def list_sources(batch_id: str) -> dict:
     batch = load_batch(batch_id)

@@ -5,7 +5,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-connection'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-workspace'
-import type { BackendConfig } from './backend.ts'
+import { callBackend, type BackendConfig } from './backend.ts'
 import type { ApprovalNotes } from './approval/notes.ts'
 import type { PendingDetails } from './approval/detail.ts'
 
@@ -106,7 +106,29 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           } catch (error) { ctx.logger.warn('Approval note persistence failed: %s', String(error)); res.writeHead(422).end(JSON.stringify({ detail: 'Could not record approval note' })) }
           return
         }
-        const read = req.method === 'GET' && (path === '/quotation/contract' || /^\/batches\/[a-f0-9]{32}(\/(view|review|artifacts|sources(?:\/(?:production|procurement|finance|marketing))?))?$/.test(path)
+        if (path === '/human-note' && req.method === 'POST') {
+          // A note on a saved report is recorded by the host before the captain sees it,
+          // so the record exists whatever the model does with the turn (#111).
+          res.setHeader('content-type', 'application/json')
+          res.setHeader('cache-control', 'no-store')
+          try {
+            let body = ''
+            for await (const chunk of req) {
+              body += chunk.toString()
+              if (Buffer.byteLength(body) > 4096) { res.writeHead(413).end('{}'); return }
+            }
+            const data = JSON.parse(body)
+            if (['batch_id', 'report_id', 'session_id', 'note_id', 'note'].some(key => typeof data[key] !== 'string')) {
+              res.writeHead(422).end('{}'); return
+            }
+            const recorded = await callBackend<Record<string, unknown>>(backend, '/tools/review-note', {
+              batch_id: data.batch_id, report_id: data.report_id, parent_session_id: data.session_id, note_id: data.note_id, note: data.note,
+            }, AbortSignal.timeout(15000))
+            res.writeHead(200).end(JSON.stringify(recorded))
+          } catch (error) { res.writeHead(422).end(JSON.stringify({ detail: String(error instanceof Error ? error.message : error) })) }
+          return
+        }
+        const read = req.method === 'GET' && (path === '/quotation/contract' || /^\/batches\/[a-f0-9]{32}(\/(view|review|artifacts|review-notes\/[a-f0-9]{32}|sources(?:\/(?:production|procurement|finance|marketing))?))?$/.test(path)
           // Workflow views are read-only here; recording and approving go through the captain and approval.
           || /^\/workflow\/(board|catalogue|adoption|artifacts\/[a-f0-9]{32})$/.test(path))
         const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo')

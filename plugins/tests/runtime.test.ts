@@ -238,3 +238,47 @@ test('the approval card lists each relayed value instead of an item count', () =
   const detail = summarise({ template: 't', said: [{ label: 'qty', value: '97.5 m3', evidence: 'D-1' }, { label: 'site', value: 'A' }] })
   assert.deepEqual(detail.slice(1), [{ label: 'said · qty', value: '97.5 m3 (D-1)' }, { label: 'said · site', value: 'A' }])
 })
+
+function captain(latestUserText: string) {
+  const events = latestUserText ? [{ type: 'user/message', data: { role: 'user', content: [{ type: 'text', text: latestUserText }] } }] : []
+  return { id: 'captain', session: { header: { origin: 'user' }, snapshotEvents: () => events } } as unknown as Agent
+}
+
+test('a human-note turn cannot start a review or write, but may still read', async (t) => {
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  t.mock.method(globalThis, 'fetch', async () => Response.json({ batch_id: 'a'.repeat(32), period: '2025-11', status: 'ready',
+    departments: [], master_rows: 0, unresolved: 0 }))
+  const agent = captain('[bridgeflow:human-note:note-1] 人工复核意见（报告 r）：财务线下确认')
+  try {
+    for (const [name, args] of [['review_context', { batch_id: 'a'.repeat(32) }], ['workflow_record', { template: 't', said: [{ label: 'a', value: '1' }] }]] as const) {
+      const denied = await ctx.tools.execute({ ...execution(name, args), agent })
+      assert.equal(denied.isError, true)
+      assert.match(JSON.stringify(denied.content), /records a person's note/)
+    }
+    const read = await ctx.tools.execute({ ...execution('batch_summary', { batch_id: 'a'.repeat(32) }), agent })
+    assert.doesNotMatch(JSON.stringify(read.content), /records a person's note/)
+  } finally { await ctx.fiber.dispose() }
+})
+
+test('a review is registered with its deadline before any department can be dispatched', async (t) => {
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  const requests: { url: string; body: Record<string, unknown> }[] = []
+  t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+    const body = JSON.parse(String(init.body ?? '{}'))
+    requests.push({ url: String(url), body })
+    if (String(url).endsWith('/tools/review-context')) {
+      return Response.json({ batch_id: body.batch_id, period: '2025-11', roles: ['production', 'procurement', 'finance', 'marketing'].map(role => ({ role, responsibility: 'r' })) })
+    }
+    return Response.json({ status: 'open' })
+  })
+  try {
+    const result = await ctx.tools.execute({ ...execution('review_context', { batch_id: 'a'.repeat(32) }), agent: captain('请研判') })
+    assert.equal(result.isError, false, JSON.stringify(result.content))
+    const opened = requests.find(r => r.url.endsWith('/tools/review-open'))
+    assert(opened, 'review-open must be called')
+    assert.equal(opened.body.deadline_seconds, 180)
+    assert.match(JSON.stringify(result.content), new RegExp(String(opened.body.review_id)))
+  } finally { await ctx.fiber.dispose() }
+})
