@@ -34,7 +34,7 @@ export function Quotation() {
     </>}>
     <div className="bf-card-head"><h3>{t('declaredTemplate')}</h3><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button></div>
     {error && <p role="alert" className="bf-error">{error}</p>}
-    {!catalogue && !error && <p role="status">{t('loading')}</p>}
+    {!catalogue && !error && <p role="status" className="bf-loading">{t('loading')}</p>}
     {catalogue && !contract && <div className="bf-notebook-empty"><h3>{t('quotationUnconfigured')}</h3><p>{t('quotationConfigureHelp')}</p></div>}
     {contract && <>
       <div className="bf-notebook-note"><span className="bf-chip" data-status="partial">{t('awaitingSamples')}</span><p>{contract.description}</p></div>

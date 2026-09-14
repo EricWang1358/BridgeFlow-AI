@@ -80,7 +80,7 @@ export function Handoff() {
     </>}>
     <div className="bf-card-head"><h3>{t('handoffBoard')}</h3><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button></div>
     {error && <p role="alert" className="bf-error">{error}</p>}
-    {!rows && !error && <p role="status">{t('loading')}</p>}
+    {!rows && !error && <p role="status" className="bf-loading">{t('loading')}</p>}
     {rows && !rows.length && <div className="bf-notebook-empty"><h3>{t('handoffEmpty')}</h3><p>{t('handoffEmptyHelp')}</p></div>}
     {rows && rows.map((row, i) => <article className="bf-source-item" key={row.kind === 'partial' ? `p${i}` : row.id}>
       <div className="bf-handoff-head"><strong>{row.department} · {row.title}</strong>

@@ -12,6 +12,7 @@ import { DataWorkspace, DataWorkspaceButton, ImportForm } from './workspace.tsx'
 import { QuotationButton } from './quotation.tsx'
 import { mountShell } from './shell.tsx'
 import { mountState } from './state.tsx'
+import { motion } from './motion.ts'
 import { style } from './style.ts'
 
 let drawer = false
@@ -140,7 +141,7 @@ export function apply(ctx: Context): void {
   ctx.slots.inject('conversation.composer', () => ctx.slots.register({ name: 'conversation.composer', priority: 0,
     select: ({ pendingInteraction }: ComposerChainProps) => pendingInteraction?.kind === 'approval' && APPROVAL_CARD_TOOLS.has(pendingInteraction.toolName) ? pendingInteraction : null,
   }, MappingApproval))
-  ctx.effect(() => { const tag = document.createElement('style'); tag.textContent = style; document.head.append(tag); return () => tag.remove() }, 'bridgeflow: styles')
+  ctx.effect(() => { const tag = document.createElement('style'); tag.textContent = style + motion; document.head.append(tag); return () => tag.remove() }, 'bridgeflow: styles')
   ctx.slots.inject('conversation.hero.brand.mark', () => ctx.slots.register({ name: 'conversation.hero.brand.mark', priority: -10 }, Welcome))
   ctx.slots.inject('sidebar.brand.name', () => ctx.slots.register({ name: 'sidebar.brand.name', priority: -10 }, () => <span>BridgeFlow AI</span>))
   ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({ name: 'sidebar.footer.action', id: 'bridgeflow-data' }, DataWorkspaceButton))
