@@ -65,6 +65,8 @@ const labels = {
   view_department: ['部门', 'Department'], view_column: ['上传列', 'Uploaded column'], view_original: ['原始表头', 'Header as written'], view_candidate: ['已声明候选列', 'Declared candidate'], view_role: ['声明角色', 'Declared role'], view_type_fits: ['类型相符', 'Type fits'], view_shared_values: ['值重合', 'Shared values'], view_decision: ['决定', 'Decision'], view_index: ['序号', 'Index'],
   columns: ['列匹配', 'Column matches'], columnsHelp: ['字典不认识的上传列，以及它们只能对应的本部门已声明列和依据（类型、与其他部门同类列的值重合）。请在对话中让队长提议，你在审批里逐列决定；决定只对之后的新导入生效，本批次保持不变。原始数据可在来源预览中查看。', 'Uploaded columns the dictionary does not know, the declared columns of that department they could be, and the evidence (type, shared values with the same kind elsewhere). Ask the captain in chat to propose; you decide each in the approval. Decisions apply to later imports only; this batch stays unchanged. Original data is in the source preview.'],
   requestFailed: ['操作未完成', 'Not completed'], networkFailed: ['连接不上服务，请检查服务是否在运行后重试。', 'Could not reach the service. Check that it is running, then retry.'],
+  loginRequired: ['这份数据需要先登录。请通过飞书登录后再试。', 'This data needs a signed-in user. Log in with Feishu, then retry.'],
+  loginWithFeishu: ['飞书登录', 'Log in with Feishu'],
   approval_feishu_import: ['飞书文件导入审批', 'Feishu import approval'], approvalTitle_feishu_import: ['从飞书下载这些文件并导入为新批次', 'Download these Feishu files into a new batch'],
   approval_feishu_upload_report: ['上传到飞书审批', 'Feishu upload approval'], approvalTitle_feishu_upload_report: ['把这份研判报告上传到飞书文件夹', 'Upload this review report to the Feishu folder'],
   feishu_import: ['从飞书导入', 'Import from Feishu'], feishu_upload_report: ['上传报告到飞书', 'Upload report to Feishu'],
@@ -251,8 +253,48 @@ export function describeError(error: unknown, t: (key: string) => string): strin
   return `${t('requestFailed')}：${detail.replace(/^Error:\s*/, '')}`
 }
 
+/**
+ * The login portal (docs/27): the portal proves who the user is via Feishu and
+ * signs a short-lived token; every backend request carries it in x-portal-token,
+ * and the backend verifies the signature. Empty portalUrl = identity layer off.
+ */
+const PORTAL_TOKEN_KEY = 'bridgeflow.portal-token'
+let portalBase = ''
+export function portalToken(): string { return sessionStorage.getItem(PORTAL_TOKEN_KEY) ?? '' }
+export function setPortalToken(token: string) { token ? sessionStorage.setItem(PORTAL_TOKEN_KEY, token) : sessionStorage.removeItem(PORTAL_TOKEN_KEY) }
+export function portalLoginUrl(): string { return portalBase ? `${portalBase}/login?app=bridgeflow` : '' }
+async function ensurePortalBase(): Promise<string> {
+  if (portalBase) return portalBase
+  try {
+    const config = await (await fetch('/bridgeflow/config', { credentials: 'same-origin' })).json()
+    portalBase = String(config.portalUrl ?? '')
+  } catch { /* No portal configured: the identity layer stays off. */ }
+  return portalBase
+}
+/** Trade the portal session cookie for a fresh app token. False = not signed in. */
+async function refreshPortalToken(): Promise<boolean> {
+  const base = await ensurePortalBase()
+  if (!base) return false
+  try {
+    const response = await fetch(`${base}/token?app=bridgeflow`, { credentials: 'include' })
+    if (!response.ok) return false
+    setPortalToken(String((await response.json()).token ?? ''))
+    return !!portalToken()
+  } catch { return false }
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/bridgeflow${path}`, { ...init, credentials: 'same-origin' })
+  return request(path, init, true)
+}
+async function request<T>(path: string, init: RequestInit | undefined, mayRetry: boolean): Promise<T> {
+  const token = portalToken()
+  const headers = { ...(init?.headers as Record<string, string> | undefined), ...(token ? { 'x-portal-token': token } : {}) }
+  const response = await fetch(`/bridgeflow${path}`, { ...init, headers, credentials: 'same-origin' })
+  if (response.status === 401) {
+    // One refresh-and-retry; a second 401 (or no portal at all) is the login prompt.
+    if (mayRetry && await refreshPortalToken()) return request(path, init, false)
+    if (await ensurePortalBase()) reportRouteError('loginRequired')
+  }
   if (!response.ok) {
     const text = await response.text()
     let detail = text

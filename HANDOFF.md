@@ -322,6 +322,10 @@ Python 测试由 `conftest.py` 隔离 provider、字典、输出与记忆。浏�
 - 建一个测试文件夹并共享给该应用，给出文件夹 token（链接里 `/folder/` 后面那段）；
 - 确认公司飞书是否免费版，免费版的云文档接口额度是否够演示。
 - 到手后运行 `python scripts/feishu_live_check.py`。
+- 员工登录门户复用同一自建应用（docs/27）：另开「网页应用」能力与通讯录 user_id 只读权限，
+  回调地址填门户的 `/callback`；门户代码已就绪（`portal/`，飞书 OAuth → 短期 JWT → 后端 JWKS 验签，
+  按 `data/mappings/access-control.yaml` 做部门级批次过滤），待真实凭据联调；
+  角色管理、操作级权限与租户隔离仍未做。
 
 仍需真人参与、模拟不了的：三 Agent 试点与组织落地（#127、#143、#144、#145，功能缺口见上文「三 Agent 与工作流」对照表），以及与业务负责人逐项核对部门责任（#41 后半）。
 
