@@ -1,9 +1,12 @@
 """Unified login portal: Feishu proves who you are, signed app tokens carry it.
 
-Flow: /login?app=… → Feishu web login → /callback → session cookie →
-/token?app=… → short-lived JWT that the named app verifies against the JWKS
-published here. The portal never sees app data, and apps never see Feishu
-credentials — decoupling in both directions.
+Flow: / → pick a sign-in method → /login → Feishu web login → /callback →
+session cookie → /token?app=… → short-lived JWT that the named app verifies
+against the JWKS published here. The portal never sees app data, and apps
+never see Feishu credentials — decoupling in both directions.
+
+/verify exists for the reverse proxy's forward_auth: it is how the main site
+asks "does this browser hold a signed-in session?" before serving anything.
 
 Run:  uvicorn portal_app.main:app --port 8100   (after sourcing env.sh)
 """
@@ -12,6 +15,7 @@ Run:  uvicorn portal_app.main:app --port 8100   (after sourcing env.sh)
 # annotations by name at runtime, and the Depends() closures below live inside
 # create_app, unreachable from module globals.
 
+import logging
 import secrets
 import time
 from pathlib import Path
@@ -21,8 +25,9 @@ import httpx
 import yaml
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
+from portal_app import pages
 from portal_app.config import Settings, settings
 from portal_app.feishu import FeishuError, FeishuOAuth, NotConfigured
 from portal_app.tokens import Signer, seal, unseal
@@ -30,6 +35,8 @@ from portal_app.tokens import Signer, seal, unseal
 SESSION_COOKIE = "portal_session"
 # A login state lives only for the redirect round-trip.
 STATE_TTL_SECONDS = 600
+
+logger = logging.getLogger("portal_app")
 
 
 def load_registry(path: str) -> dict[str, dict]:
@@ -57,8 +64,12 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
     registry = load_registry(cfg.apps_path)
     signer = Signer(cfg.key_path) if cfg.key_path else None
     origins = sorted({o for entry in registry.values() for o in entry["origins"]})
+    # Where a login ends up is the single most misconfigured fact of a deploy
+    # (docs/22 §9b) — say it out loud at boot, not after a bug report.
+    logger.info("portal registry: %s",
+                {name: entry["redirect_uri"] for name, entry in registry.items()})
 
-    app = FastAPI(title="BridgeFlow login portal", version="0.1.0")
+    app = FastAPI(title="BridgeFlow login portal", version="0.2.0")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
@@ -81,54 +92,55 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
             raise HTTPException(401, "Sign in through the portal first")
         return session
 
+    def resolve_app(name: str) -> str | None:
+        """Explicit names must be registered; an omitted name is unambiguous only
+        when one app exists (the common case: BridgeFlow alone)."""
+        if name:
+            return name if name in registry else None
+        if len(registry) == 1:
+            return next(iter(registry))
+        return "bridgeflow" if "bridgeflow" in registry else None
+
+    def error(status: int, title: str, detail: str) -> HTMLResponse:
+        return HTMLResponse(pages.error_page(title, detail), status_code=status)
+
     @app.get("/health")
     async def health() -> dict:
         return {"status": "ok", "feishu": bool(cfg.feishu_app_id), "signer": signer is not None}
 
     # response_model=None: the union return annotation is not a Pydantic field type.
     @app.get("/", response_model=None)
-    async def index(request: Request) -> HTMLResponse | RedirectResponse:
-        session = read_session(request)
-        if session is not None and len(registry) == 1:
-            # One app and a live session: there is nothing to choose — go straight in.
-            return RedirectResponse(next(iter(registry.values()))["redirect_uri"], status_code=302)
-        links = "".join(f'<li><a href="/login?app={name}">{name}</a></li>' for name in registry)
-        if session is None:
-            body = "<p>选择要登录的应用，将跳转飞书扫码/授权。</p>"
-        else:
-            who = session.get("name") or session["sub"]
-            body = (f"<p>已登录为 {who}，可直接进入应用。</p>"
-                    '<form method="post" action="/logout"><button type="submit">退出登录</button></form>')
-        return HTMLResponse(f"""<!doctype html><meta charset="utf-8"><title>BridgeFlow 登录门户</title>
-<h1>统一登录门户</h1>{body}<ul>{links}</ul>""")
+    async def index(request: Request) -> HTMLResponse:
+        return HTMLResponse(pages.index(read_session(request), registry, bool(cfg.feishu_app_id)))
 
-    @app.get("/login")
-    async def login(request: Request, app: Annotated[str, Query()]) -> RedirectResponse:
-        if app not in registry:
-            raise HTTPException(404, f"Unknown application: {app!r}")
+    @app.get("/login", response_model=None)
+    async def login(request: Request, app: Annotated[str, Query()] = "") -> HTMLResponse | RedirectResponse:
+        name = resolve_app(app)
+        if name is None:
+            return error(404, "未知应用", f"应用 {app!r} 未在门户注册。")
         if read_session(request) is not None:
             # Already signed in: skip the Feishu round-trip and go straight to the app.
-            return RedirectResponse(registry[app]["redirect_uri"], status_code=302)
+            return RedirectResponse(registry[name]["redirect_uri"], status_code=302)
         try:
             client = feishu()
         except NotConfigured as exc:
-            raise HTTPException(503, str(exc)) from exc
+            return error(503, "登录未配置", str(exc))
         await client.close()  # the URL is pure string work; no call is made here
-        state = seal({"app": app, "nonce": secrets.token_hex(8)}, cfg.session_secret, STATE_TTL_SECONDS)
+        state = seal({"app": name, "nonce": secrets.token_hex(8)}, cfg.session_secret, STATE_TTL_SECONDS)
         return RedirectResponse(client.authorize_url(state), status_code=302)
 
-    @app.get("/callback")
-    async def callback(code: str = "", state: str = "") -> RedirectResponse:
+    @app.get("/callback", response_model=None)
+    async def callback(code: str = "", state: str = "") -> HTMLResponse | RedirectResponse:
         proven = unseal(state, cfg.session_secret)
         if proven is None or proven.get("app") not in registry or not code:
-            raise HTTPException(403, "Login state is invalid or expired; start from /login again")
+            return error(403, "登录状态无效或已过期", "登录链接只在发起后 10 分钟内有效，请重新发起登录。")
         client = feishu()
         try:
             user = await client.fetch_user(code)
         except NotConfigured as exc:
-            raise HTTPException(503, str(exc)) from exc
+            return error(503, "登录未配置", str(exc))
         except FeishuError as exc:
-            raise HTTPException(502, str(exc)) from exc
+            return error(502, "飞书拒绝了这次登录", str(exc))
         finally:
             await client.close()
         session = seal({
@@ -138,8 +150,23 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
         }, cfg.session_secret, cfg.session_ttl_seconds)
         response = RedirectResponse(registry[proven["app"]]["redirect_uri"], status_code=302)
         response.set_cookie(SESSION_COOKIE, session, httponly=True, samesite="lax",
-                            secure=cfg.cookie_secure, max_age=cfg.session_ttl_seconds)
+                            secure=cfg.cookie_secure, max_age=cfg.session_ttl_seconds,
+                            domain=cfg.cookie_domain or None)
         return response
+
+    @app.get("/verify", response_model=None)
+    async def verify(request: Request) -> Response:
+        """Caddy forward_auth target: 200 lets the request through, 401 blocks it.
+
+        Browsers (Accept: text/html) get a page that steers them to the portal;
+        API callers get plain JSON.
+        """
+        session = read_session(request)
+        if session is not None:
+            return JSONResponse({"ok": True, "sub": session["sub"]})
+        if "text/html" in request.headers.get("accept", ""):
+            return HTMLResponse(pages.login_required(cfg.external_base_url), status_code=401)
+        return JSONResponse({"detail": "Sign in through the portal first"}, status_code=401)
 
     @app.get("/token")
     async def token(app: Annotated[str, Query()], session: Annotated[dict, Depends(current_session)]) -> dict:

@@ -82,6 +82,15 @@ def test_login_redirects_to_feishu_with_a_signed_state(portal):
     assert state["app"] == "bridgeflow" and state["nonce"]
 
 
+def test_the_app_defaults_to_the_only_registered_one(portal):
+    response = portal.get("/login")
+    assert response.status_code == 302
+    target = httpx.URL(response.headers["location"])
+    assert target.host == "feishu.test"
+    state = tokens.unseal(target.params["state"], "s" * 32)
+    assert state["app"] == "bridgeflow"
+
+
 def test_an_unregistered_app_is_turned_away(portal):
     assert portal.get("/login", params={"app": "stranger"}).status_code == 404
     login(portal)
@@ -93,6 +102,8 @@ def test_a_tampered_state_cannot_complete_login(portal):
     state = httpx.URL(redirect.headers["location"]).params["state"]
     response = portal.get("/callback", params={"code": "code-good", "state": state + "x"})
     assert response.status_code == 403
+    assert "text/html" in response.headers["content-type"]
+    assert "重新登录" in response.text
     assert SESSION_COOKIE not in portal.cookies
 
 
@@ -112,7 +123,7 @@ def test_a_token_without_a_session_is_refused(portal):
 
 def test_anonymous_visitors_get_the_login_page(portal):
     response = portal.get("/")
-    assert response.status_code == 200 and "/login?app=bridgeflow" in response.text
+    assert response.status_code == 200 and "飞书登录" in response.text
 
 
 def test_a_signed_in_user_skips_feishu_on_login(portal):
@@ -122,14 +133,15 @@ def test_a_signed_in_user_skips_feishu_on_login(portal):
     assert response.headers["location"] == "http://web.test/after-login"
 
 
-def test_a_signed_in_user_is_redirected_home_from_the_index(portal):
+def test_a_signed_in_user_sees_the_way_into_the_app(portal):
     login(portal)
     response = portal.get("/")
-    assert response.status_code == 302
-    assert response.headers["location"] == "http://web.test/after-login"
+    assert response.status_code == 200
+    assert "测试用户" in response.text
+    assert 'href="http://web.test/after-login"' in response.text
 
 
-def test_a_signed_in_user_still_chooses_when_several_apps_exist(tmp_path):
+def test_a_signed_in_user_sees_every_app_when_several_exist(tmp_path):
     tokens.generate_keypair(tmp_path / "portal.pem")
     apps = tmp_path / "apps.yaml"
     apps.write_text(yaml.safe_dump({"apps": {
@@ -147,6 +159,8 @@ def test_a_signed_in_user_still_chooses_when_several_apps_exist(tmp_path):
         login(client)
         response = client.get("/")
         assert response.status_code == 200 and "测试用户" in response.text
+        assert 'href="http://web.test/after-login"' in response.text
+        assert 'href="http://other.test/"' in response.text
         # The direct /login shortcut still skips Feishu per app.
         assert client.get("/login", params={"app": "other"}).headers["location"] == "http://other.test/"
 
@@ -161,8 +175,48 @@ def test_a_feishu_refusal_creates_no_session(portal):
     redirect = portal.get("/login", params={"app": "bridgeflow"})
     state = httpx.URL(redirect.headers["location"]).params["state"]
     response = portal.get("/callback", params={"code": "code-bogus", "state": state})
-    assert response.status_code == 502 and "invalid code" in response.json()["detail"]
+    assert response.status_code == 502 and "invalid code" in response.text
     assert SESSION_COOKIE not in portal.cookies
+
+
+def test_verify_blocks_anonymous_and_admits_the_signed_in(portal):
+    anonymous = portal.get("/verify")
+    assert anonymous.status_code == 401
+    assert anonymous.json()["detail"]
+    login(portal)
+    signed_in = portal.get("/verify")
+    assert signed_in.status_code == 200
+    assert signed_in.json() == {"ok": True, "sub": UNION_ID}
+
+
+def test_verify_steers_browsers_to_the_portal(portal):
+    response = portal.get("/verify", headers={"accept": "text/html,application/xhtml+xml"})
+    assert response.status_code == 401
+    assert "text/html" in response.headers["content-type"]
+    assert "http://portal.test/" in response.text
+
+
+def test_a_cookie_domain_is_set_only_when_configured(tmp_path, portal):
+    tokens.generate_keypair(tmp_path / "portal.pem")
+    apps = tmp_path / "apps.yaml"
+    apps.write_text(yaml.safe_dump({"apps": {"bridgeflow": {
+        "audience": "bridgeflow", "redirect_uri": "http://web.test/after-login",
+        "origins": ["http://web.test"]}}}), encoding="utf-8")
+    cfg = Settings(feishu_app_id="cli_test", feishu_app_secret="secret",
+                   feishu_base_url="https://feishu.test", key_path=str(tmp_path / "portal.pem"),
+                   session_secret="s" * 32, external_base_url="http://portal.test",
+                   apps_path=str(apps), cookie_domain=".web.test")
+    with TestClient(create_app(cfg, transport=httpx.MockTransport(Tenant())),
+                    follow_redirects=False) as client:
+        redirect = client.get("/login")
+        state = httpx.URL(redirect.headers["location"]).params["state"]
+        response = client.get("/callback", params={"code": "code-good", "state": state})
+        assert "Domain=.web.test" in response.headers["set-cookie"]
+    # The shared fixture (no cookie_domain) must keep the cookie host-only.
+    redirect = portal.get("/login")
+    state = httpx.URL(redirect.headers["location"]).params["state"]
+    response = portal.get("/callback", params={"code": "code-good", "state": state})
+    assert "Domain=" not in response.headers["set-cookie"]
 
 
 def test_missing_credentials_say_not_configured(tmp_path):
@@ -176,7 +230,7 @@ def test_missing_credentials_say_not_configured(tmp_path):
                    apps_path=str(apps))
     with TestClient(create_app(cfg)) as client:
         response = client.get("/login", params={"app": "bridgeflow"})
-        assert response.status_code == 503 and "not configured" in response.json()["detail"]
+        assert response.status_code == 503 and "not configured" in response.text
 
 
 def test_missing_signing_key_fails_closed(tmp_path):
