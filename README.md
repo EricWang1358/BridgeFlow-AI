@@ -13,6 +13,7 @@ This README is a guided walkthrough. Follow it top to bottom and you will have t
 one review completed end to end, and one mapping decision recorded, on a machine you have never used
 before. Nothing is assumed beyond "you can open a terminal".
 
+- [What is built today, and what is not](#what-is-built-today-and-what-is-not)
 - [Before you start](#before-you-start)
 - [1 Set up the machine](#1-set-up-the-machine)
 - [2 Install](#2-install)
@@ -31,6 +32,24 @@ before. Nothing is assumed beyond "you can open a terminal".
 - [15 When something does not work](#15-when-something-does-not-work)
 - [16 Worked examples](#16-worked-examples)
 - [Where the real documentation is](#where-the-real-documentation-is)
+
+## What is built today, and what is not
+
+| Area | State | Where to look |
+| --- | --- | --- |
+| Monthly reconciliation: import four department files, clean, quarantine, build the master table | Built | Sections 7–8 |
+| Cross-department master table from the business side's v2 templates and dictionary, every cell traced to its source | Built | Section 7 |
+| Four department sub-agents review the month; structured, evidence-bound, host-validated | Built (live-model runs recorded in `docs/00`) | Sections 9–10 |
+| Column matching and quarantine release through native approval | Built | Section 11 |
+| Guided product tour for first-time users | Built | Section 6 |
+| Quotation drafts from a declared policy | Declaration and mock samples only; no extraction from real documents, no sending | Section 13 |
+| Filling & handoff (Agent 2 foundation): assisted filling, approval, handoff board | Foundation and read-only board; no downstream actions, no real notifications | Section 13 |
+| Workflow generation (Agent 1): candidate scenarios, information/file-flow diagrams, field-lineage graph, four-quadrant proposal, MVP decision | **Not built.** Planned in [`HANDOFF.md`](HANDOFF.md) | — |
+| Organisational rollout (Agent 3): onboarding guidance, frontline feedback, retrospectives | **Not built** beyond adoption signals from the event log | — |
+| Feishu upload/download shortcuts | Code and mock-tenant tests; not connected to a real tenant | [`docs/27`](docs/27-external-inputs.md) |
+
+All sample data is fictional. Real customer exports, the business side's confirmation of the conventions
+filled in by best practice, and a real held-out evaluation are still outstanding.
 
 ## Before you start
 
@@ -132,7 +151,7 @@ and holds real master data, so a fresh clone does not have it, and the product s
 guessing. To follow this guide with the sample case, either start with `--demo` (step 5) or export:
 
 ```bash
-export FIELD_DICTIONARY_PATH=data/business_demo/dictionary.yaml
+export FIELD_DICTIONARY_PATH=data/mock_business/demo/dictionary.yaml
 ```
 
 ## 4 Build the plugins
@@ -156,7 +175,7 @@ python scripts/start_web.py --demo --port 3082
 `--demo` points the domain service at the sample case's own dictionary and prints which one it froze:
 
 ```text
-BridgeFlow field dictionary: /home/you/Hackathon2026/BridgeFlow-AI/data/business_demo/dictionary.yaml
+BridgeFlow field dictionary: /home/you/Hackathon2026/BridgeFlow-AI/data/mock_business/demo/dictionary.yaml
 ```
 
 The launcher starts a private Python service on port 8000 (localhost only) and the official
@@ -193,29 +212,58 @@ quotation stay separate paths; choosing one does not disable the other.
 Drag the dividers to resize, focus one and use the arrow keys, double-click to reset. Panel
 preferences are stored in the browser only.
 
+![Guided tour welcome card](docs/images/14-guided-tour.png)
+
+The first time you open the workspace, a welcome card offers a guided task: open the sample notebook,
+read the cross-department master table, follow one number to its original file, download the workbook
+and save the notebook. Each step only advances when the real action succeeded. **Help & guided tours**
+in the top bar resumes it, replays it, or explains the department review and the quotation path. The
+tour covers the monthly review only; the workflow features that are not built yet are not in it.
+
 ## 7 The fastest complete loop: the sample notebook
 
-Click 打开示例笔记本 / Open sample notebook in the left pane. It imports four synthetic department
-files, runs the normal import and rule computation, and freezes the sample dictionary for that batch.
-No model call happens, so this costs nothing.
+Click **Open sample notebook** in the left pane. It imports four department workbooks of a fictional
+concrete supplier for `2024-07`, filled in on the business side's v2 department templates, runs the
+normal import and rule computation, and freezes the sample dictionary for that batch. No model call
+happens, so this costs nothing.
 
 ![Sample notebook: four sources and the master table artifact](docs/images/02-sample-sources.png)
 
-What you should see, and what each part means:
+What you should see:
 
-1. Left: four sources with department and row count (`sample-production.csv` 生产 · 4 行,
-   procurement 4, finance 2, marketing 2), the period `2025-11`, a 需要人工复核 badge, and the batch
-   id with a copy button.
-2. Right: under 产物 Artifacts, one entry `2025-11 · 主表` with the same badge. Artifacts only ever
-   list things that were actually saved.
-3. A 预览 Preview of the selected source: the pre-cleaning parse view, with original row numbers,
-   original column names, and a note that pagination exists for the browser. Look at rows 2 and 3:
-   `SKU-A1` and `sku-a1`. That is deliberate; the case ships with planted defects.
+1. Left: four sources, `模拟-生产部-2024-07.xlsx` (production, 21 daily rows) and procurement, finance
+   and marketing with 4 rows each (one per project), the period `2024-07`, a **Ready** badge, and the
+   batch id.
+2. Right: under **Artifacts**, `2024-07 · Master table` with 4 rows.
+3. A **Preview** of the selected source: the parsed original with its row numbers and column names.
 
-Open 文件来源信息 to see which file, batch, worksheet and SHA-256 digest the preview belongs to. The
-digest is provenance, not an explanation of the business.
+Open the file provenance to see which file, batch, worksheet and SHA-256 digest the preview belongs to.
 
 ![Source provenance labels](docs/images/03-source-provenance.png)
+
+### The cross-department master table
+
+Click **Cross-department master** in Studio.
+
+![Cross-department master table with an open question and one cell's evidence](docs/images/12-cross-department-master.png)
+
+This is the 76-column table the business side designed, built from the four templates exactly as
+their dictionary (v2) says: rows meet on project code, customer code and report month; the formulas the
+dictionary states are computed and compared with what departments wrote; nothing the dictionary does
+not state is invented.
+
+- **3 / 4 complete rows · 1 open question.** Production wrote the customer's short name for one
+  project. The cell is left empty and the question lists what each department wrote, so a person
+  decides; the system does not pick a spelling.
+- **Conventions filled in where the dictionary is silent (4).** VAT rate 13%, the collection-gap
+  formula, the customer-diagnosis thresholds and how daily production rows roll up. Each is written in
+  `data/company_templates/integration.yaml` and marked on every cell that depends on it, until the
+  business side confirms or replaces it.
+- Click a number to see its evidence: department, file, sheet, row and header, or the formula and its
+  inputs. **Open original source** shows that row in the uploaded file. **Download master xlsx** exports
+  the table with an open-items sheet and a conventions sheet.
+
+### The batch data
 
 Now open the master table: click the artifact, or 主表 in the tool grid.
 
@@ -236,13 +284,16 @@ The batch modal is where you decide whether the data is fit to review:
 
 ## 8 Import your own files
 
-Use the four CSVs in `data/business_demo/risk/`, or your own files if you have a dictionary that
-declares them.
+Use the department workbooks in `data/mock_business/monthly/` (three months of the fictional
+supplier, with planted filing errors in June and July), or your own files on the templates in
+`data/company_templates/source/`.
 
 1. In Sources, click 添加来源 / Add sources.
-2. Pick the business month (`2025-11`) and the department files. One file per department, CSV or a
-   single-sheet XLSX. Multi-sheet workbooks are refused on purpose until there is an explicit sheet
-   and header choice.
+2. Pick the business month (`2024-07`) and the department files. One file per department, CSV or
+   XLSX. If a workbook has several sheets, or its header is not on row 1 (a merged title row above the
+   header, as in the business side's v1 procurement template), the import refuses and says which sheets
+   exist or which row looks like the header; fill in **Table position (optional)** for that file, or
+   declare `sheet_layout` in the dictionary.
 3. Click 导入并检查 Import and inspect. The batch id appears in the left pane; copy it if you want to
    refer to it in chat.
 4. Open the batch modal and read the four tabs before going any further.
@@ -385,8 +436,32 @@ template: which fields a quotation would have, which are still `Awaiting source 
 owes each piece of evidence. The badge 等待业务样板 / Awaiting business samples is the honest state of
 the feature: the template proves the execution contract, it is not an approved pricing policy.
 
-Not built, and not shown as if it were: extraction from a real contract or conversation transcript, a
-validated fact store from uploaded documents, and any way to send a quote.
+`data/mock_business/quotation/` holds a fictional but complete quotation sample for a concrete supplier:
+customer inquiry, supply contract template, standard quote sheet, cost and capacity basis, pricing and
+credit policy, a declaration written from that policy, an extraction record that points every input at
+a section or cell of an original, and a hand-computed answer. `backend/tests/test_mock_quotation.py`
+opens the originals, checks every extracted value, and confirms the draft matches the hand answer and
+that policy violations refuse.
+
+Not built, and not shown as if it were: automatic extraction from a real contract or conversation
+transcript, a validated fact store from uploaded documents, and any way to send a quote.
+
+### Filling & handoff, and the three-agent workflow
+
+![Filling & handoff: the handoff board, empty until a record is filled](docs/images/13-workflow-handoff.png)
+
+The business side designed three agents: **Agent 1** reads department materials, proposes candidate
+work scenarios, draws information and file flows, scores a four-quadrant proposal and records the MVP
+the departments choose; **Agent 2** turns the chosen flow into templates, helps staff fill them and
+hands standard records to the next department; **Agent 3** supports rollout with onboarding guidance and
+frontline feedback.
+
+What exists is the foundation: a declared workflow catalogue, a state machine and event log, assisted
+filling through the captain (every write needs native approval), and the read-only **Filling & handoff**
+view with the handoff board, drafts, field lineage list and adoption signals. The Agent 1 features,
+downstream actions (start / return / complete), real notifications and Agent 3 are not built. The
+item-by-item comparison with the design and the planned order are in [`HANDOFF.md`](HANDOFF.md).
+
 
 ## 14 Check that your install is healthy
 
@@ -431,7 +506,9 @@ example 5 were captured on 2026-09-07 against the code in `main`.
 ### Example 1 - Judge a month: "is November 2025 healthy?"
 
 **Given.** The four files in `data/business_demo/risk/`, period `2025-11`, dictionary
-`data/business_demo/dictionary.yaml`.
+`data/business_demo/dictionary.yaml`. These worked examples use the older English CSV regression case
+(it has independent answers and drives the browser smokes), not the sample notebook's v2 templates;
+start with `FIELD_DICTIONARY_PATH=data/business_demo/dictionary.yaml` instead of `--demo`.
 
 **Do it.** Import the four files (step 8), click 发起研判 (step 9), open the report (step 10).
 
@@ -610,7 +687,10 @@ plugins/          DSH tools, guards, native approval integration and Client UI s
 dsh/              Pinned Web policy patch and restricted analyst preset
 scripts/          Native Web launcher and runtime checks
 data/samples/     Historical development spreadsheets
-data/business_demo/ Generated visible business cases and independent answers
+data/business_demo/ English CSV regression cases and independent answers (browser smokes, worked examples)
+data/company_templates/ The business side's v2 templates, dictionary and the integration declaration
+data/mock_business/ Fictional monthly exports, the sample notebook case and quotation samples
+examples/         Standalone demos (production → marketing handoff MVP)
 docs/images/      Screenshots used by this guide
 docs/             Requirements, architecture, measured status and review
 ```
