@@ -100,12 +100,19 @@ jobs:
           # which could have moved on while the test job ran.
           script: bash /tmp/bf-deploy/deploy/deploy.sh ${{ github.sha }}
 
-      # 401 proves Caddy + TLS + basic auth are all answering, without
-      # putting the basic-auth password into GitHub.
+      # 200 on / proves Caddy + TLS + the reverse proxy into dsh web are
+      # answering; the portal lives on its own subdomain and is checked at its
+      # health route. Sign-in itself (Feishu OAuth) is exercised manually per
+      # docs/22 §13 — automating it would put Feishu credentials into GitHub.
       - name: Public liveness check
         run: |
           code=$(curl -s -o /dev/null -w "%{http_code}" "https://${{ vars.PUBLIC_DOMAIN }}/" || true)
-          if [ "$code" != "401" ]; then
-            echo "unexpected status $code (expected 401 from the basic-auth challenge)"
+          if [ "$code" != "200" ]; then
+            echo "unexpected status $code (expected 200 from dsh web)"
+            exit 1
+          fi
+          pcode=$(curl -s -o /dev/null -w "%{http_code}" "https://portal.${{ vars.PUBLIC_DOMAIN }}/health" || true)
+          if [ "$pcode" != "200" ]; then
+            echo "portal health returned $pcode (expected 200)"
             exit 1
           fi

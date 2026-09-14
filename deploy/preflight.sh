@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Read-only checks on the instance before enabling CI deploys (docs/22 §12). Changes nothing.
+# Read-only checks on the instance before enabling CI deploys (docs/22 §13). Changes nothing.
 #
 #   bash deploy/preflight.sh <domain>
 #
@@ -24,8 +24,14 @@ check "dsh CLI is the pinned 0.1.2-rc.1" bash -c 'dsh --version | grep -q 0.1.2-
 check "client bundle is built" test -f plugins/dist/client.js
 check "working tree is clean (instance state is gitignored)" bash -c '[[ -z "$(git status --porcelain)" ]]'
 check "bridgeflow unit is active" systemctl is-active --quiet bridgeflow
+check "portal unit is active" systemctl is-active --quiet bridgeflow-portal
 check "unit names the real domain" grep -q -- "--trusted-host $DOMAIN" /etc/systemd/system/bridgeflow.service
 check "domain service answers on loopback" curl -fsS --max-time 5 http://127.0.0.1:8000/health
+check "portal answers on loopback" curl -fsS --max-time 5 http://127.0.0.1:8100/health
+# shellcheck disable=SC1091
+check "portal env is complete (env.sh)" bash -c 'source env.sh && [[ -n "${PORTAL_FEISHU_APP_ID:-}" && -n "${PORTAL_FEISHU_APP_SECRET:-}" && -n "${PORTAL_SESSION_SECRET:-}" && -f "${PORTAL_KEY_PATH:-/nonexistent}" && "${PORTAL_BASE_URL:-}" = "https://portal.'"${DOMAIN}"'" && "${PORTAL_EXTERNAL_BASE_URL:-}" = "$PORTAL_BASE_URL" ]]'
+check "portal is configured (feishu credentials + signing key loaded)" bash -c 'curl -fsS --max-time 5 http://127.0.0.1:8100/health | grep -q "\"feishu\": *true" && curl -fsS --max-time 5 http://127.0.0.1:8100/health | grep -q "\"signer\": *true"'
 check "nothing but ssh and caddy listens publicly" bash -c '! ss -tlnH | awk "{print \$4}" | grep -vE "^(127\.0\.0\.1|\[::1\]):" | grep -vE ":(22|80|443)$"'
-check "Caddy asks for basic auth on https://$DOMAIN" bash -c 'test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 https://'"$DOMAIN"'/)" = 401'
+check "main site answers 200 on https://$DOMAIN" bash -c 'test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 https://'"$DOMAIN"'/)" = 200'
+check "portal health answers on https://portal.$DOMAIN" curl -fsS --max-time 10 "https://portal.$DOMAIN/health"
 exit $failed
