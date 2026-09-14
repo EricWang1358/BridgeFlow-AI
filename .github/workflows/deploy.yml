@@ -100,17 +100,18 @@ jobs:
           # which could have moved on while the test job ran.
           script: bash /tmp/bf-deploy/deploy/deploy.sh ${{ github.sha }}
 
-      # 200 on / proves Caddy + TLS + the reverse proxy into dsh web are
-      # answering; the portal lives on its own subdomain and is checked at its
-      # health route. Sign-in itself (Feishu OAuth) is exercised manually per
-      # docs/22 §13 — automating it would put Feishu credentials into GitHub.
+      # dsh web's session fence (Feishu auth) answers anonymous / with 401 —
+      # that proves both the process and the fence are up. Only 000 (no
+      # listener) and 5xx (Caddy can't reach upstream) mean bad deploy.
+      # Sign-in itself (Feishu OAuth) is exercised manually per docs/22 §13 —
+      # automating it would put Feishu credentials into GitHub.
       - name: Public liveness check
         run: |
           code=$(curl -s -o /dev/null -w "%{http_code}" "https://${{ vars.PUBLIC_DOMAIN }}/" || true)
-          if [ "$code" != "200" ]; then
-            echo "unexpected status $code (expected 200 from dsh web)"
-            exit 1
-          fi
+          case "$code" in
+            200|301|302|401) ;;
+            *) echo "unexpected status $code (expected 2xx/3xx/401 from dsh web)"; exit 1 ;;
+          esac
           pcode=$(curl -s -o /dev/null -w "%{http_code}" "https://portal.${{ vars.PUBLIC_DOMAIN }}/health" || true)
           if [ "$pcode" != "200" ]; then
             echo "portal health returned $pcode (expected 200)"
