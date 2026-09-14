@@ -1,7 +1,8 @@
 # 22 — AWS Lightsail 部署（GitHub Actions 自动部署）
 
 目标：合并到 `main` 即自动测试并部署到 Lightsail 实例；公网经 Caddy
-（自动 HTTPS + basic auth 共享密码）进入，**不建登录体系、不用 Docker**。
+（自动 HTTPS）进入，身份由统一登录门户（飞书 OAuth，[`27`](27-login-portal.md)）
+承担，**不用 Docker**。
 
 流水线在 `.github/workflows/deploy.yml`（本仓库唯一 CI 文件），
 实例侧脚本 `deploy/deploy.sh`，systemd 单元 `deploy/bridgeflow.service`。
@@ -19,19 +20,25 @@ ssh <user>@<host> 'bash -s -- <previous-sha>' < deploy/deploy.sh
 ## 0 部署拓扑
 
 ```
-浏览器 ──HTTPS+basic auth──▶ Caddy (:443/:80, 唯一公网监听)
-                                │ reverse_proxy, 透传 Host
-                                ▼
-                          dsh web (127.0.0.1:3080)
-                                │ 宿主侧 Node 代理，带 BRIDGEFLOW_SERVICE_TOKEN
-                                ▼
-                          后端 uvicorn (127.0.0.1:8000)
+浏览器 ──HTTPS──▶ Caddy (:443/:80, 唯一公网监听)
+                    │ reverse_proxy, 透传 Host
+                    ├─ <domain>        → dsh web (127.0.0.1:3080)
+                    │                      │ 宿主侧 Node 代理，带
+                    │                      │ BRIDGEFLOW_SERVICE_TOKEN
+                    │                      │ 与浏览器的门户令牌
+                    │                      ▼
+                    │                   后端 uvicorn (127.0.0.1:8000，JWKS 验签)
+                    └─ portal.<domain> → 登录门户 uvicorn (127.0.0.1:8100)
 ```
 
 浏览器只与 dsh web 同源通信（客户端插件全部请求同源 `/bridgeflow/*`）；
 对后端的 fetch 发生在 dsh web 宿主进程内，`DEEPSEEK_API_KEY` 与服务
 凭证不出实例。因此 `dsh/enterprise.patch.yml` 的
 `backendUrl: http://127.0.0.1:8000` **保持原样**，无 CORS 改动。
+
+主站不套 basic auth：dsh web 自身的会话凭证栅栏仍在，门户签发的短期
+JWT 守所有浏览器数据路由（见 [`27`](27-login-portal.md)）。门户站点不能
+加任何前置密码——飞书 OAuth 回调要直达。
 
 启动链复用本地开发原样：`run.sh` → source `env.sh` →
 `scripts/start_web.py` → uvicorn + `dsh web`。systemd 只是把这条链
@@ -172,7 +179,7 @@ ss -tlnp | grep -E '3080|8000'                  # 两者都应只在 127.0.0.1
 
 ---
 
-## 7 Caddy（反代 + 自动 HTTPS + basic auth）
+## 7 Caddy（反代 + 自动 HTTPS）
 
 ```bash
 # 官方 apt 源安装，见 https://caddyserver.com/docs/install#debian-ubuntu
@@ -182,31 +189,31 @@ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo 
 sudo apt update && sudo apt install -y caddy
 ```
 
-`/etc/caddy/Caddyfile`（实例文件，**不进仓库**）：
+`/etc/caddy/Caddyfile`（实例文件，**不进仓库**）——两个站点，门户站点
+必须在门户进程起来之前就位也行，Caddy 会各自签证书：
 
-```
+```caddyfile
 <domain> {
-    basic_auth {
-        demo <bcrypt-hash>
-    }
     reverse_proxy 127.0.0.1:3080
+}
+
+portal.<domain> {
+    reverse_proxy 127.0.0.1:8100
 }
 ```
 
 ```bash
-caddy hash-password --plaintext '<演示共享密码>'   # 输出填进 Caddyfile
 sudo systemctl reload caddy
 ```
 
-明文密码带外发给演示用户，机器上只留 bcrypt hash。Caddy 反代默认透传
-`Host`、原生支持 WebSocket 升级、无请求体大小上限（约 26 MiB 的上传
-路径不受阻）。
+Caddy 反代默认透传 `Host`、原生支持 WebSocket 升级、无请求体大小上限
+（约 26 MiB 的上传路径不受阻）。
 
 **验证**
 
 ```bash
-curl -sI https://<domain>/                    # 期望 401
-curl -sI -u demo:<密码> https://<domain>/     # 此时 dsh web 未起，期望 502 —— 502 也证明反代活着
+curl -sI https://<domain>/          # dsh web 未起时 502——502 也证明反代与证书活着
+curl -sI https://portal.<domain>/   # 同上（门户进程在 §9 才起）
 ```
 
 ---
@@ -231,7 +238,91 @@ ss -tlnp                                # 公网监听仅 sshd 与 caddy
 
 ---
 
-## 9 GitHub 仓库侧配置
+## 9 登录门户（飞书 OAuth）
+
+门户是第二个常驻进程（`portal/`，127.0.0.1:8100），与主服务同机部署。
+设计与边界见 [`27`](27-login-portal.md)；这里只记实例侧装配。顺序有讲究：
+**门户验证通过之后再让后端开身份层**，否则数据面会在门户就绪前全体 401。
+
+### 9a 飞书后台（一次性，人工）
+
+复用 #140 的自建应用即可（凭据同一对，权限范围不同）：
+
+1. 添加「网页应用」能力；
+2. 安全设置 → 重定向 URL 填 `https://portal.<domain>/callback`；
+3. 权限：开通获取用户 user_id 的通讯录只读权限（否则 user_info 没有
+   union_id，门户会报错而不是猜）；
+4. 创建版本并发布。
+
+App ID / Secret 只进实例 `env.sh`，不进仓库、不进 GitHub。
+
+### 9b 实例装配
+
+```bash
+cd ~/Hackathon2026/BridgeFlow-AI
+uv pip install -e portal --python ~/Hackathon2026/.venv/bin/python
+# 签名私钥放仓库外，绝不入库：
+~/Hackathon2026/.venv/bin/python -m portal_app.keygen ~/Hackathon2026/.portal-key.pem
+```
+
+`env.sh` 追加（`PORTAL_SESSION_SECRET` 用 `openssl rand -hex 32` 生成一次、
+粘贴**字面值**——每次启动重算会让所有已登录会话作废）：
+
+```bash
+export PORTAL_FEISHU_APP_ID=<app id>
+export PORTAL_FEISHU_APP_SECRET=<app secret>
+export PORTAL_KEY_PATH="$HOME/Hackathon2026/.portal-key.pem"
+export PORTAL_SESSION_SECRET=<32+ 随机字符>
+export PORTAL_EXTERNAL_BASE_URL="https://portal.<domain>"
+export PORTAL_COOKIE_SECURE=true
+export PORTAL_APPS_PATH="$HOME/Hackathon2026/portal-apps.yaml"
+# 后端验签与 dsh web 代理下发门户地址共用这一个变量；必须与上面一致
+# （验签时 iss 按它逐字节比对）：
+export PORTAL_BASE_URL="https://portal.<domain>"
+```
+
+`~/Hackathon2026/portal-apps.yaml`（实例文件，不进仓库；仓库里的
+`portal/apps.yaml` 保留给本地开发）：
+
+```yaml
+apps:
+  bridgeflow:
+    audience: bridgeflow
+    redirect_uri: "https://<domain>/"
+    origins:
+      - "https://<domain>"
+```
+
+```bash
+sudo cp deploy/portal.service /etc/systemd/system/bridgeflow-portal.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now bridgeflow-portal
+```
+
+**验证（按顺序，不过就停）**
+
+```bash
+curl -fsS http://127.0.0.1:8100/health                    # feishu 与 signer 均为 true
+curl -fsS https://portal.<domain>/health                  # 同上，证明 Caddy 站点与证书就位
+curl -sI 'https://portal.<domain>/login?app=bridgeflow'   # 期望 302 到 open.feishu.cn
+```
+
+### 9c 后端开身份层 + 首登拿 union_id
+
+```bash
+sudo systemctl restart bridgeflow   # 后端与 web 代理拿到 PORTAL_BASE_URL
+```
+
+浏览器打开主站：数据路由 401 → 界面出现「飞书登录」入口 → 完成 OAuth →
+浏览器直接访问 `https://portal.<domain>/me` 拿到自己的 union_id →
+写 `data/mappings/access-control.yaml`（格式见同目录 `.example`；gitignored，
+部署不动它）→ 再 `sudo systemctl restart bridgeflow`。
+
+文件缺失时数据面是 503「未配置」，这是设计的中间态（fail-closed），不是故障。
+
+---
+
+## 10 GitHub 仓库侧配置
 
 | 项 | 位置 | 值 |
 | --- | --- | --- |
@@ -247,7 +338,7 @@ ss -tlnp                                # 公网监听仅 sshd 与 caddy
 
 ---
 
-## 10 已知坑
+## 11 已知坑
 
 - **`--trusted-host` 匹配形态未验证**：fence 按 host 还是 `host:port`
   匹配待实测。flag 可重复；第一种形态 403/拒绝时，两个都传：
@@ -265,27 +356,31 @@ ss -tlnp                                # 公网监听仅 sshd 与 caddy
 
 ---
 
-## 11 可选加固：专用 deploy 用户
+## 12 可选加固：专用 deploy 用户
 
 CI 的 SSH key 若指向 `ubuntu`（免密 sudo）即等价 root。更严做法：
 
 ```bash
 sudo useradd -m -s /bin/bash deploy
 # deploy 用户的 authorized_keys 放 CI 公钥
-echo 'deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart bridgeflow, /usr/bin/systemctl is-active bridgeflow' \
+echo 'deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart bridgeflow, /usr/bin/systemctl restart bridgeflow-portal, /usr/bin/systemctl is-active bridgeflow, /usr/bin/systemctl is-active bridgeflow-portal' \
   | sudo tee /etc/sudoers.d/deploy-bridgeflow
 ```
 
-`deploy.sh` 中的 `sudo systemctl` 恰好只用到这两条。仓库读取权限
+`deploy.sh` 中的 `sudo systemctl` 恰好只用到这四条。仓库读取权限
 沿用 `~/Hackathon2026` 下的组可读或把 `deploy` 加进 `ubuntu` 组，按需调整。
 
 ---
 
-## 12 验收清单（部署完成后逐条过）
+## 13 验收清单（部署完成后逐条过）
 
-1. `curl -sI https://<domain>/` → 401；带 `-u demo:<密码>` → 200 且出 dsh web 页面
+1. `curl -sI https://<domain>/` → 200 且出 dsh web 页面；
+   `curl -fsS https://portal.<domain>/health` → `feishu` 与 `signer` 均 true
 2. 浏览器打开改写后的凭证 URL，`/api` 调用成功（`--trusted-host` 在此证明）
-3. UI 走全链路：传演示月度表 → review 流程 → notebook 渲染
-4. `sudo systemctl restart bridgeflow` 自愈；`sudo reboot` 后单元自启
-5. 演示前排练一次回滚：`bash deploy/deploy.sh <prev-sha>`，确认字典与
-   uploads 存活（实例 `git status` 干净）
+3. 点「飞书登录」完成 OAuth，数据路由带 JWT 通过；清掉会话后回到 401
+   与登录入口
+4. UI 走全链路：传演示月度表 → review 流程 → notebook 渲染
+5. `sudo systemctl restart bridgeflow bridgeflow-portal` 自愈；
+   `sudo reboot` 后两个单元自启
+6. 演示前排练一次回滚：`bash deploy/deploy.sh <prev-sha>`，确认字典、
+   uploads 与 `access-control.yaml` 存活（实例 `git status` 干净）

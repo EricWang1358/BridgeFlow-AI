@@ -1,0 +1,30 @@
+# systemd unit for the login portal on the Lightsail instance (see
+# docs/22-lightsail-deploy.md §9). Install as
+# /etc/systemd/system/bridgeflow-portal.service, then:
+#
+#   sudo systemctl daemon-reload && sudo systemctl enable --now bridgeflow-portal
+#
+# Like bridgeflow.service, this sources env.sh via bash so PORTAL_* (Feishu app
+# credentials, signing-key path, session secret) come from the launching shell
+# only — never from this file and never from .env, the same boundary as DSH_*.
+# Loopback-only: Caddy terminates TLS for portal.<domain> and proxies here.
+#
+# The unit assumes `uv pip install -e portal` has put portal_app into the venv;
+# deploy.sh does that on every deploy.
+
+[Unit]
+Description=BridgeFlow unified login portal (Feishu OAuth, signs app tokens)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Hackathon2026/BridgeFlow-AI
+ExecStart=/bin/bash -c 'source env.sh && exec /home/ubuntu/Hackathon2026/.venv/bin/python -m uvicorn portal_app.main:app --host 127.0.0.1 --port 8100'
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

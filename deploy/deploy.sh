@@ -20,8 +20,9 @@ git reset --hard "${1:-origin/main}"
 
 # Dependencies and the client bundle are rebuilt every deploy: both are
 # cached and take seconds, and the rebuild keeps dist/client.js newer than
-# its sources, which start_web.py checks at launch.
-uv pip install -e "backend[dsh,dev]" --python "$VENV"
+# its sources, which start_web.py checks at launch. The portal is installed
+# into the same venv so bridgeflow-portal.service can import portal_app.
+uv pip install -e "backend[dsh,dev]" -e portal --python "$VENV"
 (
   cd plugins
   # Resolve the committed packageManager pin, not the instance-global pnpm.
@@ -29,7 +30,7 @@ uv pip install -e "backend[dsh,dev]" --python "$VENV"
   corepack pnpm run build
 )
 
-sudo systemctl restart bridgeflow
+sudo systemctl restart bridgeflow bridgeflow-portal
 
 ok=""
 for _ in $(seq 1 30); do
@@ -37,7 +38,9 @@ for _ in $(seq 1 30); do
   # Bounded curl: without --max-time a stalled request could outlast the
   # whole 30×2s retry budget.
   if curl -fsS --connect-timeout 2 --max-time 5 http://127.0.0.1:8000/health >/dev/null 2>&1 \
-     && systemctl is-active --quiet bridgeflow; then
+     && curl -fsS --connect-timeout 2 --max-time 5 http://127.0.0.1:8100/health >/dev/null 2>&1 \
+     && systemctl is-active --quiet bridgeflow \
+     && systemctl is-active --quiet bridgeflow-portal; then
     ok=1
     break
   fi
@@ -45,7 +48,7 @@ done
 
 if [ -z "$ok" ]; then
   echo "health check failed after deploy" >&2
-  journalctl -u bridgeflow -n 60 --no-pager >&2
+  journalctl -u bridgeflow -u bridgeflow-portal -n 60 --no-pager >&2
   exit 1
 fi
 
