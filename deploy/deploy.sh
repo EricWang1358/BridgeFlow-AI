@@ -37,8 +37,15 @@ for _ in $(seq 1 30); do
   sleep 2
   # Bounded curl: without --max-time a stalled request could outlast the
   # whole 30×2s retry budget.
+  # 3080 (dsh web) is the port Caddy actually serves for the main domain.
+  # It boots a few seconds after uvicorn, so skipping it here lets the CI
+  # liveness check race into a 502. Its session fence may answer non-200,
+  # so the bar is "someone answers" (status != 000), not 200.
+  web_code=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 \
+    http://127.0.0.1:3080/ || true)
   if curl -fsS --connect-timeout 2 --max-time 5 http://127.0.0.1:8000/health >/dev/null 2>&1 \
      && curl -fsS --connect-timeout 2 --max-time 5 http://127.0.0.1:8100/health >/dev/null 2>&1 \
+     && [ "$web_code" != "000" ] \
      && systemctl is-active --quiet bridgeflow \
      && systemctl is-active --quiet bridgeflow-portal; then
     ok=1
