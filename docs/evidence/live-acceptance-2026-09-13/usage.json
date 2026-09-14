@@ -1,0 +1,21 @@
+{
+  "note": "All billed live attempts this round, counted from their DSH session logs (assistant/message usage). Includes failed and stopped attempts.",
+  "attempts": 10,
+  "passed_final": [
+    "business-risk",
+    "business-balanced",
+    "business-poison",
+    "web-approvals"
+  ],
+  "tokens": {
+    "total": 388902,
+    "input": 156598,
+    "output": 31984,
+    "cache_read": 200320
+  },
+  "failures_found": [
+    "batch_summary strict schema lagged host fields (fixed #166)",
+    "finance child named an unsupported topic inside a negation; instruction clarified",
+    "web smoke narration check flagged correct hedged sentences twice; check now judges per sentence with hedges"
+  ]
+}

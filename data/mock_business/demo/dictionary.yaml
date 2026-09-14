@@ -1,0 +1,161 @@
+# 演示笔记本「业务演示 · 月度对账」的批次字典（模拟商砼公司 2024-07，全部虚构）。
+# 列名逐字对应业务方 v2 四部门模板（data/company_templates/source/*-v2.xlsx，经导入规范化）；
+# 研判契约的指标是公司级月度汇总，阈值是模拟管理口径，真实业务方确认后替换。
+columns:
+  production: {项目编号: project, 客户代码: customer}
+  procurement: {项目编号: project, 客户代码: customer}
+  finance: {项目编号: project, 客户代码: customer}
+  marketing: {项目编号: project, 客户代码: customer}
+period_columns:
+  production: 日期
+  procurement: 报表年月
+  finance: 报表年月
+  marketing: 报表年月   # 市场部表里还有「完工时间」，不能拿来分月
+measures:
+  production:
+    生产量: production_volume
+    出厂量: shipped_volume
+    实际量: signed_volume
+    上月实际量: previous_signed_volume
+  procurement:
+    当月生产量: material_volume
+    当月物资总成本: material_cost
+    单方不含税毛利: unit_margin
+    不含税成本: unit_material_cost
+  finance:
+    本期实现收入: revenue
+    本期实际成本: actual_cost
+    资金占用利息成本: interest_cost
+    项目财务净利润: net_profit
+    期末余额: closing_balance
+    本期借方金额: period_debit
+  marketing:
+    累计产值: cumulative_output
+    累计结算: cumulative_settlement
+    累计收款: cumulative_receipts
+    当前垫资额: advance
+    缺口: collection_gap
+    合同销售单价: contract_price
+rollups:
+  production_volume: sum
+  shipped_volume: sum
+  signed_volume: sum
+  previous_signed_volume: average   # 按日填报的每一行都重复写上月数
+  material_volume: sum
+  material_cost: sum
+  unit_margin: average
+  unit_material_cost: average
+  revenue: sum
+  actual_cost: sum
+  interest_cost: sum
+  net_profit: sum
+  closing_balance: sum
+  period_debit: sum
+  cumulative_output: sum
+  cumulative_settlement: sum
+  cumulative_receipts: sum
+  advance: sum
+  collection_gap: sum
+  contract_price: average
+business_review:
+  case: 模拟商砼公司 2024-07 月度对账（业务方 v2 模板，虚构数据）
+  inputs:
+    production:
+      date_column: 日期
+      nonnegative_columns: [生产量, 出厂量, 实际量, 上月实际量]
+    procurement:
+      date_column: 报表年月
+      nonnegative_columns: [当月生产量, 当月物资总成本, 不含税成本]
+    finance:
+      date_column: 报表年月
+      nonnegative_columns: [本期实现收入, 本期实际成本, 资金占用利息成本, 期末余额, 本期借方金额]
+    marketing:
+      date_column: 报表年月
+      nonnegative_columns: [累计产值, 累计结算, 累计收款, 当前垫资额]
+  metrics:
+    sign_rate:
+      unit: '%'
+      formula: sum(实际量) / sum(出厂量) × 100
+      expression: {op: multiply, args: [{op: divide, args: [{op: sum, department: production, measures: [signed_volume]}, {op: sum, department: production, measures: [shipped_volume]}]}, {op: constant, value: 100}]}
+    leftover_rate:
+      unit: '%'
+      formula: (sum(生产量) − sum(出厂量)) / sum(生产量) × 100
+      expression: {op: multiply, args: [{op: divide, args: [{op: subtract, args: [{op: sum, department: production, measures: [production_volume]}, {op: sum, department: production, measures: [shipped_volume]}]}, {op: sum, department: production, measures: [production_volume]}]}, {op: constant, value: 100}]}
+    volume_gap:
+      unit: 方
+      formula: sum(物资部当月生产量) − sum(生产部生产量)
+      expression: {op: subtract, args: [{op: sum, department: procurement, measures: [material_volume]}, {op: sum, department: production, measures: [production_volume]}]}
+    material_cost_ratio:
+      unit: '%'
+      formula: sum(当月物资总成本) / sum(本期实现收入) × 100
+      expression: {op: multiply, args: [{op: divide, args: [{op: sum, department: procurement, measures: [material_cost]}, {op: sum, department: finance, measures: [revenue]}]}, {op: constant, value: 100}]}
+    weighted_unit_margin:
+      unit: 元/方
+      formula: sum(当月生产量 × 单方不含税毛利) / sum(当月生产量)
+      expression: {op: divide, args: [{op: sum_product, department: procurement, measures: [material_volume, unit_margin]}, {op: sum, department: procurement, measures: [material_volume]}]}
+    net_margin:
+      unit: '%'
+      formula: sum(项目财务净利润) / sum(本期实现收入) × 100
+      expression: {op: multiply, args: [{op: divide, args: [{op: sum, department: finance, measures: [net_profit]}, {op: sum, department: finance, measures: [revenue]}]}, {op: constant, value: 100}]}
+    receivable_months:
+      unit: 月
+      formula: sum(应收期末余额) / sum(本期借方开票额)
+      expression: {op: divide, args: [{op: sum, department: finance, measures: [closing_balance]}, {op: sum, department: finance, measures: [period_debit]}]}
+    settlement_collection_rate:
+      unit: '%'
+      formula: sum(累计收款) / sum(累计结算) × 100
+      expression: {op: multiply, args: [{op: divide, args: [{op: sum, department: marketing, measures: [cumulative_receipts]}, {op: sum, department: marketing, measures: [cumulative_settlement]}]}, {op: constant, value: 100}]}
+    advance_ratio:
+      unit: '%'
+      formula: sum(当前垫资额) / sum(累计产值) × 100
+      expression: {op: multiply, args: [{op: divide, args: [{op: sum, department: marketing, measures: [advance]}, {op: sum, department: marketing, measures: [cumulative_output]}]}, {op: constant, value: 100}]}
+    collection_gap:
+      unit: 元
+      formula: sum(缺口)，缺口 = 累计结算 − 收款计划合计（口径假设）
+      expression: {op: sum, department: marketing, measures: [collection_gap]}
+  roles:
+    production:
+      responsibility: 核对出厂量与现场签收量、生产余料，提出车次核对与退料处置；不得认定客户违约或调整结算量。
+      decision_owner: 生产部经理（模拟）
+      constraints:
+      - 签收率是公司级月度汇总，不是单个项目的结论
+      - 签收量差额须与市场部、现场核对后才能进入结算
+      unsupported_topics: []
+    procurement:
+      responsibility: 核对材料成本占收入比重、加权单方毛利，以及物资测算量与生产实际量是否一致；不得自行改合同售价。
+      decision_owner: 物资部经理（模拟）
+      constraints:
+      - 单方毛利按增值税 13% 折算不含税售价，税率是口径假设
+      - 测算量与生产量不一致时，先更正测算再比较成本
+      unsupported_topics: []
+    finance:
+      responsibility: 核对项目净利率与应收余额相当于几个月开票额，提出利润与回款复核；不得认定坏账或计提减值。
+      decision_owner: 财务总监（模拟）
+      constraints:
+      - 应收月数是余额与当月开票之比，不是账龄
+      - 净利润已扣除资金占用利息
+      unsupported_topics: [计提, 减值, 坏账概率, 信用敞口扩大, 信用敞口缩小]
+    marketing:
+      responsibility: 核对结算收款率、垫资比例与收款计划缺口，提出催收与垫资控制建议；不得自行调整客户账期或授信。
+      decision_owner: 销售总监（模拟）
+      constraints:
+      - 缺口口径为累计结算减收款计划合计，是业务方未确认的口径假设
+      - 垫资比例是公司级汇总，项目差异须看跨部门总表
+      unsupported_topics: []
+  checks:
+  - {id: sign_rate, owner: production, metric: sign_rate, attention_when: below, threshold: 97, title: 现场签收率, actions: {attention: [按项目核对低签收车次与退料记录], ok: [维持现有发货与签收流程]}}
+  - {id: leftover, owner: production, metric: leftover_rate, attention_when: above, threshold: 1, title: 生产余料率, actions: {attention: [核查余料处置与计量误差], ok: [继续按车次记录余料]}}
+  - {id: volume_gap, owner: procurement, metric: volume_gap, attention_when: above, threshold: 0, title: 物资测算量与生产量, actions: {attention: [按实际生产量更正物资测算], ok: [记录测算量与生产量一致]}}
+  - {id: material_cost, owner: procurement, metric: material_cost_ratio, attention_when: above, threshold: 85, title: 材料成本占收入, actions: {attention: [复核材料价格与配合比], ok: [持续跟踪当月到厂价]}}
+  - {id: unit_margin, owner: procurement, metric: weighted_unit_margin, attention_when: below, threshold: 60, title: 加权单方毛利, actions: {attention: [提交低毛利项目售价复核], ok: [维持现行配合比与采购价]}}
+  - {id: net_margin, owner: finance, metric: net_margin, attention_when: below, threshold: 3, title: 项目净利率, actions: {attention: [发起成本与售价联合复核], ok: [记录净利率并按月跟踪]}}
+  - {id: receivable_months, owner: finance, metric: receivable_months, attention_when: above, threshold: 3, title: 应收余额相当于开票月数, actions: {attention: [按项目复核回款计划并通报市场部], ok: [按现行回款节奏跟踪]}}
+  - {id: collection_rate, owner: marketing, metric: settlement_collection_rate, attention_when: below, threshold: 80, title: 结算收款率, actions: {attention: [对低收款率项目制定催收计划], ok: [按合同节点跟进回款]}}
+  - {id: advance, owner: marketing, metric: advance_ratio, attention_when: above, threshold: 30, title: 垫资比例, actions: {attention: [暂停新增垫资并与财务核对资金占用], ok: [维持现有垫资额度]}}
+  - {id: collection_gap, owner: marketing, metric: collection_gap, attention_when: above, threshold: 0, title: 收款计划缺口, actions: {attention: [补充收款计划并明确责任人], ok: [收款计划覆盖已结算金额]}}
+  manager_decision: 生产部核对签收差额，物资部确认测算与毛利，财务部复核利润与应收，市场部落实催收与垫资控制；本报告不自动调整结算、售价或授信。
+  limitations:
+  - 模拟商砼公司数据，用于演示业务方 v2 模板的月度对账，不代表真实经营结论
+  - 指标为公司级月度汇总；项目级核对与跨部门字段一致性看「跨部门总表」
+  - 增值税 13%、缺口公式与诊断阈值是按通用做法补的口径，业务方尚未确认
+  - 不做坏账、减值或客户信用分级判断

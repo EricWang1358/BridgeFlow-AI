@@ -1,3 +1,4 @@
+import { tourLabels } from './tour/copy.ts'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace'
 import { useSyncExternalStore } from 'react'
 import type { SubagentListEntry } from '@deepseek-ai/dsh-subagent/client'
@@ -11,6 +12,7 @@ export function configureLocale(value: Context['locale']) { locale = value }
 const subscribe = (fn: () => void) => locale.subscribe(fn)
 const current = () => locale.getSnapshot().active.startsWith('zh') ? 'zh' : 'en'
 const labels = {
+  ...tourLabels,
   notebookKind: ['笔记本用途', 'Notebook purpose'], monthlyNotebook: ['月度对账', 'Monthly review'], quotationNotebook: ['报价', 'Quotation'], mixedNotebook: ['综合工作', 'Combined work'],
   monthlyProgress: ['月度对账进度', 'Monthly review progress'], quotationProgress: ['报价进度', 'Quotation progress'],
   notStarted: ['尚未开始', 'Not started'], quotationNext: ['查看声明与待补依据', 'View declaration and missing evidence'],
@@ -23,8 +25,8 @@ const labels = {
   saveAndContinue: ['保存并继续', 'Save and continue'], discardAndContinue: ['不保存并继续', 'Discard and continue'], cancelLeave: ['取消，继续编辑', 'Cancel, keep editing'],
   notebookTitleRequired: ['请填写笔记本名称', 'Enter a notebook name'],
   notebookHistoryHelp: ['从 DSH 已保存的会话中打开笔记本；来源及产物按保存的批次恢复。未保存的空白笔记本不列入历史。', 'Open saved DSH sessions with their saved sources and artifacts. Unsaved empty notebooks are omitted.'],
-  sampleNotebook: ['打开示例笔记本', 'Open sample notebook'], sampleNotebookTitle: ['合成示例 · 月度风险复核', 'Synthetic sample · monthly risk review'],
-  sampleNotebookHelp: ['合成案例可直接预览来源和规则主表。研判需手动发起，会使用配置的模型。', 'Preview synthetic sources and the rule-computed master table. Starting a review uses the configured model.'],
+  sampleNotebook: ['打开示例笔记本', 'Open sample notebook'], sampleNotebookTitle: ['业务演示 · 月度对账（模拟商砼公司 2024-07）', 'Business demo · monthly review (fictional concrete supplier, 2024-07)'],
+  sampleNotebookHelp: ['虚构数据，按业务方 v2 四部门模板填写；可预览来源、主表和跨部门总表。研判需手动发起，会使用配置的模型。', 'Fictional data on the business side\'s v2 department templates; preview sources, the master table and the cross-department table. Starting a review uses the configured model.'],
   draftNotebook: ['空白草稿', 'Empty draft'],
   unsavedNotebook: ['未保存', 'Unsaved'], savedNotebook: ['已保存', 'Saved'],
   resizeSources: ['调整来源栏宽度', 'Resize Sources'], resizeStudio: ['调整工作室宽度', 'Resize Studio'],
@@ -66,6 +68,15 @@ const labels = {
   approval_feishu_import: ['飞书文件导入审批', 'Feishu import approval'], approvalTitle_feishu_import: ['从飞书下载这些文件并导入为新批次', 'Download these Feishu files into a new batch'],
   approval_feishu_upload_report: ['上传到飞书审批', 'Feishu upload approval'], approvalTitle_feishu_upload_report: ['把这份研判报告上传到飞书文件夹', 'Upload this review report to the Feishu folder'],
   feishu_import: ['从飞书导入', 'Import from Feishu'], feishu_upload_report: ['上传报告到飞书', 'Upload report to Feishu'],
+  integrationMaster: ['跨部门总表', 'Cross-department master'], downloadMaster: ['下载总表 xlsx', 'Download master xlsx'],
+  integrationAssumptions: ['按通用做法补的口径（业务方确认后可在声明里替换）', 'Conventions filled in where the dictionary is silent (replaceable once the business side confirms)'],
+  integrationHelp: ['按业务字典对齐四部门模板生成；悬停单元格可看出处（部门、文件、行、表头，或公式），✓ 表示部门填写值已按字典公式核对。', 'Built from the four department templates by the business dictionary; hover a cell for its source (department, file, row, header, or formula); ✓ means a department value was checked against the dictionary formula.'],
+  integrationNoRows: ['没有可对齐的行。请检查待确认项，通常是模板缺连接键列。', 'No rows could be placed. Check the open items; usually a template lacks a join key column.'],
+  integrationRowState: ['行状态', 'Row'], integration_summary: ['跨部门总表摘要', 'Master table summary'],
+  issue_missing_department: ['缺部门', 'Missing department'], issue_missing_column: ['模板缺列', 'Template lacks column'], issue_needs_rollup: ['需声明汇总规则', 'Roll-up rule needed'],
+  issue_disagreement: ['部门间不一致', 'Departments disagree'], issue_invalid_number: ['不是数字', 'Not a number'], issue_invalid_period: ['期间无法识别', 'Unreadable period'],
+  issue_undeclared_constant: ['字典未声明的常量', 'Undeclared constant'], issue_derived_mismatch: ['与字典公式不符', 'Contradicts dictionary formula'],
+  issue_check_failed: ['跨部门核对未通过', 'Cross-department check failed'], issue_cannot_compute: ['无法计算', 'Cannot compute'], issue_missing_key: ['缺连接键', 'Missing join key'],
   approvalDetailFailed: ['决定摘要加载失败。下面是工具给出的原始说明；可以重试加载摘要后再决定。', 'The decision summary failed to load. The tool\'s raw reason is shown below; retry loading the summary before deciding.'],
   imageNoticeTitle: ['这里读不了图片里的数字', 'Numbers in images cannot be read here'],
   imageNotice: ['本部署的模型只读文字，且图片里的数字无法追溯到单元格。表格请通过「添加来源」导入；说明性文字可以直接粘贴。移除图片后即可发送。', 'This deployment\'s model reads text only, and numbers in an image cannot be traced to a cell. Import tables with Add sources; paste explanatory text directly. Remove the image to send.'],
@@ -111,7 +122,8 @@ const labels = {
   files: ['部门文件', 'Department files'], submitted: ['意见已提交到队长会话', 'Note submitted to captain session'], audit: ['当前会话审计', 'Current session audit'], loadedWindow: ['仅统计已加载的会话事件，可加载更早记录。', 'Counts cover loaded events only; older events may be loaded.'], loadOlder: ['加载更早记录', 'Load older events'], stateHelp: ['图为静态规则；高亮与计数来自当前批次和原生会话记录。点击节点筛选，下方可打开原始视图。', 'The diagram shows fixed rules. Highlights and counts come from the selected batch and native session records. Select a node to filter, then open its source view.'],
   data: ['导入与数据', 'Import & data'], workspace: ['BridgeFlow 数据工作区', 'BridgeFlow data workspace'], close: ['关闭', 'Close'],
   title: ['批次数据与业务研判', 'Batch data & business review'], intro: ['把四部门数据放在一起', 'Bring four departments together'],
-  newBatch: ['导入新批次', 'Import a new batch'], uploadHelp: ['CSV 或单工作表 XLSX；保留独立批次。', 'CSV or single-sheet XLSX; each import keeps an independent batch.'],
+  newBatch: ['导入新批次', 'Import a new batch'], uploadHelp: ['CSV 或 XLSX；多工作表或表头不在第 1 行时，按提示填写表格位置。每次导入保留独立批次。', 'CSV or XLSX; for several sheets or a header below row 1, fill in the table position when asked. Each import keeps an independent batch.'],
+  sheetLayout: ['表格位置（可选）', 'Table position (optional)'], sheetName: ['工作表名', 'Sheet name'], headerRow: ['表头行号', 'Header row'],
   month: ['业务月份', 'Business month'], production: ['生产', 'Production'], procurement: ['采购', 'Procurement'], finance: ['财务', 'Finance'], marketing: ['市场', 'Marketing'],
   import: ['导入并检查', 'Import & check'], busy: ['正在处理…', 'Processing…'], loading: ['正在加载…', 'Loading…'],
   saved: ['批次已保存。清洗和聚合由规则执行，未调用模型。', 'Batch saved. Rules cleaned and aggregated the data; no model call.'],

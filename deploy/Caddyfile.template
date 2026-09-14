@@ -1,0 +1,9 @@
+# Rendered by deploy/bootstrap.sh into /etc/caddy/Caddyfile (instance file, never committed
+# with real values). Placeholders: __DOMAIN__, __USER__, __HASH__ (bcrypt from
+# `caddy hash-password`), __WEB_PORT__ (must equal --port in bridgeflow.service).
+__DOMAIN__ {
+    basic_auth {
+        __USER__ __HASH__
+    }
+    reverse_proxy 127.0.0.1:__WEB_PORT__
+}

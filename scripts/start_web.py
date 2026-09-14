@@ -70,7 +70,10 @@ def main() -> None:
     # prerequisite that fails on stage.
     if "--demo" in sys.argv:
         sys.argv.remove("--demo")
-        env["FIELD_DICTIONARY_PATH"] = str(ROOT / "data/business_demo/dictionary.yaml")
+        # The sample notebook's case: the business side's v2 templates filled with the
+        # fictional concrete supplier (data/mock_business/demo). The older English CSV case
+        # in data/business_demo stays as the browser smokes' fixture with its own dictionary.
+        env["FIELD_DICTIONARY_PATH"] = str(ROOT / "data/mock_business/demo/dictionary.yaml")
         # The synthetic production → marketing handoff (#147); never a company standard.
         env.setdefault("WORKFLOW_CATALOGUE_PATH", str(ROOT / "data/workflow_demo/catalogue.yaml"))
 

@@ -7,9 +7,191 @@
 「每个数字都量过、可追溯」是本项目对评委的核心叙事，评委抓到一处对不上，整个叙事就打折。
 所以改数字只改这一处。
 
-最后更新：2026-09-13。新增一轮时照第三节的格式写，并附上复现命令。
+最后更新：2026-09-14。新增一轮时照第三节的格式写，并附上复现命令。
 
 ---
+
+## 页面内引导与案例留档（2026-09-14）
+
+基于已合并的 `b434ac6`（#175），在 `feat/product-tour-delivery` 实现。新增 React 页面内 Product Tour，
+复用官方客户端插件与项目对话框；不新增依赖、不修改 DSH。案例原件、字典、模板／声明指纹与预期结果见
+[`data/mock_business/demo`](../data/mock_business/demo/README.md)，实现边界见 [docs/29](29-interactive-onboarding.md)。
+
+核心引导 **12 步**，实际完成导入与书签保存、总表读取、差异展开、单元格依据、对应部门原件、文件来源信息、
+XLSX 下载请求、命名和明确保存。样例总表 **4 行，3 行完整，1 处客户名称分歧**；同批次研判上下文
+**10 项检查，3 项 attention**（`collection_gap`、`material_cost`、`net_margin`）。它们是合成案例计算与契约结果，不是付费模型结论。
+
+浏览器实测暴露并修复了现有缺口：笔记本的服务端导航白名单缺少 `integration` 和 `handoff`，
+导致在新增总表页面保存失败。现已补齐合法目的地，并通过服务端解析测试与真实浏览器保存／刷新验证。
+欢迎卡首次加载的会话切换、补充引导返回核心任务、替换样例批次清除旧操作完成标记，也已覆盖。
+
+| 检查 | 结果 | 复现（仓库根） |
+| --- | --- | --- |
+| Python 全量 | **439 passed，2 warnings，56.69s**；依赖弃用警告 | `../.venv/bin/pytest -q -c backend/pyproject.toml backend/tests` |
+| 样例与最终指纹复查 | **3 passed，2 warnings，2.98s** | `../.venv/bin/pytest -q -c backend/pyproject.toml backend/tests/test_sample_notebook.py` |
+| Python 静态 | 通过 | `../.venv/bin/ruff check backend/src backend/tests scripts/start_web.py` |
+| TypeScript 单测 | **61 passed，0 failed** | `pnpm --dir plugins test` |
+| 类型／客户端构建 | 通过 | `pnpm --dir plugins typecheck`、`pnpm --dir plugins build` |
+| 新手引导真实浏览器 | 通过，原生 DSH＋真实领域接口＋临时存储；引导 **0 次模型调用** | `pnpm --dir plugins smoke:tour` |
+| 原生 Web 与审批 | 通过；离线适配器 **6 次请求**，批准／拒绝／超时、键盘拒绝、冷重启及代理权限 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web` |
+| 既有业务链 | 通过，离线适配器 **8 次请求**、`validated`，四部门重叠执行、跨批次归属与刷新恢复 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:business` |
+| 报价与笔记本交互 | 通过，**0 次模型请求**；含保存、重开、语言和既有响应式布局 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:quotation` |
+
+引导浏览器断言覆盖首次欢迎、稍后再说和刷新、上一步、Escape 退出与继续、导入失败重试、
+实际总表与原件、下载事件、持久化失败不完成、完成后刷新、重播不自动导入／保存、目标消失与超时恢复、
+接口延迟、403 与重试、配置拒绝时无欢迎遮罩、**390×844** 布局、可视视口 **1.25 倍**缩放、内部滚动、
+未保存修改对话框、补充模块和重置。纯状态回归覆盖不同笔记本、存储被禁用、过期／损坏记录和跨批次事件拒绝。
+
+关键截图：[欢迎](evidence/onboarding/welcome.png)、[真实总表](evidence/onboarding/master.png)、
+[单元格原件入口](evidence/onboarding/evidence.png)、[小屏](evidence/onboarding/mobile.png)、
+[实际保存后的完成卡](evidence/onboarding/complete.png)。[断言记录](evidence/onboarding/checks.json) 由脚本生成。
+已实际检查截图；它们不是静态教程的业务替身。
+
+本轮付费调用 **0 次**。既有回归的 scripted adapter 请求不是 DeepSeek 真实研判证据；未验证新案例的付费四角色连续彩排、
+真实企业账户、业务审批、飞书、部署或正式报告签发。未做 Safari／Firefox、真实移动设备、屏幕阅读器人工验收和跨安装迁移验收。
+引导只保留标签页级导航状态；关闭标签页不保证恢复。原件／结果与 DSH 数据目录应独立备份。
+
+既有报价／业务 smoke 首次冷重启后被新欢迎卡遮挡；已更新脚本从真实 **Maybe later** 操作关闭，而非强制穿过遮罩。
+报价 smoke 会轮换其历史截图，本轮恢复了原有仓库截图，临时新图保留在 `/tmp/bridgeflow-tour-quotation-evidence-1789324413462`。
+其他本机日志为 `/tmp/bridgeflow-tour-*.log`；临时数据会清理，可复现代码与上方引导截图在仓库长期保留。
+
+## 新增进度复审与总表边界修复（2026-09-14）
+
+基线 `4816e95`（#166–#173 之后），用户要求审查新增进度，并授权直接修复问题。
+本轮修改在 `fix/integration-review-20260914` 分支，按 PR 流程提交审阅，合并状态以远端为准。
+
+| 已复现问题 | 修复后的行为 | 验证入口 |
+| --- | --- | --- |
+| 新总表每次读取当前声明，修改政策会改变旧批次 | 导入保存 `integration_snapshot`；总表、摘要与 XLSX 共用冻结声明；旧批次无快照则 409，要求重新导入 | `test_old_master_and_download_do_not_change_when_declaration_changes`、`test_legacy_batch_cannot_silently_borrow_current_integration_policy` |
+| 选择较后的表头后引用仍从原件第二行计数 | 保存原件 `header_row` / `row_numbers`，同步清洗后行号、修正日志、分页预览及 UI | `test_selected_header_keeps_original_locations_in_preview_and_master` |
+| 总表工具摘要把含原始数值的冲突消息交给模型 | 模型只得到声明字段、类型、部门与固定指引；详细原值保留在浏览器 | `test_tool_summary_does_not_forward_numeric_conflict_values` |
+| `NaN` / 正负无穷导致数值转换异常 | 记录 `invalid_number`，行不完整 | `test_nonfinite_numeric_cells_are_reported_not_crashed`（3 种输入） |
+| 无法核对公式的行仍计完整；汇总跳过缺值行 | 未核对公式／分类计不完整；缺数值的按日汇总拒绝部分求和 | `test_unverified_formula_never_counts_as_a_complete_row`、`test_rollup_does_not_sum_only_the_rows_with_values` |
+| 导出以等号开头的文本时会成为 XLSX 公式 | 总表、待确认与假设页的文本均按文字保存 | `test_download_preserves_untrusted_formula_shaped_text_as_text` |
+
+以上 **10 条**新增回归集中在 `backend/tests/test_integration_boundaries.py`。
+将同一测试文件放入 `git archive 4816e95` 的临时副本，指向副本 Python 源码执行，**10 failed**；
+在修复后版本执行 **10 passed**。测试只使用已有的公开业务样例及人为变更，不读取新的业务留出。
+测试隔离同时显式固定 `integration_spec_path`，不继承开发者的私有整合声明。
+
+| 检查 | 本轮结果 | 复现（仓库根） |
+| --- | --- | --- |
+| 修复前 Python 全量 | **425 passed，2 warnings，15.19s** | `../.venv/bin/pytest -q -c backend/pyproject.toml backend/tests` |
+| 修复后 Python 全量 | **435 passed，2 warnings，19.49s**；依赖弃用警告 | 同上 |
+| 新增边界回归 | **10 passed，2.03s** | `../.venv/bin/pytest -q -c backend/pyproject.toml backend/tests/test_integration_boundaries.py` |
+| Python 静态 | 通过 | `../.venv/bin/ruff check backend/src backend/tests scripts/start_web.py` |
+| TS 单测 | 修复后 **55 passed，0 failed** | `pnpm --dir plugins test` |
+| TS 类型与构建 | 修复后通过 | `pnpm --dir plugins typecheck`、`pnpm --dir plugins build` |
+| 原生 Web 与审批 | 修复后通过，批准／拒绝／超时、冷重启、键盘操作 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web` |
+| 正常业务链 | 修复后通过，`validated`，四部门并行和跨批次状态通过 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:business` |
+| 故障业务链 | 修复后通过，财务无有效检查，报告 `partial` | `BRIDGEFLOW_LIVE=0 BRIDGEFLOW_TEST_FAULT=step-limit pnpm --dir plugins smoke:business` |
+
+首次 TS 检查在沙箱中因 IPC `listen EPERM` 无法启动；受限环境内两次 Python 接口检查停住后被中断。
+使用获准的测试执行环境完成上述检查，不能把环境阻塞当作产品失败。最终 TS 回归同样在获准环境通过。
+本机日志 `/tmp/bridgeflow-review-0914-*.log`；修复后 Web、正常业务、故障业务临时产物分别位于
+`/tmp/bridgeflow-web-e2e-C3GLHq`、`/tmp/bridgeflow-web-e2e-EZYTgm`、`/tmp/bridgeflow-web-e2e-CmbqZj`。
+临时目录清理后不保证保留；仓库中的新增回归可复现关键缺陷。
+
+本次付费模型调用 **0 次**。没有重跑随机合成留出、真实业务留出、真实飞书或部署；没有宣称已完成录制版本的真实模型验收。
+本次浏览器回归覆盖既有路径，新总表的声明漂移、表头来源与导出边界由真实 HTTP 接口和工作簿读取回归验证；
+仍需在冻结版本录制新总表的完整浏览器操作。新总表的通过不能替代四角色对同一业务数据的验收。
+
+## 示例笔记本换成业务方 v2 模板案例；修复编码误合并与错用完工日期分月（2026-09-14）
+
+「业务演示 · 月度对账」原来还是 2025-11 的英文合成 CSV。现改为模拟商砼公司 2024-07 四部门 v2 模板（`data/mock_business/demo/`）与对应字典和研判契约。
+接入时发现并修复三个既有缺陷：① 实体别名合并只看字符串相似度，`PRJ2024011` 与 `PRJ2024017` 相似度过线被并成一个项目——现在数字序列不同的标签一律不合并；
+② 主表按「第一个日期列」分月，市场部的「完工时间」把行分到 2024-12、2025-03——现在按字典 `period_columns` 分月，未声明且有多个日期列时不猜；
+③ 跨部门总表的名称不一致按部门到达顺序报 1–3 条并保留先到部门的写法——现在每个字段只报一条、列出各部门写法、单元格留空。
+结果：主表 **4** 行；研判 **10** 项检查 **3** 项关注（材料成本占收入 85.26%、净利率 −0.50%、收款计划缺口 942,897.50 元）；总表 **1** 条客户名称不一致。
+Python **438 passed**，TS **55 passed**，离线 `smoke:web` 通过。真实模型调用 **0 次**。
+
+## 模拟业务样板：月度导出、报价、彩排授权草案（2026-09-13，#141 / #104 / #7 / #20 / #41）
+
+真实材料未到，按用户要求先用虚构样板顶上（`data/mock_business/`，全部虚构）。
+**月度导出**：商砼公司 4 项目 × 3 月，四部门表与人工总表由 `scripts/make_mock_business.py` 按业务口径独立算出。`integration_cases.py real`：2024-05 **4/4** 行完整且逐列一致、0 条待确认；2024-06 报缺部门 **1**；2024-07 报名称不一致、跨部门生产量核对、非数字各 **1**，有差异的列恰为被篡改或因不一致而留空的 **4** 列。
+为此修正一处核对口径：部门填写的派生值按其书写精度核对（半个末位单位），此前 4 位小数的比率会被误判为与公式不符。
+**报价**：询价、合同范本、报价单模板、成本与产能依据、定价与信用政策、声明、抽取记录、手算答案。测试打开原件核对 **11** 条抽取；草稿底价 **419.77**、目标 **436.72**、争取 **448.02** 元/方、目标总额 **5,240,640.00** 元，与手算一致；期望价 415 低于底价标注总经理审批；付款比例、产能、C 级回款、交期 **4** 种违规均拒绝出草稿。抽取为人工核对，不代表自动抽取已实现。
+**彩排授权**：`docs/28` 草案，未签署，未运行付费命令。Python **425 passed**。真实模型调用 **0 次**。
+
+## 外部输入的收件准备：飞书实测、部署基建、真实导出评分（2026-09-13，#140 / #138 / #141，[`27`](27-external-inputs.md)）
+
+未连接任何外部系统：飞书凭据未提供，AWS 未配置（用户要求本轮只搭基建），真实导出未提供。
+`scripts/feishu_live_check.py` 上传合成工作簿再下载比对；无凭据时报 `not_configured` 退出 2（本机实跑），模拟租户下往返通过且输出不含凭据。
+`deploy/bootstrap.sh`、`deploy/preflight.sh`、`deploy/Caddyfile.template` 通过 `bash -n`；**未在真实实例上运行**。一致性测试锁定：Caddy 与单元端口一致、健康检查路径是真实路由、deploy 需 `DEPLOY_ENABLED`、部署文件无密钥与引导变量。
+`integration_cases.py real` 用业务方样例（文件按业务方命名习惯）对照总表模板：1 行匹配、逐列一致；改动标准答案一格后报出该列，报告不含单元格值。
+Python **416 passed**。真实模型调用 **0 次**。
+
+## XLSX 工作表与表头：声明或选择，不猜（2026-09-13，#47）
+
+导入 XLSX 时，工作表与表头行来自字典的 `sheet_layout`（`{部门: {sheet, header_row}}`）或上传时逐文件的 `sheets` / `header_rows`（导入框「表格位置（可选）」），上传选择优先。都没有时：单工作表直接读；多工作表拒绝并列出全部表名；第 1 行至多一个非空单元格而下方有多列行（标题行、合并标题）则拒绝并指出疑似表头行，不自动跳过。
+由程序写入、从未在表格软件里保存过的公式没有缓存结果，原先会被静默读成空值，现在拒绝并提示在 Excel/WPS 中打开保存。合并单元格仍只保留左上角值、不向下填充，空值走既有缺项与隔离规则。
+测试用业务方真实的物资部 v1 模板（表头上方有合并标题行）：未声明时拒绝并指出第 2 行，选择或声明第 2 行后表头与原件逐列一致；非法声明报配置无效（503）。Python 新增 **6** 条，全量 **406 passed**；TS **55 passed**；离线 `smoke:web` 通过（含上传）。真实模型调用 **0 次**。
+
+## 字典未写口径按通用做法补齐，带数据调优样例与留出生成（2026-09-13，#141 / #23）
+
+业务方授权「按最佳实践处理」的五项写入 `integration.yaml`，每项在 `assumptions` 里写明做法与依据（见 `data/company_templates/README.md`）：增值税 13%、缺口 = 累计结算 − 收款计划合计、合作状态诊断规则表（签收率 95%、环比 ±5% / −20%）、生产部按日多行汇总（数量求和、厂站与备注去重拼接、比率与诊断用汇总数重算、其余字段须一致）。
+业务方样例在新口径下 **76 列全部一致、0 条待确认**，缺口与诊断均核对通过；样例拆成按日两行汇总后仍逐列一致。依赖假设的单元格在出处里带上该条说明，xlsx 另有「口径假设」页，总控摘要列出假设。
+`scripts/integration_cases.py` 按声明生成带数据样例并用独立的分数运算给出答案：调优两组（种子 1、2，各 **7** 个干净键、**8** 个故意错误）评分全过；留出 **30** 组（系统随机种子，不落盘）**30/30** 通过，干净键 **268/268** 逐列精确，7 类错误各 **30/30**（同键多行类 **60/60**），五种诊断各有覆盖（稳定增长 84、平稳合作 70、签收异常 50、需求下滑 45、合作萎缩 19）。
+评分的反向验证：汇总只取首行、诊断恒为兜底、拼接只取首行、忽略按日多行冲突，**4** 处各被评分抓到。仍是合成数据，不代替真实导出的留出验收。
+Python **400 passed**，TS **55 passed**，typecheck 通过。真实模型调用 **0 次**。
+
+## 业务方模板与字典接入：四部门 → 跨部门业务整合总表（2026-09-13，#23 / #141 / #143 / #47 / #92）
+
+> 以下为补齐口径之前的记录：当时「单方不含税毛利」未核对、同键多行一律拒绝。
+
+业务方提供的字典 v2、四部门 v2 模板与总表模板收入 `data/company_templates/`，字典逐行转写为 `integration.yaml`（76 字段、9 条字典写明的公式、1 条跨部门核对）。
+用总表里业务方自己的样例行拆回四部门模板后整合：**76 列全部与样例一致**，部门填写的 8 个派生值均按字典公式核对通过；「单方不含税毛利」因字典未声明增值税税率而标「未核对」（声明 0.13 后核对通过）。
+拒绝猜测的场景各有测试：公式不符、跨部门生产量核对、名称不一致、缺部门、同键多行无汇总规则、v1 模板缺连接键。反向验证 **4** 处各有 **1** 条失败。
+接入中发现并修复两个既有缺陷：① 清洗器表头规范化会删掉中文字符，业务模板里重复的「单价」「材料含量」被合并成同一列，导入直接报错；② 批次保留的原件预览按 pandas 默认精度写 JSON，数值被截成 10 位（改为无损序列化）。
+Python **391 passed**，TS **55 passed**，离线三条浏览器 smoke 通过；本地浏览器截图核对总表视图与 xlsx 下载（76 列 + 待确认页）。真实模型调用 **0 次**。
+
+## 真实模型连续彩排与对抗评测（2026-09-13，#41 / #69，**已计费**，用户授权）
+
+四轮真实模型验收最终全部通过（证据 `docs/evidence/live-acceptance-2026-09-13/`，不含原始会话）：
+
+| 运行 | 结果 | 模型请求 | token（输入 / 输出 / 缓存读 / 合计） |
+| --- | --- | --- | --- |
+| `smoke:business` risk | validated，与独立标准答案一致；跨操作链路与冷重启检查通过 | **8** | 20,966 / 4,198 / 16,896 / **42,060** |
+| `smoke:business` balanced | validated，与独立标准答案一致；链路检查通过 | **8** | 20,547 / 4,875 / 16,896 / **42,318** |
+| `smoke:business` risk + 投毒单元格 | validated；注入文本（中英指令式）未出现在任何模型会话中 | **8** | 20,819 / 4,827 / 16,896 / **42,542** |
+| `smoke:web` 真实审批 | 允许 / 拒绝 / 超时三种结局；拒绝理由原样转述，未声称以后不再询问 | **6** | 5,743 / 821 / 26,496 / **33,060** |
+
+本轮全部付费尝试（含失败与中途停止）共 **10** 次，合计 **388,902** token（输入 156,598、输出 31,984、缓存读 200,320）。
+真实运行暴露并修复三个问题：① `batch_summary` 严格输出声明落后于宿主字段，真实 captain 第一步即失败（#166，已加跨语言契约测试）；
+② 财务子代理在否定句中写出了声明禁用的话题词，被校验拒绝导致 partial——保留严格校验，指令改为「禁用词连否定也不写」；
+③ `smoke:web` 的叙述检查两次误判模型正确的保留说法，改为逐句判断并识别否定/不确定表达。
+局限：每个场景只跑一次，不是统计意义上的质量评估；用的是可见合成案例，不是留出集；业务负责人逐项核对与报价样板仍待业务方。
+
+## 提交准备度复核（2026-09-13）
+
+本地代码基线 `06cc1ab`（在下方 #166–#168 之前）；本次只做评估与文档更新，没有修改业务实现。之后的实测以本节以上的记录为准。普通测试使用隔离配置，浏览器显式设置
+`BRIDGEFLOW_LIVE=0`。本次付费模型调用 **0 次**；未重跑真实模型、真实飞书、部署或新的留出验收。
+
+| 检查 | 本次结果 | 复现命令（仓库根） |
+| --- | --- | --- |
+| Python 全量 | **372 passed，2 warnings，9.40s**；警告来自 Starlette/httpx 与 AnyIO 弃用 | `../.venv/bin/pytest -q -c backend/pyproject.toml backend/tests` |
+| Python 静态 | 通过 | `../.venv/bin/ruff check backend/src backend/tests scripts/start_web.py` |
+| TS 全量 | **54 passed，0 failed** | `pnpm --dir plugins test` |
+| TS 类型／构建 | 均通过；本次未重新安装依赖 | `pnpm --dir plugins typecheck`、`pnpm --dir plugins build` |
+| 原生 Web／审批 | 通过；允许、拒绝、无人应答，备注、重试、键盘操作及冷读取 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web` |
+| 月度正常链 | 通过；**4** 个部门子会话，报告 `validated`，验证并行重叠与跨批次状态 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:business` |
+| 月度故障链 | 通过；财务无有效检查，报告 `partial`，其他部门保留结果 | `BRIDGEFLOW_LIVE=0 BRIDGEFLOW_TEST_FAULT=step-limit pnpm --dir plugins smoke:business` |
+| 报价／Notebook | 通过 | `BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:quotation` |
+
+首次浏览器启动在沙箱内因 `listen EPERM: operation not permitted 127.0.0.1` 退出；在允许监听本地端口的环境
+重跑上述浏览器套件后全部通过。这是执行权限边界，不能记为产品回归，也不能据此推断所有机器都能启动。
+浏览器使用离线适配器：其请求数、合成 token 与亚秒级研判时间都不是付费模型效果或延迟证据。
+
+本机临时日志在 `/tmp/bridgeflow-assessment-{web,business,partial,quotation}.log`；本次临时产物分别在
+`/tmp/bridgeflow-web-e2e-PuFhnq`、`/tmp/bridgeflow-web-e2e-oe2sjN`、`/tmp/bridgeflow-web-e2e-bU3Gcz`、
+`/tmp/bridgeflow-web-e2e-eDew9h`，清理 `/tmp` 后不保证保留。报价 smoke 自动轮换了仓库截图；本次已恢复原有归档，
+新截图保存在临时目录，未把原始会话与凭证归档进仓库。提交建议见 [HANDOFF](../HANDOFF.md#提交准备度评估2026-09-14)。
+
+## 真实 captain 列匹配全流程（2026-09-13，#102，**已计费**）
+
+真实模型、演示服务、浏览器扮演操作者（`plugins/tests/column-match-live.mjs`）：finance 表头改名的四部门批次导入受阻（`needs_configuration`，主表 **0** 行）→ 数据工作区「让 captain 看这批数据」→ captain 依次调用 `column_candidates`、`lookup_field_dictionary` ×2、`confirm_column_match`，提议 `finance.project_code → project`（依据：类型相符、与 marketing.product 值重合 100%）→ 审批卡核对后批准 → 回合 `completed`，叙述写明当前批次冻结、需重新导入 → 重新导入主表 **4** 行、`matched_columns` 含该匹配；原批次仍为 `needs_configuration`。
+模型用量（单个会话 **4** 步）：输入 **7,876** token、输出 **1,890** token、缓存读取 **14,336** token，合计 **24,102** token；只做了这一次真实调用。浏览器页面错误 **0**。证据：`docs/evidence/live-column-match/`（摘要与审批卡截图，不含原始会话）。
+未做：本次没有在新批次上继续跑四部门研判（研判的真实模型验收见 `17`）。
 
 ## 飞书上传下载快捷调用（代码就绪，待凭据联调）（2026-09-13，#140）
 
@@ -137,30 +319,19 @@ SSH_HOST／SSH_USER／SSH_PRIVATE_KEY 与 PUBLIC_DOMAIN。缺项追踪 [#138](ht
 
 **可以对外说：**
 
-- 月度对账闭环能在原生 DSH Web 上跑通：导入 → 冻结字典的规则计算 → 官方四角色子会话 → 原生审批 → 可重开报告。
-- 报价路径的样板前第一步已完成：`quotation:` 人工声明 + 通用文档求值器 + 点名缺项的聚合拒绝，全程不调模型。
-- 离线回归 Python 全量 **302 passed**（2 条依赖弃用提示），TS **32 passed**，typecheck / build / frozen-lockfile 通过。
-- 报价契约复验 **28 passed**：成本变更、全缺项、来源、范围、单位、阈值、循环、除零、纯常量伪报价、改名、鉴权、有界返回。
-- 最近一轮（2026-09-11）真实模型调用 **0 次**、计费 tokens **0**、模型费用 **0**。
+- 月度对账可在原生 DSH Web 上完成导入、冻结字典的规则计算、官方四角色研判和保存后重开；映射写入另经原生审批。
+- 列匹配已完成一次真实 captain 提议、人工批准与重新导入验收，详见上方对应记录；该次没有继续跑新批次研判。
+- 研判期限、幂等汇总、重启回收、人工意见 guard、隔离处置与日期声明已有实现和对应回归。
+- 业务模板总表已有整合、公式与跨部门核对、来源及 XLSX 导出；本轮补齐冻结与边界保护。报价模拟材料已通过人工抽取核对和手算比对，自动抽取未实现；飞书尚未真实联调。
+- 本次离线完整复核通过，最新计数、命令与验证范围见 [新增进度复审与修复](#新增进度复审与总表边界修复2026-09-14)。
 
 **还不能说：**
 
-- 「稳定业务展示 MVP」还不成立：人工意见不触发宿主级禁重跑、端到端超时、重启后恢复三处仍有实现缺口
-  （清单见 [19 的未收尾链路](19-chain-audit.md)）。
-- 「真实企业验收」不成立：目前是真实模型在**可见合成案例**上的验收，不是留出集，也不是客户数据。
-- 「员工身份、角色、租户隔离」不成立：当前认证表示共享 DSH 会话，记录为 `dsh-authenticated-session`。
-
-### 当前状态快照
-
-| 检查 | 结果 | 复现 |
-| --- | --- | --- |
-| Python 全量 | **302 passed**，2 条依赖弃用提示 | `pytest -q -c backend/pyproject.toml backend/tests` |
-| Python 聚焦（报价契约） | **28 passed** | `pytest -q -c backend/pyproject.toml backend/tests/test_declared_documents.py` |
-| TS 单测 | **32 passed** | `pnpm --dir plugins test` |
-| 类型 / 产物 / 锁文件 | 通过 | `pnpm --dir plugins typecheck` / `build` / `install --frozen-lockfile` |
-| Python 静态 | 通过 | `ruff check backend scripts` |
-| 浏览器 smoke 三条 | 本轮隔离验收通过，退出码 **0**；历史环境差异见第二节 | `pnpm --dir plugins smoke:web` / `smoke:quotation` / `smoke:business` |
-| 本轮模型费用 | **0** | 浏览器测试用进程内离线适配器 |
+- 最终录制版本的真实模型连续彩排已经完成，或已证明稳定性 SLA。#167 的真实彩排跑在当时的 main 上，录制版本冻结后需要再跑一次；生命周期的浏览器超时／重启故障注入尚待补证据。
+- 已通过真实企业验收：现有真实模型记录基于可见合成案例；新的业务留出集与人工效率基线仍缺。
+- `validated` 意味着跨部门映射已全部确认或报表已正式签发；当前报告汇总声明列，不消费待确认关系。
+- 已实现员工身份、角色、租户隔离或已部署上线。当前认证是共享 DSH 会话；部署由团队另行安排，本次没有外部验收结果。
+- 多 Agent 比单 Agent／纯规则更准确或节省工时：本次未见支持该比较的效果实验。
 
 ---
 

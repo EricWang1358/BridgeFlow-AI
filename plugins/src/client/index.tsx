@@ -12,6 +12,7 @@ import { DataWorkspace, DataWorkspaceButton, ImportForm } from './workspace.tsx'
 import { QuotationButton } from './quotation.tsx'
 import { mountShell } from './shell.tsx'
 import { mountState } from './state.tsx'
+import { motion } from './motion.ts'
 import { style } from './style.ts'
 
 let drawer = false
@@ -140,7 +141,7 @@ export function apply(ctx: Context): void {
   ctx.slots.inject('conversation.composer', () => ctx.slots.register({ name: 'conversation.composer', priority: 0,
     select: ({ pendingInteraction }: ComposerChainProps) => pendingInteraction?.kind === 'approval' && APPROVAL_CARD_TOOLS.has(pendingInteraction.toolName) ? pendingInteraction : null,
   }, MappingApproval))
-  ctx.effect(() => { const tag = document.createElement('style'); tag.textContent = style; document.head.append(tag); return () => tag.remove() }, 'bridgeflow: styles')
+  ctx.effect(() => { const tag = document.createElement('style'); tag.textContent = style + motion; document.head.append(tag); return () => tag.remove() }, 'bridgeflow: styles')
   ctx.slots.inject('conversation.hero.brand.mark', () => ctx.slots.register({ name: 'conversation.hero.brand.mark', priority: -10 }, Welcome))
   ctx.slots.inject('sidebar.brand.name', () => ctx.slots.register({ name: 'sidebar.brand.name', priority: -10 }, () => <span>BridgeFlow AI</span>))
   ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({ name: 'sidebar.footer.action', id: 'bridgeflow-data' }, DataWorkspaceButton))
@@ -157,7 +158,7 @@ export function apply(ctx: Context): void {
     const navigateSession = () => { const value = route(); if (value.parent) void openSession(value.parent, value.child).catch(e => { ctx.logger.warn('Session route unavailable: %s', String(e)); reportRouteError(value.child ? 'routeChildUnavailable' : 'routeParentUnavailable') }) }
     navigateSession(); window.addEventListener('hashchange', navigateSession); return () => window.removeEventListener('hashchange', navigateSession)
   }, 'bridgeflow: native session routes')
-  for (const key of ['aggregate_metric', 'confirm_mapping', 'column_candidates', 'confirm_column_match', 'workflow_catalogue', 'workflow_draft', 'workflow_board', 'workflow_record', 'workflow_approve_submit', 'quarantine_list', 'quarantine_decide', 'quarantine_apply', 'feishu_import', 'feishu_upload_report', 'batch_summary', 'list_metrics', 'lookup_field_dictionary', 'review_context', 'review_finalize']) {
+  for (const key of ['aggregate_metric', 'confirm_mapping', 'column_candidates', 'confirm_column_match', 'workflow_catalogue', 'workflow_draft', 'workflow_board', 'workflow_record', 'workflow_approve_submit', 'quarantine_list', 'quarantine_decide', 'quarantine_apply', 'feishu_import', 'feishu_upload_report', 'integration_summary', 'batch_summary', 'list_metrics', 'lookup_field_dictionary', 'review_context', 'review_finalize']) {
     ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({ name: 'tool.call.toolview', key }, ToolCard))
   }
 }

@@ -33,6 +33,7 @@ def isolated_environment(monkeypatch, tmp_path):
     for name in ("llm_provider", "llm_provider_sanitizer", "llm_provider_resolver", "llm_provider_evaluator"):
         monkeypatch.setattr(settings, name, "mock")
     monkeypatch.setattr(settings, "field_dictionary_path", str(REPO_ROOT / "data/mappings/field-dictionary.example.yaml"))
+    monkeypatch.setattr(settings, "integration_spec_path", str(REPO_ROOT / "data/company_templates/integration.yaml"))
     monkeypatch.setattr(settings, "result_store_path", str(tmp_path / "outputs"))
     monkeypatch.setattr(settings, "mapping_memory_path", str(tmp_path / "mappings.json"))
     monkeypatch.setattr(settings, "column_match_path", str(tmp_path / "column-matches.json"))

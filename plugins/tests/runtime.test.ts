@@ -454,7 +454,7 @@ test('the product tool catalogue is pinned: a new or missing tool must be a deli
   const ctx = await runtime()
   const product = ctx.tools.schemas().map(tool => tool.name).sort()
   assert.deepEqual(product, [
-    'aggregate_metric', 'batch_summary', 'column_candidates', 'confirm_column_match', 'confirm_mapping', 'feishu_import', 'feishu_upload_report', 'list_metrics',
+    'aggregate_metric', 'batch_summary', 'column_candidates', 'confirm_column_match', 'confirm_mapping', 'feishu_import', 'feishu_upload_report', 'integration_summary', 'list_metrics',
     'lookup_field_dictionary', 'profile_batch', 'quarantine_apply', 'quarantine_decide', 'quarantine_list', 'review_context',
     'review_finalize', 'workflow_approve_submit', 'workflow_board', 'workflow_catalogue', 'workflow_draft', 'workflow_record',
   ])
@@ -472,4 +472,18 @@ test('feishu shortcuts are approval-gated and bind the exact files and folder', 
   const denied = await ctx.tools.execute(execution('feishu_upload_report', { batch_id: 'b', folder_token: 'fldcn1' }))
   assert.match(JSON.stringify(denied.content), /No current approval/)
   await ctx.fiber.dispose()
+})
+
+test('batch_summary accepts the full host summary, including absent optional values', async (t) => {
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  t.mock.method(globalThis, 'fetch', async () => Response.json({
+    demo_case: null, batch_id: 'a'.repeat(32), period: '2025-11', master_rows: 4, unresolved: 2, status: 'needs_review', refusal: '',
+    departments: [{ department: 'finance', rows: 2, quarantined: 0, corrections: 0 }], dictionary: 'data/business_demo/dictionary.yaml',
+    declared_entities: { finance: ['project'] }, matched_columns: ['finance.project_code → project'], stale_matches: [], column_questions: 0, derived_from: null,
+  }))
+  try {
+    const result = await ctx.tools.execute(execution('batch_summary', { batch_id: 'a'.repeat(32) }))
+    assert.equal(result.isError, false, JSON.stringify(result.content))
+  } finally { await ctx.fiber.dispose() }
 })

@@ -12,12 +12,18 @@ import assert from 'node:assert/strict'
 /** A fresh browser profile without a saved preference must land in English. */
 export async function assertDefaultEnglish(page) {
   await page.getByRole('complementary', { name: 'Sources', exact: true }).waitFor()
+  await page.locator('body[data-tour-ready]').waitFor()
+  const welcome = page.locator('[data-tour-mode="welcome"] [data-tour-card]')
+  if (await welcome.isVisible()) await welcome.getByRole('button', {name:'Maybe later', exact:true}).click()
   assert.equal(await page.getByRole('complementary', { name: '来源', exact: true }).count(), 0,
     'A new user on a zh-CN browser must still default to English')
 }
 
 /** Switch via the native Settings → Language row. target: '中文' | 'English'. */
 export async function switchLanguage(page, target) {
+  await page.locator('body[data-tour-ready]').waitFor()
+  const welcome = page.locator('[data-tour-mode="welcome"] [data-tour-card]')
+  if (await welcome.isVisible()) await welcome.getByRole('button', {name:/^(Maybe later|稍后再说)$/}).click()
   // Native modality correctly blocks Settings behind a data workspace. Dismiss
   // that read-only workspace through its own control, never force-click through it.
   const workspace = page.getByRole('dialog', { name: /^BridgeFlow (数据工作区|data workspace)$/ })

@@ -1,0 +1,35 @@
+{
+  "case_id": "mock-company-2024-07",
+  "classification": "synthetic; fictional concrete supplier; not business approval",
+  "period": "2024-07",
+  "files": {
+    "data/mock_business/demo/finance.xlsx": "61d187a5c5fb23e78b08316be2a924aec0f493bc07719e1dff968464162e3e88",
+    "data/mock_business/demo/marketing.xlsx": "b38e179c6705aba27c1054f52fe408dbda623e2d8ac4c31c4ff7f3156bf9c312",
+    "data/mock_business/demo/procurement.xlsx": "8fbdd72b13a375f64dc0a6b31813190f2c1ea11922ad58342b86dca419e5f552",
+    "data/mock_business/demo/production.xlsx": "9350376f300bd6fb520f9febb85b8b99b05b66b92b373c7b16afcce0048b4ff5",
+    "data/mock_business/demo/dictionary.yaml": "9019c1896fe63106232c9716abc40edf7e119eeba7924a4d261a4b1e04a1fff2",
+    "data/company_templates/integration.yaml": "b106196dfcfa8810d67505f3dc42c7b96aa81eb451f27ce1d537fd879a9ed319",
+    "data/company_templates/source/dictionary-v2.xlsx": "61c155f1b8652984ee310b829de5ca484d3f8d5c7afa182ad75641408cd2a3b0",
+    "data/company_templates/source/finance-v2.xlsx": "315ea1a4e6f06840873a8bec6e69313953ad1aa159c66fef2aa4c3d42da1073c",
+    "data/company_templates/source/marketing-v2.xlsx": "eff9b93866eb32311eb4d6a43ecb2385a46817093912fb84a7dc6e4c80fb62b4",
+    "data/company_templates/source/master-v2.xlsx": "fdca574fa9cb21e18e947c30f2e49a7b75991a86bbcef5d405c9ffdd43141d66",
+    "data/company_templates/source/procurement-v2.xlsx": "12e125c31744c2ad9089ee51f1a0ff9fdf7993e541e8fa44c5b76df5e03a690f",
+    "data/company_templates/source/production-v2.xlsx": "7e0cc00b4d006fc7e3438a3bcea6891c109e94c291abbbbca99bdf47cec6f8f9"
+  },
+  "expected": {
+    "integration_rows": 4,
+    "complete_rows": 3,
+    "open_questions": [
+      {
+        "kind": "disagreement",
+        "field": "客户名称"
+      }
+    ],
+    "review_checks": 10,
+    "attention_checks": [
+      "collection_gap",
+      "material_cost",
+      "net_margin"
+    ]
+  }
+}

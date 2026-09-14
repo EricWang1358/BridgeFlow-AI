@@ -20,6 +20,7 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
       if (file instanceof File && file.size) {
         if (!/\.(csv|xlsx)$/i.test(file.name)) { setError(t('invalidUpload')); return }
         total += file.size; count++; body.append('departments', name); body.append('files', file)
+        body.append('sheets', String(form.get(`${name}-sheet`) ?? '')); body.append('header_rows', String(form.get(`${name}-header`) ?? ''))
       }
     }
     if (!count || !limits || total > limits.maxUploadBytes) { setError(t('invalidUpload')); return }
@@ -56,7 +57,8 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
 function FileRow({ name }: { name: string }) {
   const { t } = useUI()
   const [chosen, setChosen] = useState('')
-  return <label className="bf-file" data-filled={Boolean(chosen)}>
+  return <div>
+  <label className="bf-file" data-filled={Boolean(chosen)}>
     <input type="file" name={name} accept=".csv,.xlsx" aria-label={t(name)}
       onChange={e => setChosen(e.target.files?.[0]?.name ?? '')} />
     <span style={{ minWidth: 0 }}>
@@ -64,6 +66,12 @@ function FileRow({ name }: { name: string }) {
       <span className="bf-file-name">{chosen || t('noFile')}</span>
     </span>
   </label>
+  {/\.xlsx$/i.test(chosen) && <details className="bf-hint">
+    <summary>{t('sheetLayout')}</summary>
+    <input name={`${name}-sheet`} aria-label={`${t(name)} · ${t('sheetName')}`} placeholder={t('sheetName')} />
+    <input name={`${name}-header`} type="number" min={1} aria-label={`${t(name)} · ${t('headerRow')}`} placeholder={t('headerRow')} />
+  </details>}
+  </div>
 }
 type View = { total: number; offset: number; rows: Record<string, unknown>[] }
 
@@ -106,7 +114,7 @@ export function DataWorkspace() {
     const readRoute = () => {
       const value = route()
       abort?.abort(); setBusy(false)
-      if (['quotation', 'source', 'artifact'].includes(value.view ?? '')) { dialog.current?.close(); return }
+      if (['quotation', 'handoff', 'integration', 'source', 'artifact'].includes(value.view ?? '')) { dialog.current?.close(); return }
       if (!value.batch || value.view === 'state' || !/^[a-f0-9]{32}$/.test(value.batch)) return
       pendingBatch.current?.abort(); abort = new AbortController(); pendingBatch.current = abort; const signal = abort.signal
       dialog.current?.showModal(); setBatchId(value.batch); setReportId(value.report ?? '')
@@ -219,7 +227,7 @@ export function DataWorkspace() {
         <p className="bf-hint">{t('startReviewHint')}</p>
         <nav className="bf-tabs" aria-label={t('tabs')}>{sections.map(key => <button key={key} aria-label={t(key)} aria-pressed={section === key} onClick={() => tab(key)}>{t(key)} <span className="bf-badge">{counts[key]}</span></button>)}</nav>
         {section === 'mappings' && <p className="bf-hint">{t('mappingHelp')}</p>}{section === 'columns' && <p className="bf-hint">{t('columnsHelp')}</p>}{section === 'quarantine' && <p className="bf-hint">{t('quarantineHelp')}</p>}
-        {section === 'review' ? review ? <BusinessReview report={review} /> : !error && <p role="status">{t('loading')}</p> : view ? <>
+        {section === 'review' ? review ? <BusinessReview report={review} /> : !error && <p role="status" className="bf-loading">{t('loading')}</p> : view ? <>
           {view.rows.length > 0 && <div className="bf-scroll"><table><thead><tr>{columns.map(c => {
             const { group, label } = columnLabel(c, t)
             return <th scope="col" key={c}>{group && <small>{group}</small>}{label}</th>
@@ -237,7 +245,7 @@ export function DataWorkspace() {
               <button disabled={offset + 50 >= view.total} onClick={() => setOffset(offset + 50)}>{t('next')}</button>
             </> : <span className="bf-hint">{t('allRowsShown')}</span>}
           </div>
-        </> : !error && <p role="status">{t('loading')}</p>}
+        </> : !error && <p role="status" className="bf-loading">{t('loading')}</p>}
       </section>}
       </div>
     </dialog>
