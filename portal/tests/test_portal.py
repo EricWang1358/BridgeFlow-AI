@@ -110,6 +110,47 @@ def test_a_token_without_a_session_is_refused(portal):
     assert portal.get("/token", params={"app": "bridgeflow"}).status_code == 401
 
 
+def test_anonymous_visitors_get_the_login_page(portal):
+    response = portal.get("/")
+    assert response.status_code == 200 and "/login?app=bridgeflow" in response.text
+
+
+def test_a_signed_in_user_skips_feishu_on_login(portal):
+    login(portal)
+    response = portal.get("/login", params={"app": "bridgeflow"})
+    assert response.status_code == 302
+    assert response.headers["location"] == "http://web.test/after-login"
+
+
+def test_a_signed_in_user_is_redirected_home_from_the_index(portal):
+    login(portal)
+    response = portal.get("/")
+    assert response.status_code == 302
+    assert response.headers["location"] == "http://web.test/after-login"
+
+
+def test_a_signed_in_user_still_chooses_when_several_apps_exist(tmp_path):
+    tokens.generate_keypair(tmp_path / "portal.pem")
+    apps = tmp_path / "apps.yaml"
+    apps.write_text(yaml.safe_dump({"apps": {
+        "bridgeflow": {"audience": "bridgeflow", "redirect_uri": "http://web.test/after-login",
+                       "origins": ["http://web.test"]},
+        "other": {"audience": "other", "redirect_uri": "http://other.test/",
+                  "origins": []},
+    }}), encoding="utf-8")
+    cfg = Settings(feishu_app_id="cli_test", feishu_app_secret="secret",
+                   feishu_base_url="https://feishu.test", key_path=str(tmp_path / "portal.pem"),
+                   session_secret="s" * 32, external_base_url="http://portal.test",
+                   apps_path=str(apps))
+    with TestClient(create_app(cfg, transport=httpx.MockTransport(Tenant())),
+                    follow_redirects=False) as client:
+        login(client)
+        response = client.get("/")
+        assert response.status_code == 200 and "测试用户" in response.text
+        # The direct /login shortcut still skips Feishu per app.
+        assert client.get("/login", params={"app": "other"}).headers["location"] == "http://other.test/"
+
+
 def test_logout_ends_the_session(portal):
     login(portal)
     portal.post("/logout")

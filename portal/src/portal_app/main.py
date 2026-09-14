@@ -71,8 +71,12 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
         return FeishuOAuth(cfg.feishu_app_id, cfg.feishu_app_secret,
                            cfg.feishu_base_url, cfg.callback_uri, transport)
 
+    def read_session(request: Request) -> dict | None:
+        """The non-raising half of current_session, for pages that adapt to sign-in state."""
+        return unseal(request.cookies.get(SESSION_COOKIE, ""), cfg.session_secret)
+
     async def current_session(request: Request) -> dict:
-        session = unseal(request.cookies.get(SESSION_COOKIE, ""), cfg.session_secret)
+        session = read_session(request)
         if session is None:
             raise HTTPException(401, "Sign in through the portal first")
         return session
@@ -81,16 +85,30 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
     async def health() -> dict:
         return {"status": "ok", "feishu": bool(cfg.feishu_app_id), "signer": signer is not None}
 
-    @app.get("/", response_class=HTMLResponse)
-    async def index() -> str:
+    # response_model=None: the union return annotation is not a Pydantic field type.
+    @app.get("/", response_model=None)
+    async def index(request: Request) -> HTMLResponse | RedirectResponse:
+        session = read_session(request)
+        if session is not None and len(registry) == 1:
+            # One app and a live session: there is nothing to choose — go straight in.
+            return RedirectResponse(next(iter(registry.values()))["redirect_uri"], status_code=302)
         links = "".join(f'<li><a href="/login?app={name}">{name}</a></li>' for name in registry)
-        return f"""<!doctype html><meta charset="utf-8"><title>BridgeFlow 登录门户</title>
-<h1>统一登录门户</h1><p>选择要登录的应用，将跳转飞书扫码/授权。</p><ul>{links}</ul>"""
+        if session is None:
+            body = "<p>选择要登录的应用，将跳转飞书扫码/授权。</p>"
+        else:
+            who = session.get("name") or session["sub"]
+            body = (f"<p>已登录为 {who}，可直接进入应用。</p>"
+                    '<form method="post" action="/logout"><button type="submit">退出登录</button></form>')
+        return HTMLResponse(f"""<!doctype html><meta charset="utf-8"><title>BridgeFlow 登录门户</title>
+<h1>统一登录门户</h1>{body}<ul>{links}</ul>""")
 
     @app.get("/login")
-    async def login(app: Annotated[str, Query()]) -> RedirectResponse:
+    async def login(request: Request, app: Annotated[str, Query()]) -> RedirectResponse:
         if app not in registry:
             raise HTTPException(404, f"Unknown application: {app!r}")
+        if read_session(request) is not None:
+            # Already signed in: skip the Feishu round-trip and go straight to the app.
+            return RedirectResponse(registry[app]["redirect_uri"], status_code=302)
         try:
             client = feishu()
         except NotConfigured as exc:

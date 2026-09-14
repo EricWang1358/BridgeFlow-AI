@@ -8,12 +8,16 @@ JWKS 公钥本地验签。门户看不到任何应用数据，应用拿不到飞
 ## 流程
 
 ```
-GET /login?app=bridgeflow        → 302 到飞书授权页（state 为 HMAC 签名，防 CSRF）
+GET /login?app=bridgeflow        → 302 到飞书授权页（state 为 HMAC 签名，防 CSRF）；
+                                   已持有效会话则跳过飞书，直接 302 到该应用的 redirect_uri
 GET /callback?code=&state=       → 换 user_access_token、取 user_info，种会话 Cookie，302 回应用
 GET /token?app=bridgeflow        → 凭会话 Cookie 签发应用 JWT（Ed25519，aud=bridgeflow，15 分钟）
 GET /.well-known/jwks.json       → 验签公钥（应用侧只持有这一半）
 GET /me · POST /logout · GET /health
 ```
+
+`GET /` 是门户首页：未登录时列应用登录入口；已登录且只注册了一个应用时直接 302 进应用，
+多个应用时显示「已登录为…」与应用列表。
 
 接入新应用 = 在 `apps.yaml` 里加一段声明（audience、回调地址、允许的跨域来源），
 不改代码——与 `data/mappings/` 字段字典同一条约定。

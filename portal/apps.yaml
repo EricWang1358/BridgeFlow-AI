@@ -6,8 +6,9 @@ apps:
     # The audience claim BridgeFlow's backend verifies against portal_audience.
     audience: bridgeflow
     # Where the browser lands after a successful Feishu login (the dsh web page).
-    redirect_uri: "http://127.0.0.1:5173/"
+    # Must match the port you actually start dsh web on (scripts/start_web.py --port …).
+    redirect_uri: "http://127.0.0.1:3082/"
     # Origins allowed to call /token cross-origin with the session cookie.
     origins:
-      - "http://127.0.0.1:5173"
-      - "http://localhost:5173"
+      - "http://127.0.0.1:3082"
+      - "http://localhost:3082"
