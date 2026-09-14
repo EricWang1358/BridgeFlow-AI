@@ -1,9 +1,14 @@
 # Rendered by deploy/bootstrap.sh into /etc/caddy/Caddyfile (instance file, never committed
-# with real values). Placeholders: __DOMAIN__, __USER__, __HASH__ (bcrypt from
-# `caddy hash-password`), __WEB_PORT__ (must equal --port in bridgeflow.service).
+# with real values). Placeholders: __DOMAIN__, __WEB_PORT__, __PORTAL_PORT__ (ports must
+# equal --port in bridgeflow.service / portal.service).
+#
+# No basic auth anywhere: the main site is guarded by dsh web's own session fence plus
+# the portal-signed JWT on every browser data route (docs/27), and the portal site must
+# stay directly reachable — the Feishu OAuth callback lands on it.
 __DOMAIN__ {
-    basic_auth {
-        __USER__ __HASH__
-    }
     reverse_proxy 127.0.0.1:__WEB_PORT__
+}
+
+portal.__DOMAIN__ {
+    reverse_proxy 127.0.0.1:__PORTAL_PORT__
 }

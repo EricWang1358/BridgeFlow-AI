@@ -24,8 +24,22 @@ def test_caddy_proxies_to_the_port_the_unit_starts_on():
     [unit_port] = re.findall(r"^ExecStart=.*--port (\d+)", unit, re.MULTILINE)
     [bootstrap_port] = re.findall(r"^WEB_PORT=(\d+)$", bootstrap, re.MULTILINE)
     assert unit_port == bootstrap_port
-    assert "reverse_proxy 127.0.0.1:__WEB_PORT__" in (DEPLOY / "Caddyfile.template").read_text(encoding="utf-8")
+    template = (DEPLOY / "Caddyfile.template").read_text(encoding="utf-8")
+    assert "reverse_proxy 127.0.0.1:__WEB_PORT__" in template
     assert "--host 127.0.0.1" in unit  # Caddy is the only public listener
+
+
+def test_portal_unit_and_caddy_site_agree_on_the_portal_port():
+    unit = (DEPLOY / "portal.service").read_text(encoding="utf-8")
+    bootstrap = (DEPLOY / "bootstrap.sh").read_text(encoding="utf-8")
+    [unit_port] = re.findall(r"portal_app\.main:app.*--port (\d+)", unit)
+    [bootstrap_port] = re.findall(r"^PORTAL_PORT=(\d+)$", bootstrap, re.MULTILINE)
+    assert unit_port == bootstrap_port
+    template = (DEPLOY / "Caddyfile.template").read_text(encoding="utf-8")
+    assert "portal.__DOMAIN__" in template
+    assert "reverse_proxy 127.0.0.1:__PORTAL_PORT__" in template
+    # No pre-auth anywhere: the Feishu callback must reach the portal directly.
+    assert "basic_auth" not in template
 
 
 def test_the_unit_runs_the_launcher_that_exists():
@@ -52,7 +66,13 @@ def test_no_secret_or_bootstrap_variable_is_committed_in_deploy_files():
         text = path.read_text(encoding="utf-8")
         assert not re.search(r"\$2[aby]\$\d\d\$[./A-Za-z0-9]{53}", text), path  # a real bcrypt hash
         assert not re.search(r"sk-[A-Za-z0-9]{20,}", text), path
-        assert not re.search(r"^\s*(export\s+)?(DSH_[A-Z_]+|DEEPSEEK_BASE_URL)=", text, re.MULTILINE), path
+        # Bootstrap/credential variables come from the launching shell only. PORTAL_PORT
+        # and the like are non-secret tuning knobs and stay assignable in scripts.
+        assert not re.search(
+            r"^\s*(export\s+)?(DSH_[A-Z_]+|DEEPSEEK_BASE_URL"
+            r"|PORTAL_(FEISHU_APP_ID|FEISHU_APP_SECRET|SESSION_SECRET|KEY_PATH"
+            r"|EXTERNAL_BASE_URL|BASE_URL|APPS_PATH))=",
+            text, re.MULTILINE), path
 
 
 @pytest.mark.parametrize("script", ["bootstrap.sh", "preflight.sh", "deploy.sh"])
