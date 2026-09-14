@@ -193,10 +193,15 @@ sudo apt update && sudo apt install -y caddy
 ```
 
 `/etc/caddy/Caddyfile`（实例文件，**不进仓库**）——两个站点，门户站点
-必须在门户进程起来之前就位也行，Caddy 会各自签证书：
+必须在门户进程起来之前就位也行，Caddy 会各自签证书。主站带
+`forward_auth`：每个请求先问门户 `/verify`，没有登录会话的浏览器拿到
+401 引导页，被送去门户登录——AI 对话页面本身也在门后：
 
 ```caddyfile
 <domain> {
+    forward_auth 127.0.0.1:8100 {
+        uri /verify
+    }
     reverse_proxy 127.0.0.1:3080
 }
 
@@ -204,6 +209,8 @@ portal.<domain> {
     reverse_proxy 127.0.0.1:8100
 }
 ```
+
+与 `deploy/Caddyfile.template` 一致；`bootstrap.sh` 渲染的就是它。
 
 ```bash
 sudo systemctl reload caddy
@@ -278,6 +285,8 @@ export PORTAL_KEY_PATH="$HOME/Hackathon2026/.portal-key.pem"
 export PORTAL_SESSION_SECRET=<32+ 随机字符>
 export PORTAL_EXTERNAL_BASE_URL="https://portal.<domain>"
 export PORTAL_COOKIE_SECURE=true
+# 主站的 forward_auth 也要读会话 cookie → 共享到父域（点前缀，两个站点都吃）：
+export PORTAL_COOKIE_DOMAIN=".<domain>"
 export PORTAL_APPS_PATH="$HOME/Hackathon2026/portal-apps.yaml"
 # 后端验签与 dsh web 代理下发门户地址共用这一个变量；必须与上面一致
 # （验签时 iss 按它逐字节比对）：
@@ -307,7 +316,10 @@ sudo systemctl enable --now bridgeflow-portal
 ```bash
 curl -fsS http://127.0.0.1:8100/health                    # feishu 与 signer 均为 true
 curl -fsS https://portal.<domain>/health                  # 同上，证明 Caddy 站点与证书就位
-curl -sI 'https://portal.<domain>/login?app=bridgeflow'   # 期望 302 到 open.feishu.cn
+curl -sI 'https://portal.<domain>/login'                  # 期望 302 到 open.feishu.cn（app 缺省即 bridgeflow）
+curl -sI https://portal.<domain>/verify                   # 无会话期望 401
+curl -sI https://<domain>/                                # 主站过 forward_auth：无会话同样期望 401
+journalctl -u bridgeflow-portal -n 5 --no-pager           # 启动日志打印 registry（app → redirect_uri），配置错这里现形
 ```
 
 ### 9c 后端开身份层 + 首登拿 union_id
@@ -316,7 +328,8 @@ curl -sI 'https://portal.<domain>/login?app=bridgeflow'   # 期望 302 到 open.
 sudo systemctl restart bridgeflow   # 后端与 web 代理拿到 PORTAL_BASE_URL
 ```
 
-浏览器打开主站：数据路由 401 → 界面出现「飞书登录」入口 → 完成 OAuth →
+浏览器打开主站：forward_auth 401 → 引导页送去门户 → 飞书 OAuth → 回到主站
+（forward_auth 这次放行，因为 cookie 已共享到父域）→
 浏览器直接访问 `https://portal.<domain>/me` 拿到自己的 union_id →
 写 `data/mappings/access-control.yaml`（格式见同目录 `.example`；gitignored，
 部署不动它）→ 再 `sudo systemctl restart bridgeflow`。

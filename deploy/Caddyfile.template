@@ -2,10 +2,17 @@
 # with real values). Placeholders: __DOMAIN__, __WEB_PORT__, __PORTAL_PORT__ (ports must
 # equal --port in bridgeflow.service / portal.service).
 #
-# No basic auth anywhere: the main site is guarded by dsh web's own session fence plus
-# the portal-signed JWT on every browser data route (docs/27), and the portal site must
-# stay directly reachable — the Feishu OAuth callback lands on it.
+# No basic auth anywhere: the main site is gated by the portal's session via
+# forward_auth below (every request first asks /verify whether the browser
+# holds a signed-in session; PORTAL_COOKIE_DOMAIN must cover both sites), plus
+# the portal-signed JWT on every browser data route (docs/27). The portal site
+# must stay directly reachable — the Feishu OAuth callback lands on it.
 __DOMAIN__ {
+    # 2xx from /verify passes the request through to dsh web; 401 answers with
+    # the portal's own page, which steers browsers to the login flow.
+    forward_auth 127.0.0.1:__PORTAL_PORT__ {
+        uri /verify
+    }
     reverse_proxy 127.0.0.1:__WEB_PORT__
 }
 

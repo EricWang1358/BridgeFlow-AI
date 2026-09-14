@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     app_token_ttl_seconds: int = 900
     # True behind HTTPS; False only for localhost development.
     cookie_secure: bool = False
+    # Set to the parent domain (".example.com") when the main site must read the
+    # session too — the reverse proxy's forward_auth calls /verify with it.
+    # Empty = host-only cookie on the portal host (local development).
+    cookie_domain: str = ""
 
     host: str = "127.0.0.1"
     port: int = 8100
