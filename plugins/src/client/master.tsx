@@ -43,7 +43,7 @@ export function MasterTable({ batchId }: { batchId: string }) {
     } catch (e) { setError(describeError(e, t)) }
   }
   if (error) return <p role="alert" className="bf-error">{error}</p>
-  if (!master) return <p role="status">{t('loading')}</p>
+  if (!master) return <p role="status" className="bf-loading">{t('loading')}</p>
   return <section aria-label={t('integrationMaster')}>
     <div className="bf-card-head"><h3>{t('integrationMaster')}</h3><button onClick={() => void download()}>{t('downloadMaster')}</button></div>
     <p className="bf-hint">{t('integrationHelp')} · {master.version}</p>

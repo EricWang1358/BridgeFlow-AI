@@ -227,7 +227,7 @@ export function DataWorkspace() {
         <p className="bf-hint">{t('startReviewHint')}</p>
         <nav className="bf-tabs" aria-label={t('tabs')}>{sections.map(key => <button key={key} aria-label={t(key)} aria-pressed={section === key} onClick={() => tab(key)}>{t(key)} <span className="bf-badge">{counts[key]}</span></button>)}</nav>
         {section === 'mappings' && <p className="bf-hint">{t('mappingHelp')}</p>}{section === 'columns' && <p className="bf-hint">{t('columnsHelp')}</p>}{section === 'quarantine' && <p className="bf-hint">{t('quarantineHelp')}</p>}
-        {section === 'review' ? review ? <BusinessReview report={review} /> : !error && <p role="status">{t('loading')}</p> : view ? <>
+        {section === 'review' ? review ? <BusinessReview report={review} /> : !error && <p role="status" className="bf-loading">{t('loading')}</p> : view ? <>
           {view.rows.length > 0 && <div className="bf-scroll"><table><thead><tr>{columns.map(c => {
             const { group, label } = columnLabel(c, t)
             return <th scope="col" key={c}>{group && <small>{group}</small>}{label}</th>
@@ -245,7 +245,7 @@ export function DataWorkspace() {
               <button disabled={offset + 50 >= view.total} onClick={() => setOffset(offset + 50)}>{t('next')}</button>
             </> : <span className="bf-hint">{t('allRowsShown')}</span>}
           </div>
-        </> : !error && <p role="status">{t('loading')}</p>}
+        </> : !error && <p role="status" className="bf-loading">{t('loading')}</p>}
       </section>}
       </div>
     </dialog>
