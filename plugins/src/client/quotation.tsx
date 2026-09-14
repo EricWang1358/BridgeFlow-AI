@@ -1,3 +1,4 @@
+import { tourEvent } from './tour/state.ts'
 import { useEffect, useState } from 'react'
 import { api, navigate, route, useUI, describeError } from './ui.ts'
 import { Notebook } from './notebook.tsx'
@@ -15,9 +16,14 @@ export function Quotation() {
   const [catalogue, setCatalogue] = useState<Catalogue | null>(null), [error, setError] = useState(''), [revision, setRevision] = useState(0)
   useEffect(() => {
     const controller = new AbortController(); setCatalogue(null); setError('')
-    void api<Catalogue>('/quotation/contract', { signal: controller.signal }).then(setCatalogue).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
+    void api<Catalogue>('/quotation/contract', { signal: controller.signal }).then(value => { setCatalogue(value); tourEvent('quotation', route().batch ?? '') }).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
   }, [revision])
+  useEffect(() => {
+    const opened = () => { if (catalogue && !error) tourEvent('quotation', route().batch ?? '') }
+    window.addEventListener('bridgeflow:quotation-opened', opened)
+    return () => window.removeEventListener('bridgeflow:quotation-opened', opened)
+  }, [catalogue, error])
   const contract = catalogue?.contract
   return <Notebook title={t('quotation')} description={t('quotationHelp')}
     sources={<>
@@ -27,12 +33,12 @@ export function Quotation() {
       </article>) : <p className="bf-empty">{t('quotationUnconfigured')}</p>}
     </>}
     studio={<>
-      <div className="bf-notebook-note"><strong>{t('quotationStage')}</strong><p>{t('quotationStageHelp')}</p></div>
+      <div data-tour-id="quotation-scope" className="bf-notebook-note"><strong>{t('quotationStage')}</strong><p>{t('quotationStageHelp')}</p></div>
       {contract && <><h4>{t('decisionOwners')}</h4>{Object.entries(contract.roles).map(([key, role]) => <article className="bf-source-item" key={key}><strong>{role.decision_owner}</strong><p className="bf-hint">{role.responsibility}</p></article>)}
         <h4>{t('quotationChecks')}</h4>{contract.checks.map(check => <p className="bf-hint" key={check.id}>{check.title}</p>)}</>}
       <p className="bf-hint">{t('quotationApprovalHelp')}</p>
     </>}>
-    <div className="bf-card-head"><h3>{t('declaredTemplate')}</h3><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button></div>
+    <div className="bf-card-head"><h3>{t('declaredTemplate')}</h3><button data-tour-recovery={error ? '' : undefined} onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button></div>
     {error && <p role="alert" className="bf-error">{error}</p>}
     {!catalogue && !error && <p role="status" className="bf-loading">{t('loading')}</p>}
     {catalogue && !contract && <div className="bf-notebook-empty"><h3>{t('quotationUnconfigured')}</h3><p>{t('quotationConfigureHelp')}</p></div>}

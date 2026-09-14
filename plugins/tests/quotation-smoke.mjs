@@ -230,7 +230,7 @@ with DeepSeekHarness(dsh_bin=native_command(), profile="sdk-minimal", initialize
   while (!logs.slice(restartOffset).includes('dsh web: ') && Date.now()<restartDeadline) await new Promise(resolve=>setTimeout(resolve,100))
   assert(logs.slice(restartOffset).includes('dsh web: '),'Restart did not become ready')
   await page.goto(restoreUrl)
-  await page.getByRole('complementary',{name:'来源',exact:true}).getByRole('button',{name:/sample-production.csv/}).waitFor()
+  await page.getByRole('complementary',{name:'来源',exact:true}).getByRole('button',{name:/模拟-生产部-2024-07.xlsx/}).waitFor()
   await page.getByRole('complementary',{name:'工作室',exact:true}).getByRole('region',{name:'来源预览'}).waitFor()
   await page.waitForFunction(()=>document.querySelector('.bf-notebook-title')?.value==='业务示例复核')
   const created = await Promise.all(createResponses)
