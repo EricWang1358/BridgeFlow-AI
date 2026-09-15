@@ -165,6 +165,45 @@ def test_a_signed_in_user_sees_every_app_when_several_exist(tmp_path):
         assert client.get("/login", params={"app": "other"}).headers["location"] == "http://other.test/"
 
 
+def make_portal(tmp_path, entry_extra: dict | None = None, **cfg_overrides):
+    """A second portal instance with its own registry/config, for one-off scenarios."""
+    tokens.generate_keypair(tmp_path / "portal.pem")
+    entry = {"audience": "bridgeflow", "redirect_uri": "http://web.test/after-login",
+             "origins": ["http://web.test"], **(entry_extra or {})}
+    apps = tmp_path / "apps.yaml"
+    apps.write_text(yaml.safe_dump({"apps": {"bridgeflow": entry}}), encoding="utf-8")
+    cfg = Settings(feishu_app_id="cli_test", feishu_app_secret="secret",
+                   feishu_base_url="https://feishu.test", key_path=str(tmp_path / "portal.pem"),
+                   session_secret="s" * 32, external_base_url="http://portal.test",
+                   apps_path=str(apps), **cfg_overrides)
+    return create_app(cfg, transport=httpx.MockTransport(Tenant()))
+
+
+def test_enter_hands_a_signed_in_browser_to_the_app(tmp_path):
+    token_file = tmp_path / "token"
+    token_file.write_text("tok-1\n", encoding="utf-8")
+    app = make_portal(tmp_path, entry_extra={"app_uri": "http://web.test/"},
+                      dsh_token_file=str(token_file))
+    with TestClient(app, follow_redirects=False) as client:
+        assert client.get("/enter").headers["location"] == "/"  # anonymous → back to login
+        login(client)
+        target = httpx.URL(client.get("/enter").headers["location"])
+        assert target.host == "web.test" and target.params["token"] == "tok-1"
+
+
+def test_enter_fails_closed_without_a_token_or_app_uri(tmp_path):
+    no_file = make_portal(tmp_path / "a", entry_extra={"app_uri": "http://web.test/"},
+                          dsh_token_file=str(tmp_path / "a" / "missing"))
+    with TestClient(no_file, follow_redirects=False) as client:
+        login(client)
+        assert client.get("/enter").status_code == 503
+    no_uri = make_portal(tmp_path / "b", dsh_token_file=str(tmp_path / "b" / "missing"))
+    (tmp_path / "b" / "missing").write_text("tok-2\n", encoding="utf-8")
+    with TestClient(no_uri, follow_redirects=False) as client:
+        login(client)
+        assert client.get("/enter").status_code == 503
+
+
 def test_logout_ends_the_session(portal):
     login(portal)
     portal.post("/logout")

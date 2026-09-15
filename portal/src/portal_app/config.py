@@ -1,11 +1,20 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Relative settings paths are anchored at the portal/ directory.
 PORTAL_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _default_dsh_token_file() -> str:
+    """start_web.py captures dsh web's per-boot launch token into DSH_HOME
+    (see scripts/start_web.py). Empty without DSH_HOME: /enter stays off."""
+    dsh_home = os.environ.get("DSH_HOME", "")
+    return str(Path(dsh_home) / ".web-launch-token") if dsh_home else ""
 
 
 class Settings(BaseSettings):
@@ -42,6 +51,10 @@ class Settings(BaseSettings):
     # session too — the reverse proxy's forward_auth calls /verify with it.
     # Empty = host-only cookie on the portal host (local development).
     cookie_domain: str = ""
+
+    # File holding dsh web's current launch token, written by start_web.py.
+    # /enter 502s while it is missing (dsh web still booting or token capture off).
+    dsh_token_file: str = Field(default_factory=_default_dsh_token_file)
 
     host: str = "127.0.0.1"
     port: int = 8100
