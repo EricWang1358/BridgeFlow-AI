@@ -4,15 +4,42 @@ from __future__ import annotations
 
 import importlib.metadata
 import os
+import re
 import secrets
 import signal
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
+
+# dsh web prints its per-boot launch token exactly once, on stdout:
+#   dsh web: http://127.0.0.1:3080/?token=<random>
+# The token rotates every restart and has no config/env override (verified in
+# dsh-client-connection: processLaunchToken is plain randomBytes). The login
+# portal's /enter endpoint needs the current value to hand a signed-in browser
+# over to dsh's native session, so we capture the line into a file.
+TOKEN_LOG = re.compile(r"dsh web: \S+\?token=(\S+)")
+TOKEN_FILE_NAME = ".web-launch-token"
+
+
+def web_token_path() -> Path:
+    """Shared with the portal (PORTAL_DSH_TOKEN_FILE defaults to the same path)."""
+    return Path(os.environ["DSH_HOME"]) / TOKEN_FILE_NAME
+
+
+def pump_web_output(web: subprocess.Popen, token_path: Path) -> None:
+    """Tee dsh web's stdout to ours; stash the launch token when it appears."""
+    assert web.stdout is not None
+    for line in web.stdout:
+        print(line, end="", flush=True)
+        match = TOKEN_LOG.search(line)
+        if match:
+            token_path.write_text(match.group(1) + "\n", encoding="utf-8")
+            token_path.chmod(0o600)
 
 
 # Keep both SDK and Web on the same physical installation. Packed-runtime
@@ -110,9 +137,14 @@ def main() -> None:
             raise SystemExit("Domain service did not become ready")
         web = subprocess.Popen(
             [dsh, "web", "--patch", "dsh/enterprise.patch.yml", "--no-open", *sys.argv[1:]],
-            cwd=ROOT, env=env,
+            cwd=ROOT, env=env, stdout=subprocess.PIPE, text=True, bufsize=1,
         )
         processes.append(web)
+        # A stale token from a previous boot is worse than none: /enter would
+        # hand out a credential dsh no longer accepts. Cleared before boot.
+        token_path = web_token_path()
+        token_path.unlink(missing_ok=True)
+        threading.Thread(target=pump_web_output, args=(web, token_path), daemon=True).start()
         wait_services(backend, web)
     except KeyboardInterrupt:
         pass

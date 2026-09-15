@@ -300,10 +300,19 @@ export PORTAL_BASE_URL="https://portal.<domain>"
 apps:
   bridgeflow:
     audience: bridgeflow
-    redirect_uri: "https://<domain>/"
+    # 登录成功后先落门户 /enter：dsh web 的原生会话只认它启动时打印一次的
+    # launch token（每次重启轮换，无配置入口），/enter 读出当次值再放行。
+    redirect_uri: "https://portal.<domain>/enter"
+    # /enter 的最终目的地；token 以 ?token= 附在这个地址上进主站。
+    app_uri: "https://<domain>/"
     origins:
       - "https://<domain>"
 ```
+
+token 文件不需要配置：`start_web.py` 从 dsh web 的 stdout 捕获当次 token
+写到 `$DSH_HOME/.web-launch-token`（0600），门户默认读同一路径
+（`PORTAL_DSH_TOKEN_FILE` 可覆盖）。dsh 会话 cookie 跨重启有效（签名密钥
+持久化在 dsh credentials store），所以 /enter 只在新浏览器首次进入时绕一次。
 
 ```bash
 sudo cp deploy/portal.service /etc/systemd/system/bridgeflow-portal.service
@@ -328,8 +337,9 @@ journalctl -u bridgeflow-portal -n 5 --no-pager           # 启动日志打印 r
 sudo systemctl restart bridgeflow   # 后端与 web 代理拿到 PORTAL_BASE_URL
 ```
 
-浏览器打开主站：forward_auth 401 → 引导页送去门户 → 飞书 OAuth → 回到主站
-（forward_auth 这次放行，因为 cookie 已共享到父域）→
+浏览器打开主站：forward_auth 401 → 引导页送去门户 → 飞书 OAuth →
+回调落门户 `/enter` → 带当次 launch token 进主站，dsh web 签出原生会话
+cookie（此后直到 cookie 过期都直达，重启不影响）→
 浏览器直接访问 `https://portal.<domain>/me` 拿到自己的 union_id →
 写 `data/mappings/access-control.yaml`（格式见同目录 `.example`；gitignored，
 部署不动它）→ 再 `sudo systemctl restart bridgeflow`。

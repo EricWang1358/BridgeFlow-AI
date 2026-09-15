@@ -55,6 +55,9 @@ def load_registry(path: str) -> dict[str, dict]:
         registry[str(name)] = {
             "audience": str(entry["audience"]),
             "redirect_uri": str(entry["redirect_uri"]),
+            # Where /enter ultimately lands the browser. Optional: local dev points
+            # redirect_uri straight at the app and never uses /enter.
+            "app_uri": str(entry["app_uri"]) if entry.get("app_uri") else "",
             "origins": [str(o) for o in entry.get("origins") or []],
         }
     return registry
@@ -167,6 +170,34 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
         if "text/html" in request.headers.get("accept", ""):
             return HTMLResponse(pages.login_required(cfg.external_base_url), status_code=401)
         return JSONResponse({"detail": "Sign in through the portal first"}, status_code=401)
+
+    @app.get("/enter", response_model=None)
+    async def enter(request: Request, app: Annotated[str, Query()] = "") -> HTMLResponse | RedirectResponse:
+        """Hand a signed-in browser over to the app's own session.
+
+        dsh web mints its native session only from the launch token it prints
+        once per boot; start_web.py captures that token into cfg.dsh_token_file.
+        The browser detours through the app's URL with the token attached, then
+        never needs it again — the session cookie survives restarts (the signing
+        secret persists in dsh's credentials store).
+        """
+        if read_session(request) is None:
+            return RedirectResponse("/", status_code=302)
+        name = resolve_app(app)
+        if name is None:
+            return error(404, "未知应用", f"应用 {app!r} 未在门户注册。")
+        target = registry[name]["app_uri"]
+        if not target:
+            return error(503, "应用入口未配置", f"应用 {name!r} 缺少 app_uri（docs/22 §9b）。")
+        token = ""
+        if cfg.dsh_token_file:
+            try:
+                token = Path(cfg.dsh_token_file).read_text(encoding="utf-8").strip()
+            except OSError:
+                token = ""
+        if not token:
+            return error(503, "应用尚未就绪", "dsh web 还在启动或 token 捕获未开启，请稍后重试。")
+        return RedirectResponse(str(httpx.URL(target).copy_add_param("token", token)), status_code=302)
 
     @app.get("/token")
     async def token(app: Annotated[str, Query()], session: Annotated[dict, Depends(current_session)]) -> dict:
