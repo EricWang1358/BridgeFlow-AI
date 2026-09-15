@@ -31,6 +31,21 @@ def web_token_path() -> Path:
     return Path(os.environ["DSH_HOME"]) / TOKEN_FILE_NAME
 
 
+def warn_if_token_missing(web: subprocess.Popen, token_path: Path, seconds: float = 20) -> None:
+    """The capture above is one regex over dsh web's stdout; a reworded launch
+    line breaks it silently, and the portal then hands browsers the site with no
+    token. Say so on the console instead of letting /enter degrade in the dark."""
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if token_path.exists() or web.poll() is not None:
+            return
+        time.sleep(.5)
+    print(f"WARNING: dsh web printed no launch token in {seconds:.0f}s; {token_path} is missing. "
+          "The login portal will send browsers to the site without one, so a browser that has no "
+          "dsh session cookie yet will meet dsh's 401. Check dsh web's startup line against TOKEN_LOG.",
+          file=sys.stderr, flush=True)
+
+
 def pump_web_output(web: subprocess.Popen, token_path: Path) -> None:
     """Tee dsh web's stdout to ours; stash the launch token when it appears."""
     assert web.stdout is not None
@@ -145,6 +160,7 @@ def main() -> None:
         token_path = web_token_path()
         token_path.unlink(missing_ok=True)
         threading.Thread(target=pump_web_output, args=(web, token_path), daemon=True).start()
+        threading.Thread(target=warn_if_token_missing, args=(web, token_path), daemon=True).start()
         wait_services(backend, web)
     except KeyboardInterrupt:
         pass

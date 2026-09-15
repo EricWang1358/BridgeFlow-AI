@@ -30,8 +30,21 @@ check "domain service answers on loopback" curl -fsS --max-time 5 http://127.0.0
 check "portal answers on loopback" curl -fsS --max-time 5 http://127.0.0.1:8100/health
 # shellcheck disable=SC1091
 check "portal env is complete (env.sh)" bash -c 'source env.sh && [[ -n "${PORTAL_FEISHU_APP_ID:-}" && -n "${PORTAL_FEISHU_APP_SECRET:-}" && -n "${PORTAL_SESSION_SECRET:-}" && -f "${PORTAL_KEY_PATH:-/nonexistent}" && "${PORTAL_BASE_URL:-}" = "https://portal.'"${DOMAIN}"'" && "${PORTAL_EXTERNAL_BASE_URL:-}" = "$PORTAL_BASE_URL" ]]'
+# The instance registry is a hand-written file deploy.sh never touches, and the
+# one thing it must say is "send logins through /enter with an app_uri" — without
+# that, a login lands on the site with no dsh launch token (docs/22 §9b).
+# shellcheck disable=SC1091
+check "portal registry sends logins through /enter" bash -c 'source env.sh && grep -qE "redirect_uri: *\"?[^\"]*/enter/?\"? *$" "${PORTAL_APPS_PATH:-portal/apps.yaml}"'
+# shellcheck disable=SC1091
+check "portal registry names app_uri" bash -c 'source env.sh && grep -qE "^ *app_uri: *\"?https?://" "${PORTAL_APPS_PATH:-portal/apps.yaml}"'
+# start_web.py captures dsh web's launch token by regex; an empty file means the
+# capture missed and first-time browsers will meet dsh's own 401.
+# shellcheck disable=SC1091
+check "dsh launch token was captured" bash -c 'source env.sh && test -s "${PORTAL_DSH_TOKEN_FILE:-$DSH_HOME/.web-launch-token}"'
 check "portal is configured (feishu credentials + signing key loaded)" bash -c 'curl -fsS --max-time 5 http://127.0.0.1:8100/health | grep -q "\"feishu\": *true" && curl -fsS --max-time 5 http://127.0.0.1:8100/health | grep -q "\"signer\": *true"'
 check "nothing but ssh and caddy listens publicly" bash -c '! ss -tlnH | awk "{print \$4}" | grep -vE "^(127\.0\.0\.1|\[::1\]):" | grep -vE ":(22|80|443)$"'
-check "main site answers 200 on https://$DOMAIN" bash -c 'test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 https://'"$DOMAIN"'/)" = 200'
+# forward_auth gates the main site, so a cookie-less curl is *supposed* to be
+# refused: 401 is the healthy answer here, 200 only if the gate is off.
+check "main site is gated by the portal on https://$DOMAIN" bash -c 'test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 https://'"$DOMAIN"'/)" = 401'
 check "portal health answers on https://portal.$DOMAIN" curl -fsS --max-time 10 "https://portal.$DOMAIN/health"
 exit $failed

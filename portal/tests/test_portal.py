@@ -185,21 +185,40 @@ def test_enter_hands_a_signed_in_browser_to_the_app(tmp_path):
     app = make_portal(tmp_path, entry_extra={"app_uri": "http://web.test/"},
                       dsh_token_file=str(token_file))
     with TestClient(app, follow_redirects=False) as client:
-        assert client.get("/enter").headers["location"] == "/"  # anonymous → back to login
+        # Anonymous → the portal itself, absolutely: this route can be served on
+        # the app's domain, where a relative "/" would loop into the app.
+        assert client.get("/enter").headers["location"] == "http://portal.test/"
         login(client)
-        target = httpx.URL(client.get("/enter").headers["location"])
-        assert target.host == "web.test" and target.params["token"] == "tok-1"
+        response = client.get("/enter")
+        assert response.status_code == 200
+        # The whole point: no Location header. dsh's session cookie is
+        # SameSite=Strict, and one more redirect keeps the browser inside the
+        # cross-site chain that started at Feishu, so the cookie would be
+        # withheld and dsh would answer its own 401. The handover must be a
+        # document that starts a fresh, same-site navigation.
+        assert "location" not in response.headers
+        assert response.headers["cache-control"] == "no-store"
+        assert "http://web.test/?token=tok-1" in response.text
+        assert '<meta name="referrer" content="no-referrer">' in response.text
 
 
-def test_enter_fails_closed_without_a_token_or_app_uri(tmp_path):
-    no_file = make_portal(tmp_path / "a", entry_extra={"app_uri": "http://web.test/"},
-                          dsh_token_file=str(tmp_path / "a" / "missing"))
-    with TestClient(no_file, follow_redirects=False) as client:
+def test_enter_still_lands_the_browser_when_the_token_is_missing(tmp_path):
+    """A browser that already holds dsh's cookie needs only the address; failing
+    closed on a missing token locked returning users out of a working site."""
+    app = make_portal(tmp_path, entry_extra={"app_uri": "http://web.test/"},
+                      dsh_token_file=str(tmp_path / "missing"))
+    with TestClient(app, follow_redirects=False) as client:
         login(client)
-        assert client.get("/enter").status_code == 503
-    no_uri = make_portal(tmp_path / "b", dsh_token_file=str(tmp_path / "b" / "missing"))
-    (tmp_path / "b" / "missing").write_text("tok-2\n", encoding="utf-8")
-    with TestClient(no_uri, follow_redirects=False) as client:
+        response = client.get("/enter")
+        assert response.status_code == 200 and "location" not in response.headers
+        assert "http://web.test/" in response.text and "token=" not in response.text
+
+
+def test_enter_fails_closed_without_an_app_uri(tmp_path):
+    token_file = tmp_path / "token"
+    token_file.write_text("tok-2\n", encoding="utf-8")
+    app = make_portal(tmp_path, dsh_token_file=str(token_file))
+    with TestClient(app, follow_redirects=False) as client:
         login(client)
         assert client.get("/enter").status_code == 503
 
