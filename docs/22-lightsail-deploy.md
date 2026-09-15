@@ -300,9 +300,11 @@ export PORTAL_BASE_URL="https://portal.<domain>"
 apps:
   bridgeflow:
     audience: bridgeflow
-    # 登录成功后先落门户 /enter：dsh web 的原生会话只认它启动时打印一次的
+    # 登录成功后先落 /enter：dsh web 的原生会话只认它启动时打印一次的
     # launch token（每次重启轮换，无配置入口），/enter 读出当次值再放行。
-    redirect_uri: "https://portal.<domain>/enter"
+    # 走主站的 /__enter（Caddy 把它反代到门户的 /enter），这样交接页与主站同源；
+    # 没配这条 Caddy 路由时退回 "https://portal.<domain>/enter"，同站也够用。
+    redirect_uri: "https://<domain>/__enter"
     # /enter 的最终目的地；token 以 ?token= 附在这个地址上进主站。
     app_uri: "https://<domain>/"
     origins:
@@ -313,6 +315,15 @@ token 文件不需要配置：`start_web.py` 从 dsh web 的 stdout 捕获当次
 写到 `$DSH_HOME/.web-launch-token`（0600），门户默认读同一路径
 （`PORTAL_DSH_TOKEN_FILE` 可覆盖）。dsh 会话 cookie 跨重启有效（签名密钥
 持久化在 dsh credentials store），所以 /enter 只在新浏览器首次进入时绕一次。
+捕获失败时 /enter 不再 503：照样把浏览器送到主站，只是不带 token——手里已有
+cookie 的浏览器不该被拦；`start_web.py` 会在控制台 WARNING，preflight 也查。
+
+**/enter 回的是一张页面，不是 302**。dsh 的会话 cookie 是 `SameSite=Strict`，
+而整条登录导航从 `open.feishu.cn` 起跳属于跨站链，再多一跳 302 会让浏览器在
+最后一跳不带 cookie，dsh 直接 401（现象：登录后停在
+「dsh web authentication required」，手动再访问一次才进得去）。交接页把链打断，
+之后那一跳由页面自己发起，同站/同源，cookie 才跟得上。改这里时别把
+`Location` 加回来，`portal/tests/test_portal.py` 有断言守着。
 
 ```bash
 sudo cp deploy/portal.service /etc/systemd/system/bridgeflow-portal.service

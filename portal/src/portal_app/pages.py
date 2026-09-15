@@ -119,3 +119,27 @@ def login_required(portal_url: str) -> str:
 <title>需要登录 · {BRAND}</title></head>
 <body><p>需要先登录，正在跳转到统一登录门户……<a href="{target}">立即跳转</a></p>
 </body></html>"""
+
+
+def entering(target: str) -> str:
+    """The page that ends the cross-site login chain, instead of one more redirect.
+
+    dsh web's native session cookie is ``SameSite=Strict``. The whole login is a
+    single navigation whose redirect chain starts at ``open.feishu.cn`` — cross
+    site — so browsers withhold that cookie on the last hop and dsh answers its
+    own 401 ("dsh web authentication required"), which is why a manual reload
+    used to be needed. This page breaks the chain: the browser stops here on the
+    portal, and the jump into the app is a NEW navigation started by this
+    document. ``portal.<domain>`` and ``<domain>`` share a registrable domain, so
+    that navigation is same-site and the cookie rides along.
+
+    Never answer /enter with a Location header again — that restores the chain.
+    """
+    href = html.escape(target, quote=True)
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="refresh" content="0; url={href}">
+<title>正在进入 · {BRAND}</title></head>
+<body><p>正在进入 {BRAND}……<a id="go" href="{href}">立即进入</a></p>
+<script>location.replace(document.getElementById("go").href)</script>
+</body></html>"""

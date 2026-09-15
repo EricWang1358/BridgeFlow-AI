@@ -180,9 +180,15 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
         The browser detours through the app's URL with the token attached, then
         never needs it again — the session cookie survives restarts (the signing
         secret persists in dsh's credentials store).
+
+        The handover is a PAGE, not a redirect: dsh's cookie is SameSite=Strict
+        and this navigation started at Feishu, so a 302 from here would land the
+        browser on the app without its cookie (see pages.entering).
         """
         if read_session(request) is None:
-            return RedirectResponse("/", status_code=302)
+            # Absolute, not "/": Caddy may serve this route on the app's own
+            # domain (docs/22 §9b), where "/" is the app, not the portal.
+            return RedirectResponse(cfg.external_base_url.rstrip("/") + "/", status_code=302)
         name = resolve_app(app)
         if name is None:
             return error(404, "未知应用", f"应用 {app!r} 未在门户注册。")
@@ -195,9 +201,16 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
                 token = Path(cfg.dsh_token_file).read_text(encoding="utf-8").strip()
             except OSError:
                 token = ""
-        if not token:
-            return error(503, "应用尚未就绪", "dsh web 还在启动或 token 捕获未开启，请稍后重试。")
-        return RedirectResponse(str(httpx.URL(target).copy_add_param("token", token)), status_code=302)
+        # A missing token is not a dead end. A browser that already holds dsh's
+        # session cookie only needs the address; a first-time one pays a single
+        # 401 it can retry. Failing closed here locked everybody out instead.
+        url = httpx.URL(target)
+        if token:
+            url = url.copy_add_param("token", token)
+        else:
+            logger.warning("dsh launch token unavailable (%s): entering %s without one",
+                           cfg.dsh_token_file or "PORTAL_DSH_TOKEN_FILE unset", name)
+        return HTMLResponse(pages.entering(str(url)), headers={"cache-control": "no-store"})
 
     @app.get("/token")
     async def token(app: Annotated[str, Query()], session: Annotated[dict, Depends(current_session)]) -> dict:

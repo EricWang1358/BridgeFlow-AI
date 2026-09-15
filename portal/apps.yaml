@@ -1,13 +1,21 @@
 # Registered applications. The portal issues tokens only for apps declared here;
 # adding an app is a config edit, never a code change — the same rule as the
 # field dictionary in data/mappings/.
+#
+# THIS FILE IS LOCAL DEVELOPMENT ONLY. The instance reads PORTAL_APPS_PATH
+# (~/Hackathon2026/portal-apps.yaml, never committed) — see docs/22 §9b. Both
+# must route logins through the portal's /enter, which is what attaches dsh
+# web's launch token and ends the cross-site redirect chain.
 apps:
   bridgeflow:
     # The audience claim BridgeFlow's backend verifies against portal_audience.
     audience: bridgeflow
-    # Where the browser lands after a successful Feishu login (the dsh web page).
-    # Must match the port you actually start dsh web on (scripts/start_web.py --port …).
-    redirect_uri: "http://127.0.0.1:3082/"
+    # Where Feishu's callback sends the browser: the portal's own /enter, which
+    # reads this boot's dsh launch token and serves the handover page.
+    redirect_uri: "http://127.0.0.1:8100/enter"
+    # /enter's destination. Must match the port dsh web actually runs on
+    # (scripts/start_web.py --port …).
+    app_uri: "http://127.0.0.1:3082/"
     # Origins allowed to call /token cross-origin with the session cookie.
     origins:
       - "http://127.0.0.1:3082"
