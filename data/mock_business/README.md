@@ -37,7 +37,7 @@ python scripts/integration_cases.py real data/mock_business/monthly/2024-07-模�
 
 `demo/` 是 2024-07 的四部门表（只留一处生产部客户简称），配 `demo/dictionary.yaml`：v2 模板的连接键、分月列、度量与四部门研判契约。
 Web 里「打开示例笔记本」与 `start_web.py --demo` 都用它。预期：主表 4 个项目；研判 10 项检查中材料成本占收入、净利率、收款计划缺口 3 项需关注；
-跨部门总表 1 条客户名称不一致（`backend/tests/test_sample_notebook.py` 锁定）。`data/business_demo/` 的英文 CSV 案例保留为浏览器 smoke 的回归夹具。
+跨部门总表 1 条客户名称不一致（`backend/tests/test_sample_notebook.py` 锁定）。字典的 `business_review.brief` 声明了「本月结论」的关键指标、严重度顺序与依赖口径（E13-UC01/06）。`data/business_demo/` 的英文 CSV 案例保留为浏览器 smoke 的回归夹具。
 
 ## quotation
 

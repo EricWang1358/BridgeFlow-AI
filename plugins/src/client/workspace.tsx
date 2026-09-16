@@ -5,11 +5,34 @@ export const departments = ['production', 'procurement', 'finance', 'marketing']
 export const sections = ['master', 'corrections', 'mappings', 'columns', 'quarantine', 'review'] as const
 export function Chip({ status }: { status: string }) { const { t } = useUI(); return <span className="bf-chip" data-status={status}>{t(status.replaceAll('-', '_'))}</span> }
 export type Limits = { maxUploadBytes: number; maxRequestBytes: number; noteLimit: number; decisionTimeoutMs: number }
+type Finding = { check: string; message: string; row: number | null; column: string; count: number }
+type CheckReport = { department: string; filename: string; must_fix: Finding[]; review: Finding[]; passed: string[]; accepts: boolean }
 export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
   const { t } = useUI()
   const [limits, setLimits] = useState<Limits | null>(null)
-  const [busy, setBusy] = useState(false), [error, setError] = useState('')
+  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [reports, setReports] = useState<CheckReport[]>([])
+  const formRef = useRef<HTMLFormElement>(null)
   useEffect(() => { const controller = new AbortController(); void api<Limits>('/config', { signal: controller.signal }).then(setLimits).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) }); return () => controller.abort() }, [])
+  async function selfCheck() {
+    if (!formRef.current) return
+    const form = new FormData(formRef.current)
+    setError(''); setReports([])
+    if (!form.get('period')) { setError(t('selfCheckNeedsPeriod')); return }
+    setBusy(true)
+    try {
+      const found: CheckReport[] = []
+      for (const name of departments) {
+        const file = form.get(name)
+        if (!(file instanceof File) || !file.size) continue
+        const body = new FormData()
+        body.set('period', String(form.get('period'))); body.set('department', name); body.set('file', file)
+        body.set('sheet', String(form.get(`${name}-sheet`) ?? '')); body.set('header_row', String(form.get(`${name}-header`) ?? ''))
+        found.push(await api<CheckReport>('/batches/self-check', { method: 'POST', body }))
+      }
+      if (!found.length) setError(t('invalidUpload'))
+      setReports(found)
+    } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
+  }
   async function upload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError('')
     const form = new FormData(event.currentTarget), body = new FormData()
@@ -28,7 +51,7 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
     try { onSaved(await api<Summary>('/batches', { method: 'POST', body })) }
     catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
   }
-  return <form onSubmit={upload} className="bf-steps">
+  return <form ref={formRef} onSubmit={upload} className="bf-steps">
     <div className="bf-step">
       <h3>{t('stepMonth')}</h3>
       <input type="month" name="period" aria-label={t('month')} required />
@@ -37,6 +60,13 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
       <h3>{t('stepFiles')}</h3>
       <p className="bf-hint">{t('stepFilesHint')} {t('uploadHelp')}</p>
       <div className="bf-files">{departments.map(name => <FileRow key={name} name={name} />)}</div>
+      <p className="bf-hint">{t('selfCheckHelp')}</p>
+      <button type="button" disabled={busy} onClick={() => void selfCheck()}>{t('selfCheck')}</button>
+      {reports.map(report => <div key={report.department} className="bf-callout" data-tone={report.accepts ? 'ok' : 'warn'} role="status">
+        <h3>{t(report.department)} · {report.filename} · {report.accepts ? t('selfCheckAccepted') : `${t('selfCheckMustFix')} ${report.must_fix.length}`}</h3>
+        {report.must_fix.length > 0 && <ul>{report.must_fix.map((f, i) => <li key={i}>{f.row ? `row ${f.row} · ` : ''}{f.column && !f.message.startsWith(f.column) ? `${f.column} · ` : ''}{f.message}{f.count > 1 ? ` ×${f.count}` : ''}</li>)}</ul>}
+        {report.review.length > 0 && <details><summary>{t('selfCheckReview')} {report.review.length}</summary><ul>{report.review.map((f, i) => <li key={i}>{f.column ? `${f.column} · ` : ''}{f.message} ×{f.count}</li>)}</ul></details>}
+      </div>)}
     </div>
     <div className="bf-step">
       <h3>{t('stepGo')}</h3>
@@ -114,7 +144,7 @@ export function DataWorkspace() {
     const readRoute = () => {
       const value = route()
       abort?.abort(); setBusy(false)
-      if (['discovery', 'quotation', 'handoff', 'integration', 'source', 'artifact'].includes(value.view ?? '')) { dialog.current?.close(); return }
+      if (['discovery', 'quotation', 'handoff', 'integration', 'brief', 'source', 'artifact'].includes(value.view ?? '')) { dialog.current?.close(); return }
       if (!value.batch || value.view === 'state' || !/^[a-f0-9]{32}$/.test(value.batch)) return
       pendingBatch.current?.abort(); abort = new AbortController(); pendingBatch.current = abort; const signal = abort.signal
       dialog.current?.showModal(); setBatchId(value.batch); setReportId(value.report ?? '')

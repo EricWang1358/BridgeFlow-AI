@@ -32,6 +32,8 @@ This epic adds no computation of its own. Every number still comes from the E06 
 
 **Status: PARTIAL**
 
+看板 / Issue: [#190](https://github.com/EricWang1358/BridgeFlow-AI/issues/190)
+
 ### 中文需求与验收
 
 - 参与者：管理层决策者（A04）、月度汇总负责人（A03）。
@@ -50,7 +52,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
   - AC-4 Given 本月结论页 When 统计其生成过程 Then 模型调用次数为 0。
 - 后置：结论页作为派生产物保存，绑定批次、报告与声明版本；报告更新后旧结论页标为过期，不被覆盖。
 - 依赖：E07-UC06、E06-UC02、E13-UC02（上期对比）、E13-UC06（依据等级）。
-- 当前证据与缺口：已有四部门报告卡片、`manager_decision` 与检查状态（[review.tsx](../../plugins/src/client/review.tsx)、[reviews.py](../../backend/src/bridgeflow/api/reviews.py)）；缺一页式汇总、严重度排序、较上期变化与过期标记。
+- 当前证据与缺口（2026-09-17 第一轮）：[conclusions/brief.py](../../backend/src/bridgeflow/conclusions/brief.py) 的 `BriefBuilder` 与 `GET /conclusions/batches/{id}`，工作室「本月结论」视图（[brief.tsx](../../plugins/src/client/brief.tsx)）；关键指标、严重度与口径依赖由字典 `business_review.brief` 声明，缺声明拒绝。[行为测试](../../backend/tests/test_conclusions.py) 覆盖 AC-1–4 与过期标记；[浏览器旅程](../../plugins/tests/round1-journey.mjs)。剩余：较上期变化（依赖 E13-UC02）、保存为笔记本产物、关注项直接跳到单个指标出处。
 
 ### English requirements and acceptance
 
@@ -61,7 +63,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 - Exceptions: a partial report names missing departments and excludes their metrics from ranking and from “OK”; no saved report refuses with “complete the review first”.
 - Acceptance: AC-1 three attention items are listed, ordered and linked; AC-2 a partial report is labelled and finance metrics are excluded; AC-3 no report refuses without a blank page; AC-4 zero model calls.
 - Postcondition: the brief is a derived artifact bound to batch, report and declaration versions; a newer report marks it stale without overwriting.
-- Evidence and gap: department cards, `manager_decision` and check states exist; the one-page summary, severity ordering, change versus prior period and staleness are missing.
+- Evidence and gap (round 1, 2026-09-17): `BriefBuilder`, `GET /conclusions/batches/{id}` and the Studio “This month” view; key metrics, severity and convention dependencies are declared under `business_review.brief` and refused when absent. Tests cover AC-1–4 and staleness; a browser journey passes. Remaining: change versus prior period (needs UC02), saving as a notebook artifact, drilling from an attention item to its metric sources.
 
 ## E13-UC02 — 跨期对比与差异解释 / Period comparison and variance explanation
 
@@ -207,6 +209,8 @@ This epic adds no computation of its own. Every number still comes from the E06 
 
 **Status: PARTIAL**
 
+看板 / Issue: [#195](https://github.com/EricWang1358/BridgeFlow-AI/issues/195)
+
 ### 中文需求与验收
 
 - 参与者：管理层决策者（A04）、部门负责人（A02）。
@@ -223,7 +227,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
   - AC-3 Given 一个数字缺少出处 When 生成结论页 Then 该数字标「出处缺失」，并出现在 E14-UC05 收件箱。
 - 后置：等级是派生属性，随口径确认或数据更新重新计算，不单独保存。
 - 依赖：E06-UC04、E07-UC04、E13-UC05。
-- 当前证据与缺口：总表单元格已有出处、`verified_by_formula` 与口径说明；研判结论强制带证据；缺面向读者的统一等级、汇总与缺失出处处理。
+- 当前证据与缺口（2026-09-17 第一轮）：[conclusions/grades.py](../../backend/src/bridgeflow/conclusions/grades.py) 以组合模式表示出处树并取最弱等级；结论页的关键指标、关注项与建议动作，以及总表视图的每个单元格都带等级与依赖链，页首显示分布；部门写法不一致而留空的单元格标「出处缺失」。AC-1、AC-2 已由测试覆盖。剩余：AC-3 的「进入收件箱」依赖 E14-UC05；口径确认后升级依赖 E13-UC05；图表与报告导出中的等级依赖 E13-UC03/04。
 
 ### English requirements and acceptance
 
@@ -234,7 +238,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 - Exceptions: a broken chain shows “provenance missing” instead of a grade and raises an open item.
 - Acceptance: AC-1 margin depending on the unconfirmed VAT rate is G3; AC-2 a subagent action is G4 with its cited metrics; AC-3 a missing provenance is labelled and reaches the E14-UC05 inbox.
 - Postcondition: grades are derived and recomputed, never stored separately.
-- Evidence and gap: cell provenance, formula verification and convention notes exist; findings require evidence; a reader-facing grade, summary and missing-provenance handling are missing.
+- Evidence and gap (round 1, 2026-09-17): a composite provenance tree graded by its weakest node; grades and chains on brief metrics, attention items, advice and every master cell, with a distribution summary; withheld cells show “provenance missing”. AC-1 and AC-2 are tested. Remaining: AC-3 inbox routing (E14-UC05), upgrade after confirmation (E13-UC05), grades in charts and exports (E13-UC03/04).
 
 ## Epic 数据与实现设计 / Epic data and implementation design
 

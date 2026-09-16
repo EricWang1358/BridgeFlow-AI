@@ -23,7 +23,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 | --- | --- | --- | --- |
 | E14-UC01 | 月度对账进度清单 / Monthly close checklist | PARTIAL | Must |
 | E14-UC02 | 模板下载与上月预填 / Template download with carry-over | DESIGNED | Should |
-| E14-UC03 | 提交前自检 / Self-check before submission | PARTIAL | Must |
+| E14-UC03 | 提交前自检 / Self-check before submission | IMPLEMENTED_OFFLINE | Must |
 | E14-UC04 | 单部门补传生成新版本 / Replace one department's file as a new version | DESIGNED | Must |
 | E14-UC05 | 待确认事项收件箱 / Open-item inbox by owner | DESIGNED | Should |
 | E14-UC06 | 飞书文件夹批量导入 / Import from a Feishu folder | DESIGNED | Could |
@@ -97,7 +97,9 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 
 ## E14-UC03 — 提交前自检 / Self-check before submission
 
-**Status: PARTIAL**
+**Status: IMPLEMENTED_OFFLINE**
+
+看板 / Issue: [#199](https://github.com/EricWang1358/BridgeFlow-AI/issues/199)
 
 ### 中文需求与验收
 
@@ -108,16 +110,16 @@ Convenience never relaxes constraints: self-check and corrections use the same d
   1. 员工上传文件到「自检」，不创建批次。
   2. 系统运行与导入相同的检查：工作表与表头位置、必填列、连接键、数字与日期格式、字典公式核对、同键多行汇总规则。
   3. 结果按「必须修改」「建议核对」「通过」分组，每条给出行号、列名与原因，不回显无关单元格内容。
-  4. 全部「必须修改」清零后，提供「正式提交」一步完成导入。
+  4. 员工按结果修改后，用同一对话框的「导入并检查」正式提交。
 - 异常：自检结果与正式导入结果不一致视为缺陷，而不是可接受的差异。
 - 验收：
   - AC-1 Given 物资部 v1 模板（表头上方有合并标题行） When 自检 Then「必须修改」列出「表头不在第 1 行，疑似第 2 行」，并提示在表格位置中填写。
   - AC-2 Given 市场部表「可争取」填了「待定」 When 自检 Then 列出行号与列名「可争取：不是数字」。
   - AC-3 Given 同一文件 When 分别自检与正式导入 Then 两者报告的必须修改项完全一致。
   - AC-4 Given 自检完成 When 查看批次列表 Then 没有新增批次。
-- 后置：自检结果按配置声明的保留期限保存，到期删除，不保存文件本身；正式提交走 E04-UC01。
+- 后置：自检不保存任何内容（不建批次、不留原件、不写映射记忆），结果只返回给本人；正式提交走 E04-UC01，导入把同一份检查报告存入批次。
 - 依赖：E04-UC02、E04-UC03、E06-UC03、NFR01。
-- 当前证据与缺口：导入时已有明确拒绝原因（[batches.py](../../backend/src/bridgeflow/api/batches.py) 工作表、表头、公式缓存；[integration.py](../../backend/src/bridgeflow/integration.py) 缺列、非数字、不一致）；只能在创建批次时得到，员工无法单独自检，也没有分组与「正式提交」。
+- 当前证据与缺口（2026-09-17 第一轮）：[monthly/checks.py](../../backend/src/bridgeflow/monthly/checks.py) 的 `CheckChain`（可读性、清洗、声明核对三项检查）由 `POST /batches/self-check` 与导入共同调用，导入把报告存入批次 `intake_checks`；导入框「先自检」按必须修改 / 建议核对分组展示，隔离原因引用清洗器自己的说明。[行为测试](../../backend/tests/test_self_check.py) 覆盖 AC-1–4（含自检与导入逐项一致、不新增批次）；[浏览器旅程](../../plugins/tests/round1-journey.mjs)。缺口：真实员工使用验收；「必须修改」清零前不阻止提交（与现有导入一致）。
 
 ### English requirements and acceptance
 
@@ -127,8 +129,8 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 - Main flow: upload for self-check without creating a batch; run the same checks as import (sheet and header, required columns, keys, number and date formats, formulas, roll-up rules); group results as must-fix, review or pass with row, column and reason, without echoing unrelated cells; once must-fix items are clear, submit in one step.
 - Exceptions: any disagreement between self-check and import results is a defect, not an accepted difference.
 - Acceptance: AC-1 v1 procurement title row flagged; AC-2 text in a number column located; AC-3 self-check and import agree exactly; AC-4 no batch created.
-- Postcondition: results are kept for a configured retention period and then deleted; the file itself is not kept; submission uses E04-UC01.
-- Evidence and gap: explicit refusal reasons already exist at import time; there is no separate self-check, grouping or one-step submission.
+- Postcondition: self-check keeps nothing (no batch, original or mapping memory); import stores the same report on the batch.
+- Evidence and gap (round 1, 2026-09-17): a shared `CheckChain` serves `POST /batches/self-check` and import, which stores the report as `intake_checks`; the import dialog groups findings and quotes the cleaner's own reasons. Behavioral tests cover AC-1–4 and a browser journey passes. Gaps: acceptance with real staff; submission is not blocked while must-fix items remain, as with import today.
 
 ## E14-UC04 — 单部门补传生成新版本 / Replace one department's file as a new version
 
