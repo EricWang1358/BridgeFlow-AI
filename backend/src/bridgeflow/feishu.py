@@ -41,13 +41,24 @@ class _Token:
 
 
 class FeishuDrive:
-    def __init__(self, app_id: str, app_secret: str, base_url: str = "https://open.feishu.cn",
-                 transport: httpx.AsyncBaseTransport | None = None) -> None:
-        if not app_id or not app_secret:
+    def __init__(self, app_id: str = "", app_secret: str = "", base_url: str = "https://open.feishu.cn",
+                 user_token: str = "", transport: httpx.AsyncBaseTransport | None = None) -> None:
+        if not user_token and not (app_id and app_secret):
             raise NotConfigured("Feishu is not configured: export FEISHU_APP_ID and FEISHU_APP_SECRET")
         self._app_id, self._app_secret = app_id, app_secret
+        # User-identity mode (docs/30): the token comes from the signed-in browser,
+        # scopes every call to what that person may see, and is never cached beyond
+        # this client's lifetime.
+        self._user_token = user_token
         self._client = httpx.AsyncClient(base_url=base_url, transport=transport, timeout=30)
         self._token: _Token | None = None
+
+    @classmethod
+    def for_user(cls, user_token: str, base_url: str = "https://open.feishu.cn",
+                 transport: httpx.AsyncBaseTransport | None = None) -> FeishuDrive:
+        if not user_token:
+            raise NotConfigured("A Feishu user token is required: sign in again")
+        return cls(base_url=base_url, user_token=user_token, transport=transport)
 
     async def close(self) -> None:
         await self._client.aclose()
@@ -62,6 +73,8 @@ class FeishuDrive:
         return self._token.value
 
     async def _headers(self) -> dict[str, str]:
+        if self._user_token:
+            return {"authorization": f"Bearer {self._user_token}"}
         return {"authorization": f"Bearer {await self._tenant_token()}"}
 
     @staticmethod
@@ -96,6 +109,29 @@ class FeishuDrive:
             files={"file": (filename, payload)}))
         return str(body["data"]["file_token"])
 
+    async def list_files(self, folder_token: str = "", page_token: str = "", page_size: int = 50) -> dict:
+        """One folder's children, metadata only (docs/30).
+
+        The reply carries token, name, type, size and modification time — never
+        cell content, so the answer stays bounded no matter how large the files are.
+        Feishu filters by the caller's own permissions when a user token is used.
+        """
+        params: dict[str, str] = {"page_size": str(min(max(page_size, 1), 200))}
+        if folder_token:
+            params["folder_token"] = folder_token
+        if page_token:
+            params["page_token"] = page_token
+        body = await self._json(await self._client.get(
+            "/open-apis/drive/v1/files", headers=await self._headers(), params=params))
+        data = body.get("data") or {}
+        files = [{"token": str(item.get("token", "")), "name": str(item.get("name", "")),
+                  "type": str(item.get("type", "")), "size": int(item.get("size") or 0),
+                  "modified_time": str(item.get("modified_time", ""))}
+                 for item in data.get("files") or []]
+        return {"files": files, "has_more": bool(data.get("has_more")),
+                "next_page_token": str(data.get("next_page_token") or "")}
+
 
 def from_settings(transport: httpx.AsyncBaseTransport | None = None) -> FeishuDrive:
-    return FeishuDrive(settings.feishu_app_id, settings.feishu_app_secret, settings.feishu_base_url, transport)
+    return FeishuDrive(settings.feishu_app_id, settings.feishu_app_secret,
+                       settings.feishu_base_url, transport=transport)

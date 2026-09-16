@@ -26,8 +26,12 @@ class Tenant:
         if path.endswith("/tenant_access_token/internal"):
             self.token_calls += 1
             return httpx.Response(200, json={"code": 0, "tenant_access_token": "t-1", "expire": 7200})
-        if request.headers.get("authorization") != "Bearer t-1":
+        if request.headers.get("authorization") not in ("Bearer t-1", "Bearer u-1"):
             return httpx.Response(401, json={"code": 99991663, "msg": "invalid token"})
+        if path.endswith("/files"):
+            files = [{"token": token, "name": name, "type": "file", "size": len(content), "modified_time": "1700000000",
+                      "secret_cell": "must-not-leak"} for token, (name, content) in self.files.items()]
+            return httpx.Response(200, json={"code": 0, "data": {"files": files, "has_more": False, "next_page_token": ""}})
         if path.endswith("/download"):
             token = path.split("/")[-2]
             if token not in self.files:
@@ -44,7 +48,9 @@ class Tenant:
 def tenant(monkeypatch):
     fake = Tenant()
     monkeypatch.setattr(feishu_tools, "client_factory",
-                        lambda: feishu.FeishuDrive("app", "secret", "https://feishu.test", httpx.MockTransport(fake)))
+                        lambda: feishu.FeishuDrive("app", "secret", "https://feishu.test", transport=httpx.MockTransport(fake)))
+    monkeypatch.setattr(feishu_tools, "user_client_factory",
+                        lambda token: feishu.FeishuDrive.for_user(token, "https://feishu.test", transport=httpx.MockTransport(fake)))
     monkeypatch.setattr(settings, "field_dictionary_path", str(CASES / "dictionary.yaml"))
     return fake
 
@@ -117,7 +123,7 @@ def test_the_live_check_script_round_trips_against_a_tenant(monkeypatch, capsys)
 
     class Drive(feishu.FeishuDrive):
         def __init__(self, app_id, secret, base_url):
-            super().__init__(app_id, secret, base_url, httpx.MockTransport(fake))
+            super().__init__(app_id, secret, base_url, transport=httpx.MockTransport(fake))
 
         async def upload(self, folder_token, filename, payload):
             token = await super().upload(folder_token, filename, payload)
@@ -135,3 +141,46 @@ def test_the_live_check_script_round_trips_against_a_tenant(monkeypatch, capsys)
     assert asyncio.run(script.main()) == 0
     report = json.loads(capsys.readouterr().out)
     assert report["status"] == "passed" and "value-" not in json.dumps(report)
+
+
+# --- User-identity endpoints (docs/30): the browser relays the user's own token. -------
+
+USER = {"content-type": "application/json", "x-feishu-user-token": "u-1"}
+
+
+def test_user_endpoints_require_a_user_token(client, tenant):
+    for path in ("/tools/feishu-list", "/tools/feishu-import-user", "/tools/feishu-upload-user"):
+        payload = import_payload() if "import" in path else {"batch_id": "a" * 32, "folder_token": "fldcn123456"}
+        response = client.post(path, content=json.dumps(payload), headers={"content-type": "application/json"})
+        assert response.status_code == 401, path
+    assert tenant.token_calls == 0  # a missing user token never falls back to the tenant
+
+
+def test_listing_returns_metadata_only(client, tenant):
+    response = client.post("/tools/feishu-list", content=json.dumps({"folder_token": ""}), headers=USER)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert {f["name"] for f in body["files"]} == {f"{r}.csv" for r in business.ROLES}
+    assert "secret_cell" not in json.dumps(body)  # metadata only: no cell content, ever
+    assert body["has_more"] is False
+
+
+def test_user_import_needs_no_model_approval_but_sets_owner(client, tenant):
+    payload = import_payload(files=[{"department": "production", "file_token": "tokproduction"}])
+    response = client.post("/tools/feishu-import-user", content=json.dumps(payload), headers=USER)
+    assert response.status_code == 200, response.text
+    batch = response.json()["batch"]
+    assert batch["master_rows"] > 0
+    sources = client.get(f"/batches/{batch['batch_id']}/sources").json()["sources"]
+    assert [s["filename"] for s in sources] == ["production.csv"]
+
+
+def test_user_upload_round_trip(client, tenant):
+    batch_id = client.post("/tools/feishu-import-user", content=json.dumps(import_payload()), headers=USER).json()["batch"]["batch_id"]
+    context = client.post("/tools/review-context", json={"batch_id": batch_id}).json()
+    runs = [{"role": p["role"], "session_id": p["role"], "status": "completed", "judgement": judgement(p)} for p in context["roles"]]
+    report = client.post("/tools/review-finalize", json={"batch_id": batch_id, "parent_session_id": "p", "runs": runs}).json()
+    response = client.post("/tools/feishu-upload-user", headers=USER,
+                           content=json.dumps({"batch_id": batch_id, "folder_token": "fldcn123456", "report_id": report["report_id"]}))
+    assert response.status_code == 200, response.text
+    assert report["report_id"].encode() in tenant.uploaded["new-file-token"]

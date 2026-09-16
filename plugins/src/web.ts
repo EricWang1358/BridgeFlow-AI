@@ -144,8 +144,13 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           || /^\/workflow\/(board|catalogue|adoption|artifacts\/[a-f0-9]{32})$/.test(path)
           || /^\/integration\/batches\/[a-f0-9]{32}(\/xlsx)?$/.test(path))
         const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo')
+        // Feishu user-identity calls (docs/30): the browser relays the user's own token;
+        // these endpoints are never model tools, so the click is the approval.
+        const feishuUser = req.method === 'POST' && /^\/tools\/feishu-(list|import-user|upload-user)$/.test(path)
+        const feishuToken = req.headers['x-feishu-user-token']
+        const feishuAuth = feishuUser && typeof feishuToken === 'string' && feishuToken ? { 'x-feishu-user-token': feishuToken } : {}
         // No generic proxy. Browser requests cannot mint approval receipts or call writes.
-        if (!read && !upload) { res.writeHead(403).end('Route not authorized'); return }
+        if (!read && !upload && !feishuUser) { res.writeHead(403).end('Route not authorized'); return }
         const abort = new AbortController()
         req.on('aborted', () => abort.abort())
         res.on('close', () => { if (!res.writableEnded) abort.abort() })
@@ -166,8 +171,9 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
               authorization: `Bearer ${process.env.BRIDGEFLOW_SERVICE_TOKEN ?? ''}`,
               'content-type': req.headers['content-type'] ?? 'application/json',
               ...portalUser,
+              ...feishuAuth,
             },
-            ...(upload ? { body: Buffer.concat(chunks) } : {}),
+            ...(upload || feishuUser ? { body: Buffer.concat(chunks) } : {}),
             signal: AbortSignal.any([abort.signal, AbortSignal.timeout(120_000)]),
           })
           res.writeHead(response.status, { 'content-type': 'application/json', 'cache-control': 'no-store' })

@@ -70,6 +70,13 @@ const labels = {
   approval_feishu_import: ['飞书文件导入审批', 'Feishu import approval'], approvalTitle_feishu_import: ['从飞书下载这些文件并导入为新批次', 'Download these Feishu files into a new batch'],
   approval_feishu_upload_report: ['上传到飞书审批', 'Feishu upload approval'], approvalTitle_feishu_upload_report: ['把这份研判报告上传到飞书文件夹', 'Upload this review report to the Feishu folder'],
   feishu_import: ['从飞书导入', 'Import from Feishu'], feishu_upload_report: ['上传报告到飞书', 'Upload report to Feishu'],
+  feishuPick: ['从飞书选择', 'Choose from Feishu'],
+  feishuPickHelp: ['浏览你有权访问的飞书云文档，选中文件并指定部门后导入。只能看到你自己有权限的内容；在线表格与多维表格暂不支持导入。', 'Browse the Feishu files your own account can access; pick files, assign departments, then import. Sheets and bitables cannot be imported yet.'],
+  feishuRoot: ['我的空间', 'My space'], feishuEmpty: ['这个文件夹是空的', 'This folder is empty'], feishuMore: ['加载更多', 'Load more'],
+  feishuUnsupported: ['此类型暂不支持导入', 'This type cannot be imported yet'], feishuAssign: ['部门', 'Department'],
+  feishuImportGo: ['导入选中文件', 'Import selected files'], feishuPickFolder: ['选择当前文件夹', 'Choose this folder'],
+  feishuUpload: ['上传报告到飞书', 'Upload report to Feishu'], feishuUploadHere: ['上传到当前文件夹', 'Upload to this folder'],
+  feishuUploaded: ['已上传到飞书', 'Uploaded to Feishu'], feishuNoReport: ['先完成一次研判，才能把报告传回飞书。', 'Finish a review before sending a report back to Feishu.'],
   integrationMaster: ['跨部门总表', 'Cross-department master'], downloadMaster: ['下载总表 xlsx', 'Download master xlsx'],
   integrationAssumptions: ['按通用做法补的口径（业务方确认后可在声明里替换）', 'Conventions filled in where the dictionary is silent (replaceable once the business side confirms)'],
   integrationHelp: ['按业务字典对齐四部门模板生成；悬停单元格可看出处（部门、文件、行、表头，或公式），✓ 表示部门填写值已按字典公式核对。', 'Built from the four department templates by the business dictionary; hover a cell for its source (department, file, row, header, or formula); ✓ means a department value was checked against the dictionary formula.'],
@@ -281,6 +288,28 @@ async function refreshPortalToken(): Promise<boolean> {
     setPortalToken(String((await response.json()).token ?? ''))
     return !!portalToken()
   } catch { return false }
+}
+
+/**
+ * The signed-in user's own Feishu access token (docs/30), cached until near expiry.
+ * It rides one header per Drive call and is never persisted beyond this page's memory.
+ * Throws 'loginRequired' when the portal asks for a fresh sign-in.
+ */
+let feishuToken = { value: '', expiresAt: 0 }
+export async function feishuUserToken(): Promise<string> {
+  if (feishuToken.value && feishuToken.expiresAt > Date.now() / 1000 + 120) return feishuToken.value
+  const base = await ensurePortalBase()
+  if (!base) throw new Error('The login portal is not configured')
+  const response = await fetch(`${base}/feishu/user-token`, { credentials: 'include' })
+  if (response.status === 401) { reportRouteError('loginRequired'); throw new Error('Sign in again to grant Feishu Drive access') }
+  if (!response.ok) {
+    const detail = (await response.json().catch(() => ({}))) as { detail?: string }
+    throw new Error(String(detail.detail ?? `portal answered ${response.status}`))
+  }
+  const body = (await response.json()) as { access_token?: string; expires_at?: number }
+  if (!body.access_token) throw new Error('The portal returned no Feishu token')
+  feishuToken = { value: body.access_token, expiresAt: Number(body.expires_at ?? 0) }
+  return feishuToken.value
 }
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {

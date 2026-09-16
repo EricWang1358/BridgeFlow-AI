@@ -59,15 +59,42 @@ class FeishuOAuth:
 
     async def fetch_user(self, code: str) -> dict:
         """Exchange a one-time login code for the user's profile."""
+        return (await self.exchange_code(code))["user"]
+
+    async def exchange_code(self, code: str) -> dict:
+        """One-time login code → user profile plus Drive-capable user tokens.
+
+        The tokens are what let BridgeFlow act within this user's own Feishu
+        permissions (docs/30). An empty refresh_token means the app lacks the
+        offline_access scope — the caller reports that, it never guesses.
+        """
         app_token = await self._app_access_token()
         token_body = await self._json(await self._client.post(
             "/open-apis/authen/v1/oidc/access_token",
             headers={"authorization": f"Bearer {app_token}"},
             json={"grant_type": "authorization_code", "code": code}))
-        user_token = str(token_body["data"]["access_token"])
+        token_data = token_body["data"]
+        user_token = str(token_data["access_token"])
         info = await self._json(await self._client.get(
             "/open-apis/authen/v1/user_info", headers={"authorization": f"Bearer {user_token}"}))
         data = info["data"]
         if not data.get("union_id"):
             raise FeishuError("Feishu returned no union_id; the app needs contact scopes")
-        return data
+        return {"user": data, "access_token": user_token,
+                "refresh_token": str(token_data.get("refresh_token") or ""),
+                "access_expires_in": int(token_data.get("expires_in") or 0)}
+
+    async def refresh(self, refresh_token: str) -> dict:
+        """A still-valid refresh token → a fresh user access token.
+
+        Feishu rotates the refresh token on use; the caller must persist the new one.
+        """
+        app_token = await self._app_access_token()
+        body = await self._json(await self._client.post(
+            "/open-apis/authen/v1/oidc/refresh_access_token",
+            headers={"authorization": f"Bearer {app_token}"},
+            json={"grant_type": "refresh_token", "refresh_token": refresh_token}))
+        data = body["data"]
+        return {"access_token": str(data["access_token"]),
+                "refresh_token": str(data.get("refresh_token") or refresh_token),
+                "access_expires_in": int(data.get("expires_in") or 0)}
