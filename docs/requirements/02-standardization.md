@@ -33,7 +33,8 @@ Deliver workflow standardization, pilot and execution with explicit human decisi
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「2A 详细流程与字段血缘」。
+- 参与者：字典与标准维护人（A05）、部门负责人（A02）；写入操作按工具声明取得审批。
+- 触发：MVP 已批准，需要把选定流程细化为阶段、模板和字段血缘。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：承接已批准 MVP，逐阶段定义输入输出、键、期间、单位、公式及双向血缘，列出未确认项。
 - 异常与验收：不得按第一列拼接；生产量、出厂量、实际量与产值、结算、收款分别保留。
@@ -42,7 +43,8 @@ Deliver workflow standardization, pilot and execution with explicit human decisi
 
 ### English requirements and acceptance
 
-- Trigger: the user requests 2a detailed workflow and field lineage at the relevant project stage.
+- Actors: Dictionary and standards steward (A05), Department owner (A02); writes follow the tool-declared approval policy.
+- Trigger: an approved MVP must be detailed into stages, templates and field lineage.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Starting with an approved MVP, define stage inputs, outputs, keys, periods, units, formulas and bidirectional lineage, including unresolved items.
 - Exceptions and acceptance: Never join on the first column; preserve distinct production, shipment, actual quantity, output value, settlement and payment concepts.
@@ -62,7 +64,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「2A 模板试点、修订及发布」。
+- 参与者：字典与标准维护人（A05）、部门填报员（A01）；写入操作按工具声明取得审批。
+- 触发：模板草案需要在一线试用后修订并发布版本。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：邀请涉及部门实际填写者和下游验证字段可获得性、重复劳动、例外及输出可用性；记录反馈并批准新版本。
 - 异常与验收：draft/proposed 不能收正式数据；单次记录批准不等于模板发布；旧版本保持可追溯。
@@ -71,7 +74,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests 2a pilot, revise and release templates at the relevant project stage.
+- Actors: Dictionary and standards steward (A05), Department contributor (A01); writes follow the tool-declared approval policy.
+- Trigger: draft templates need a frontline pilot before a version is released.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Have actual contributors and downstream users validate field availability, duplication, exceptions and output usability; record feedback and approve a new version.
 - Exceptions and acceptance: Draft/proposed templates cannot accept operational data; approving a record does not release a template; preserve historical versions.
@@ -91,7 +95,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「2B 提取与多格式来源」。
+- 参与者：部门填报员（A01）、Captain 代理（S01）；写入操作按工具声明取得审批。
+- 触发：员工手里是非标准原件（表格、文字、图片），需要落到批准模板。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：受控解析器在主机侧读表格、文字或获准 OCR，返回候选与页码/单元格/区域引用；员工核对模糊项。
 - 异常与验收：原始业务行不进代理上下文；不清晰图像不视作事实；未配置解析器明确拒绝。
@@ -100,7 +105,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests 2b extract heterogeneous inputs at the relevant project stage.
+- Actors: Department contributor (A01), Captain agent (S01); writes follow the tool-declared approval policy.
+- Trigger: a staff member holds non-standard originals that must land on an approved template.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Host-side parsers read spreadsheets, text or approved OCR and return candidates with page/cell/region references; people verify ambiguity.
 - Exceptions and acceptance: Raw business rows stay out of agent context; unclear images are not facts; unconfigured parsers refuse explicitly.
@@ -120,7 +126,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「2B 补问、校验与批准」。
+- 参与者：部门填报员（A01）、审批人（A06）；写入操作按工具声明取得审批。
+- 触发：抽取结果有缺项、冲突或需要确认的值。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：按批准字段匹配、规则转换和确定性计算；缺失/冲突提出聚焦问题；新信息重算；展示 digest 对应值审批。
 - 异常与验收：不填零、不猜日期；变更使旧审批失效；拒绝/取消/不可用均不提交。
@@ -129,7 +136,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests 2b clarify, validate and approve at the relevant project stage.
+- Actors: Department contributor (A01), Approver (A06); writes follow the tool-declared approval policy.
+- Trigger: an extracted record has missing, conflicting or unconfirmed values.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Match approved fields, normalize declared formats and compute deterministically; ask focused questions for gaps/conflicts, recompute changes and approve the displayed digest.
 - Exceptions and acceptance: Never fill missing values with zero or guess dates; changes invalidate approval; rejection, cancellation and unavailable approval do not submit.
@@ -149,7 +157,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「2B API 入库与恢复」。
+- 参与者：Captain 代理（S01）、外部系统（飞书、目标 API）（S03）；写入操作按工具声明取得审批。
+- 触发：标准记录经批准，需要写入目标系统。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：批准标准草稿后提交指定目标，保存可核实回执、产物版本、幂等键；失败保留草稿并重试。
 - 异常与验收：未知目标不假报成功；同请求不重复写入；同 ID 不同内容冲突；分项失败单独报告。
@@ -158,7 +167,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests 2b api submission and recovery at the relevant project stage.
+- Actors: Captain agent (S01), External system (Feishu, target API) (S03); writes follow the tool-declared approval policy.
+- Trigger: an approved standard record must be written to the target system.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Submit an approved draft to the configured target and retain verifiable receipts, artifact versions and idempotency keys; preserve failed drafts for retry.
 - Exceptions and acceptance: Unknown targets cannot report success; retries do not duplicate writes; conflicting content for the same ID is refused; report item failures separately.
@@ -178,7 +188,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「2B 就绪、通知与看板」。
+- 参与者：部门负责人（A02）、外部系统（飞书、目标 API）（S03）；写入操作按工具声明取得审批。
+- 触发：数据已就绪，需要通知下一个部门并在看板上可见。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：所有必要输入就绪后为每个下游创建交接；数据状态、通知状态、业务状态分列；通知可独立重试。
 - 异常与验收：消息送达不等于已读或完成；缺收件路由不猜人；失败不回滚已成功数据。
@@ -187,7 +198,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests 2b readiness, notification and board at the relevant project stage.
+- Actors: Department owner (A02), External system (Feishu, target API) (S03); writes follow the tool-declared approval policy.
+- Trigger: ready data must notify the next department and appear on the board.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Create each downstream handoff only when every required input is ready; separate data, notification and work states; retry notification independently.
 - Exceptions and acceptance: Delivery does not imply reading or completion; missing routes never trigger guessed recipients; delivery failure does not undo ready data.
@@ -207,7 +219,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「2B 下游开始、退回与完成」。
+- 参与者：部门负责人（A02）；写入操作按工具声明取得审批。
+- 触发：下游部门收到交接，需要开始、退回或完成。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：读取交接 ID、seq、输入版本，审批具体操作后执行 start/return/complete；退回必须说明可操作原因。
 - 异常与验收：过期 seq、无审批、非法迁移不写事件；waiting 不能直接完成；看板可取得执行所需 seq。
@@ -216,7 +229,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests 2b start, return and complete downstream work at the relevant project stage.
+- Actors: Department owner (A02); writes follow the tool-declared approval policy.
+- Trigger: a downstream department receives a handoff to start, return or complete.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Read handoff ID, sequence and input versions, approve a specific start/return/complete action and execute it; return requires an actionable reason.
 - Exceptions and acceptance: Stale sequences, absent approval and invalid transitions append no events; waiting cannot complete directly; the board exposes the sequence needed for action.
@@ -238,7 +252,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「2B 修订确认与影响控制」。
+- 参与者：部门负责人（A02）、部门填报员（A01）；写入操作按工具声明取得审批。
+- 触发：上游修订了已交接的记录，下游需要确认影响。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：上游修改后交接 stale；新版本重新就绪后，下游明确确认输入版本，再开始或完成工作。
 - 异常与验收：上游尚未重新就绪不能清除 stale；未确认修订不能开始/完成；批准绑定当前 seq。
@@ -247,7 +262,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests 2b acknowledge revisions and control impact at the relevant project stage.
+- Actors: Department owner (A02), Department contributor (A01); writes follow the tool-declared approval policy.
+- Trigger: an upstream revision affects a record already handed off.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Upstream revisions mark the handoff stale; after the revised version becomes ready, downstream explicitly acknowledges its inputs before starting or completing.
 - Exceptions and acceptance: Do not clear stale while upstream is not ready; do not start/complete before acknowledging revisions; bind approval to the current sequence.
@@ -269,7 +285,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「试点度量与独立样例」。
+- 参与者：独立评测人（A09）、字典与标准维护人（A05）；写入操作按工具声明取得审批。
+- 触发：试点结束，需要用独立样例衡量正确性与人工负担。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：记录关键字段正确性、补问轮次、人工修正、耗时、下游可用性；业务方提供两组调优、一组独立留出及人工标准。
 - 异常与验收：说明分母、时间窗、基线和版本；开发不读留出答案；合成数据不得标为客户验收。
@@ -278,7 +295,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests pilot measurement and independent samples at the relevant project stage.
+- Actors: Independent evaluator (A09), Dictionary and standards steward (A05); writes follow the tool-declared approval policy.
+- Trigger: a pilot ends and correctness and human effort must be measured on independent samples.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Measure key-field accuracy, clarification rounds, manual corrections, duration and downstream usability; obtain two tuning sets and one independently held-out set with human standards.
 - Exceptions and acceptance: Declare denominators, windows, baselines and versions; developers do not inspect held-out answers; synthetic fixtures never count as customer acceptance.
@@ -298,7 +316,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「飞书文件快捷调用」。
+- 参与者：部门填报员（A01）、外部系统（飞书、目标 API）（S03）；写入操作按工具声明取得审批。
+- 触发：部门文件放在飞书云文档里，需要直接取用或传回结果。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：通过已有审批工具下载指定文件导入，上传产出到指定文件夹并验证链接。
 - 异常与验收：缺凭据明确未配置；文件内容不进上下文；不能当作通知或通用数据库接口。
@@ -307,7 +326,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests feishu file shortcuts at the relevant project stage.
+- Actors: Department contributor (A01), External system (Feishu, target API) (S03); writes follow the tool-declared approval policy.
+- Trigger: department files live in Feishu Drive and must be fetched or results sent back.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Use existing approval tools to download and import a specified file, upload an output to a selected folder and verify access.
 - Exceptions and acceptance: Missing credentials report unconfigured; file contents stay out of context; this does not implement notification or a generic database API.

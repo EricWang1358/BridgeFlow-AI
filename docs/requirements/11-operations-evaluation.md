@@ -32,8 +32,8 @@ Pinned official runtime + launcher/preflight + offline CI and isolated model eva
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「启动预检与官方运行时修复」。
+- 参与者：平台运维管理员（A10）；写入操作按工具声明取得审批。
+- 触发：部署或本机启动服务。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：验证官方运行时和插件环境，启动私有后端及原生 Web，修复已知模块定位问题。
 - 异常、验收和边界：不 fork DSH；预检失败给原因；不将测试替身称真实模型运行。
@@ -41,8 +41,8 @@ Pinned official runtime + launcher/preflight + offline CI and isolated model eva
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to preflight and launch the pinned runtime.
+- Actors: Platform operator (A10); writes follow the tool-declared approval policy.
+- Trigger: the service is started locally or on a server.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Validate runtime/plugin setup, start the private backend and native Web, and recover known module-resolution failures.
 - Exceptions, acceptance and boundary: Do not fork DSH; expose preflight failures; test fixtures are not live model runs.
@@ -65,8 +65,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「会话保留与日志兼容修复」。
+- 参与者：平台运维管理员（A10）；写入操作按工具声明取得审批。
+- 触发：升级后旧会话打不开，或会话需要长期保留。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：检查会话及已知历史元数据问题，显式应用时备份原始字节；按保留策略维护证据。
 - 异常、验收和边界：不改未知必需事件或业务内容；修复需明确 apply；正常启动不静默删日志。
@@ -74,8 +74,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to retain sessions and repair known metadata safely.
+- Actors: Platform operator (A10); writes follow the tool-declared approval policy.
+- Trigger: old sessions fail to open after an upgrade or must be retained.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Inspect sessions and known historical metadata issues, back up bytes before explicit repair and retain evidence by policy.
 - Exceptions, acceptance and boundary: Do not alter unknown required events/business content; repairs require explicit apply; normal startup does not silently delete logs.
@@ -98,8 +98,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「离线与对抗评测及用量证据」。
+- 参与者：独立评测人（A09）、平台运维管理员（A10）；写入操作按工具声明取得审批。
+- 触发：版本冻结或提交前需要证明质量与安全。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：用标准答案和攻击样例验证规则、引用与护栏，隔离 mock 与真实模型记录及用量。
 - 异常、验收和边界：开发集不冒充留出；真实数据评测归 E02-UC09；本轮只盘点没有新付费调用。
@@ -107,8 +107,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to run offline and adversarial evaluations.
+- Actors: Independent evaluator (A09), Platform operator (A10); writes follow the tool-declared approval policy.
+- Trigger: a version freeze or submission requires evidence of quality and safety.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Evaluate rules, citations and guards against independent answers and attacks, distinguishing mock from live runs and usage.
 - Exceptions, acceptance and boundary: Development fixtures are not held-out evidence; real-data evaluation belongs to E02-UC09; no new billed run occurred in this audit.
@@ -131,8 +131,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「CI、部署预检与生产联调」。
+- 参与者：平台运维管理员（A10）；写入操作按工具声明取得审批。
+- 触发：代码合并到主干，需要自动检查并部署。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：通过离线检查、构建和部署预检，按已配置域名、SSH 及服务配置发布。
 - 异常、验收和边界：脚本存在不等于真实生产已部署；#138 外部凭据/域名仍是独立验收。
@@ -140,8 +140,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to validate ci and production deployment.
+- Actors: Platform operator (A10); writes follow the tool-declared approval policy.
+- Trigger: code merges to main and must be checked and deployed.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Use offline checks, builds and deployment preflight before deploying with configured domain, SSH and services.
 - Exceptions, acceptance and boundary: Scripts do not prove production deployment; #138 credentials/domain remain separate acceptance requirements.
@@ -164,8 +164,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「自动巡检、自愈与升级」。
+- 参与者：平台运维管理员（A10）；写入操作按工具声明取得审批。
+- 触发：生产环境出现异常，需要发现、处置与升级。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：目标：按授权信号巡检，分级诊断、有限重试、审批有副作用动作，失败升级并留验证证据。
 - 异常、验收和边界：已有事件信号与恢复机制不是完整定时运维 Agent；未发现通用巡检、资源监控、升级通知交付。
@@ -173,8 +173,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to autonomous inspection, recovery and escalation.
+- Actors: Platform operator (A10); writes follow the tool-declared approval policy.
+- Trigger: production misbehaves and must be detected, handled and escalated.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Target: inspect authorized signals, diagnose by action level, retry within limits, approve side effects and escalate failures with verification.
 - Exceptions, acceptance and boundary: Existing signals and recovery are not a scheduled operations agent; general inspection, resource monitoring and escalation delivery are unimplemented.

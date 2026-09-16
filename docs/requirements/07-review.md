@@ -34,8 +34,8 @@ Python computes declared metrics; native DSH captain dispatches independent chil
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「列出可用指标并确定性计算」。
+- 参与者：Captain 代理（S01）、月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：研判开始前，需要知道有哪些声明指标并确定性算出。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：从字典列可算指标，按声明公式和科目分类计算产能、成本、毛利、账期及订单差。
 - 异常、验收和边界：缺字段、币种不符或零分母拒绝；不让模型补数字。
@@ -43,8 +43,8 @@ Python computes declared metrics; native DSH captain dispatches independent chil
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to discover and compute declared metrics.
+- Actors: Captain agent (S01), Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: before review, declared metrics must be listed and computed deterministically.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: List computable metrics and calculate capacity, cost, margin, terms and order gaps using declared formulas and account classes.
 - Exceptions, acceptance and boundary: Refuse missing fields, currency mismatches or zero denominators; models do not fill numbers.
@@ -67,8 +67,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「带来源的指标查询」。
+- 参与者：部门研判子代理（S02）、月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：研判或人工核对需要某个指标的值及其来源。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：按批次/实体查询指标，返回公式、引用样本和真实计数。
 - 异常、验收和边界：未知指标拒绝；有界样本不冒充全部来源；不得返回完整原始行。
@@ -76,8 +76,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to query metrics with bounded provenance.
+- Actors: Department review subagent (S02), Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: review or a person needs a metric value with its sources.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Query metrics by batch/entity with formulas, sampled citations and true counts.
 - Exceptions, acceptance and boundary: Refuse unknown metrics; distinguish samples from full provenance; never return all raw rows.
@@ -100,8 +100,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「原生队长分派四部门研判」。
+- 参与者：月度汇总负责人（A03）、Captain 代理（S01）；写入操作按工具声明取得审批。
+- 触发：批次就绪，汇总负责人发起四部门研判。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：队长取得上下文，通过官方子代理分派四部门，收集独立结果并保留父子会话。
 - 异常、验收和边界：不使用遗留 Python provider 的伪并发；本轮没有重新验证真实模型质量。
@@ -109,8 +109,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to dispatch four departmental reviews natively.
+- Actors: Monthly consolidation lead (A03), Captain agent (S01); writes follow the tool-declared approval policy.
+- Trigger: the batch is ready and the consolidation lead starts the four-department review.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: The captain reads context, dispatches four official subagents and collects independent results with parent/child sessions.
 - Exceptions, acceptance and boundary: Do not equate legacy provider serialization with native concurrency; live model quality was not rerun this turn.
@@ -133,8 +133,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「验证数值、证据与责任边界」。
+- 参与者：Captain 代理（S01）、部门负责人（A02）；写入操作按工具声明取得审批。
+- 触发：部门子代理提交结论，需要校验数值、证据与职责边界。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：核对模型解释的数值、阈值、依据及责任；自由文本标为建议。
 - 异常、验收和边界：阈值不能冒充批准额度；无证据或篡改数值拒绝；角色冲突不自动调和。
@@ -142,8 +142,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to validate findings, evidence and responsibility.
+- Actors: Captain agent (S01), Department owner (A02); writes follow the tool-declared approval policy.
+- Trigger: a department subagent submits findings that must be validated.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Validate interpreted numbers, thresholds, evidence and decision ownership; label free text as advice.
 - Exceptions, acceptance and boundary: Thresholds are not approved limits; reject unsupported or altered numbers; do not silently reconcile role conflicts.
@@ -166,8 +166,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「部分结果、超时与重启恢复」。
+- 参与者：月度汇总负责人（A03）、Captain 代理（S01）；写入操作按工具声明取得审批。
+- 触发：研判中途超时、失败或服务重启。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：贯穿父子任务同一截止时间；保留失败归属；重启终结在途任务；重复汇总幂等。
 - 异常、验收和边界：迟到成功不能覆盖超时；人工备注不补造部门结论，也不能触发重跑。
@@ -175,8 +175,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to preserve partial reviews and recover interrupted runs.
+- Actors: Monthly consolidation lead (A03), Captain agent (S01); writes follow the tool-declared approval policy.
+- Trigger: a review times out, fails partway or the service restarts.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Apply a common deadline, retain failure attribution, terminate interrupted runs after restart and finalize idempotently.
 - Exceptions, acceptance and boundary: Late success cannot overwrite timeout; human notes neither fabricate missing findings nor trigger reruns.
@@ -199,8 +199,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「保存报告、用量与轨迹」。
+- 参与者：月度汇总负责人（A03）、独立评测人（A09）；写入操作按工具声明取得审批。
+- 触发：研判结束，需要保存报告、用量与轨迹供复查。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：保存真实报告身份，按阶段记录用量，链接原生会话并恢复历史报告。
 - 异常、验收和边界：未发生研判不生成报告；失效链接显示错误；历史证据不冒充同版本重跑。
@@ -208,8 +208,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to retain reports, usage and review traces.
+- Actors: Monthly consolidation lead (A03), Independent evaluator (A09); writes follow the tool-declared approval policy.
+- Trigger: a finished review must retain its report, usage and trace.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Persist report identity and per-stage usage, link native sessions and reopen saved reports.
 - Exceptions, acceptance and boundary: No review means no report; expired links are explicit; historical evidence is not a rerun of the current build.
@@ -232,8 +232,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「风险处置审批生命周期」。
+- 参与者：部门负责人（A02）、审批人（A06）；写入操作按工具声明取得审批。
+- 触发：报告里有需关注项，需要指派、处置并审批关闭。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：目标：确认、驳回、指派、备注及关闭风险，保存授权人和处置时间。
 - 异常、验收和边界：已有 Finding 和报告备注不构成完整状态机；业务责任与关闭规则待定。
@@ -241,8 +241,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to approve and track risk dispositions.
+- Actors: Department owner (A02), Approver (A06); writes follow the tool-declared approval policy.
+- Trigger: a report contains attention items to assign, handle and close with approval.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Target: confirm, reject, assign, annotate and close risk findings with authorized actor and timestamp.
 - Exceptions, acceptance and boundary: Finding schemas and report notes do not implement the full state machine; ownership and closure rules remain undecided.

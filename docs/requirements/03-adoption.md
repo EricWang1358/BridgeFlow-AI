@@ -28,7 +28,8 @@ Deliver role onboarding, organizational support and improvement with explicit hu
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「岗位指引与数据去向」。
+- 参与者：部门填报员（A01）、落地支持负责人（A08）；写入操作按工具声明取得审批。
+- 触发：员工上岗或流程变更后，不知道数据该交到哪、下一步是什么。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：按声明阶段/角色展示入口、输入输出模板、完成凭据、数据目的地、看板和求助角色；未知支持信息明确缺失。
 - 异常与验收：本地 sink 不称公司平台；角色名称不代表有查看权限；未声明岗位不编造指引。
@@ -37,7 +38,8 @@ Deliver role onboarding, organizational support and improvement with explicit hu
 
 ### English requirements and acceptance
 
-- Trigger: the user requests role guidance and data destination at the relevant project stage.
+- Actors: Department contributor (A01), Adoption support lead (A08); writes follow the tool-declared approval policy.
+- Trigger: after onboarding or a process change a staff member does not know where data goes next.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: For a declared stage/role, explain entry, input/output templates, completion receipts, destination, board and support role; identify missing support configuration.
 - Exceptions and acceptance: A local sink is not a company platform; a role label grants no access; undeclared roles receive no invented guidance.
@@ -57,7 +59,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「一线反馈与事实核验」。
+- 参与者：部门填报员（A01）、落地支持负责人（A08）；写入操作按工具声明取得审批。
+- 触发：一线员工遇到问题，需要提交反馈并核实事实。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：记录反馈来源、关联项目/阶段/版本、观察事实、影响、原因假设和待核验项；先检查回执与权限。
 - 异常与验收：不从延迟推断态度；不采集私人通信；无法复现保持待核验而非已解决。
@@ -66,7 +69,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests frontline feedback and fact verification at the relevant project stage.
+- Actors: Department contributor (A01), Adoption support lead (A08); writes follow the tool-declared approval policy.
+- Trigger: a frontline employee hits a problem and files feedback that must be verified.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Record the feedback source, project/stage/version, observation, impact, causal hypotheses and unknowns; inspect receipts and access first.
 - Exceptions and acceptance: Do not infer attitude from delay or ingest private messages; unreproduced problems remain unverified, not resolved.
@@ -86,7 +90,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「障碍分类与支持建议」。
+- 参与者：落地支持负责人（A08）；写入操作按工具声明取得审批。
+- 触发：反馈累积，需要区分技术、模板、权限与培训问题并给出支持建议。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：区分技术、权限、模板、交互、流程、资源；每项建议列证据、建议动作、确认角色及验证方式。
 - 异常与验收：故障不能用培训掩盖；管理层目标和一线证据都保留；不生成人员排名。
@@ -95,7 +100,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests classify obstacles and propose support at the relevant project stage.
+- Actors: Adoption support lead (A08); writes follow the tool-declared approval policy.
+- Trigger: feedback accumulates and must be classified into technical, template, permission or training issues.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Separate technical, access, template, interaction, process and resource issues; attach evidence, proposed action, decision role and verification method.
 - Exceptions and acceptance: Training cannot conceal failures; retain management goals and frontline evidence; never rank employees.
@@ -115,7 +121,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「资源协调与分阶段推广」。
+- 参与者：落地支持负责人（A08）、管理层决策者（A04）；写入操作按工具声明取得审批。
+- 触发：推广需要人手、预算或分阶段计划，须由管理层决定。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：提出支持时间、岗位材料、试点范围、检查点和停止条件；公司确认负责人、预算与排期。
 - 异常与验收：建议不自动派人、不更权限、不发送管理指令；没有确认保留草案。
@@ -124,7 +131,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests resource coordination and staged rollout at the relevant project stage.
+- Actors: Adoption support lead (A08), Management decision-maker (A04); writes follow the tool-declared approval policy.
+- Trigger: rollout needs people, budget or staging that management must decide.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Propose support time, role materials, pilot scope, checkpoints and stop conditions; the company decides owners, budget and schedule.
 - Exceptions and acceptance: Proposals do not assign people, change permissions or send management instructions; unconfirmed plans remain drafts.
@@ -144,7 +152,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「复盘、效果验证与回流」。
+- 参与者：落地支持负责人（A08）、管理层决策者（A04）；写入操作按工具声明取得审批。
+- 触发：措施执行一段时间后，需要复盘效果并把改动送回 Agent 1/2。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：记录措施、实施证据、基线/后测窗口与效果；范围/价值回 Agent 1，流程/模板/执行回 Agent 2，技术故障关联运维。
 - 异常与验收：关闭需验证证据；建议不能覆盖已批准目录；缺基线显示不可比较；不自动定时跟踪。
@@ -153,7 +162,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests review outcomes and route improvements at the relevant project stage.
+- Actors: Adoption support lead (A08), Management decision-maker (A04); writes follow the tool-declared approval policy.
+- Trigger: measures have run for a while and outcomes must be reviewed and routed back to Agents 1/2.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Record actions, execution evidence, baseline/follow-up windows and outcomes; route scope/value to Agent 1, workflow/template/execution to Agent 2 and technical failures to operations.
 - Exceptions and acceptance: Closure requires verification; proposals never overwrite approved catalogues; missing baselines mean not comparable; no implicit scheduled tracking.

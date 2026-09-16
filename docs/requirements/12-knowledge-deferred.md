@@ -30,8 +30,8 @@ Historical #131 was explicitly closed as out of current scope. These UCs preserv
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「知识材料转写、解析与切块」。
+- 参与者：字典与标准维护人（A05）；写入操作按工具声明取得审批。
+- 触发：企业制度、手册或录音需要成为可检索的知识。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：历史目标：音频或文档转写解析为带来源、部门、时间的切块，解析失败进入人工处理。
 - 异常、验收和边界：#131 关闭理由为本轮不做；工作流材料结构检查不是知识接入管线。
@@ -39,8 +39,8 @@ Historical #131 was explicitly closed as out of current scope. These UCs preserv
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to transcribe, parse and chunk knowledge materials.
+- Actors: Dictionary and standards steward (A05); writes follow the tool-declared approval policy.
+- Trigger: policies, manuals or recordings must become searchable knowledge.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Historical target: transcribe/parse audio or documents into source-, department- and time-tagged chunks, routing failures to people.
 - Exceptions, acceptance and boundary: The closure reason is out of current scope; workflow shape inspection is not a knowledge ingestion pipeline.
@@ -63,8 +63,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「知识版本存储与索引」。
+- 参与者：字典与标准维护人（A05）、平台运维管理员（A10）；写入操作按工具声明取得审批。
+- 触发：知识资料更新，需要保留版本并重建索引。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：历史目标：持久知识原文、切块与索引，修订使旧片段失效，删除同步清理。
 - 异常、验收和边界：不存在交付的通用知识索引；批次/映射持久化不能计作知识库。
@@ -72,8 +72,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to store and index versioned knowledge.
+- Actors: Dictionary and standards steward (A05), Platform operator (A10); writes follow the tool-declared approval policy.
+- Trigger: knowledge materials change and versions and indexes must be maintained.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Historical target: persist originals/chunks/indexes, invalidate old revisions and propagate deletions.
 - Exceptions, acceptance and boundary: No delivered general knowledge index was found; batch/mapping persistence is not a knowledge base.
@@ -96,8 +96,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「按权限检索并引用回答」。
+- 参与者：部门填报员（A01）、Captain 代理（S01）；写入操作按工具声明取得审批。
+- 触发：员工提问，需要在其权限内引用资料回答。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：历史目标：先按部门权限裁剪检索，再以有界片段回答，引用原文；无依据明确拒答。
 - 异常、验收和边界：指标工具和字段字典查询不等于企业文档问答；不纳入已实现数量。
@@ -105,8 +105,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to retrieve authorized knowledge and answer with citations.
+- Actors: Department contributor (A01), Captain agent (S01); writes follow the tool-declared approval policy.
+- Trigger: an employee asks a question answered only from authorized, cited materials.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Historical target: filter retrieval by department permission, answer from bounded passages with citations and refuse unsupported answers.
 - Exceptions, acceptance and boundary: Metric tools and dictionary lookup are not enterprise document Q&A; exclude this from delivered counts.

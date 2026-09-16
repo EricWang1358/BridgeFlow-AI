@@ -1,6 +1,6 @@
 # 全项目需求追溯 / Project requirement traceability
 
-核对日期 / Reviewed: 2026-09-16. 来源为 PRD、当前代码和测试、GitHub issue 正文及关键关闭评论。该矩阵是索引，不额外定义 UC。
+核对日期 / Reviewed: 2026-09-16；E13/E14 于 2026-09-17 补入。 来源为 PRD、当前代码和测试、GitHub issue 正文及关键关闭评论。该矩阵是索引，不额外定义 UC。
 
 Sources: PRD, current code/tests, issue bodies and material closure comments. This matrix is an index and adds no UCs.
 
@@ -144,6 +144,27 @@ OPEN/CLOSED is tracker state, not delivery state. Use UC details and implementat
 | [#144](https://github.com/EricWang1358/BridgeFlow-AI/issues/144) | OPEN | [需求评审][Agent 2] 一线试点验证部门模板，辅助补全标准表并经 API 入库 | [E02-UC01](02-standardization.md), [E02-UC02](02-standardization.md), [E02-UC03](02-standardization.md), [E02-UC04](02-standardization.md), [E02-UC05](02-standardization.md), [E02-UC06](02-standardization.md), [E02-UC07](02-standardization.md), [E02-UC08](02-standardization.md), [E02-UC09](02-standardization.md) |
 | [#145](https://github.com/EricWang1358/BridgeFlow-AI/issues/145) | OPEN | [需求评审][Agent 3] Consulting Agent：员工上手、组织资源协调与持续落地闭环 | [E03-UC01](03-adoption.md), [E03-UC02](03-adoption.md), [E03-UC03](03-adoption.md), [E03-UC04](03-adoption.md), [E03-UC05](03-adoption.md) |
 | [#147](https://github.com/EricWang1358/BridgeFlow-AI/issues/147) | CLOSED | [MVP 案例] 生产记录缺失补问 → 标准化 → 本地 API 入库 → 模拟市场部交接（已跑通） | [E02-UC04](02-standardization.md), [E02-UC05](02-standardization.md), [E02-UC06](02-standardization.md) |
+
+## 2026-09-17 需求盘点新增 / Added by the 2026-09-17 review
+
+这些 UC 来自三视角盘点，不对应单独的 issue；来源与理由见 [00-foundations §1](00-foundations.md#1-进展盘点三个视角--progress-review-from-three-perspectives)。
+
+These UCs come from the three-perspective review rather than individual issues; see foundations §1 for sources and rationale.
+
+| UC | 视角 / Perspective | 关联 issue / Related issues | 状态 / Status |
+| --- | --- | --- | --- |
+| [E13-UC01](13-conclusions.md) 一页月度结论 / One-page brief | 结论直观性 / Clarity | [#127](https://github.com/EricWang1358/BridgeFlow-AI/issues/127) | PARTIAL |
+| [E13-UC02](13-conclusions.md) 跨期对比 / Period comparison | 完整性 / Completeness | — | DESIGNED |
+| [E13-UC03](13-conclusions.md) 指标可视化 / Metric charts | 结论直观性 / Clarity | — | DESIGNED |
+| [E13-UC04](13-conclusions.md) 月度报告文档 / Monthly report | 完整性、专业性 / Completeness, professionalism | [#22](https://github.com/EricWang1358/BridgeFlow-AI/issues/22)（季度年度 PDF 仍归 E06-UC06） | PARTIAL |
+| [E13-UC05](13-conclusions.md) 口径假设确认 / Convention confirmation | 完整性 / Completeness | [#23](https://github.com/EricWang1358/BridgeFlow-AI/issues/23) | PARTIAL |
+| [E13-UC06](13-conclusions.md) 依据等级 / Evidence grades | 专业性 / Professionalism | — | PARTIAL |
+| [E14-UC01](14-monthly-convenience.md) 进度清单 / Close checklist | 便民性 / Ease of use | — | PARTIAL |
+| [E14-UC02](14-monthly-convenience.md) 模板预填 / Template carry-over | 便民性 / Ease of use | — | DESIGNED |
+| [E14-UC03](14-monthly-convenience.md) 提交前自检 / Self-check | 便民性 / Ease of use | [#47](https://github.com/EricWang1358/BridgeFlow-AI/issues/47) | PARTIAL |
+| [E14-UC04](14-monthly-convenience.md) 单部门补传 / Single-department correction | 便民性 / Ease of use | — | DESIGNED |
+| [E14-UC05](14-monthly-convenience.md) 待确认收件箱 / Open-item inbox | 便民性 / Ease of use | [#144](https://github.com/EricWang1358/BridgeFlow-AI/issues/144) | DESIGNED |
+| [E14-UC06](14-monthly-convenience.md) 飞书文件夹导入 / Feishu folder import | 便民性 / Ease of use | [#140](https://github.com/EricWang1358/BridgeFlow-AI/issues/140) | DESIGNED |
 
 ## 关闭原因与实现不能混同 / Closure is not delivery
 

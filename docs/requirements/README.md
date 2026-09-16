@@ -4,9 +4,9 @@
 
 Reviewed issue bodies/comments and code at `main@4a38904` on 2026-09-16. The clean checkout was fast-forwarded from `a891131`; implementation is on `feat/14x-requirements-delivery`.
 
-本阶段已按用户要求于 2026-09-16 暂停开发，后续接手顺序与当前工作树状态见 [HANDOFF](../../HANDOFF.md)。暂停不表示全部 UC 完成。
+该分支已于 #187 合入主干。2026-09-17 按「项目完整性、流程便民性、结论直观性与专业性」三个视角复核，补充了共用基础、E13、E14 与类设计，并把全部 UC 的套话参与者与触发事件改为具体描述，见 [00-foundations](00-foundations.md)。后续接手顺序见 [HANDOFF](../../HANDOFF.md)；这不表示全部 UC 完成。
 
-This phase is paused at the user’s request. See [HANDOFF](../../HANDOFF.md) for the next phase; this is not full UC completion.
+The branch was merged in #187. On 2026-09-17 the catalogue was reviewed for completeness, ease of use and the clarity and professionalism of conclusions; foundations, E13, E14 and a class design were added and every UC's boilerplate actor and trigger was replaced. See [00-foundations](00-foundations.md) and [HANDOFF](../../HANDOFF.md); this is not full UC completion.
 
 ## 全项目范围与 14x 的关系 / Project scope and the 14x subset
 
@@ -26,9 +26,9 @@ Each epic has one bilingual file. The table above covers only the 14x subset: 3 
 
 ## 全项目盘点 / Full project inventory
 
-截至 2026-09-16，目录共有 **12 个 epic、73 个 UC**：14x 主线 3 个 epic / 21 UC，加上本轮补录的既有能力及历史范围 9 个 epic / 52 UC。既有实现按用户目标归类，工具、接口和测试本身不各算一个 UC。原 E01–E03 编号保持不变。
+截至 2026-09-17，目录共有 **14 个 epic、85 个 UC**：14x 主线 3 个 epic / 21 UC，既有能力及历史范围 9 个 epic / 52 UC（2026-09-16 补录），以及结论呈现与流程便民 2 个 epic / 12 UC（2026-09-17 新增）。既有实现按用户目标归类，工具、接口和测试本身不各算一个 UC。原 E01–E03 编号保持不变。
 
-As of 2026-09-16, this directory contains **12 epics and 73 UCs**: 3 epics / 21 UCs for the 14x track plus 9 epics / 52 UCs covering existing capabilities and historical scope. Grouping follows user goals, not a separate UC per tool/endpoint/test. E01–E03 IDs are unchanged.
+As of 2026-09-17, this directory contains **14 epics and 85 UCs**: 3 epics / 21 UCs for the 14x track, 9 epics / 52 UCs for existing capabilities and historical scope (added 2026-09-16), and 2 epics / 12 UCs for conclusions and monthly convenience (added 2026-09-17). Grouping follows user goals, not a separate UC per tool/endpoint/test. E01–E03 IDs are unchanged.
 
 | Epic | 文件 / File | UC 数 / Count |
 | --- | --- | ---: |
@@ -44,6 +44,10 @@ As of 2026-09-16, this directory contains **12 epics and 73 UCs**: 3 epics / 21 
 | E10 | [原生工作室、笔记本与使用引导 / Native workspace, notebooks and onboarding](10-workspace.md) | 6 |
 | E11 | [运行维护、评测与交付 / Operations, evaluation and delivery](11-operations-evaluation.md) | 5 |
 | E12 | [历史知识库与问答范围 / Historical knowledge and Q&A scope](12-knowledge-deferred.md) | 3 |
+| E13 | [月度结论呈现与口径治理 / Monthly conclusions, presentation and convention governance](13-conclusions.md) | 6 |
+| E14 | [月度流程便民 / Monthly workflow convenience](14-monthly-convenience.md) | 6 |
+
+共用基础不定义 UC / Shared foundations define no UCs: [00-foundations](00-foundations.md)（角色目录、逐 UC 参与者与触发、非功能需求、结论呈现规范、优先级与验收写法 / actors, per-UC actors and triggers, quality attributes, presentation standards, priority and acceptance format）；[class-design](class-design.md)（E13/E14 类设计与模式 / class design and patterns）。
 
 ### 状态汇总 / Status totals
 
@@ -51,8 +55,8 @@ As of 2026-09-16, this directory contains **12 epics and 73 UCs**: 3 epics / 21 
 | --- | ---: |
 | IMPLEMENTED | 38 |
 | IMPLEMENTED_OFFLINE | 2 |
-| PARTIAL | 19 |
-| DESIGNED | 6 |
+| PARTIAL | 25 |
+| DESIGNED | 12 |
 | BLOCKED_EXTERNAL | 3 |
 | DEFERRED | 5 |
 
