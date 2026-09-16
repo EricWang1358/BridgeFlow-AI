@@ -33,8 +33,8 @@ Frozen human dictionary → shape profiling → closed candidate set → native 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「读取人工字典与拒绝猜字段」。
+- 参与者：字典与标准维护人（A05）、Captain 代理（S01）；写入操作按工具声明取得审批。
+- 触发：导入或研判需要知道每一列在字典里代表什么。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：从冻结字典取得实体、关系、连接键和指标；缺声明时提示配置缺失。
 - 异常、验收和边界：默认路径不猜第一列；遗留关闭路径不能当成现行产品能力。
@@ -42,8 +42,8 @@ Frozen human dictionary → shape profiling → closed candidate set → native 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to read declared fields without guessing.
+- Actors: Dictionary and standards steward (A05), Captain agent (S01); writes follow the tool-declared approval policy.
+- Trigger: import or review needs the declared meaning of each column.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Read entities, relations, join keys and measures from the frozen dictionary; missing declarations require configuration.
 - Exceptions, acceptance and boundary: The default path never guesses the first column; disabled legacy paths are not current product capabilities.
@@ -66,8 +66,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「无原始值的列特征画像」。
+- 参与者：Captain 代理（S01）、月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：有未知列需要匹配，但不能把单元格内容交给模型。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：计算唯一度、填充率、类型及跨部门重合度，帮助判断需要匹配的列。
 - 异常、验收和边界：工具不带真实单元格；特征不等于字段语义已获批准。
@@ -75,8 +75,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to profile columns without exposing cell values.
+- Actors: Captain agent (S01), Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: unknown columns need matching without exposing cell values to the model.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Compute uniqueness, fill ratio, type and cross-department overlap to identify matching needs.
 - Exceptions, acceptance and boundary: Tools omit actual cells; statistical shape does not approve field semantics.
@@ -99,8 +99,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「列候选、审批与拒绝恢复」。
+- 参与者：月度汇总负责人（A03）、审批人（A06）；写入操作按工具声明取得审批。
+- 触发：上传件列名与字典不一致，需要提议匹配并由人审批。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：从已声明字段生成候选，显示依据；人审批后记录映射；拒绝后提示补规则、改匹配或搁置。
 - 异常、验收和边界：候选集外目标拒绝；无审批不保存；新映射只影响后续导入。
@@ -108,8 +108,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to review field candidates and recover after refusal.
+- Actors: Monthly consolidation lead (A03), Approver (A06); writes follow the tool-declared approval policy.
+- Trigger: uploaded column names differ from the dictionary and a match must be proposed and approved.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Offer candidates from declared fields with evidence, persist after approval and provide correction/configuration/defer paths after refusal.
 - Exceptions, acceptance and boundary: Reject targets outside the closed set and writes without approval; apply new mappings to later imports only.
@@ -132,8 +132,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「跨部门实体关系与同类别名」。
+- 参与者：字典与标准维护人（A05）、审批人（A06）；写入操作按工具声明取得审批。
+- 触发：不同部门用不同写法指同一实体，或实体之间有业务关系。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：使用字典关系、行内共现及残余裁决；只对同一实体的别名使用相似度。
 - 异常、验收和边界：产品与原料不因名称相似自动建立关系；未知与低置信分别保留。
@@ -141,8 +141,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to resolve cross-department relations and aliases.
+- Actors: Dictionary and standards steward (A05), Approver (A06); writes follow the tool-declared approval policy.
+- Trigger: departments name the same entity differently or entities are related.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Use declared relations, within-row co-occurrence and residual adjudication; similarity applies only to aliases of the same entity.
 - Exceptions, acceptance and boundary: Do not infer product/material relations from name similarity; distinguish unresolved from low-confidence results.
@@ -165,8 +165,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「映射记忆、审计与失效」。
+- 参与者：月度汇总负责人（A03）、字典与标准维护人（A05）；写入操作按工具声明取得审批。
+- 触发：下个月再导入时，希望复用已批准的匹配，且依据变化时失效。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：保存批准的关系及依据；跨批次复用；按语义证据或列形状变更重新询问。
 - 异常、验收和边界：文字改写不必失效；事实变化不能复用；批准身份仍受共享会话边界限制。
@@ -174,8 +174,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to persist mapping memory with evidence invalidation.
+- Actors: Monthly consolidation lead (A03), Dictionary and standards steward (A05); writes follow the tool-declared approval policy.
+- Trigger: next month's import should reuse approved matches and invalidate them when evidence changes.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Persist approved relations and evidence for reuse; ask again when semantic evidence or column shape changes.
 - Exceptions, acceptance and boundary: Wording changes need not invalidate memory; changed facts do; approval identity retains shared-session limits.
@@ -198,8 +198,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「会议规则上下文接入」。
+- 参与者：字典与标准维护人（A05）、部门负责人（A02）；写入操作按工具声明取得审批。
+- 触发：会议上口头约定了字段规则，需要作为有来源的规则上下文登记。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：目标：登记会议/文档来源，提取规则候选，人工确认后作为封闭映射依据。
 - 异常、验收和边界：现有候选证据不等于通用音频转写或会议文档解析；未发现该通用管线的交付证据。
@@ -207,8 +207,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to ingest meeting context for mapping rules.
+- Actors: Dictionary and standards steward (A05), Department owner (A02); writes follow the tool-declared approval policy.
+- Trigger: field rules agreed verbally in a meeting must be registered with their source.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Target: register meeting/document references, extract proposed rules and confirm them before matching.
 - Exceptions, acceptance and boundary: Existing candidate evidence is not general transcription or meeting parsing; no delivered general pipeline was found.

@@ -33,8 +33,8 @@ Browser identity via portal JWT/JWKS is distinct from shared host authentication
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「原生审批与一次性回执」。
+- 参与者：审批人（A06）、Captain 代理（S01）；写入操作按工具声明取得审批。
+- 触发：代理要执行写入或跨边界操作。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：对工具声明的写操作展示请求，原生批准后签发绑定参数的单次回执并消费。
 - 异常、验收和边界：拒绝/取消/无人应答均不写；重放或改参失败；不能从提示词绕过。
@@ -42,8 +42,8 @@ Browser identity via portal JWT/JWKS is distinct from shared host authentication
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to require native approval and one-use receipts.
+- Actors: Approver (A06), Captain agent (S01); writes follow the tool-declared approval policy.
+- Trigger: an agent attempts a write or boundary-crossing action.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Display declared mutations and consume a one-use parameter-bound receipt only after native approval.
 - Exceptions, acceptance and boundary: Rejection, cancellation and no answer cause no write; replay and parameter changes fail; prompts cannot bypass policy.
@@ -66,8 +66,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「拒绝理由与结果一致」。
+- 参与者：审批人（A06）、Captain 代理（S01）；写入操作按工具声明取得审批。
+- 触发：审批人拒绝了一次操作并给出理由。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：在审批卡录入理由并按会话/调用绑定，拒绝结果将未执行事实反馈给模型。
 - 异常、验收和边界：拒绝写入不等于保存负映射；无回复不称作人工拒绝；备注不能串调用。
@@ -75,8 +75,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to carry refusal reasons into tool outcomes.
+- Actors: Approver (A06), Captain agent (S01); writes follow the tool-declared approval policy.
+- Trigger: an approver rejects an action with a reason.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Bind decision notes to session/call and relay the fact that the operation did not execute to the model.
 - Exceptions, acceptance and boundary: Refusing a write differs from saving a negative mapping; no answer is not human rejection; notes cannot cross calls.
@@ -99,8 +99,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「工具护栏与数据上下文边界」。
+- 参与者：Captain 代理（S01）、平台运维管理员（A10）；写入操作按工具声明取得审批。
+- 触发：模型输入或工具参数中出现指令式文本或超界数据。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：限制工具册、禁 shell/editor，拒绝指令形状的非可信输入；模型仅取有界摘要。
 - 异常、验收和边界：后来 allow 策略不能撤销拒绝；不能声称提示词防御足够或全面消除注入。
@@ -108,8 +108,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to enforce tool guards and context boundaries.
+- Actors: Captain agent (S01), Platform operator (A10); writes follow the tool-declared approval policy.
+- Trigger: instruction-shaped text or over-bounded data appears in model input or tool arguments.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Restrict tools, disable shells/editors and reject instruction-shaped untrusted input; models receive bounded summaries.
 - Exceptions, acceptance and boundary: Later allow policies cannot undo denial; prompts alone are insufficient and no universal injection immunity is claimed.
@@ -132,8 +132,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「飞书登录与应用令牌」。
+- 参与者：部门填报员（A01）、平台运维管理员（A10）；写入操作按工具声明取得审批。
+- 触发：员工通过飞书身份登录门户并打开应用。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：门户 OAuth 确认身份，按应用签 JWT，后端用 JWKS 校验；浏览器令牌失败有登录恢复。
 - 异常、验收和边界：协议测试已存在；真实飞书租户未验收；门户认证不等于全 API 部门隔离。
@@ -141,8 +141,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to authenticate through feishu and application tokens.
+- Actors: Department contributor (A01), Platform operator (A10); writes follow the tool-declared approval policy.
+- Trigger: an employee signs in through Feishu and opens the application.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Use portal OAuth, application-scoped JWTs and backend JWKS verification, with browser login recovery.
 - Exceptions, acceptance and boundary: Protocol tests exist; real tenant acceptance is pending; portal authentication does not provide department isolation on every API.
@@ -165,8 +165,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「浏览器批次部门可见性」。
+- 参与者：部门负责人（A02）、平台运维管理员（A10）；写入操作按工具声明取得审批。
+- 触发：员工只应看到本部门有权查看的批次。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：按人工访问配置限制上传和批次读取，不可见批次返回 404；未配置失败关闭。
 - 异常、验收和边界：浏览器批次、总表/XLSX 与工作流目录/看板/草稿/信号现已按身份过滤。工具路径仍为共享主机权限，个人操作授权待补。
@@ -174,8 +174,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to enforce departmental batch visibility.
+- Actors: Department owner (A02), Platform operator (A10); writes follow the tool-declared approval policy.
+- Trigger: an employee must see only batches their department may view.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Use human access configuration to restrict uploads and batch reads; hidden batches return 404 and missing configuration fails closed.
 - Exceptions, acceptance and boundary: Browser batches, master/XLSX and workflow catalogue/board/drafts/signals now enforce identity scope. Tools retain shared host authority; individual operation authorization remains open.
@@ -198,8 +198,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「审批操作角色与个人审计」。
+- 参与者：审批人（A06）、平台运维管理员（A10）；写入操作按工具声明取得审批。
+- 触发：需要限定谁能批准哪类操作，并留下个人审计记录。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：目标：将批准动作绑定员工身份、角色权限和审计记录，分离查看、上传和批准权限。
 - 异常、验收和边界：批准写入已绑定验签员工、明确操作权限和精确请求；拒绝审计及原生会话读取仍未实现员工隔离，不可把 confirmed_by 文本当身份认证。
@@ -207,8 +207,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to authorize approver roles and individual audit.
+- Actors: Approver (A06), Platform operator (A10); writes follow the tool-declared approval policy.
+- Trigger: who may approve which action must be restricted and individually audited.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Target: bind approval to employee identity, operation roles and audit records, separating view/upload/approval permissions.
 - Exceptions, acceptance and boundary: Approved mutations bind the verified employee, explicit operation grants and exact request. Refusal audit and native session reads still lack employee isolation; confirmed_by text is not authentication.

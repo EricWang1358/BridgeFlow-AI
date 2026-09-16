@@ -35,8 +35,8 @@ Upload → immutable BatchSnapshot + frozen dictionary → sanitizer → correct
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「多文件批次与冻结版本」。
+- 参与者：月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：月末收到四个部门的报表，需要导入成一个可复现的批次。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：选择期间、部门及 CSV/XLSX 文件，保存批次标识、来源和冻结字典；重启后读取同一结果。
 - 异常、验收和边界：重跑产生可定位版本；不得静默重写旧结果；不等于任意来源连接器。
@@ -44,8 +44,8 @@ Upload → immutable BatchSnapshot + frozen dictionary → sanitizer → correct
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to import files into frozen batches.
+- Actors: Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: month-end department reports must be imported as one reproducible batch.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Select period, departments and CSV/XLSX files; persist batch identity, sources and dictionary snapshot; reload after restart.
 - Exceptions, acceptance and boundary: Reruns retain addressable versions without silently rewriting old results; this is not a generic connector.
@@ -68,8 +68,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「明确工作表和表头位置」。
+- 参与者：月度汇总负责人（A03）、字典与标准维护人（A05）；写入操作按工具声明取得审批。
+- 触发：工作簿有多个工作表或表头不在第 1 行。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：按声明或用户选择解析工作表、表头与数据起始行，保留原始坐标。
 - 异常、验收和边界：多个候选不能猜第一张表；选错或结构不符给出恢复动作。
@@ -77,8 +77,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to select declared sheets and headers.
+- Actors: Monthly consolidation lead (A03), Dictionary and standards steward (A05); writes follow the tool-declared approval policy.
+- Trigger: a workbook has several sheets or its header is below row 1.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Parse the declared or selected sheet, header and data start while retaining source coordinates.
 - Exceptions, acceptance and boundary: Do not guess the first sheet among multiple candidates; expose recovery for incompatible layouts.
@@ -101,8 +101,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「格式规范与质量问题」。
+- 参与者：月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：导入的表格存在格式不一、重复、错位等质量问题。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：规范可确定的数值、日期及空行，检测重复和错列，输出修复日志或隔离项。
 - 异常、验收和边界：可疑重复交易不能等同于可删重复行；关键值不由模型补全；行为受声明约束。
@@ -110,8 +110,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to normalize formats and detect quality problems.
+- Actors: Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: an imported sheet has inconsistent formats, duplicates or shifted rows.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Normalize unambiguous numbers, dates and blank rows; detect duplicates and shifted columns; produce corrections or quarantine entries.
 - Exceptions, acceptance and boundary: Suspected duplicate transactions are not automatically disposable rows; models never fill critical values; declarations control behavior.
@@ -134,8 +134,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「歧义日期的声明与恢复」。
+- 参与者：字典与标准维护人（A05）、月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：日期写法有歧义（如 03/11/2025），需要按部门声明解读。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：歧义日期进入待确认；按字典日期顺序解释后重新导入或处置。
 - 异常、验收和边界：未声明日/月顺序不得猜测；按行日期归期而不是强塞批次月份。
@@ -143,8 +143,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to resolve date ambiguity by declaration.
+- Actors: Dictionary and standards steward (A05), Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: dates are ambiguous (e.g. 03/11/2025) and must be read by department declaration.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Flag ambiguous dates, apply a declared date order and reimport or resolve the quarantined record.
 - Exceptions, acceptance and boundary: Do not guess day/month order; assign periods from row dates rather than forcing the batch month.
@@ -167,8 +167,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「清洗差异与原件定位」。
+- 参与者：月度汇总负责人（A03）、部门负责人（A02）；写入操作按工具声明取得审批。
+- 触发：需要核对某处清洗改动对应原件的哪一格。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：查看原值、修复值、规则、文件、表和单元格，核对来源与总数。
 - 异常、验收和边界：引用缺关键部分不能编造；模型只获有界引用，不返还整表。
@@ -176,8 +176,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to trace corrections to original sources.
+- Actors: Monthly consolidation lead (A03), Department owner (A02); writes follow the tool-declared approval policy.
+- Trigger: a cleaning change must be traced to its original cell.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Inspect original/corrected values, rule, file, sheet and cell with source counts.
 - Exceptions, acceptance and boundary: Do not fabricate missing provenance; model tools return bounded citations, never whole tables.
@@ -200,8 +200,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「隔离记录批准放行或丢弃」。
+- 参与者：月度汇总负责人（A03）、审批人（A06）；写入操作按工具声明取得审批。
+- 触发：有行被隔离，需要决定放行或丢弃。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：查看失败检查；提交修正及处置原因；审批后重校验，应用为派生批次。
 - 异常、验收和边界：无审批或重校验失败不放行；原批次不变；丢弃有审计记录。
@@ -209,8 +209,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to approve quarantine release or discard.
+- Actors: Monthly consolidation lead (A03), Approver (A06); writes follow the tool-declared approval policy.
+- Trigger: quarantined rows must be released or discarded.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Inspect failed checks, propose fixes and a disposition reason, approve, revalidate and create a derived batch.
 - Exceptions, acceptance and boundary: Absent approval or failed revalidation blocks release; preserve the original batch and audit discards.
@@ -233,8 +233,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「原件列表和分页预览」。
+- 参与者：月度汇总负责人（A03）、部门负责人（A02）；写入操作按工具声明取得审批。
+- 触发：需要在浏览器里翻看上传原件核对内容。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：从批次来源列表打开实际保留的原始解析视图，按页定位。
 - 异常、验收和边界：缺原件明确不可预览；清洗结果不冒充原件；网页读取不成为模型读取。
@@ -242,8 +242,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to browse original sources with pagination.
+- Actors: Monthly consolidation lead (A03), Department owner (A02); writes follow the tool-declared approval policy.
+- Trigger: uploaded originals must be browsed page by page.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Open retained source previews from a batch source list and locate records by page.
 - Exceptions, acceptance and boundary: Missing originals are unavailable rather than substituted with cleaned rows; browser access does not expose rows to models.
@@ -266,8 +266,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「币种换算、单位治理与缺月补齐」。
+- 参与者：字典与标准维护人（A05）、月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：报表出现不同币种、单位或缺少某个月份。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：现有计算检查声明币种并拒绝不一致；填报可按声明规范单位。
 - 异常、验收和边界：通用汇率版本、跨币换算、缺月补齐尚未实现；#17 因范围缩减关闭，不记作完成。
@@ -275,8 +275,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to currency conversion, unit governance and missing periods.
+- Actors: Dictionary and standards steward (A05), Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: reports mix currencies or units, or a month is missing.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Current computation checks declared currency and rejects mismatches; intake normalizes declared units.
 - Exceptions, acceptance and boundary: General FX versioning, cross-currency conversion and missing-month completion remain unimplemented; #17 was closed for scope, not delivery.

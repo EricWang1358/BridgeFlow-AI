@@ -33,8 +33,8 @@ Frozen integration declaration + retained source sheets → declared keys/rollup
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「日周粒度归并到月」。
+- 参与者：月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：部门按日或按周填报，需要归并到月份口径。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：按度量声明归并日周数据，保留原始期间和来源供下钻。
 - 异常、验收和边界：未裁决日期不参与；数量、价格、存量不得统一盲目求和。
@@ -42,8 +42,8 @@ Frozen integration declaration + retained source sheets → declared keys/rollup
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to roll daily and weekly data onto months.
+- Actors: Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: departments report daily or weekly and figures must roll up to the month.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Roll daily/weekly measurements onto months using declared semantics while retaining contributing periods and sources.
 - Exceptions, acceptance and boundary: Exclude unresolved dates; do not blindly sum quantities, prices and stocks alike.
@@ -66,8 +66,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「按声明构建跨部门总表」。
+- 参与者：月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：四部门批次就绪，需要生成业务方设计的跨部门总表。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：按业务模板顺序与公共键整合部门文件；生产明细依声明汇总，缺部门显示部分记录。
 - 异常、验收和边界：同名不同编码不合并；未声明多行汇总拒绝；冻结批次不借用当前规则。
@@ -75,8 +75,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to build a declared cross-department master.
+- Actors: Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: a four-department batch is ready and the business-designed master table must be built.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Integrate departments using declared common keys and template order; roll up production as declared and mark missing departments.
 - Exceptions, acceptance and boundary: Do not merge matching names with different codes; reject undeclared rollups; frozen batches do not borrow current policy.
@@ -99,8 +99,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「公式核对与跨部门差异」。
+- 参与者：月度汇总负责人（A03）、部门负责人（A02）；写入操作按工具声明取得审批。
+- 触发：总表生成后，需要核对部门填写值与字典公式、跨部门数字是否一致。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：比较上传值与声明公式，检查数量、名称和财务分类，显示冲突和未确认假设。
 - 异常、验收和边界：缺税率不标已验证；缺数值不能只加剩余行；收入与成本口径分离。
@@ -108,8 +108,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to verify formulas and cross-department differences.
+- Actors: Monthly consolidation lead (A03), Department owner (A02); writes follow the tool-declared approval policy.
+- Trigger: the master must check department values against formulas and across departments.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Compare supplied values against formulas and check quantities, names and financial classes, exposing conflicts and assumptions.
 - Exceptions, acceptance and boundary: Missing VAT prevents verification; missing values cannot yield partial sums presented as complete; separate revenue and costs.
@@ -132,8 +132,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「单元格下钻与源文件跳转」。
+- 参与者：月度汇总负责人（A03）、管理层决策者（A04）；写入操作按工具声明取得审批。
+- 触发：有人质疑总表里的某个数字。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：点击总表单元格查看计算或引用，再定位对应部门原件；失败可重试。
 - 异常、验收和边界：引用与当前批次一致；没有出处不能以另一批次补齐。
@@ -141,8 +141,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to drill from master cells to source files.
+- Actors: Monthly consolidation lead (A03), Management decision-maker (A04); writes follow the tool-declared approval policy.
+- Trigger: someone questions a number in the master table.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Open a master cell to inspect its calculation/citations and navigate to its departmental source; allow retry after failure.
 - Exceptions, acceptance and boundary: Citations must belong to the current batch; never substitute sources from another batch.
@@ -165,8 +165,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「总表 XLSX 导出」。
+- 参与者：月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：总表需要交给不使用本系统的人。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：下载当前冻结批次的总表工作簿，保留模板列和未决问题。
 - 异常、验收和边界：公式形状的不可信文本保持文本；此能力不代表全部报告 PDF 导出。
@@ -174,8 +174,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to export the master workbook.
+- Actors: Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: the master must be handed to people outside the system.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Download the frozen batch master workbook with template columns and open issues.
 - Exceptions, acceptance and boundary: Untrusted formula-shaped strings remain text; this does not implement general report PDF export.
@@ -198,8 +198,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「季度年度总表与 PDF 报告」。
+- 参与者：管理层决策者（A04）、月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：季度或年度经营会需要汇总表和正式报告。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：目标：在批准聚合口径后生成季/年结果，并按明确筛选及版本生成 PDF。
 - 异常、验收和边界：现有月度总表和 XLSX 不满足该完整需求；未发现完整交付路径，保留为范围缺口。
@@ -207,8 +207,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to quarter/year masters and pdf reports.
+- Actors: Management decision-maker (A04), Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: a quarterly or annual meeting needs consolidated tables and a formal report.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Target: generate quarter/year results under approved aggregation policies and PDF reports with version/filter context.
 - Exceptions, acceptance and boundary: Monthly masters and XLSX do not satisfy this scope; no complete delivery path was found.

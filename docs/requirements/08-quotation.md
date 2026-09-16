@@ -32,8 +32,8 @@ StructuredDocument facts + human quotation contract → evidence/units checks �
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「报价声明与输入责任」。
+- 参与者：报价负责人（A07）；写入操作按工具声明取得审批。
+- 触发：收到询价，需要知道报价要哪些输入、各由谁提供。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：查看人工配置的报价字段、单位、必需依据、公式与决策角色。
 - 异常、验收和边界：无配置明确拒绝；政策系数不是合同事实；只读目录不算已生成报价。
@@ -41,8 +41,8 @@ StructuredDocument facts + human quotation contract → evidence/units checks �
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to read quotation requirements and ownership.
+- Actors: Quotation owner (A07); writes follow the tool-declared approval policy.
+- Trigger: an inquiry arrives and the owner needs the required inputs and who supplies them.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Read configured quote fields, units, required evidence, formulas and decision roles.
 - Exceptions, acceptance and boundary: Refuse missing configuration; policy factors are not contract facts; reading a catalogue is not producing a quote.
@@ -65,8 +65,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「基于声明计算内部草稿」。
+- 参与者：报价负责人（A07）、Captain 代理（S01）；写入操作按工具声明取得审批。
+- 触发：输入齐备，需要按声明政策算出内部报价草稿。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：验证结构化事实后用 Decimal 与声明舍入计算价格档及风险检查，绑定输入版本。
 - 异常、验收和边界：缺成本/产能/付款依据、错误单位、循环或除零不给半成品价格；实现限结构化事实。
@@ -74,8 +74,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to compute an evidence-backed internal draft.
+- Actors: Quotation owner (A07), Captain agent (S01); writes follow the tool-declared approval policy.
+- Trigger: inputs are complete and an internal draft must be computed from the declared policy.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Validate structured facts, calculate price bands using Decimal and declared rounding, and bind the draft to input versions.
 - Exceptions, acceptance and boundary: Missing cost/capacity/payment evidence, wrong units, cycles or division by zero yield no partial prices; implementation accepts structured facts.
@@ -98,8 +98,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「真实客户原件提取」。
+- 参与者：报价负责人（A07）、Captain 代理（S01）；写入操作按工具声明取得审批。
+- 触发：输入还在客户合同、会话记录等原件里。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：目标：按获准解析器从真实合同、条款和附件提取事实及页/段引用，再进入报价计算。
 - 异常、验收和边界：当前只有结构化/合成事实验证；真实样板、格式适配及语义验收均未完成。
@@ -107,8 +107,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to extract facts from real customer originals.
+- Actors: Quotation owner (A07), Captain agent (S01); writes follow the tool-declared approval policy.
+- Trigger: inputs are still inside customer contracts or conversation records.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Target: use approved parsers to extract facts and page/paragraph references from real contracts and attachments before computation.
 - Exceptions, acceptance and boundary: Current evidence covers structured/synthetic facts only; real samples, format adapters and semantic acceptance remain open.
@@ -131,8 +131,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「多方案比较及批准签发」。
+- 参与者：报价负责人（A07）、审批人（A06）；写入操作按工具声明取得审批。
+- 触发：需要比较价格、账期、交期等方案并批准对外版本。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：目标：比较至少三组价格与账期，展示成本、毛利、产能及风险，批准具体版本才可外用。
 - 异常、验收和边界：价格档计算不等于方案审批；当前通用审批框架不代表报价签发已接入。
@@ -140,8 +140,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to compare scenarios and approve release.
+- Actors: Quotation owner (A07), Approver (A06); writes follow the tool-declared approval policy.
+- Trigger: price, terms and delivery scenarios must be compared and one approved for release.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Target: compare at least three price/term scenarios with costs, margin, capacity and risks; approve an exact version for external use.
 - Exceptions, acceptance and boundary: Price-band computation is not scenario approval; the generic approval framework does not establish quote release integration.
@@ -164,8 +164,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「内部草稿与禁止自动外发」。
+- 参与者：报价负责人（A07）、Captain 代理（S01）；写入操作按工具声明取得审批。
+- 触发：草稿完成后，有人或代理试图直接外发。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：返回草稿性质、输入依据和限制，由用户决定后续人工业务动作。
 - 异常、验收和边界：未批准不得声称可对外使用；当前没有客户自动发送通道。
@@ -173,8 +173,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to keep drafts internal without automatic sending.
+- Actors: Quotation owner (A07), Captain agent (S01); writes follow the tool-declared approval policy.
+- Trigger: after drafting, a person or agent attempts to send it externally.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Return draft status, input evidence and limitations for subsequent human business action.
 - Exceptions, acceptance and boundary: Unapproved drafts cannot be claimed externally usable; no automatic customer sending channel is implemented.

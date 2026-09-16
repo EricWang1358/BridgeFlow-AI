@@ -29,7 +29,8 @@ Deliver discovery and mvp decisions with explicit human decisions and verifiable
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「材料分类与来源登记」。
+- 参与者：月度汇总负责人（A03）、字典与标准维护人（A05）；写入操作按工具声明取得审批。
+- 触发：项目启动时收到部门报表、说明或会议纪要，需要先弄清手里有哪些材料。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：上传表格、说明或会议材料；按文件版本、部门、期间登记，区分空模板、实际数据及规则陈述。
 - 异常与验收：空模板只能产出结构描述；解析失败给出文件级原因，不生成业务记录。
@@ -38,7 +39,8 @@ Deliver discovery and mvp decisions with explicit human decisions and verifiable
 
 ### English requirements and acceptance
 
-- Trigger: the user requests classify materials and register provenance at the relevant project stage.
+- Actors: Monthly consolidation lead (A03), Dictionary and standards steward (A05); writes follow the tool-declared approval policy.
+- Trigger: project kickoff brings department reports, notes or minutes that must be inventoried first.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Register uploaded spreadsheets, narratives and meeting materials by version, department and period; distinguish empty templates, records and rule statements.
 - Exceptions and acceptance: An empty template produces structure only; parsing failures identify the file and never fabricate records.
@@ -58,7 +60,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「有依据的候选场景卡」。
+- 参与者：月度汇总负责人（A03）、Captain 代理（S01）；写入操作按工具声明取得审批。
+- 触发：材料登记完成后，需要找出值得改进的跨部门工作场景。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：根据材料提出业务问题、涉及部门、输入、预期输出、人工节点、规则依赖和价值假设；每项关联来源。
 - 异常与验收：同名字段不能证明交接；证据不足保留问题，不能自动批准候选。
@@ -67,7 +70,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests evidence-backed opportunity cards at the relevant project stage.
+- Actors: Monthly consolidation lead (A03), Captain agent (S01); writes follow the tool-declared approval policy.
+- Trigger: registered materials need to be turned into candidate cross-department work scenarios.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Propose a business problem, departments, inputs, outputs, human checkpoints, rule dependencies and value hypotheses with source references.
 - Exceptions and acceptance: Matching field names do not prove a handoff; retain open questions and never auto-approve opportunities.
@@ -87,7 +91,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「信息流与文件流草图」。
+- 参与者：月度汇总负责人（A03）、部门负责人（A02）；写入操作按工具声明取得审批。
+- 触发：业务方选定要深入的候选场景，需要看清信息与文件如何在部门间流转。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：先记录阶段触发、角色、输入输出与证据，再展示支持并行、分支和返工的图；文件边包含版本。
 - 异常与验收：每条边区分 confirmed/inferred/missing/conflict；未知阶段不能按部门名称排序。
@@ -96,7 +101,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests information and document flow drafts at the relevant project stage.
+- Actors: Monthly consolidation lead (A03), Department owner (A02); writes follow the tool-declared approval policy.
+- Trigger: the business picks a candidate scenario and needs to see how information and files move between departments.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Record stage triggers, roles, inputs, outputs and evidence, then render parallel branches and rework; document edges include versions.
 - Exceptions and acceptance: Each edge distinguishes confirmed/inferred/missing/conflict; department names never determine ordering.
@@ -116,7 +122,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「四象限与优先级」。
+- 参与者：管理层决策者（A04）、月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：候选场景超过一个，管理层需要按落地难度与价值排序。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：以候选项目为本轮评分对象，记录 effort、value、评分人、量表版本及依据；坐标点击可追溯。
 - 异常与验收：缺任一评分或依据不落点；量表、分界线和权重需业务确认；排序不是立项。
@@ -125,7 +132,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests quadrants and prioritization at the relevant project stage.
+- Actors: Management decision-maker (A04), Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: more than one candidate exists and management needs them ranked by effort and value.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Use candidate projects as the proposed scoring object; record effort, value, scorer, scale version and evidence; expose evidence for each point.
 - Exceptions and acceptance: Missing scores or evidence prevent plotting; scales, boundaries and weights need business confirmation; ranking is not approval.
@@ -145,7 +153,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「会议准备与实施路线草案」。
+- 参与者：月度汇总负责人（A03）、Captain 代理（S01）；写入操作按工具声明取得审批。
+- 触发：管理层初选了项目，需要组织相关部门开会确认。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：初选候选后生成范围、风险、资源依赖、阶段退出条件和待讨论问题；记录会议输入版本。
 - 异常与验收：估算标记假设，不承诺未测节省时间；会议记录变化须保留来源。
@@ -154,7 +163,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests meeting preparation and implementation proposal at the relevant project stage.
+- Actors: Monthly consolidation lead (A03), Captain agent (S01); writes follow the tool-declared approval policy.
+- Trigger: management shortlists projects and a cross-department meeting must be prepared.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Prepare scope, risks, resource dependencies, stage exit criteria and discussion questions against a frozen input version.
 - Exceptions and acceptance: Label estimates as assumptions; do not promise unmeasured savings; retain sources for meeting changes.
@@ -174,7 +184,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### 中文需求与验收
 
-- 触发：用户在本 epic 的相应阶段发起「MVP 决策、投票与修订」。
+- 参与者：管理层决策者（A04）、部门负责人（A02）；写入操作按工具声明取得审批。
+- 触发：会议结束，需要记录共识、投票并确认 MVP 范围。
 - 前置：用户可访问所需材料；明确项目及输入版本。运行时写入沿用主机授权和审批；设计草稿不视为批准标准。
 - 主流程：记录候选、投票或确认、决定人、理由、条件和排除范围；批准后交 Agent 2。
 - 异常与验收：未定投票规则不能自动计票生效；条件未满足保留条件式决定；修订新建版本。
@@ -183,7 +194,8 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 
 ### English requirements and acceptance
 
-- Trigger: the user requests mvp decision, voting and revision at the relevant project stage.
+- Actors: Management decision-maker (A04), Department owner (A02); writes follow the tool-declared approval policy.
+- Trigger: the meeting ends and consensus, votes and the MVP scope must be recorded.
 - Preconditions: authorized access to the required materials and identified project/input versions. Runtime writes use host authorization and approval; design drafts are not approved standards.
 - Main flow: Record candidates, votes or confirmations, decision owner, rationale, conditions and exclusions; hand the approved scope to Agent 2.
 - Exceptions and acceptance: No automatic approval without agreed voting rules; unresolved conditions remain explicit; revisions create versions.

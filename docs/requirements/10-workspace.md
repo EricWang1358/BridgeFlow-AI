@@ -33,8 +33,8 @@ Official DSH shell and session identity + Client slots → Sources/chat/Studio. 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「来源、聊天与工作室并行操作」。
+- 参与者：月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：汇总负责人在同一页面上看来源、与 captain 对话、查看产物。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：在官方工作面切换来源预览、原生对话与业务产物，按笔记本用途展示功能。
 - 异常、验收和边界：不替换原生输入框或另建聊天存储；配置预览与真实产物分开。
@@ -42,8 +42,8 @@ Official DSH shell and session identity + Client slots → Sources/chat/Studio. 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to use sources, native chat and studio together.
+- Actors: Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: the consolidation lead works with sources, chat and artifacts on one page.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Use the official workspace to navigate sources, native conversation and artifacts according to notebook purpose.
 - Exceptions, acceptance and boundary: Do not replace the native composer or build another chat store; distinguish configuration previews from actual artifacts.
@@ -66,8 +66,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「笔记本创建、保存与恢复」。
+- 参与者：月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：工作需要分多次完成，离开后要回到原处。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：创建原生会话，编辑名称用途与来源，等待标题和书签落盘后确认保存，重开恢复。
 - 异常、验收和边界：未保存切换提供保存/放弃/取消；写失败保留输入；不能冒充已保存。
@@ -75,8 +75,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to create, save and restore notebooks.
+- Actors: Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: work spans sessions and must resume where it stopped.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Create native sessions, edit title/purpose/sources, await persisted titles/bookmarks before acknowledging save and restore later.
 - Exceptions, acceptance and boundary: Offer save/discard/cancel for dirty navigation; preserve input on failure and never falsely acknowledge saving.
@@ -99,8 +99,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「真实合成样例的无模型导入」。
+- 参与者：月度汇总负责人（A03）、管理层决策者（A04）；写入操作按工具声明取得审批。
+- 触发：第一次试用或演示，还没有自己的数据。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：导入仓库保留的 v2 模板案例及冻结字典，展示总表与原件，用户另行发起研判。
 - 异常、验收和边界：不修改部署字典；合成样例不能算真实客户或独立留出验收。
@@ -108,8 +108,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to import the retained synthetic case without model calls.
+- Actors: Monthly consolidation lead (A03), Management decision-maker (A04); writes follow the tool-declared approval policy.
+- Trigger: a first trial or demo happens before real data exists.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Import the retained v2 template case with its frozen dictionary, show master/sources and leave review as a separate user action.
 - Exceptions, acceptance and boundary: Do not change the deployment dictionary; synthetic examples are neither customer acceptance nor independent held-out acceptance.
@@ -132,8 +132,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「可恢复的页面操作导览」。
+- 参与者：部门填报员（A01）、月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：新用户第一次打开工作面，不知道从哪开始。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：欢迎、样例导入、总表、差异、出处、下载、命名和保存按实际事件推进，支持稍后与重播。
 - 异常、验收和边界：不能伪造完成标记；刷新可恢复；关闭标签不保证继续；不自动审批或调用模型。
@@ -141,8 +141,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to follow and resume the product tour.
+- Actors: Department contributor (A01), Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: a new user opens the workspace for the first time.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Advance welcome/import/master/differences/sources/download/name/save steps from actual events, with defer and replay.
 - Exceptions, acceptance and boundary: Reject forged completion; refresh can resume but tab closure need not; never auto-approve or invoke a model.
@@ -165,8 +165,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「双语、主题、窄屏与键盘操作」。
+- 参与者：部门填报员（A01）、管理层决策者（A04）；写入操作按工具声明取得审批。
+- 触发：用户使用英文界面、深色主题、手机窄屏或只用键盘。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：切换中英文、深浅主题与窄屏面板，保留焦点、键盘动作和可读错误。
 - 异常、验收和边界：现有历史浏览器证据见 docs/00；未声称每个新工具均有本轮视觉复验。
@@ -174,8 +174,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to use bilingual, themed and accessible layouts.
+- Actors: Department contributor (A01), Management decision-maker (A04); writes follow the tool-declared approval policy.
+- Trigger: a user needs English UI, dark theme, a narrow screen or keyboard-only use.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Switch Chinese/English, themes and narrow panels while preserving focus, keyboard actions and readable errors.
 - Exceptions, acceptance and boundary: See docs/00 for historical browser evidence; this does not claim a fresh visual run for every new tool.
@@ -198,8 +198,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 中文用例
 
-- 参与者：本 epic 的授权使用者；有写入时按工具声明取得审批。
-- 触发：用户需要「错误恢复与图片能力说明」。
+- 参与者：部门填报员（A01）、月度汇总负责人（A03）；写入操作按工具声明取得审批。
+- 触发：页面加载失败，或用户粘贴了系统不支持的图片。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：审批详情加载失败可重试；无效来源/会话链接报错；图片不支持时说明可用路径。
 - 异常、验收和边界：错误不显示空成功；图片入口说明不等于 OCR 或多模态提取已实现。
@@ -207,8 +207,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### English use case
 
-- Actor: an authorized epic user; mutations follow the tool-declared approval policy.
-- Trigger: the user requests to recover from ui errors and explain image support.
+- Actors: Department contributor (A01), Monthly consolidation lead (A03); writes follow the tool-declared approval policy.
+- Trigger: a page fails to load or an unsupported image is pasted.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Retry failed approval detail loads, show errors for invalid source/session links and explain supported paths when images cannot be handled.
 - Exceptions, acceptance and boundary: Errors cannot appear as empty success; image guidance is not delivered OCR or multimodal extraction.
