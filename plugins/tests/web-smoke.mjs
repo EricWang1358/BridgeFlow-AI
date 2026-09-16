@@ -3,7 +3,8 @@ import { assertClientModulesServed, resolveDsh } from './dsh.mjs'
 import { assertDefaultEnglish, switchLanguage } from './locale.mjs'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, generateKeyPairSync, sign } from 'node:crypto'
+import { createServer as createHttpServer } from 'node:http'
 import { mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -13,6 +14,12 @@ import { chromium } from '@playwright/test'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const live = process.env.BRIDGEFLOW_LIVE === '1'
+const discoveryMode = process.env.BRIDGEFLOW_TEST_DISCOVERY === '1'
+assert(!discoveryMode || !live, 'Discovery fixtures require offline mode')
+const employeeMode = process.env.BRIDGEFLOW_TEST_EMPLOYEE === '1'
+assert(!employeeMode || !live, 'Synthetic employee mode is an offline test only')
+let portalServer
+let employeeToken = '', secondEmployeeToken = ''
 const scratch = await mkdtemp(`${tmpdir()}/bridgeflow-web-e2e-`)
 const python = process.env.BRIDGEFLOW_PYTHON ?? resolve(root, '../.venv/bin/python')
 async function port() {
@@ -60,6 +67,37 @@ function start(command, args) {
   return child
 }
 try {
+  if (discoveryMode) {
+    env.DISCOVERY_SCORING_POLICY_PATH = `${scratch}/scoring-policy.json`
+    env.DISCOVERY_DECISION_POLICY_PATH = `${scratch}/decision-policy.json`
+    await writeFile(env.DISCOVERY_DECISION_POLICY_PATH, JSON.stringify({ id: 'browser-decision-policy', project_id: 'browser-project', version: 1, departments: ['production'], declared_by: 'offline-owner', declaration_ref: 'Synthetic voting rules for browser test only', proposers: ['offline-employee'], voters: ['offline-employee', 'offline-voter'], approvers: ['offline-employee'], condition_confirmers: ['offline-employee'], quorum: 2, minimum_yes: 2, no_votes_block: true, abstentions_count_for_quorum: false, agent2_owner_role: 'synthetic-standardization-owner' }))
+    const axis = { title: 'Synthetic effort', unit: 'points', minimum: '0', maximum: '10', split: '5', split_is_high: true, low_meaning: 'Low', high_meaning: 'High' }
+    await writeFile(env.DISCOVERY_SCORING_POLICY_PATH, JSON.stringify({ id: 'browser-policy', project_id: 'browser-project', version: 1, departments: ['production'], declared_by: 'offline-owner', declaration_ref: 'Synthetic browser test only', effort: axis, value: { ...axis, title: 'Synthetic value' } }))
+  }
+  if (employeeMode) {
+    const { privateKey, publicKey } = generateKeyPairSync('ed25519')
+    const jwk = { ...publicKey.export({ format: 'jwk' }), kid: 'offline-employee', use: 'sig', alg: 'EdDSA' }
+    portalServer = createHttpServer((req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ keys: [jwk] }))
+    })
+    await new Promise(resolve => portalServer.listen(0, '127.0.0.1', resolve))
+    env.PORTAL_BASE_URL = `http://127.0.0.1:${portalServer.address().port}`
+    env.PORTAL_AUDIENCE = 'bridgeflow'
+    env.ACCESS_CONTROL_PATH = `${scratch}/access.yaml`
+    await writeFile(env.ACCESS_CONTROL_PATH, JSON.stringify({ users: { 'offline-employee': {
+      departments: ['production', 'procurement', 'finance', 'marketing'],
+      operations: ['batch_import', 'confirm_mapping', 'review_note', 'discovery_upload', 'discovery_register', 'discovery_propose', 'discovery_graph_save', 'discovery_score_save', 'discovery_meeting_save', 'discovery_decision_propose', 'discovery_decision_vote', 'discovery_decision_resolve', 'discovery_decision_finalize'],
+      workflow_departments: ['production'],
+    }, 'offline-voter': { departments: ['production'], workflow_departments: ['production'], operations: ['discovery_decision_vote'] } } }))
+    const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url')
+    const makeEmployeeToken = subject => {
+      const unsigned = `${encode({ alg: 'EdDSA', kid: jwk.kid })}.${encode({ sub: subject, iss: env.PORTAL_BASE_URL, aud: 'bridgeflow', iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 900 })}`
+      return `${unsigned}.${sign(null, Buffer.from(unsigned), privateKey).toString('base64url')}`
+    }
+    employeeToken = makeEmployeeToken('offline-employee')
+    secondEmployeeToken = makeEmployeeToken('offline-voter')
+  }
   const patch = (await readFile(`${root}/dsh/enterprise.patch.yml`, 'utf8'))
     .replace("'../plugins/src/index.ts'", JSON.stringify(`${root}/plugins/src/index.ts`))
     .replace('./dsh/presets', `${root}/dsh/presets`)
@@ -83,6 +121,12 @@ try {
   await assertClientModulesServed(match[1])
   browser = await chromium.launch({ headless: true })
   page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: 'zh-CN' })
+  if (employeeMode) await page.addInitScript(token => {
+    // Cold-reload verification navigates through a document without a storage origin.
+    if (location.protocol === 'http:' || location.protocol === 'https:') {
+      sessionStorage.setItem('bridgeflow.portal-token', token)
+    }
+  }, employeeToken)
   const errors = []
   page.on('pageerror', error => { errors.push(error.message); logs += '\nBROWSER: ' + error.message })
   page.on('console', message => { if (message.type() === 'error') logs += '\nCONSOLE: ' + message.text() })
@@ -147,7 +191,12 @@ try {
   await waitTurn(1)
   const acceptedMemory = await readFile(`${scratch}/mappings.json`, 'utf8')
   assert(acceptedMemory.includes('sku:test-0'))
-  assert(acceptedMemory.includes('dsh-authenticated-session'))
+  if (employeeMode) {
+    assert(acceptedMemory.includes('offline-employee'), 'The persisted decision must name the verified employee')
+    assert(!acceptedMemory.includes('dsh-authenticated-session'), 'Employee approval must not fall back to shared identity')
+  } else {
+    assert(acceptedMemory.includes('dsh-authenticated-session'))
+  }
   await composer.fill(live ? request(2) : 'Exercise the rejected mapping fixture.')
   await composer.press('Enter')
   // #96: decide with the keyboard only. Focus lands on the card; Tab reaches the reason, then Reject.
@@ -204,6 +253,285 @@ try {
   for (const group of await page.getByText(/^(1 tool call|1 次工具调用)$/).all()) await group.click()
   assert.equal(await page.getByRole('region', { name: '映射决定' }).count(), 3)
   await page.screenshot({ path: `${scratch}/native-approval.png`, fullPage: true })
+  if (discoveryMode) {
+    await page.getByRole('button', { name: '立项材料与候选', exact: true }).click()
+    const discovery = page.getByRole('region', { name: '立项材料与候选', exact: true })
+    await discovery.getByLabel('项目标识', { exact: true }).fill('browser-project')
+    await discovery.getByRole('button', { name: '打开项目', exact: true }).click()
+    for (const [name, value] of Object.entries({ id: 'browser-material', department: 'production', period: '2026-09', source_description: 'Offline browser fixture' })) {
+      await discovery.locator(`input[name=${name}]`).fill(value)
+    }
+    await discovery.locator('input[name=file]').setInputFiles({ name: 'material.csv', mimeType: 'text/csv', buffer: Buffer.from('a,b\n') })
+    await discovery.getByRole('button', { name: '暂存材料', exact: true }).click()
+    const instruction = discovery.getByRole('textbox', { name: '登记审批请求', exact: true })
+    await instruction.waitFor()
+    const message = await instruction.inputValue()
+    assert(message.includes('browser-material'))
+    await page.screenshot({ path: `${scratch}/discovery-staged.png`, fullPage: true })
+    await page.evaluate(() => { location.hash = '#bridgeflow?view=state' })
+    await composer.fill(message)
+    await composer.press('Enter')
+    const registration = page.getByRole('region', { name: '材料登记确认', exact: true })
+    await registration.getByText(/browser-material/).waitFor()
+    await registration.getByRole('button', { name: '允许一次', exact: true }).click()
+    await waitTurn(4)
+    await page.getByRole('button', { name: '立项材料与候选', exact: true }).click()
+    await discovery.getByLabel('项目标识', { exact: true }).fill('browser-project')
+    await discovery.getByRole('button', { name: '打开项目', exact: true }).click()
+    await discovery.getByText('material.csv · browser-material · v1', { exact: true }).waitFor()
+    const downloadEvent = page.waitForEvent('download')
+    await discovery.getByRole('button', { name: '下载此版本原件', exact: true }).click()
+    const original = await downloadEvent
+    assert.equal(original.suggestedFilename(), 'material.csv')
+    assert.equal(await readFile(await original.path(), 'utf8'), 'a,b\n')
+    await discovery.getByRole('button', { name: '查看详情与依据', exact: true }).click()
+    await discovery.locator('pre').getByText(/"detected_kind": "template"/).waitFor()
+    await page.screenshot({ path: `${scratch}/discovery-registered.png`, fullPage: true })
+    await discovery.getByRole('button', { name: '候选', exact: true }).click()
+    const editor = discovery.getByRole('region', { name: '候选共创', exact: true })
+    await editor.getByLabel('候选标识', { exact: true }).fill('browser-opportunity')
+    await editor.getByLabel('候选标题', { exact: true }).fill('核对交接问题')
+    await editor.getByLabel('涉及部门（每行一个准确名称）', { exact: true }).fill('production')
+    await editor.getByLabel('陈述内容', { exact: true }).fill('需要确认实际交接缺口，空模板不能证明问题已发生。')
+    await editor.getByLabel('来源材料标识', { exact: true }).fill('browser-material')
+    await editor.getByLabel('工作表名称', { exact: true }).fill('csv')
+    await editor.getByLabel('待确认问题（每行一条）', { exact: true }).fill('请提供一次实际交接案例。')
+    async function approveProposal(turn) {
+      await editor.getByRole('button', { name: '准备候选审批请求', exact: true }).click()
+      const instruction = await editor.getByRole('textbox', { name: '候选审批请求', exact: true }).inputValue()
+      await page.evaluate(() => { location.hash = '#bridgeflow?view=state' })
+      await composer.fill(instruction); await composer.press('Enter')
+      const card = page.getByRole('region', { name: '候选提案确认', exact: true })
+      await card.getByText(/browser-opportunity/).waitFor()
+      await card.getByRole('button', { name: '允许一次', exact: true }).click()
+      await waitTurn(turn)
+      await page.getByRole('button', { name: '立项材料与候选', exact: true }).click()
+      await discovery.getByLabel('项目标识', { exact: true }).fill('browser-project')
+      await discovery.getByRole('button', { name: '打开项目', exact: true }).click()
+      await discovery.getByRole('button', { name: '候选', exact: true }).click()
+    }
+    await approveProposal(5)
+    await discovery.getByText('核对交接问题 · browser-opportunity · v1', { exact: true }).waitFor()
+    await discovery.getByRole('button', { name: '修订此候选', exact: true }).click()
+    await editor.getByText('基于版本: 1', { exact: true }).waitFor()
+    await editor.getByLabel('候选标题', { exact: true }).fill('核对交接问题（待试点）')
+    await approveProposal(6)
+    await discovery.getByText('核对交接问题（待试点） · browser-opportunity · v2', { exact: true }).waitFor()
+    await discovery.getByRole('button', { name: '查看详情与依据', exact: true }).click()
+    await discovery.locator('pre').getByText(/"approval": "not_decided"/).waitFor()
+    await page.screenshot({ path: `${scratch}/discovery-opportunity.png`, fullPage: true })
+    await discovery.getByRole('button', { name: '设计流程草图', exact: true }).click()
+    const flow = discovery.getByRole('region', { name: '流程图编辑', exact: true })
+    await flow.getByLabel('图标识', { exact: true }).fill('browser-flow')
+    await flow.getByLabel('图标题', { exact: true }).fill('待确认交接流程')
+    for (let i = 0; i < 2; i++) {
+      await flow.getByRole('button', { name: '添加节点', exact: true }).click()
+      await flow.getByLabel('节点标识', { exact: true }).nth(i).fill(`stage${i}`)
+      await flow.getByLabel('节点标题', { exact: true }).nth(i).fill(`阶段 ${i}`)
+      await flow.getByLabel('负责角色', { exact: true }).nth(i).fill('业务负责人')
+      await flow.getByLabel('触发条件', { exact: true }).nth(i).fill('由负责人确认触发')
+      await flow.getByLabel('材料标识', { exact: true }).nth(i).fill('browser-material')
+      await flow.getByLabel('工作表', { exact: true }).nth(i).fill('csv')
+    }
+    await flow.getByRole('button', { name: '添加关系', exact: true }).click()
+    await flow.getByLabel('关系标识', { exact: true }).fill('return-edge')
+    await flow.getByLabel('起点', { exact: true }).selectOption('stage1')
+    await flow.getByLabel('终点', { exact: true }).selectOption('stage0')
+    await flow.getByLabel('关系说明', { exact: true }).fill('返工过程缺少实际材料，待负责人确认。')
+    await flow.getByLabel('返工关系', { exact: true }).check()
+    await flow.getByRole('button', { name: '准备流程图审批请求', exact: true }).click()
+    const flowRequest = await flow.getByRole('textbox', { name: '流程图审批请求', exact: true }).inputValue()
+    assert(flowRequest.includes('"opportunity_version": 2'))
+    await page.screenshot({ path: `${scratch}/discovery-flow-edit.png`, fullPage: true })
+    await page.evaluate(() => { location.hash = '#bridgeflow?view=state' })
+    await composer.fill(flowRequest); await composer.press('Enter')
+    const graphApproval = page.getByRole('region', { name: '流程草图确认', exact: true })
+    await graphApproval.getByText(/return-edge/).waitFor()
+    await graphApproval.getByRole('button', { name: '允许一次', exact: true }).click()
+    await waitTurn(7)
+    await page.getByRole('button', { name: '立项材料与候选', exact: true }).click()
+    await discovery.getByLabel('项目标识', { exact: true }).fill('browser-project')
+    await discovery.getByRole('button', { name: '打开项目', exact: true }).click()
+    await discovery.getByRole('button', { name: '流程图', exact: true }).click()
+    await discovery.getByText('待确认交接流程 · browser-flow · v1', { exact: true }).waitFor()
+    await discovery.getByRole('button', { name: '查看详情与依据', exact: true }).click()
+    const diagram = discovery.getByRole('region', { name: '流程草图', exact: true })
+    await diagram.getByRole('img', { name: '信息流与文件流' }).waitFor()
+    await diagram.getByRole('button', { name: /stage1 → stage0.*缺失.*返工/ }).click()
+    await diagram.getByText('返工过程缺少实际材料，待负责人确认。', { exact: true }).waitFor()
+    await diagram.getByRole('button', { name: '阶段 0', exact: true }).click()
+    await diagram.getByText(/browser-material.*v1/).waitFor()
+    await page.screenshot({ path: `${scratch}/discovery-flow.png`, fullPage: true })
+    async function fillRating(id, complete) {
+      await discovery.getByRole('button', { name: '候选', exact: true }).click()
+      await discovery.getByRole('button', { name: '为候选评分', exact: true }).click()
+      const editor = discovery.getByRole('region', { name: '候选评分编辑', exact: true })
+      await editor.getByLabel('评分标识', { exact: true }).fill(id)
+      const effort = editor.getByRole('group', { name: '投入评分', exact: true })
+      await effort.getByLabel('分值（可留空）', { exact: true }).fill('3')
+      await effort.getByLabel('评分理由', { exact: true }).fill('Synthetic effort estimate for browser verification')
+      await effort.getByRole('button', { name: '添加依据', exact: true }).click()
+      await effort.getByLabel('材料标识', { exact: true }).fill('browser-material')
+      await effort.getByLabel('工作表', { exact: true }).fill('csv')
+      if (complete) {
+        const value = editor.getByRole('group', { name: '价值评分', exact: true })
+        await value.getByLabel('分值（可留空）', { exact: true }).fill('8')
+        await value.getByLabel('评分理由', { exact: true }).fill('Synthetic value hypothesis, not measured savings')
+        await value.getByRole('button', { name: '添加依据', exact: true }).click()
+        await value.getByLabel('材料标识', { exact: true }).fill('browser-material')
+        await value.getByLabel('工作表', { exact: true }).fill('csv')
+      }
+      await editor.getByRole('button', { name: '准备评分审批请求', exact: true }).click()
+      const instruction = await editor.getByRole('textbox', { name: '评分审批请求', exact: true }).inputValue()
+      await page.evaluate(() => { location.hash = '#bridgeflow?view=state' })
+      await composer.fill(instruction); await composer.press('Enter')
+      const approval = page.getByRole('region', { name: '候选评分确认', exact: true })
+      await approval.getByText(new RegExp(id)).waitFor()
+      await approval.getByRole('button', { name: '允许一次', exact: true }).click()
+      await waitTurn(complete ? 8 : 9)
+      await page.getByRole('button', { name: '立项材料与候选', exact: true }).click()
+      await discovery.getByLabel('项目标识', { exact: true }).fill('browser-project')
+      await discovery.getByRole('button', { name: '打开项目', exact: true }).click()
+      await discovery.getByRole('button', { name: '评分四象限', exact: true }).click()
+    }
+    await fillRating('browser-rating', true)
+    const board = discovery.getByRole('region', { name: '评分四象限', exact: true })
+    await board.getByRole('button', { name: 'browser-opportunity · browser-rating', exact: true }).click()
+    await board.getByRole('region', { name: '评分依据', exact: true }).getByText('Synthetic value hypothesis, not measured savings', { exact: true }).waitFor()
+    await fillRating('incomplete-rating', false)
+    await board.getByText(/价值评分缺少分值、理由或依据/).waitFor()
+    assert.equal(await board.locator('svg circle').count(), 1)
+    await board.locator('svg').scrollIntoViewIfNeeded()
+    await page.screenshot({ path: `${scratch}/discovery-quadrants.png`, fullPage: true })
+    const policy = JSON.parse(await readFile(env.DISCOVERY_SCORING_POLICY_PATH, 'utf8'))
+    await writeFile(env.DISCOVERY_SCORING_POLICY_PATH, JSON.stringify({ ...policy, version: 2 }))
+    await board.getByRole('button', { name: '刷新', exact: true }).click()
+    await board.getByText(/量表已改变/).first().waitFor()
+    assert.equal(await board.locator('svg circle').count(), 0, 'Changed policy must withdraw stale points')
+    await discovery.getByRole('button', { name: '候选', exact: true }).click()
+    await discovery.getByRole('button', { name: '准备会议', exact: true }).click()
+    const meetingEditor = discovery.getByRole('region', { name: '会议记录编辑', exact: true })
+    await meetingEditor.getByLabel('会议标识', { exact: true }).fill('browser-meeting')
+    await meetingEditor.getByLabel('会议标题', { exact: true }).fill('Offline pilot preparation')
+    await meetingEditor.getByRole('group', { name: '范围', exact: true }).getByLabel('陈述 1', { exact: true }).fill('Proposed pilot scope, pending owner review')
+    const stages = meetingEditor.getByRole('group', { name: '实施阶段', exact: true })
+    await stages.getByLabel('阶段标识', { exact: true }).fill('pilot')
+    await stages.getByLabel('阶段标题', { exact: true }).fill('Validate proposal')
+    await stages.getByLabel('责任角色', { exact: true }).fill('pilot owner')
+    await stages.getByLabel('退出条件（每行一项）', { exact: true }).fill('Owner reviews all cited material')
+    await stages.getByLabel('阶段理由（假设／建议）', { exact: true }).fill('Synthetic implementation proposal')
+    await meetingEditor.getByLabel('本次记录／修订原因', { exact: true }).fill('Prepare discussion')
+    async function saveMeeting(turn) {
+      await meetingEditor.getByRole('button', { name: '准备会议审批请求', exact: true }).click()
+      const instruction = await meetingEditor.getByRole('textbox', { name: '会议审批请求', exact: true }).inputValue()
+      await page.evaluate(() => { location.hash = '#bridgeflow?view=state' })
+      await composer.fill(instruction); await composer.press('Enter')
+      const approval = page.getByRole('region', { name: '会议记录确认', exact: true })
+      await approval.getByText(/browser-meeting/).waitFor()
+      await approval.getByRole('button', { name: '允许一次', exact: true }).click()
+      await waitTurn(turn)
+      await page.getByRole('button', { name: '立项材料与候选', exact: true }).click()
+      await discovery.getByLabel('项目标识', { exact: true }).fill('browser-project')
+      await discovery.getByRole('button', { name: '打开项目', exact: true }).click()
+      await discovery.getByRole('button', { name: '会议', exact: true }).click()
+    }
+    await saveMeeting(10)
+    await discovery.getByText('Offline pilot preparation · browser-meeting · v1', { exact: true }).waitFor()
+    await discovery.getByRole('button', { name: '修订会议记录', exact: true }).click()
+    await meetingEditor.getByLabel('记录阶段', { exact: true }).selectOption('minutes')
+    await meetingEditor.getByLabel('参会者记录（每行一人）', { exact: true }).fill('Reported offline participant')
+    const minutes = meetingEditor.getByRole('group', { name: '纪要', exact: true })
+    await minutes.getByRole('button', { name: '添加陈述', exact: true }).click()
+    await minutes.getByLabel('陈述 1', { exact: true }).fill('Further scope confirmation is proposed; no approval')
+    await meetingEditor.getByLabel('本次记录／修订原因', { exact: true }).fill('Record discussion; no decision')
+    await saveMeeting(11)
+    await discovery.getByText('Offline pilot preparation · browser-meeting · v2', { exact: true }).waitFor()
+    await discovery.getByRole('button', { name: '查看详情与依据', exact: true }).click()
+    await discovery.getByRole('region', { name: '会议记录详情', exact: true }).getByText(/Further scope confirmation is proposed; no approval/).waitFor()
+    assert.equal(await discovery.getByLabel('材料文件', { exact: true }).isVisible(), false, 'Upload form is hidden outside materials')
+    await discovery.getByRole('region', { name: '会议记录详情', exact: true }).getByRole('heading', { name: '冻结候选版本', exact: true }).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: `${scratch}/discovery-meeting.png`, fullPage: true })
+    if (employeeMode) {
+      await discovery.getByRole('button', { name: '准备 MVP 决策', exact: true }).click()
+      const decisionEditor = discovery.getByRole('region', { name: '决策提案编辑', exact: true })
+      await decisionEditor.getByLabel('决策标识', { exact: true }).fill('browser-mvp')
+      await decisionEditor.getByRole('checkbox', { name: 'browser-opportunity · v2', exact: true }).check()
+      await decisionEditor.getByLabel('批准范围（每行一项）', { exact: true }).fill('Synthetic pilot only')
+      await decisionEditor.getByLabel('排除范围（每行一项）', { exact: true }).fill('No rollout approval')
+      await decisionEditor.getByLabel('提案或修订理由', { exact: true }).fill('Discussed in offline minutes')
+      await decisionEditor.getByRole('button', { name: '添加条件', exact: true }).click()
+      await decisionEditor.getByLabel('条件标识', { exact: true }).fill('verify-source')
+      await decisionEditor.getByLabel('条件说明', { exact: true }).fill('Verify cited source before release')
+      await decisionEditor.getByLabel('指定确认人', { exact: true }).selectOption('offline-employee')
+      await decisionEditor.getByRole('button', { name: '准备决策提案请求', exact: true }).click()
+      const panel = discovery.getByRole('region', { name: '决策详情与操作', exact: true })
+      async function submitDecision(turn, approvalName) {
+        const instruction = await discovery.getByRole('textbox', { name: '决策审批请求', exact: true }).inputValue()
+        await page.evaluate(() => { location.hash = '#bridgeflow?view=state' })
+        await composer.fill(instruction); await composer.press('Enter')
+        const approval = page.getByRole('region', { name: approvalName, exact: true })
+        await approval.getByText(/browser-mvp/).waitFor()
+        await approval.getByRole('button', { name: '允许一次', exact: true }).click()
+        await waitTurn(turn)
+        await page.getByRole('button', { name: '立项材料与候选', exact: true }).click()
+        await discovery.getByLabel('项目标识', { exact: true }).fill('browser-project')
+        await discovery.getByRole('button', { name: '打开项目', exact: true }).click()
+        await discovery.getByRole('button', { name: '决策', exact: true }).click()
+        await discovery.getByRole('button', { name: '查看详情与依据', exact: true }).click()
+        await panel.getByRole('button', { name: '刷新决策与身份', exact: true }).waitFor()
+      }
+      await submitDecision(12, '决策提案确认')
+      await panel.getByLabel('本次操作理由', { exact: true }).fill('First voter supports scoped pilot')
+      await panel.getByLabel('本人投票', { exact: true }).selectOption('yes')
+      await panel.getByRole('button', { name: '准备本人投票请求', exact: true }).click()
+      await submitDecision(13, '本人投票确认')
+      await panel.getByText(/offline-employee · yes/).waitFor()
+      assert(await panel.getByRole('button', { name: '准备批准决定请求', exact: true }).isDisabled())
+      // Sequential signed identity switch tests personal attribution, not native session isolation.
+      await page.evaluate(token => sessionStorage.setItem('bridgeflow.portal-token', token), secondEmployeeToken)
+      await panel.getByRole('button', { name: '刷新决策与身份', exact: true }).click()
+      await panel.getByText('当前身份: offline-voter', { exact: true }).waitFor()
+      assert.equal(await panel.getByRole('button', { name: '准备批准决定请求', exact: true }).count(), 0)
+      await panel.getByLabel('本次操作理由', { exact: true }).fill('Second voter independently supports pilot')
+      await panel.getByLabel('本人投票', { exact: true }).selectOption('yes')
+      await panel.getByRole('button', { name: '准备本人投票请求', exact: true }).click()
+      await submitDecision(14, '本人投票确认')
+      await panel.getByText(/offline-voter · yes/).waitFor()
+      await panel.getByText('待决定', { exact: true }).waitFor()
+      assert.equal(await panel.getByRole('region', { name: 'Agent 2 批准范围', exact: true }).count(), 0)
+      await page.evaluate(token => sessionStorage.setItem('bridgeflow.portal-token', token), employeeToken)
+      await panel.getByRole('button', { name: '刷新决策与身份', exact: true }).click()
+      await panel.getByText('当前身份: offline-employee', { exact: true }).waitFor()
+      await panel.getByLabel('本次操作理由', { exact: true }).fill('Approve only after source verification')
+      await panel.getByRole('button', { name: '准备批准决定请求', exact: true }).click()
+      await submitDecision(15, '立项决定确认')
+      await panel.getByText('条件式决定，尚未批准交付', { exact: true }).waitFor()
+      assert.equal(await panel.getByRole('region', { name: 'Agent 2 批准范围', exact: true }).count(), 0)
+      await panel.getByLabel('本次操作理由', { exact: true }).fill('Assigned confirmer checked the source')
+      await panel.getByLabel('待确认条件', { exact: true }).selectOption('verify-source')
+      await panel.getByRole('button', { name: '添加依据', exact: true }).click()
+      await panel.getByLabel('材料标识', { exact: true }).fill('browser-material')
+      await panel.getByLabel('工作表', { exact: true }).fill('csv')
+      await panel.getByRole('button', { name: '准备条件确认请求', exact: true }).click()
+      await submitDecision(16, '决策条件确认')
+      await panel.getByText('条件式决定，尚未批准交付', { exact: true }).waitFor()
+      assert.equal(await panel.getByRole('region', { name: 'Agent 2 批准范围', exact: true }).count(), 0)
+      await panel.getByLabel('本次操作理由', { exact: true }).fill('Conditions verified; release pilot scope')
+      await panel.getByRole('button', { name: '准备批准决定请求', exact: true }).click()
+      await submitDecision(17, '立项决定确认')
+      await panel.getByRole('region', { name: 'Agent 2 批准范围', exact: true }).getByText('当前有效批准范围', { exact: true }).waitFor()
+      await panel.getByRole('region', { name: 'Agent 2 批准范围', exact: true }).scrollIntoViewIfNeeded()
+      await page.screenshot({ path: `${scratch}/discovery-decision.png`, fullPage: true })
+      const votingPolicy = JSON.parse(await readFile(env.DISCOVERY_DECISION_POLICY_PATH, 'utf8'))
+      await writeFile(env.DISCOVERY_DECISION_POLICY_PATH, JSON.stringify({ ...votingPolicy, version: 2 }))
+      await panel.getByRole('button', { name: '刷新决策与身份', exact: true }).click()
+      await panel.getByText('输入已变化，需重审', { exact: true }).waitFor()
+      assert.equal(await panel.getByRole('region', { name: 'Agent 2 批准范围', exact: true }).count(), 0)
+    }
+
+
+    await page.evaluate(() => { location.hash = '#bridgeflow?view=state' })
+  }
   // #99: an image in the composer shows our way forward (sources), not only the native
   // message pointing at a model selector this deployment removes.
   await composer.click()
@@ -229,15 +557,18 @@ try {
   assert.equal(await page.getByRole('complementary', { name: 'Sources', exact: true }).count(), 0,
     'Language preference must survive a full host restart')
   assert.deepEqual(errors, [])
-  const measurement = { mode: live ? 'live' : 'offline', approval_outcomes: decisions.map(e => e.data.outcome), refusalNarration,
-    model_requests: events.filter(e => e.type === 'assistant/message').length,
-    usage: events.filter(e => e.type === 'assistant/message' && e.data.usage).reduce((total, e) => {
+  assert(!logs.includes('Pattern attribute value'), 'HTML identifier patterns must compile')
+  assert(!logs.includes('slot entry crashed'), 'Native client slots must not crash during navigation')
+  const finalEvents = await sessionEvents()
+  const measurement = { discovery_journey: discoveryMode, mode: live ? 'live' : 'offline', employee_identity: employeeMode, approval_outcomes: finalEvents.filter(e => e.type === 'approval/decided').map(e => e.data.outcome), refusalNarration,
+    model_requests: finalEvents.filter(e => e.type === 'assistant/message').length,
+    usage: finalEvents.filter(e => e.type === 'assistant/message' && e.data.usage).reduce((total, e) => {
       for (const [key, value] of Object.entries(e.data.usage)) if (typeof value === 'number') total[key] = (total[key] ?? 0) + value
       return total
     }, {}) }
   await writeFile(`${scratch}/measurement.json`, JSON.stringify(measurement, null, 2))
   await writeFile(`${scratch}/approval-note-audit.json`, JSON.stringify(noteAudit, null, 2))
-  await writeFile(`${scratch}/approval-events.json`, JSON.stringify(events.filter(e => ['approval/asked', 'approval/decided', 'bridgeflow/approval-note', 'tool/result'].includes(e.type)), null, 2))
+  await writeFile(`${scratch}/approval-events.json`, JSON.stringify(finalEvents.filter(e => ['approval/asked', 'approval/decided', 'bridgeflow/approval-note', 'tool/result'].includes(e.type)), null, 2))
   console.log(JSON.stringify({ ...measurement, artifacts: scratch }))
   console.log(JSON.stringify({ status: 'passed', screenshot: `${scratch}/data-workspace.png`, approvalScreenshot: `${scratch}/native-approval.png`, checks: ['native shell', 'plugin loading', 'upload', 'master table', 'authenticated proxy', 'write proxy denied', `native approval allow/reject/timeout with ${live ? 'live model' : 'offline adapter'}`, 'approval summary retry after failure', 'keyboard-only rejection', 'image paste guidance', 'paired native audit events', 'zero browser errors'] }))
 } catch (error) {
@@ -246,6 +577,7 @@ try {
   throw error
 } finally {
   await browser?.close()
+  if (portalServer) await new Promise(resolve => portalServer.close(resolve))
   for (const child of processes) child.kill('SIGTERM')
   await Promise.all(processes.map(child => new Promise(resolve => {
     if (child.exitCode !== null) return resolve()

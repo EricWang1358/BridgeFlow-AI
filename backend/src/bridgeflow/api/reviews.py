@@ -5,13 +5,15 @@ import json
 import re
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, ValidationError
 
 from bridgeflow import business, profiling, review_runs
-from bridgeflow.api.batches import BatchRef, batch_path, load_batch, summary
+from bridgeflow.access import operations_for
+from bridgeflow.api.batches import BatchRef, _visible, batch_path, load_batch, summary
+from bridgeflow.identity import UserIdentity, require_user
 from bridgeflow.store import _write
 
 router = APIRouter(prefix="/tools", tags=["reviews"])
@@ -175,10 +177,14 @@ class NoteRequest(BaseModel):
 
 
 @router.post("/review-note")
-async def review_note(request: NoteRequest) -> dict:
+async def review_note(request: NoteRequest, user: Annotated[UserIdentity | None, Depends(require_user)]) -> dict:
     """Record a person's note on a saved report. It never changes the report's status."""
+    _visible(load_batch(request.batch_id), user)
+    if user is not None and "review_note" not in operations_for(user.sub):
+        raise HTTPException(403, "This employee is not authorized to record review notes")
     saved_review(request.batch_id, request.report_id)
-    note = review_runs.HumanNote(**request.model_dump(), recorded_at=datetime.now(UTC).isoformat())
+    note = review_runs.HumanNote(**request.model_dump(), recorded_at=datetime.now(UTC).isoformat(),
+                                  author=user.sub if user else "dsh-authenticated-session")
     stored, added = review_runs.add_note(note)
     return {"recorded": added, "notes": len(stored)}
 

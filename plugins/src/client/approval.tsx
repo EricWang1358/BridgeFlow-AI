@@ -54,6 +54,10 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
   async function answer(outcome: 'allowed-once' | 'rejected') {
     setBusy(true); setError('')
     try {
+      if (outcome === 'allowed-once') {
+        await api('/approval-authorize', { method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ session_id: pending.sessionId, call_id: pending.callId, ticket }) })
+      }
       if (outcome === 'rejected' && note.trim()) {
         const response = await fetch('/bridgeflow/approval-notes', {
           method: 'POST', headers: { 'content-type': 'application/json' },
@@ -101,7 +105,7 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
         approving the easy default trains people to approve without reading. */}
     <div className="bf-actions">
       <button className="bf-danger-btn" disabled={busy || (!!note.trim() && !ticket)} onClick={() => void answer('rejected')}>{t('reject')}</button>
-      <button className="bf-primary" disabled={busy} onClick={() => void answer('allowed-once')}>{t('allow')}</button>
+      <button className="bf-primary" disabled={busy || !ticket} onClick={() => void answer('allowed-once')}>{t('allow')}</button>
     </div>
   </section>
 }

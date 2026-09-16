@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from pydantic import BaseModel, Field
 
 from bridgeflow import column_matches
-from bridgeflow.access import departments_for
+from bridgeflow.access import departments_for, operations_for
 from bridgeflow.agents import DataSanitizerAgent, SanitizerInput
 from bridgeflow.agents.semantic_resolver import FieldDictionary, SemanticResolverAgent
 from bridgeflow.agents.sop_flow import MissingRollup, SOPFlowEngine, SOPInput, UnjoinableTables
@@ -182,6 +182,8 @@ def _check_upload_scope(departments: list[Department], user: UserIdentity | None
     """With the identity layer on, you may only upload departments you may also see."""
     if user is None:
         return
+    if "batch_import" not in operations_for(user.sub):
+        raise HTTPException(403, "This employee is not authorized to import batches")
     denied = set(departments) - departments_for(user.sub)
     if denied:
         raise HTTPException(403, f"Not authorized for departments: {sorted(denied)}")

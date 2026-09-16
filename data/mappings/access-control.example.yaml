@@ -9,3 +9,16 @@ users:
   ou_example_union_id:
     name: 示例用户
     departments: [production, procurement, finance, marketing]
+    # Exact workflow catalogue department labels. Separate from the fixed import
+    # department IDs above: no automatic translation or inferred permission.
+    # Missing list means no workflow data access once portal identity is enabled.
+    workflow_departments: [生产部, 市场部]
+    # Explicit operation grants; omitted means read-only. Grant only required actions.
+    operations: [batch_import, review_note]
+    # Native approved writes additionally accept: confirm_mapping, confirm_column_match,
+    # quarantine_decide, quarantine_apply, workflow_record, workflow_approve_submit,
+    # workflow_handoff, feishu_import, feishu_upload_report, discovery_propose, discovery_register, discovery_graph_save, discovery_score_save, discovery_meeting_save.
+    # MVP decisions: discovery_decision_propose, discovery_decision_vote,
+    # discovery_decision_resolve, discovery_decision_finalize; declared policy roles also required.
+    # Data scope and native approval are still required; a grant alone cannot write.
+    # discovery_upload allows staging files only; discovery_register additionally needs native approval.

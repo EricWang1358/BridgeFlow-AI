@@ -96,8 +96,8 @@ class WorkflowStore:
     def streams(self, prefix: str) -> list[str]:
         with self._connect() as connection:
             rows = connection.execute(
-                "SELECT stream, MIN(rowid) AS first FROM events WHERE stream LIKE ? GROUP BY stream ORDER BY first",
-                (prefix.replace("%", r"\%") + "%",)).fetchall()
+                "SELECT stream, MIN(rowid) AS first FROM events WHERE substr(stream, 1, ?) = ? "
+                "GROUP BY stream ORDER BY first", (len(prefix), prefix)).fetchall()
         return [r["stream"] for r in rows]
 
     def commit(self, pending: Sequence[Pending], notifications: Sequence[tuple[str, str, str, str]] = (),

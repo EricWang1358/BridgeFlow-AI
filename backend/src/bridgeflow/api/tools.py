@@ -283,7 +283,7 @@ async def confirm_mapping(request: ConfirmRequest, http_request: Request) -> Con
     """
     if not settings.bridgeflow_allow_mapping_write:
         raise HTTPException(403, "Mapping writes disabled by deployment policy")
-    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body())
+    actor = consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(), "confirm_mapping")
     link = Link(
         source=request.source,
         target=request.target,
@@ -293,10 +293,10 @@ async def confirm_mapping(request: ConfirmRequest, http_request: Request) -> Con
     )
     memory = mappings.confirm(
         link,
-        by=request.confirmed_by,
+        by=actor if settings.portal_base_url else request.confirmed_by,
         accepted=request.accepted,
         period=request.period,
-        authorised_by="dsh-authenticated-session",
+        authorised_by=actor,
     )
     recorded = memory.find(link)
     assert recorded is not None  # just written
@@ -381,7 +381,7 @@ async def confirm_column_match(request: ColumnMatchRequest, http_request: Reques
             "declares for this department and the upload lacks. Creating fields is the "
             "dictionary owner's decision.",
         )
-    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body())
+    actor = consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(), "confirm_column_match")
 
     profile = next(p for p in column_matches.profiling.profile_table(tables[0])[0]
                    if p.column == request.column)
@@ -389,7 +389,7 @@ async def confirm_column_match(request: ColumnMatchRequest, http_request: Reques
         department=request.department, column=request.column, target=request.target,
         accepted=request.accepted, evidence=column_matches.fingerprint(profile),
         reason=request.reason, period=batch.period, batch_id=request.batch_id,
-        confirmed_by=request.confirmed_by, authorised_by="dsh-authenticated-session",
+        confirmed_by=actor if settings.portal_base_url else request.confirmed_by, authorised_by=actor,
     ))
     recorded = column_matches.memory_for(memory, request.department, request.column, request.target)
     assert recorded is not None  # just written

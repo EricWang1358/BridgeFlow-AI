@@ -5,7 +5,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-connection'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-workspace'
-import { callBackend, type BackendConfig } from './backend.ts'
+import type { BackendConfig } from './backend.ts'
 import { settledNote, type ApprovalNotes } from './approval/notes.ts'
 import type { PendingDetails } from './approval/detail.ts'
 
@@ -94,6 +94,38 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
             .end(JSON.stringify({ details: details.peek(callId) }))
           return
         }
+        if (path === '/approval-authorize' && req.method === 'POST') {
+          res.setHeader('content-type', 'application/json')
+          res.setHeader('cache-control', 'no-store')
+          try {
+            let body = ''
+            for await (const chunk of req) {
+              body += chunk.toString()
+              if (Buffer.byteLength(body) > 4096) { res.writeHead(413).end('{}'); return }
+            }
+            const data = JSON.parse(body)
+            if (['session_id', 'call_id', 'ticket'].some(key => typeof data[key] !== 'string')) {
+              res.writeHead(422).end('{}'); return
+            }
+            // Body and operation come only from the pending native call, never the browser.
+            const write = notes.write(data.session_id, data.call_id, data.ticket)
+            if (!write) { res.writeHead(409).end(JSON.stringify({ detail: 'Approval is no longer pending' })); return }
+            const check = await fetch(`${backend.baseUrl}/identity/authorize-write`, {
+              method: 'POST', headers: { authorization: `Bearer ${process.env.BRIDGEFLOW_SERVICE_TOKEN ?? ''}`,
+                'content-type': 'application/json', ...portalUser },
+              body: JSON.stringify(write), signal: AbortSignal.timeout(backend.timeoutMs),
+            })
+            const result = await check.json()
+            if (!check.ok) { res.writeHead(check.status).end(JSON.stringify(result)); return }
+            if (result.required && (typeof result.permit !== 'string' || typeof result.subject !== 'string'
+              || !notes.authorize(data.session_id, data.call_id, data.ticket, result.permit, result.subject))) {
+              res.writeHead(409).end(JSON.stringify({ detail: 'Approval expired or belongs to another employee' })); return
+            }
+            // Keep the permit in host memory; it never enters a browser response or model context.
+            res.writeHead(200).end(JSON.stringify({ authorized: true }))
+          } catch { res.writeHead(503).end(JSON.stringify({ detail: 'Employee authorization is unavailable; nothing was approved' })) }
+          return
+        }
         if (path === '/approval-notes' && (req.method === 'GET' || req.method === 'POST')) {
           res.setHeader('content-type', 'application/json')
           res.setHeader('cache-control', 'no-store')
@@ -132,18 +164,25 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
             if (['batch_id', 'report_id', 'session_id', 'note_id', 'note'].some(key => typeof data[key] !== 'string')) {
               res.writeHead(422).end('{}'); return
             }
-            const recorded = await callBackend<Record<string, unknown>>(backend, '/tools/review-note', {
-              batch_id: data.batch_id, report_id: data.report_id, parent_session_id: data.session_id, note_id: data.note_id, note: data.note,
-            }, AbortSignal.timeout(15000))
-            res.writeHead(200).end(JSON.stringify(recorded))
+            const recorded = await fetch(`${backend.baseUrl}/tools/review-note`, {
+              method: 'POST', headers: { authorization: `Bearer ${process.env.BRIDGEFLOW_SERVICE_TOKEN ?? ''}`,
+                'content-type': 'application/json', ...portalUser },
+              body: JSON.stringify({ batch_id: data.batch_id, report_id: data.report_id,
+                parent_session_id: data.session_id, note_id: data.note_id, note: data.note }),
+              signal: AbortSignal.timeout(15000),
+            })
+            res.writeHead(recorded.status).end(await recorded.text())
           } catch (error) { res.writeHead(422).end(JSON.stringify({ detail: String(error instanceof Error ? error.message : error) })) }
           return
         }
         const read = req.method === 'GET' && (path === '/quotation/contract' || /^\/batches\/[a-f0-9]{32}(\/(view|review|artifacts|review-notes\/[a-f0-9]{32}|sources(?:\/(?:production|procurement|finance|marketing))?))?$/.test(path)
           // Workflow views are read-only here; recording and approving go through the captain and approval.
           || /^\/workflow\/(board|catalogue|adoption|artifacts\/[a-f0-9]{32})$/.test(path)
+          || /^\/discovery\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/(material|opportunity|graph|score|meeting|decision)(\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79})?$/.test(path)
+          || /^\/discovery\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/(scoring-policy|decision-policy)$/.test(path)
+          || /^\/discovery\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/material\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/original$/.test(path)
           || /^\/integration\/batches\/[a-f0-9]{32}(\/xlsx)?$/.test(path))
-        const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo')
+        const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo' || path === '/discovery/uploads')
         // No generic proxy. Browser requests cannot mint approval receipts or call writes.
         if (!read && !upload) { res.writeHead(403).end('Route not authorized'); return }
         const abort = new AbortController()

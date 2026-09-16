@@ -30,6 +30,7 @@ class SheetShape(BaseModel):
     labels: list[str] = Field(default_factory=list)
     duplicate_labels: list[str] = Field(default_factory=list)
     data_rows: int = 0
+    physical_rows: int = 0
 
     @property
     def header_only(self) -> bool:
@@ -41,6 +42,7 @@ class MaterialShape(BaseModel):
     sheets: list[SheetShape]
     header_only: bool
     truncated: bool = False
+    sheet_count: int = 0
 
 
 class MaterialError(Exception):
@@ -52,7 +54,7 @@ def _cells(row: pd.Series) -> list[str]:
 
 
 def _shape(name: str, frame: pd.DataFrame) -> SheetShape:
-    shape = SheetShape(name=name)
+    shape = SheetShape(name=name, physical_rows=len(frame))
     rows = [(index, _cells(row)) for index, row in frame.iterrows()]
     rows = [(index, cells) for index, cells in rows if cells]
     for position, (index, cells) in enumerate(rows):
@@ -88,4 +90,4 @@ def inspect(filename: str, payload: bytes) -> MaterialShape:
     return MaterialShape(filename=filename, sheets=sheets,
                          header_only=any(s.header_row is not None for s in sheets)
                          and all(s.header_only or s.header_row is None for s in sheets),
-                         truncated=len(frames) > MAX_SHEETS)
+                         truncated=len(frames) > MAX_SHEETS, sheet_count=len(frames))

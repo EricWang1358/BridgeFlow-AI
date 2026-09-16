@@ -46,7 +46,14 @@ async def _fetch_jwks(url: str) -> list[dict]:
         raise HTTPException(503, f"Login portal is unreachable: {exc}") from exc
     if response.status_code != 200:
         raise HTTPException(503, "Login portal did not publish its keys")
-    return list(response.json().get("keys", []))
+    try:
+        payload = response.json()
+        keys = payload["keys"]
+        if not isinstance(keys, list) or not keys or any(not isinstance(k, dict) for k in keys):
+            raise ValueError("Invalid JWKS keys")
+    except (ValueError, TypeError, KeyError) as exc:
+        raise HTTPException(503, "Login portal published an invalid key set") from exc
+    return keys
 
 
 async def _keys(refresh: bool = False) -> list[dict]:
@@ -80,10 +87,11 @@ async def require_user(request: Request) -> UserIdentity | None:
             match = [k for k in await _keys(refresh=True) if k.get("kid") == header.get("kid")]
         key = jwt.algorithms.OKPAlgorithm.from_jwk(json.dumps(match[0]))
         claims = jwt.decode(token, key, algorithms=["EdDSA"], audience=settings.portal_audience,
-                            issuer=settings.portal_base_url.rstrip("/"))
-    except (jwt.PyJWTError, IndexError, KeyError, ValueError) as exc:
+                            issuer=settings.portal_base_url.rstrip("/"),
+                            options={"require": ["exp", "iat", "iss", "aud", "sub"]})
+    except (jwt.PyJWTError, IndexError, KeyError, ValueError, TypeError) as exc:
         raise HTTPException(401, "Portal token is invalid or expired") from exc
-    if not claims.get("sub"):
+    if not isinstance(claims.get("sub"), str) or not claims["sub"].strip():
         raise HTTPException(401, "Portal token carries no identity")
     return UserIdentity(sub=str(claims["sub"]), name=str(claims.get("name", "")),
                         email=str(claims.get("email", "")))
