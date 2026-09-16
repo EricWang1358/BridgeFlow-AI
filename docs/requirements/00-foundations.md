@@ -8,9 +8,9 @@ This file defines no UCs. It holds what every epic shares: actors, quality attri
 
 ## 1 进展盘点：三个视角 / Progress review from three perspectives
 
-2026-09-17 对照 `main@692d3d5` 的代码与 12 个 epic、73 个 UC，按三个视角检查缺口。结论：**核心月度对账链路完整，但「谁来用、怎么省事、结论怎么读」三件事在需求层面没有被写成 UC**；已有 UC 的写法也不够专业。
+2026-09-17 对照 `main@692d3d5` 的代码与 12 个 epic、73 个 UC，按三个视角检查缺口。结论：**核心月度对账链路已经完整，但「谁在用、怎么省事、结论怎么读」三件事没有写成 UC**；已有 UC 的参与者、触发与验收写法也达不到可测、可追责的标准。
 
-Reviewed against `main@692d3d5` and the existing 12 epics / 73 UCs. The core monthly reconciliation chain is complete, but who uses it, how it saves effort and how its conclusions are read were never captured as UCs, and existing UC wording is not yet professional.
+Reviewed against `main@692d3d5` and the existing 12 epics / 73 UCs. The core monthly reconciliation chain is complete, but who uses it, how it saves effort and how its conclusions are read were never written as UCs, and existing actors, triggers and acceptance criteria were not testable or attributable.
 
 ### 1.1 项目完整性 / Completeness
 
@@ -191,7 +191,7 @@ Applies to the UI, exports and model narration, so the same number reads the sam
 
 | 类型 / Kind | 规则 / Rule | 示例 / Example |
 | --- | --- | --- |
-| 金额 / Amount | 千分位；保留 2 位小数；万元以上的摘要可用「万元」并保留 2 位；注明含税或不含税 / thousands separators, 2 decimals, state tax basis | 5,240,640.00 元（含税）；524.06 万元 |
+| 金额 / Amount | 千分位，保留 2 位小数，注明含税或不含税；摘要中可改用「万元」为单位，同样保留 2 位 / thousands separators, 2 decimals and tax basis; summaries may use 10k-yuan units with 2 decimals | 5,240,640.00 元（含税）；524.06 万元 |
 | 方量与数量 / Quantity | 按业务精度（商砼方量 1 位）；单位必写 / business precision, unit always shown | 5,600.0 方 |
 | 比率 / Ratio | 百分比 1–2 位；同一张表统一位数；分母为 0 时显示「无法计算」，不显示 0% / 1–2 decimals, consistent per table, “not computable” on zero denominators | 85.26% |
 | 变化 / Change | 同时给绝对变化与相对变化，并标明比较基期 / absolute and relative change with the base period | +320.0 方（+6.1%，较 2024-06） |
@@ -199,13 +199,13 @@ Applies to the UI, exports and model narration, so the same number reads the sam
 
 ### 5.2 状态用词 / Status vocabulary
 
-| 界面用词 / Label | 含义 / Meaning | 不得表述为 / Never shown as |
-| --- | --- | --- |
-| 正常 / OK | 声明检查通过 / declared check passed | 「无风险」 / no risk |
-| 需关注 / Attention | 触及声明阈值 / declared threshold reached | 「违规」「坏账」 / violation, bad debt |
-| 部分完成 / Partial | 有部门或检查未完成 / a department or check is incomplete | 「已完成」 / complete |
-| 待确认 / Open question | 需要人判断的差异或缺项 / a difference or gap requiring a person | 系统替人选定的值 / a value chosen by the system |
-| 已拒绝 / Refused | 输入不足或违反声明，不出结果 / insufficient or invalid input, no result | 「0」或空白 / zero or blank |
+| 界面用词 / Label | 系统状态值 / System values | 含义 / Meaning | 不得表述为 / Never shown as |
+| --- | --- | --- | --- |
+| 正常 / OK | `ok`、`validated`、`ready` | 声明检查通过 / declared check passed | 「无风险」 / no risk |
+| 需关注 / Attention | `attention`、`needs_review` | 触及声明阈值或需要人工复核 / declared threshold reached or review needed | 「违规」「坏账」 / violation, bad debt |
+| 部分完成 / Partial | `partial` | 有部门或检查未完成 / a department or check is incomplete | 「已完成」 / complete |
+| 待确认 / Open question | 总表 `issues`、隔离行、待审批匹配 / master issues, quarantined rows, pending matches | 需要人判断的差异或缺项 / a difference or gap requiring a person | 系统替人选定的值 / a value chosen by the system |
+| 已拒绝 / Refused | `rejected`、`needs_configuration`、拒绝原因 / refusal reasons | 输入不足或违反声明，不出结果 / insufficient or invalid input, no result | 「0」或空白 / zero or blank |
 
 ### 5.3 依据等级 / Evidence grades
 
@@ -246,7 +246,7 @@ A conclusion takes the weakest grade among its inputs.
 | 级别 / Level | 含义 / Meaning |
 | --- | --- |
 | Must | 没有它，月度对账或结论不可用、不可信 / without it the monthly close or its conclusions are unusable or untrustworthy |
-| Should | 明显减少人工或误读，提交前应尽量完成 / clearly reduces effort or misreading; target before submission |
+| Should | 明显减少人工或误读；计划在提交前完成，未完成须在限制中说明 / clearly reduces effort or misreading; planned before submission, otherwise stated as a limitation |
 | Could | 体验增强，可在提交后完成 / enhancement, may follow submission |
 | Won't (this phase) | 本期不做，保留需求 / retained but not in this phase |
 

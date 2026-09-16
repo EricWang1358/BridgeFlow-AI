@@ -451,10 +451,13 @@ Frontend: the brief, charts, inbox and checklist are new read-only Studio views;
 | `CloseChecklist` / `OpenItemInbox` | 读取失败为 `Unknown`；部门范围过滤含计数；原模块处理后消失；收件箱无决策操作 |
 | `TemplateKitFactory` | 上期值预填并标注；无上期或上期隔离不预填；表头与批准版本一致 |
 
-## 6 两轮评审记录 / Two review passes
+## 6 两轮润色记录 / Two polishing passes
 
-第一轮（结构）：核对每个 UC 的验收条件都能落到至少一个类的行为测试（第 5 节）；删去「结论页保存数值副本」的初稿做法，改为只保存绑定版本（P4）；把自检与导入从「两个服务各自校验」改为共用 `CheckChain`，否则 E14-UC03 AC-3 无法由结构保证。
+本轮需求与设计文档经过两遍润色，记录实际发现与修改，便于评审复核。
 
-第二轮（约束与用词）：逐条对照 CLAUDE.md 硬约束：图表类型、严重度、清单步骤、沿用规则、部门识别均改为声明对象（P2）；给代理的结论工具限定为计数与标识（P7）；统一「投影 / 命令 / 端口」用词，删去未在代码中出现的术语；中英文表述逐句对齐。
+Both the requirements and this design went through two polishing passes; findings and changes are recorded for reviewers.
 
-Pass 1 (structure): every acceptance criterion maps to at least one class-level behavioral test; the brief stores bound versions instead of copied values; self-check and import share one `CheckChain` so AC-3 holds by construction. Pass 2 (constraints and wording): all business-specific choices became declarations; captain tools return counts and identifiers only; terminology aligned with the codebase and between languages.
+| 轮次 / Pass | 检查方法 / Method | 发现并修正 / Found and fixed |
+| --- | --- | --- |
+| 1 事实与一致性 / Facts and consistency | 脚本比对索引与正文状态、README 汇总、相对链接、foundations 映射表与 E13/E14 正文；逐项核对引用的模拟数据与代码名；浏览器实际渲染全部 mermaid 图 / scripted status, totals, link and mapping checks; cited data and code names verified; all mermaid diagrams rendered | E13-UC05 映射表漏了审批人（A06）；E13-UC06 触发句两处措辞不一致；类图引用了代码中不存在的 `AccessScope`，改为由现有 `UserIdentity` 与 `access.departments_for` / `workflow_departments_for` 构造的新值对象 `VisibleScope`；时序图消息中的分号导致 mermaid 解析失败；类成员中的竖线写法有渲染风险。状态 85 个与汇总一致，链接全部有效，6 月实际量 5,650 与 7 月环比 −40% 属实 |
+| 2 用词与专业性 / Wording and professionalism | 扫描不可测或模糊表述，逐节通读 / scanned for vague or untestable phrasing and read every section | 「保存一定期限」改为按配置保留期限并到期删除；「尽量完成」改为未完成须写入限制；关键指标改为「声明为关键指标的 3–5 个」，避免系统自行挑选；AC-2 补上声明阈值 −20% 与实际降幅约 40%；状态用词表增加与系统状态值（`ok`、`attention`、`partial` 等）的对照列；E13/E14 英文参与者统一为「角色名 (编号)」；设计上确认自检与导入共用 `CheckChain`、结论页只保存绑定版本、所有业务口径均为声明对象、给代理的工具只返回计数与标识 |

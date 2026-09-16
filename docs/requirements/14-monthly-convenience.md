@@ -11,7 +11,7 @@
 让每个月重复的对账工作少走弯路：汇总负责人一眼看到进度，员工拿到预填模板、提交前自检，出错只补一个部门，所有待确认事项集中到各自的收件箱，飞书文件夹一次导入。
 主要角色：部门填报员（A01）、部门负责人（A02）、月度汇总负责人（A03）、字典与标准维护人（A05）。
 
-Remove the repeated friction of each monthly close: visible progress, prefilled templates with self-check, single-department corrections, one inbox per owner and one-step Feishu folder import. Actors: A01, A02, A03, A05.
+Remove the repeated friction of each monthly close: visible progress, prefilled templates with self-check, single-department corrections, one inbox per owner and one-step Feishu folder import. Actors: Department contributor (A01), Department owner (A02), Monthly consolidation lead (A03), Dictionary and standards steward (A05).
 
 便民不放宽约束：自检与补传仍走与正式导入相同的声明与拒绝规则；沿用上月的值只是预填建议，提交时仍要本人确认；收件箱只聚合，不替人决定。
 
@@ -53,7 +53,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 
 ### English requirements and acceptance
 
-- Actor: A03.
+- Actors: Monthly consolidation lead (A03).
 - Trigger: a new month starts and the consolidation lead needs progress and who still owes what.
 - Preconditions: a period is selected; required department files and steps are declared.
 - Main flow: open the period checklist; show declared step states (files submitted, self-checked or quarantined, open items, review, brief, export); each incomplete step names its owner role and next action; when all required steps are done, show “ready to close” with a timestamp.
@@ -86,7 +86,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 
 ### English requirements and acceptance
 
-- Actors: A01, A05.
+- Actors: Department contributor (A01), Dictionary and standards steward (A05).
 - Trigger: staff fill the same template monthly and some fields carry over from last month.
 - Preconditions: an approved template version; declared carry-over rules (e.g. this month's “previous actual” from last month's “actual”).
 - Main flow: choose period and department; download a workbook with the approved headers and version, carry-over fields prefilled and annotated “prefilled from 2024-06, please verify”, required fields marked and an instructions sheet with meanings, units and examples; then self-check and submit.
@@ -109,25 +109,25 @@ Convenience never relaxes constraints: self-check and corrections use the same d
   2. 系统运行与导入相同的检查：工作表与表头位置、必填列、连接键、数字与日期格式、字典公式核对、同键多行汇总规则。
   3. 结果按「必须修改」「建议核对」「通过」分组，每条给出行号、列名与原因，不回显无关单元格内容。
   4. 全部「必须修改」清零后，提供「正式提交」一步完成导入。
-- 异常：自检不保存文件内容与结果以外的数据；自检结果与正式导入结果不一致被视为缺陷。
+- 异常：自检结果与正式导入结果不一致视为缺陷，而不是可接受的差异。
 - 验收：
   - AC-1 Given 物资部 v1 模板（表头上方有合并标题行） When 自检 Then「必须修改」列出「表头不在第 1 行，疑似第 2 行」，并提示在表格位置中填写。
   - AC-2 Given 市场部表「可争取」填了「待定」 When 自检 Then 列出行号与列名「可争取：不是数字」。
   - AC-3 Given 同一文件 When 分别自检与正式导入 Then 两者报告的必须修改项完全一致。
   - AC-4 Given 自检完成 When 查看批次列表 Then 没有新增批次。
-- 后置：自检结果保存一定期限供员工回看；正式提交走 E04-UC01。
+- 后置：自检结果按配置声明的保留期限保存，到期删除，不保存文件本身；正式提交走 E04-UC01。
 - 依赖：E04-UC02、E04-UC03、E06-UC03、NFR01。
 - 当前证据与缺口：导入时已有明确拒绝原因（[batches.py](../../backend/src/bridgeflow/api/batches.py) 工作表、表头、公式缓存；[integration.py](../../backend/src/bridgeflow/integration.py) 缺列、非数字、不一致）；只能在创建批次时得到，员工无法单独自检，也没有分组与「正式提交」。
 
 ### English requirements and acceptance
 
-- Actor: A01.
+- Actors: Department contributor (A01).
 - Trigger: a staff member wants to know before submitting whether the file will be accepted.
 - Preconditions: department and period chosen; the same dictionary, template version and sheet declarations as import.
 - Main flow: upload for self-check without creating a batch; run the same checks as import (sheet and header, required columns, keys, number and date formats, formulas, roll-up rules); group results as must-fix, review or pass with row, column and reason, without echoing unrelated cells; once must-fix items are clear, submit in one step.
-- Exceptions: self-check retains nothing beyond its result; any disagreement with import results is a defect.
+- Exceptions: any disagreement between self-check and import results is a defect, not an accepted difference.
 - Acceptance: AC-1 v1 procurement title row flagged; AC-2 text in a number column located; AC-3 self-check and import agree exactly; AC-4 no batch created.
-- Postcondition: results are retained for a limited period; submission uses E04-UC01.
+- Postcondition: results are kept for a configured retention period and then deleted; the file itself is not kept; submission uses E04-UC01.
 - Evidence and gap: explicit refusal reasons already exist at import time; there is no separate self-check, grouping or one-step submission.
 
 ## E14-UC04 — 单部门补传生成新版本 / Replace one department's file as a new version
@@ -156,7 +156,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 
 ### English requirements and acceptance
 
-- Actors: A03, A01.
+- Actors: Monthly consolidation lead (A03), Department contributor (A01).
 - Trigger: after import only one department's file needs correcting.
 - Preconditions: the original batch is frozen; the replacement matches period and department and passes self-check.
 - Main flow: choose batch and department and upload the corrected file; derive a new batch reusing the other departments' sources and cleaning, reimporting only the replaced department, recording lineage and reason; rebuild the master and show a diff of added, removed and changed cells and affected open items; mark reports bound to the old batch “data updated, review again”.
@@ -191,7 +191,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 
 ### English requirements and acceptance
 
-- Actors: A02, A03.
+- Actors: Department owner (A02), Monthly consolidation lead (A03).
 - Trigger: open items are scattered across modules and nobody knows what is theirs.
 - Preconditions: items carry declared owner roles or departments; access follows E09.
 - Main flow: open “My items”; aggregate authorized items (master disagreements and formula mismatches, quarantined rows, pending column matches, filling clarifications, missing provenance, stale briefs) with source module, batch, owner, time and a link; filter by period, department and type; items disappear once handled in their module.
@@ -224,7 +224,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 
 ### English requirements and acceptance
 
-- Actors: A03, S03.
+- Actors: Monthly consolidation lead (A03), External system (Feishu, target API) (S03).
 - Trigger: department files sit in one Feishu folder and picking them one by one is slow.
 - Preconditions: Feishu shortcuts configured and verified (E02-UC10); declared department recognition rules.
 - Main flow: choose folder and period; list spreadsheet files and recognise departments, showing recognised and unrecognised files; after confirmation, import all recognised files under one native approval through self-check and import.

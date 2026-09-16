@@ -11,7 +11,7 @@
 把已经算对的月度结果变成管理层能直接读懂、能放心引用的结论：一页看清本月、和过去比、用图说话、导出成正式报告、口径由业务方确认、每条结论标明依据有多可靠。
 主要角色：管理层决策者（A04）、月度汇总负责人（A03）、部门负责人（A02）、字典与标准维护人（A05）。
 
-Turn correctly computed monthly results into conclusions management can read directly and cite with confidence: a one-page brief, period comparison, charts, a formal report, business-confirmed conventions and an evidence grade on every conclusion. Actors: A04, A03, A02, A05.
+Turn correctly computed monthly results into conclusions management can read directly and cite with confidence: a one-page brief, period comparison, charts, a formal report, business-confirmed conventions and an evidence grade on every conclusion. Actors: Management decision-maker (A04), Monthly consolidation lead (A03), Department owner (A02), Dictionary and standards steward (A05).
 
 本 epic 不新增计算口径：所有数字仍来自 E06 总表与 E07 声明指标。它只决定**怎么比、怎么排、怎么说、怎么交付**。
 
@@ -38,8 +38,8 @@ This epic adds no computation of its own. Every number still comes from the E06 
 - 触发：月度研判完成，管理层需要一页看懂本月结论与要做的决定。
 - 前置：批次状态为就绪；四部门研判报告已保存（validated 或 partial）；跨部门总表已生成。
 - 主流程：
-  1. 汇总负责人在工作室打开「本月结论」。
-  2. 系统从已保存报告与总表生成一页结论：本月一句话结论；3–5 个关键指标（本期值、较上期变化、状态）；需关注事项按严重度排序，每项含负责人与建议动作；待确认事项计数；完整性说明（完整行数、partial 部门、口径假设条数）。
+  1. 汇总负责人在工作室打开「本月结论」（界面名称以实现为准）。
+  2. 系统从已保存报告与总表生成一页结论：本月一句话结论；声明为关键指标的 3–5 个指标（本期值、较上期变化、状态）；需关注事项按严重度排序，每项含负责人与建议动作；待确认事项计数；完整性说明（完整行数、partial 部门、口径假设条数）。
   3. 每个数字可点开，跳到 E07 指标来源或 E06 单元格出处。
   4. 汇总负责人可把结论保存为笔记本产物，供管理层打开。
 - 异常：报告为 partial 时，页首显示缺失部门，缺失部门的指标不参与排序，也不显示为「正常」；没有已保存报告时拒绝生成，并提示先发起研判。
@@ -54,10 +54,10 @@ This epic adds no computation of its own. Every number still comes from the E06 
 
 ### English requirements and acceptance
 
-- Actors: A04, A03.
+- Actors: Management decision-maker (A04), Monthly consolidation lead (A03).
 - Trigger: the monthly review is done and management needs one page with the conclusions and decisions.
 - Preconditions: batch ready; four-department report saved (validated or partial); master table built.
-- Main flow: (1) open “This month” in Studio; (2) build one page from the saved report and master: a one-sentence conclusion, 3–5 key metrics with value, change and status, attention items ordered by declared severity with owner and action, open-item count and a completeness note; (3) every number drills to E07 metric sources or E06 cell provenance; (4) save as a notebook artifact.
+- Main flow: (1) open “This month” in Studio; (2) build one page from the saved report and master: a one-sentence conclusion, the 3–5 metrics declared as key with value, change and status, attention items ordered by declared severity with owner and action, open-item count and a completeness note; (3) every number drills to E07 metric sources or E06 cell provenance; (4) save as a notebook artifact.
 - Exceptions: a partial report names missing departments and excludes their metrics from ranking and from “OK”; no saved report refuses with “complete the review first”.
 - Acceptance: AC-1 three attention items are listed, ordered and linked; AC-2 a partial report is labelled and finance metrics are excluded; AC-3 no report refuses without a blank page; AC-4 zero model calls.
 - Postcondition: the brief is a derived artifact bound to batch, report and declaration versions; a newer report marks it stale without overwriting.
@@ -80,8 +80,8 @@ This epic adds no computation of its own. Every number still comes from the E06 
 - 异常：基期缺失时显示「无基期」，不以 0 代替；两期字典版本不同且没有声明映射时拒绝对比并列出不一致字段；基期为 0 时相对变化显示「无法计算」。
 - 验收：
   - AC-1 Given 模拟商砼公司 2024-06 与 2024-07 两个批次 When 选择「较上月」 Then 每个项目的实际量给出两期值与变化，且变化之和等于公司合计变化。
-  - AC-2 Given 第二实验学校扩建 7 月实际量下降超过 20% When 生成对比 Then 该项进入关注区，并附 6 月与 7 月两个出处。
-  - AC-3 Given 只有 2024-07 一个批次 When 选择「较上月」 Then 显示「无基期」，不显示 0 或 -100%。
+  - AC-2 Given 声明的环比关注阈值为 −20%，第二实验学校扩建 7 月实际量较 6 月下降约 40% When 生成对比 Then 该项进入关注区，并附 6 月与 7 月两个出处。
+  - AC-3 Given 只有 2024-07 一个批次 When 选择「较上月」 Then 显示「无基期」，不显示 0 或 −100%。
   - AC-4 Given 两期字典版本不同且未声明映射 When 请求对比 Then 拒绝并列出不一致的字段名。
 - 后置：对比结果是派生视图，不改动任一批次。
 - 依赖：E04-UC01（冻结批次）、E06-UC02、E05-UC01；计划值依赖业务方提供计划来源。
@@ -89,12 +89,12 @@ This epic adds no computation of its own. Every number still comes from the E06 
 
 ### English requirements and acceptance
 
-- Actors: A03, A04.
+- Actors: Monthly consolidation lead (A03), Management decision-maker (A04).
 - Trigger: this month's figures only mean something against last month, last year or plan.
 - Preconditions: frozen batches for both periods with the same dictionary version or a declared mapping; plan values have a declared source.
 - Main flow: choose a base (prior month, same month last year, plan); align masters or metrics by entity keys; show current, base, absolute and relative change; decompose totals into new, discontinued and continuing entities whose parts sum to the total change; changes beyond declared thresholds feed the E13-UC01 attention list with both sources.
 - Exceptions: a missing base shows “no base period”, never 0; different dictionary versions without a declared mapping are refused with the mismatched fields; a zero base shows “not computable”.
-- Acceptance: AC-1 June vs July per-project changes sum to the company change; AC-2 a >20% decline enters attention with both sources; AC-3 a single batch shows “no base period”; AC-4 unmapped version mismatch is refused.
+- Acceptance: AC-1 June vs July per-project changes sum to the company change; AC-2 with a declared −20% threshold, a ~40% decline enters attention with both sources; AC-3 a single batch shows “no base period”; AC-4 unmapped version mismatch is refused.
 - Postcondition: comparison is a derived view and modifies no batch.
 - Evidence and gap: batches are frozen per period; no alignment or variance computation exists; plan data has no source.
 
@@ -123,7 +123,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 
 ### English requirements and acceptance
 
-- Actors: A04, A03.
+- Actors: Management decision-maker (A04), Monthly consolidation lead (A03).
 - Trigger: tables of numbers do not show trends, variances or outliers at a glance.
 - Preconditions: data comes from declared metrics or E13-UC02 comparisons; chart types are declared, not chosen ad hoc by a model.
 - Main flow: declared charts (multi-period trend lines, variance waterfall, department or project comparison bars) with conclusion titles, units, periods and threshold lines from the same declaration version; data points drill to sources; an equivalent table view accompanies every chart.
@@ -157,7 +157,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 
 ### English requirements and acceptance
 
-- Actors: A03, A04.
+- Actors: Monthly consolidation lead (A03), Management decision-maker (A04).
 - Trigger: a management meeting, audit or archive needs a properly formatted offline monthly report.
 - Preconditions: a current (not stale) E13-UC01 brief exists.
 - Main flow: choose Word or PDF; generate a fixed structure (cover, conclusion, key metrics and comparison, department summaries, attention items and owners, open items, conventions and limitations, appendix of sources, formulas and provenance index); follow the presentation standards with a provenance number for every figure; name the file by period and version.
@@ -194,7 +194,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 
 ### English requirements and acceptance
 
-- Actors: A05, A02, A06.
+- Actors: Dictionary and standards steward (A05), Department owner (A02), Approver (A06).
 - Trigger: conventions filled in by best practice must be confirmed or replaced by the business.
 - Preconditions: conventions are declared with IDs, rationale and affected fields; confirming roles are declared.
 - Main flow: list conventions with affected cell counts; the owning department confirms or replaces with a sourced value or formula; the system drafts a new declaration version with an impact preview; an approver publishes it natively; frozen batches are not rewritten; confirmed conventions lift dependent conclusions from G3 to G2.
@@ -227,7 +227,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 
 ### English requirements and acceptance
 
-- Actors: A04, A02.
+- Actors: Management decision-maker (A04), Department owner (A02).
 - Trigger: a reader needs to know how reliable a conclusion is and what it rests on.
 - Preconditions: complete provenance chains for cells, formula inputs, convention dependencies and subagent evidence.
 - Main flow: compute grades G1–G4 per §5.3 taking the weakest dependency; show a grade mark beside numbers in the brief, report and charts with the dependency chain on demand; summarise the grade distribution at the top.
