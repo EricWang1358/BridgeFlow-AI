@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from bridgeflow import integration
 from bridgeflow.api.batches import BatchRef, _visible, batch_path, load_batch
+from bridgeflow.conclusions.grades import grade_master
 from bridgeflow.identity import UserIdentity, require_user
 
 router = APIRouter(tags=["integration"])
@@ -32,9 +33,13 @@ def _result(batch_id: str, user: UserIdentity | None = None) -> integration.Mast
 
 @router.get("/integration/batches/{batch_id}")
 async def master_for_batch(batch_id: str,
-                           user: Annotated[UserIdentity | None, Depends(require_user)]) -> integration.MasterResult:
-    """Browser view: every row, value and source. Rows stay in the authenticated browser."""
-    return _result(batch_id, user)
+                           user: Annotated[UserIdentity | None, Depends(require_user)]) -> dict:
+    """Browser view: every row, value and source, and each cell's evidence grade (E13-UC06).
+
+    Rows stay in the authenticated browser."""
+    result = _result(batch_id, user)
+    grades, summary = grade_master([row.provenance for row in result.rows])
+    return {**result.model_dump(mode="json"), "grades": grades, "grade_summary": summary}
 
 
 @router.get("/integration/batches/{batch_id}/xlsx")

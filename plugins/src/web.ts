@@ -181,8 +181,9 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           || /^\/discovery\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/(material|opportunity|graph|score|meeting|decision)(\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79})?$/.test(path)
           || /^\/discovery\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/(scoring-policy|decision-policy)$/.test(path)
           || /^\/discovery\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/material\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/original$/.test(path)
-          || /^\/integration\/batches\/[a-f0-9]{32}(\/xlsx)?$/.test(path))
-        const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo' || path === '/discovery/uploads')
+          || /^\/integration\/batches\/[a-f0-9]{32}(\/xlsx)?$/.test(path)
+          || /^\/conclusions\/batches\/[a-f0-9]{32}$/.test(path))
+        const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo' || path === '/batches/self-check' || path === '/discovery/uploads')
         // No generic proxy. Browser requests cannot mint approval receipts or call writes.
         if (!read && !upload) { res.writeHead(403).end('Route not authorized'); return }
         const abort = new AbortController()

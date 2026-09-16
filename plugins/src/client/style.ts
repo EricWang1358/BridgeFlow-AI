@@ -408,6 +408,28 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-formulas summary { cursor: pointer; color: var(--bf-accent) }
 .bf-formulas code { white-space: normal; overflow-wrap: anywhere }
 .bf-state button:disabled { opacity: .45; cursor: default }
+/* Evidence grades (E13-UC06): the label always carries the grade; colour only supports it. */
+.bf-grade { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .02em; border-radius: 5px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; border: 1px solid currentColor; cursor: help }
+.bf-grade[data-grade=G1] { color: var(--bf-ok) }
+.bf-grade[data-grade=G2] { color: var(--bf-accent) }
+.bf-grade[data-grade=G3] { color: var(--bf-warn); background: var(--bf-warn-bg) }
+.bf-grade[data-grade=G4] { color: var(--bf-muted) }
+.bf-grade[data-grade=missing] { color: var(--bf-danger); background: var(--bf-danger-bg) }
+/* One-page monthly brief (E13-UC01). */
+.bf-brief h4 { margin: 18px 0 8px; font-size: 13px }
+.bf-brief-headline { font-size: 14px; margin: 8px 0 }
+.bf-brief-headline strong { font-size: 20px; font-weight: 650 }
+.bf-brief-metrics { display: grid; gap: 8px; margin: 0 }
+.bf-brief-metrics > div { border: 1px solid var(--bf-line); border-radius: 8px; padding: 8px 10px }
+.bf-brief-metrics dt { font-size: 12px; color: var(--bf-muted) }
+.bf-brief-metrics dd { margin: 2px 0 0 }
+.bf-brief-metrics dd b { font-size: 16px; font-weight: 650 }
+.bf-brief-metrics dd small { display: block; color: var(--bf-muted); font-size: 11px; margin-top: 2px; overflow-wrap: anywhere }
+.bf-brief-attention { padding-left: 18px; margin: 0 }
+.bf-brief-attention li { margin: 0 0 12px }
+.bf-brief-attention p { margin: 2px 0 }
+.bf-brief-open { padding-left: 18px; margin: 0 }
+.bf-brief-open button { margin-left: 8px; font-size: 11px; padding: 2px 8px }
 .bf-document button:focus-visible, .bf-document summary:focus-visible { outline: 2px solid var(--bf-accent); outline-offset: 3px }
 
 .bf-discovery form { display: grid; gap: 12px; margin: 16px 0 }

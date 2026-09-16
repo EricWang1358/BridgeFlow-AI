@@ -15,8 +15,8 @@ Execution began on 2026-09-16 and paused at the user’s request after handoff o
 | 7 | 风险与报价业务闭环 / Risk and quotation lifecycle | E07-UC07；E08-UC03/04 | 待风险处置状态机、报价方案比较和精确版本审批；实际定价政策及样板外部确认 / pending dispositions, scenario comparison and exact-version approval |
 | 8 | 补齐通用数据能力 / Remaining data capabilities | E04-UC08；E06-UC06；FR07/08 生命周期细节 | 待明确换算、补齐、实体有效期和分摊策略后实现；季年汇总/PDF 不从 XLSX 推定完成 / implement declared FX/completion/validity/allocation and separate quarter/year/PDF paths |
 | 9 | 真实目标及运维 / Live targets and operations | E02-UC05/06/10；E11-UC04/05 | 可先实现配置与适配器契约，真实入库、通知、飞书及部署需提供凭据和路由 / adapters can be local; live verification requires credentials and routes |
-| 9a | 结论可信与可读 / Trustworthy, readable conclusions | E13-UC05/06 → E13-UC01/02 → E13-UC03/04 | 2026-09-17 设计，未实现；口径确认需业务方参与，其余可离线实现 / designed, not implemented; convention confirmation needs business participation |
-| 9b | 月度流程便民 / Monthly convenience | E14-UC03 → UC04 → UC01 → UC05 → UC02 → UC06 | 2026-09-17 设计，未实现；UC06 真实验收依赖飞书凭据 / designed, not implemented; UC06 acceptance needs Feishu credentials |
+| 9a | 结论可信与可读 / Trustworthy, readable conclusions | E13-UC05/06 → E13-UC01/02 → E13-UC03/04 | 第一轮（2026-09-17）已实现 E13-UC06 依据等级与 E13-UC01 一页结论的主流程，其余设计未实现；口径确认需业务方参与，其余可离线实现 / designed, not implemented; convention confirmation needs business participation |
+| 9b | 月度流程便民 / Monthly convenience | E14-UC03 → UC04 → UC01 → UC05 → UC02 → UC06 | 第一轮（2026-09-17）E14-UC03 离线实现完成，其余设计未实现；UC06 真实验收依赖飞书凭据 / designed, not implemented; UC06 acceptance needs Feishu credentials |
 | 10 | 历史知识范围与全旅程验收 / Historical knowledge scope and final acceptance | E12；E10；所有 UC / all UCs | 知识库曾明确排除；需确认与当前产品的启用边界、资料授权及保留策略；其余能力完成后做连续浏览器旅程和真实模型验收 / resolve historical scope and data policy, then verify complete journeys |
 
 ## 真正的外部输入 / Actual external inputs
