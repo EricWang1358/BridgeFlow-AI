@@ -13,13 +13,14 @@ import type { ApprovalReceipts } from '../approval/receipts.ts'
  * evidence, state, submission, who downstream is told — happens on the host
  * (`backend/src/bridgeflow/workflow/`, `docs/25`).
  *
- * Two writes, both approval-gated, because both put words in the record:
+ * Mutations are approval-gated because they record human decisions:
  *
  * - `workflow_record` relays what the person said. The approval card lists each value,
  *   so the person confirms the model heard them right. The host records the source
  *   as this conversation whatever the model claims.
  * - `workflow_approve_submit` is the reviewer's decision on exact values, bound by
  *   digest; if the values changed since they were shown, it is refused.
+ * - `workflow_handoff` records a downstream action against the displayed sequence.
  */
 
 /** Draft as the host shapes it for a model: state, open questions, one record's values. */
@@ -243,4 +244,54 @@ export function workflowApproveSubmit(config: BackendConfig, receipts: ApprovalR
     denialEffect: 'Nothing was approved or submitted; the draft is unchanged. Do NOT tell anyone the data is ready',
     body: approveBody,
   })
+}
+
+export function handoffBody(args: Record<string, unknown>, agentId: string, callId: string | undefined) {
+  return { handoff_id: args.handoff_id, action: args.action, expected_seq: args.expected_seq,
+    reason: args.reason ?? '', confirmed_by: agentId, call_id: callId ?? null }
+}
+
+export function workflowHandoff(config: BackendConfig, receipts: ApprovalReceipts): ProductTool {
+  return withAccess(defineTool({
+    name: 'workflow_handoff',
+    description: 'Record an explicitly confirmed downstream action. Read workflow_board first for the handoff id, ' +
+      'seq, inputs and stale flag. A return requires a reason. A revised upstream input must be ready and ' +
+      'acknowledged before starting or completing. Notification delivery never completes work.',
+    parameters: {
+      handoff_id: { type: 'string', required: true, description: 'Handoff id from workflow_board' },
+      action: { type: 'string', enum: ['start', 'return', 'complete', 'acknowledge'], required: true },
+      expected_seq: { type: 'number', required: true, description: 'Sequence from the displayed handoff' },
+      reason: { type: 'string', description: 'Actionable explanation; required when returning work' },
+    },
+    output: {
+      schema: { type: 'object', additionalProperties: true },
+      render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }],
+    },
+    async execute(args, exec) {
+      return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-handoff',
+        handoffBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec.signal,
+        receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+    },
+  }), {
+    kind: 'approval',
+    reason: 'Confirm this downstream action on the displayed handoff version.',
+    denialEffect: 'The downstream state did not change. Do NOT claim work started, returned or completed',
+    body: handoffBody,
+  })
+}
+
+export function workflowGuidance(config: BackendConfig): ProductTool {
+  return withAccess(defineTool({
+    name: 'workflow_guidance',
+    description: 'Read role guidance for one declared stage: entry, templates, destination, receipt, status and ' +
+      'support role. Missing contacts remain unconfigured. This does not grant permissions or assign people.',
+    parameters: { stage: { type: 'string', required: true, description: 'Stage id from workflow_catalogue' } },
+    output: {
+      schema: { type: 'object', additionalProperties: true },
+      render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }],
+    },
+    async execute(args, exec) {
+      return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-guidance', { stage: args.stage }, exec.signal)
+    },
+  }), { kind: 'read' })
 }

@@ -51,6 +51,12 @@ function show(value: unknown): string {
 /** Summarise a tool call's arguments for a person, within the caps above. */
 export function summarise(args: unknown): ApprovalDetail[] {
   if (!args || typeof args !== 'object' || Array.isArray(args)) return []
+  // Discovery decisions must expose every claim and source, not a clipped object.
+  if ('proposal' in args || 'material' in args || 'graph' in args || 'score' in args || 'meeting' in args || 'proposal_version' in args) {
+    const proposal = JSON.stringify('proposal' in args ? args.proposal : args, null, 2)
+    if (!proposal || proposal.length > 64_000) throw new Error('Proposal exceeds the approval display limit; split it before submitting')
+    return [{ label: 'proposal' in args ? 'proposal' : 'graph' in args ? 'graph' : 'score' in args ? 'score' : 'meeting' in args ? 'meeting' : 'proposal_version' in args ? 'decision' : 'material', value: proposal }]
+  }
   return Object.entries(args)
     .filter(([, value]) => value !== undefined && value !== null && value !== '')
     .flatMap(([label, value]) => labelled(value)

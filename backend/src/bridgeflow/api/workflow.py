@@ -13,10 +13,11 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Annotated, Any
 
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
 from bridgeflow.config import settings
+from bridgeflow.identity import UserIdentity, require_user
 from bridgeflow.security import consume_approval
 from bridgeflow.store import _root
 from bridgeflow.workflow import adoption, board, catalogue, materials
@@ -31,6 +32,9 @@ from bridgeflow.workflow.service import (
     WorkflowService,
 )
 from bridgeflow.workflow.store import ConcurrencyError, WorkflowStore
+from bridgeflow.workflow.visibility import Visibility
+
+BrowserUser = Annotated[UserIdentity | None, Depends(require_user)]
 
 router = APIRouter(prefix="/workflow", tags=["workflow"])
 
@@ -114,30 +118,39 @@ def _handoff(snapshot: HandoffSnapshot) -> HandoffOut:
 
 
 @router.get("/catalogue")
-async def get_catalogue() -> dict[str, Any]:
+async def get_catalogue(user: BrowserUser) -> dict[str, Any]:
     declared = service().catalogue
+    visible = Visibility(declared, user)
     return {
-        "version": declared.version, "status": declared.status, "case": declared.case,
-        "mvp": declared.mvp.model_dump(),
+        "version": declared.version, "status": declared.status,
+        "case": declared.case if visible.all() else "",
+        "mvp": declared.mvp.model_dump() if visible.all() else {"status": "restricted"},
         "templates": {name: {"title": t.title, "department": t.department, "version": t.version, "status": t.status,
                              "business_key": list(t.business_key),
                              "fields": {k: f.model_dump(include={"label", "definition", "dtype", "required", "unit"})
                                         for k, f in t.fields.items()}}
-                      for name, t in declared.templates.items()},
-        "stages": {name: s.model_dump() for name, s in declared.stages.items()},
-        "lineage": [e.model_dump() for e in declared.lineage],
+                      for name, t in declared.templates.items() if visible.template(name)},
+        "stages": {name: s.model_dump() for name, s in declared.stages.items() if visible.stage(name)},
+        "lineage": [e.model_dump() for e in declared.lineage
+                    if visible.template(e.source.partition(".")[0])
+                    and visible.template(e.target.partition(".")[0])],
         "integrations": {"sink": declared.sink.kind, "notifier": declared.notifier.kind},
     }
 
 
 @router.get("/lineage/{template}/{field}")
-async def get_lineage(template: str, field: str) -> dict[str, Any]:
+async def get_lineage(template: str, field: str, user: BrowserUser) -> dict[str, Any]:
     declared = service().catalogue
+    visible = Visibility(declared, user)
+    if not visible.template(template):
+        raise HTTPException(404, "Field is not declared")
     spec = declared.templates.get(template)
     if spec is None or (field not in spec.fields and field not in spec.derived):
         raise HTTPException(404, "Field is not declared")
     trace = declared.lineage_of(template, field)
-    return {"field": f"{template}.{field}", **{k: [e.model_dump() for e in v] for k, v in trace.items()}}
+    return {"field": f"{template}.{field}", **{k: [e.model_dump() for e in v
+            if visible.template(e.source.partition(".")[0])
+            and visible.template(e.target.partition(".")[0])] for k, v in trace.items()}}
 
 
 @router.post("/materials/inspect", response_model=materials.MaterialShape)
@@ -181,10 +194,13 @@ async def receive(request: ReceiveRequest) -> ArtifactOut:
 
 
 @router.get("/artifacts/{artifact_id}", response_model=ArtifactOut)
-async def get_artifact(artifact_id: str) -> ArtifactOut:
+async def get_artifact(artifact_id: str, user: BrowserUser) -> ArtifactOut:
     workflow = service()
     with _domain_errors():
-        return _artifact(workflow.artifact(artifact_id))
+        snapshot = workflow.artifact(artifact_id)
+        if not Visibility(workflow.catalogue, user).template(snapshot.template):
+            raise HTTPException(404, "Artifact not found")
+        return _artifact(snapshot)
 
 
 @router.post("/artifacts/{artifact_id}/answers", response_model=ArtifactOut)
@@ -228,17 +244,25 @@ async def dispatch() -> dict[str, Any]:
 
 
 @router.get("/board", response_model=board.Board)
-async def get_board() -> board.Board:
+async def get_board(user: BrowserUser) -> board.Board:
     workflow = service()
     with _domain_errors():
-        return board.project(workflow)
+        visible = Visibility(workflow.catalogue, user)
+        result = board.project(workflow)
+        return board.Board(rows=[r for r in result.rows
+            if (visible.template(r.template) if isinstance(r, board.ArtifactRow)
+                else visible.stage(r.stage))])
 
 
 # --- adoption (Agent 3) ----------------------------------------------------------------
 
 
 @router.get("/adoption", response_model=list[adoption.Finding])
-async def get_adoption() -> list[adoption.Finding]:
+async def get_adoption(user: BrowserUser) -> list[adoption.Finding]:
     workflow = service()
     with _domain_errors():
-        return adoption.assess(workflow)
+        visible = Visibility(workflow.catalogue, user)
+        return [f for f in adoption.assess(workflow)
+                if (visible.stage(f.scope["stage"]) if "stage" in f.scope
+                    else visible.department(f.scope["department"]) if "department" in f.scope
+                    else visible.all())]

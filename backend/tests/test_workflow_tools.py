@@ -94,3 +94,58 @@ def test_deployment_policy_can_switch_workflow_writes_off(client, monkeypatch):
     payload = {"template": "production_record", "said": first_submission(), "confirmed_by": "captain", "call_id": "c1"}
     assert post(client, "/tools/workflow-receive", payload).status_code == 403
     assert client.post("/tools/workflow-catalogue").status_code == 200
+
+
+def submitted_handoff(client):
+    draft = start(client)
+    draft = post(client, "/tools/workflow-answer", {
+        "artifact_id": draft["artifact_id"], "expected_seq": draft["seq"],
+        "said": said((FIELDS["actual_qty"]["label"], "97.5 方", "DEMO-CONFIRM-001")),
+    }).json()
+    result = post(client, "/tools/workflow-approve-submit", {
+        "artifact_id": draft["artifact_id"], "expected_seq": draft["seq"], "digest": draft["digest"],
+    })
+    assert result.status_code == 200, result.text
+    return next(r for r in client.post("/tools/workflow-board").json()["rows"] if r["kind"] == "handoff")
+
+
+def test_downstream_tool_requires_approval_and_fresh_sequence(client):
+    handoff = submitted_handoff(client)
+    body = {"handoff_id": handoff["id"], "expected_seq": handoff["seq"], "action": "start"}
+    assert "inputs" in handoff and handoff["stale"] is False
+    assert post(client, "/tools/workflow-handoff", body, approve=False).status_code == 403
+    assert post(client, "/tools/workflow-handoff", {**body, "action": "complete"}).status_code == 409
+    started = post(client, "/tools/workflow-handoff", body)
+    assert started.status_code == 200, started.text
+    assert started.json()["state"] == "in_progress"
+    assert post(client, "/tools/workflow-handoff", body).status_code == 409
+    completed = post(client, "/tools/workflow-handoff", {
+        **body, "expected_seq": started.json()["seq"], "action": "complete"})
+    assert completed.status_code == 200 and completed.json()["state"] == "completed"
+
+
+def test_downstream_return_requires_reason_and_respects_write_policy(client, monkeypatch):
+    handoff = submitted_handoff(client)
+    body = {"handoff_id": handoff["id"], "expected_seq": handoff["seq"], "action": "return"}
+    assert post(client, "/tools/workflow-handoff", body).status_code == 409
+    monkeypatch.setattr(settings, "bridgeflow_allow_workflow_write", False)
+    assert post(client, "/tools/workflow-handoff", {**body, "reason": "Check source"}).status_code == 403
+    monkeypatch.setattr(settings, "bridgeflow_allow_workflow_write", True)
+    returned = post(client, "/tools/workflow-handoff", {**body, "reason": "Check source"})
+    assert returned.status_code == 200 and returned.json()["state"] == "returned"
+
+
+def test_guidance_uses_declared_role_and_honestly_reports_unconfigured_contact(client, monkeypatch):
+    monkeypatch.setattr(settings, "bridgeflow_allow_workflow_write", False)
+    result = client.post("/tools/workflow-guidance", json={"stage": "market_review"})
+    assert result.status_code == 200
+    guide = result.json()
+    stages = client.post("/tools/workflow-catalogue").json()["stages"]
+    stage = next(s for s in stages if s["stage"] == "market_review")
+    assert guide["owner_role"] == stage["owner_role"]
+    assert guide["destination"] == {"kind": "local_sqlite", "scope": "local_demo"}
+    assert guide["help"]["contact"] is None
+    assert guide["inputs_total"] == len(stage["inputs"])
+    assert "submission receipt" in guide["success_evidence"]
+    assert client.post("/tools/workflow-guidance", json={"stage": "invented"}).status_code == 404
+    assert client.post("/tools/workflow-board").json()["total"] == 0

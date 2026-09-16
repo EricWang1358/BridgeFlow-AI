@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Relative settings paths are anchored here, so they mean the same thing whether
@@ -85,6 +86,11 @@ class Settings(BaseSettings):
     # Where analysed periods are kept. A file per period rather than a process-local
     # dict: the dict was lost on restart and wrong with more than one worker.
     result_store_path: str = "data/outputs"
+    discovery_scoring_policy_path: str = ""
+    discovery_decision_policy_path: str = ""
+    discovery_upload_owner_count: int = Field(20, ge=1)
+    discovery_upload_owner_bytes: int = Field(100 * 1024 * 1024, ge=1)
+    discovery_upload_total_bytes: int = Field(1024 * 1024 * 1024, ge=1)
     # Confirmed mappings, kept between months. A confirmation that does not survive
     # its run means every month asks the same questions.
     mapping_memory_path: str = "data/outputs/mappings.json"

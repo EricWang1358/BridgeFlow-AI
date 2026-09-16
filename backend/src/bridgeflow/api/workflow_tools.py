@@ -15,12 +15,12 @@ The same use cases as `/workflow/*`, shaped for a model and guarded for one:
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from bridgeflow.api.workflow import _domain_errors, service
+from bridgeflow.api.workflow import _domain_errors, _handoff, service
 from bridgeflow.config import settings
 from bridgeflow.security import consume_approval
 from bridgeflow.workflow import board
@@ -117,8 +117,29 @@ async def workflow_board() -> dict[str, Any]:
         rows = board.project(workflow).rows
     return {"total": len(rows), "truncated": len(rows) > MAX_BOARD_ROWS,
             "rows": [{"kind": r.kind, "summary": r.summary, "business_key": r.business_key,
-                      **({"id": r.id, "state": r.state} if hasattr(r, "id") else {})}
+                      **({"id": r.id, "state": r.state, "seq": r.seq} if hasattr(r, "id") else {}),
+                      **({"stale": r.stale, "inputs": r.inputs, "notification": r.notification}
+                         if isinstance(r, board.HandoffRow) else {})}
                      for r in rows[-MAX_BOARD_ROWS:]]}
+
+
+class HandoffCall(BaseModel):
+    handoff_id: str = Field(min_length=1, max_length=200)
+    action: Literal["start", "return", "complete", "acknowledge"]
+    expected_seq: int = Field(ge=1)
+    reason: str = Field("", max_length=500)
+    confirmed_by: str = "unknown-agent"
+    call_id: str | None = None
+
+
+@router.post("/workflow-handoff")
+async def workflow_handoff(request: HandoffCall, http_request: Request) -> dict[str, Any]:
+    _require_writes()
+    workflow = service()
+    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(), "workflow_handoff")
+    with _domain_errors():
+        return _handoff(workflow.act(request.handoff_id, request.action, request.reason,
+                                     request.expected_seq)).model_dump()
 
 
 class ReceiveCall(BaseModel):
@@ -132,7 +153,7 @@ class ReceiveCall(BaseModel):
 async def workflow_receive(request: ReceiveCall, http_request: Request) -> dict[str, Any]:
     _require_writes()
     workflow = service()
-    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body())
+    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(), "workflow_record")
     with _domain_errors():
         return _draft(workflow.receive(request.template, _observations(request.said, request.call_id)))
 
@@ -149,7 +170,7 @@ class AnswerCall(BaseModel):
 async def workflow_answer(request: AnswerCall, http_request: Request) -> dict[str, Any]:
     _require_writes()
     workflow = service()
-    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body())
+    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(), "workflow_record")
     with _domain_errors():
         return _draft(workflow.answer(request.artifact_id, _observations(request.said, request.call_id),
                                       request.expected_seq))
@@ -173,11 +194,30 @@ async def workflow_approve_submit(request: ApproveCall, http_request: Request) -
     """
     _require_writes()
     workflow = service()
-    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body())
+    actor = consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(), "workflow_approve_submit")
     with _domain_errors():
         current = workflow.artifact(request.artifact_id)
         if str(current.view.state) == "ready_for_review":
-            workflow.review(request.artifact_id, request.digest, "dsh-authenticated-session", request.expected_seq)
+            workflow.review(request.artifact_id, request.digest, actor, request.expected_seq)
         elif current.draft.digest != request.digest:
             raise HTTPException(409, "The values changed since they were shown; read the draft again")
         return _draft(workflow.submit(request.artifact_id))
+
+
+class GuidanceCall(BaseModel):
+    stage: str = Field(min_length=1, max_length=200)
+
+
+@router.post("/workflow-guidance")
+async def workflow_guidance(request: GuidanceCall) -> dict[str, Any]:
+    from bridgeflow.workflow.guidance import for_stage
+
+    declared = service().catalogue
+    if request.stage not in declared.stages:
+        raise HTTPException(404, "Stage is not declared")
+    result = for_stage(declared, request.stage)
+    for key in ("inputs", "outputs"):
+        result[f"{key}_total"] = len(result[key])
+        result[f"{key}_truncated"] = len(result[key]) > MAX_BOARD_ROWS
+        result[key] = result[key][:MAX_BOARD_ROWS]
+    return result

@@ -223,6 +223,13 @@ class WorkflowService:
         current = self.handoff(handoff_id)
         if expected_seq != current.seq:
             raise StaleRead(f"Handoff is at {current.seq}, request was based on {expected_seq}")
+        if action in {"start", "complete"} and current.view.stale:
+            raise TransitionError("Acknowledge the ready upstream revision before continuing work")
+        if action == "acknowledge":
+            ready = self._ready_versions()
+            if any(ready.get((template, current.key)) != version
+                   for template, version in current.view.inputs.items()):
+                raise TransitionError("Upstream inputs are not ready at the handoff's current versions")
         event = Event(types[action], {"reason": reason.strip()})
         HandoffMachine.next(HandoffView(**{**vars(current.view), "inputs": dict(current.view.inputs)}), event)
         self._append(f"handoff:{handoff_id}", current.seq, [event])

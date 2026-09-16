@@ -409,4 +409,12 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-formulas code { white-space: normal; overflow-wrap: anywhere }
 .bf-state button:disabled { opacity: .45; cursor: default }
 .bf-document button:focus-visible, .bf-document summary:focus-visible { outline: 2px solid var(--bf-accent); outline-offset: 3px }
+
+.bf-discovery form { display: grid; gap: 12px; margin: 16px 0 }
+.bf-discovery label { display: grid; gap: 5px; font-size: 13px }
+.bf-discovery input, .bf-discovery select, .bf-discovery textarea { width: 100%; min-width: 0; box-sizing: border-box }
+.bf-discovery textarea { min-height: 160px; font-family: monospace }
+.bf-discovery article { padding: 12px 0; border-bottom: 1px solid var(--bf-border) }
+.bf-discovery article strong { overflow-wrap: anywhere }
+.bf-discovery pre { font-size: 12px; max-height: 360px; overflow: auto }
 `

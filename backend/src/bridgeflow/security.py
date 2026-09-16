@@ -22,18 +22,26 @@ async def require_host(request: Request) -> None:
         raise HTTPException(401, "DSH host authentication required")
 
 
-def consume_approval(receipt: str, body: bytes) -> None:
+def consume_approval(receipt: str, body: bytes, operation: str | None = None) -> str:
     """Validate before writing, with a durable unique nonce across workers/restarts.
 
-    A receipt attests an approval in the authenticated DSH browser session. It does
-    not identify an individual employee; the shared host identity is explicit.
+    Portal mode additionally requires an exact-operation employee permit. The
+    returned actor is verified by the backend, never copied from model arguments.
     """
     try:
-        stamp, nonce, signature = receipt.split(".")
+        parts = receipt.split(".")
+        if len(parts) not in (3, 4):
+            raise ValueError("malformed")
+        stamp, nonce, signature = parts[:3]
+        permit = parts[3] if len(parts) == 4 else ""
+        if settings.portal_base_url and not permit:
+            raise ValueError("employee authorization missing")
         timestamp = int(stamp)
         if not 0 <= time.time() - timestamp <= 60 or len(nonce) != 32:
             raise ValueError("expired or malformed")
         message = f"{stamp}.{nonce}.{hashlib.sha256(body).hexdigest()}"
+        if permit:
+            message += f".{permit}"
         expected = hmac.new(
             settings.bridgeflow_service_token.encode(), message.encode(), hashlib.sha256
         ).hexdigest()
@@ -45,8 +53,17 @@ def consume_approval(receipt: str, body: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as connection:
         connection.execute("CREATE TABLE IF NOT EXISTS receipts (nonce TEXT PRIMARY KEY, stamp INT)")
+        actor = "dsh-authenticated-session"
+        if permit:
+            from bridgeflow.write_authorization import consume
+
+            try:
+                actor = consume(connection, permit, operation, body, nonce)
+            except sqlite3.IntegrityError as exc:
+                raise HTTPException(403, "Approval already consumed; request a new decision") from exc
         connection.execute("DELETE FROM receipts WHERE stamp < ?", (time.time() - 120,))
         try:
             connection.execute("INSERT INTO receipts VALUES (?, ?)", (nonce, timestamp))
         except sqlite3.IntegrityError as exc:
             raise HTTPException(403, "Approval already consumed; request a new decision") from exc
+    return actor

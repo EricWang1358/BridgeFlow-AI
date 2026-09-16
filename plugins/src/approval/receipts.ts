@@ -12,7 +12,7 @@ export function mappingBody(args: Record<string, unknown>, agentId: string, call
 export class ApprovalReceipts {
   readonly #receipts = new Map<string, { receipt: string; expires: number }>()
 
-  authorize(callId: string, body: unknown): void {
+  authorize(callId: string, body: unknown, permit?: string): void {
     const secret = process.env.BRIDGEFLOW_SERVICE_TOKEN ?? ''
     if (secret.length < 32) throw new Error('BRIDGEFLOW_SERVICE_TOKEN must have 32+ characters')
     for (const [id, value] of this.#receipts) {
@@ -22,8 +22,9 @@ export class ApprovalReceipts {
     const stamp = Math.floor(Date.now() / 1000)
     const nonce = randomBytes(16).toString('hex')
     const digest = createHash('sha256').update(JSON.stringify(body)).digest('hex')
-    const signature = createHmac('sha256', secret).update(`${stamp}.${nonce}.${digest}`).digest('hex')
-    this.#receipts.set(callId, { receipt: `${stamp}.${nonce}.${signature}`, expires: Date.now() + 60_000 })
+    const identity = permit ? `.${permit}` : ''
+    const signature = createHmac('sha256', secret).update(`${stamp}.${nonce}.${digest}${identity}`).digest('hex')
+    this.#receipts.set(callId, { receipt: `${stamp}.${nonce}.${signature}${identity}`, expires: Date.now() + 60_000 })
   }
 
   take(callId: string | undefined): string {

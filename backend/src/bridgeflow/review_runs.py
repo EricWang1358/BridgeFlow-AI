@@ -102,6 +102,7 @@ def open_runs() -> list[ReviewRun]:
 
 
 class HumanNote(BaseModel):
+    author: str = "dsh-authenticated-session"
     note_id: str
     report_id: str
     batch_id: str

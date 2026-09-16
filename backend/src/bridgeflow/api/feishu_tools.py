@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, StringConstraints
 from bridgeflow import feishu
 from bridgeflow.api.batches import _import_batch, load_batch
 from bridgeflow.api.reviews import saved_review
+from bridgeflow.config import settings
 from bridgeflow.schemas import Department
 from bridgeflow.security import consume_approval
 
@@ -47,14 +48,17 @@ class ImportRequest(BaseModel):
 @router.post("/feishu-import")
 async def feishu_import(request: ImportRequest, http_request: Request) -> dict:
     """Download department files from Feishu Drive and import them as one batch."""
-    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body())
+    if not settings.bridgeflow_allow_workflow_write:
+        raise HTTPException(403, "Workflow writes disabled by deployment policy")
+    actor = consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(), "feishu_import")
     drive = _client()
     uploads: list[UploadFile] = []
     try:
         for item in request.files:
             name, payload = await drive.download(item.file_token)
             uploads.append(UploadFile(io.BytesIO(payload), filename=name))
-        summary = await _import_batch(request.period, [f.department for f in request.files], uploads)
+        summary = await _import_batch(request.period, [f.department for f in request.files], uploads,
+                                      owner=actor if settings.portal_base_url else "")
     except feishu.FeishuError as exc:
         raise HTTPException(502, str(exc)) from exc
     finally:
@@ -76,7 +80,9 @@ class UploadRequest(BaseModel):
 @router.post("/feishu-upload-report")
 async def feishu_upload_report(request: UploadRequest, http_request: Request) -> dict:
     """Upload a saved review report to a Feishu folder. The report is sent as saved."""
-    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body())
+    if not settings.bridgeflow_allow_workflow_write:
+        raise HTTPException(403, "Workflow writes disabled by deployment policy")
+    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(), "feishu_upload_report")
     load_batch(request.batch_id)
     report = saved_review(request.batch_id, request.report_id)
     filename = re.sub(r"[^A-Za-z0-9_.-]", "-", f"bridgeflow-review-{report['period']}-{report['report_id'][:8]}.json")

@@ -1,3 +1,8 @@
+import { discoveryDecisionTools } from './tools/discovery-decision.ts'
+import { discoveryMeetingSave } from './tools/discovery-meeting.ts'
+import { discoveryScoreSave } from './tools/discovery-score.ts'
+import { discoveryGraphSave } from './tools/discovery-graph.ts'
+import { discoveryMaterials, discoveryPropose, discoveryRegister } from './tools/discovery.ts'
 import { ToolCatalogue } from './tool-catalogue.ts'
 import type { Context } from '@deepseek-ai/cordis'
 import Schema from '@deepseek-ai/schemastery'
@@ -13,7 +18,7 @@ import { confirmColumnMatch } from './tools/confirm-column-match.ts'
 import { feishuImport, feishuUploadReport } from './tools/feishu.ts'
 import { integrationSummary } from './tools/integration.ts'
 import { quarantineApply, quarantineDecide, quarantineList } from './tools/quarantine.ts'
-import { workflowApproveSubmit, workflowBoard, workflowCatalogue, workflowDraft, workflowRecord } from './tools/workflow.ts'
+import { workflowApproveSubmit, workflowBoard, workflowCatalogue, workflowDraft, workflowGuidance, workflowHandoff, workflowRecord } from './tools/workflow.ts'
 import { listMetrics } from './tools/list-metrics.ts'
 import { profileBatch } from './tools/profile-batch.ts'
 import { lookupFieldDictionary } from './tools/lookup-field-dictionary.ts'
@@ -80,9 +85,18 @@ export function apply(ctx: Context, config: Config): void {
   catalogue.register(ctx, workflowCatalogue(backend))
   catalogue.register(ctx, workflowDraft(backend))
   catalogue.register(ctx, workflowBoard(backend))
+  catalogue.register(ctx, workflowGuidance(backend))
+  catalogue.register(ctx, discoveryMaterials(backend))
   if (config.allowWorkflowWrite) {
+    catalogue.register(ctx, discoveryPropose(backend, receipts))
+    catalogue.register(ctx, discoveryRegister(backend, receipts))
+    catalogue.register(ctx, discoveryGraphSave(backend, receipts))
+    catalogue.register(ctx, discoveryScoreSave(backend, receipts))
+    catalogue.register(ctx, discoveryMeetingSave(backend, receipts))
+    for (const tool of discoveryDecisionTools(backend, receipts)) catalogue.register(ctx, tool)
     catalogue.register(ctx, workflowRecord(backend, receipts))
     catalogue.register(ctx, workflowApproveSubmit(backend, receipts))
+    catalogue.register(ctx, workflowHandoff(backend, receipts))
     catalogue.register(ctx, feishuImport(backend, receipts))
     catalogue.register(ctx, feishuUploadReport(backend, receipts))
   }

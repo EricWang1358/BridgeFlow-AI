@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from bridgeflow import __version__, store
 from bridgeflow.api.approvals import router as approvals_router
 from bridgeflow.api.batches import router as batches_router
+from bridgeflow.api.discovery import router as discovery_router
+from bridgeflow.api.discovery import tools_router as discovery_tools_router
 from bridgeflow.api.documents import router as documents_router
 from bridgeflow.api.feishu_tools import router as feishu_tools_router
 from bridgeflow.api.integration import router as integration_router
@@ -18,6 +20,7 @@ from bridgeflow.api.reviews import router as reviews_router
 from bridgeflow.api.tools import router as tools_router
 from bridgeflow.api.workflow import router as workflow_router
 from bridgeflow.api.workflow_tools import router as workflow_tools_router
+from bridgeflow.api.write_identity import router as write_identity_router
 from bridgeflow.config import settings
 from bridgeflow.pipeline import Orchestrator
 from bridgeflow.schemas import Department, PipelineResult, QuoteRecommendation, QuoteRequest
@@ -33,6 +36,7 @@ app.add_middleware(
 
 # The dsh tools call in here for the work their TypeScript declarations describe.
 # See plugins/README.md for why the two halves live where they do.
+app.include_router(write_identity_router, dependencies=[Depends(require_host)])
 app.include_router(tools_router, dependencies=[Depends(require_host)])
 app.include_router(batches_router, dependencies=[Depends(require_host)])
 app.include_router(reviews_router, dependencies=[Depends(require_host)])
@@ -43,6 +47,8 @@ app.include_router(documents_router, dependencies=[Depends(require_host)])
 # — correct for an unattended run, and not a human in the loop.
 app.include_router(approvals_router, dependencies=[Depends(require_host)])
 app.include_router(workflow_router, dependencies=[Depends(require_host)])
+app.include_router(discovery_router, dependencies=[Depends(require_host)])
+app.include_router(discovery_tools_router, dependencies=[Depends(require_host)])
 app.include_router(workflow_tools_router, dependencies=[Depends(require_host)])
 app.include_router(quarantine_tools_router, dependencies=[Depends(require_host)])
 app.include_router(feishu_tools_router, dependencies=[Depends(require_host)])
