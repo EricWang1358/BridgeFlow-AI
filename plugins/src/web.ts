@@ -184,9 +184,10 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           || /^\/integration\/batches\/[a-f0-9]{32}(\/xlsx)?$/.test(path)
           || /^\/conclusions\/batches\/[a-f0-9]{32}$/.test(path))
         const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo' || path === '/batches/self-check' || path === '/discovery/uploads')
-        // Feishu user-identity calls (docs/30, docs/31): the browser relays the user's own
-        // token; these endpoints are never model tools, so the click is the approval.
-        const feishuUser = req.method === 'POST' && /^\/tools\/feishu-(list|import-user|upload-user|wiki-spaces|wiki-list|wiki-upload)$/.test(path)
+        // Feishu user-identity calls (docs/30, docs/31, docs/33): the browser relays the
+        // user's own token; these endpoints are never model tools, so the click is the
+        // approval. sheet-meta / bitable-meta answer names and dimensions only (docs/33).
+        const feishuUser = req.method === 'POST' && /^\/tools\/feishu-(list|import-user|upload-user|wiki-spaces|wiki-list|wiki-upload|sheet-meta|bitable-meta)$/.test(path)
         // The route match alone is not enough: a feishu call without the user's own
         // token must stop here with the same 403 as any other unauthorized route.
         const feishuToken = req.headers['x-feishu-user-token']

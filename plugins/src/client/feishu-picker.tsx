@@ -177,7 +177,9 @@ export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void })
     setAssign(prev => {
       const next = { ...prev }
       for (const d of departments) if (next[d]?.token === item.token) delete next[d]
-      if (dept) next[dept] = { ...item }
+      // A sheet's header row input displays 1 when unset; the state must say the same,
+      // otherwise ready() and the submit body disagree with what the user sees.
+      if (dept) next[dept] = item.kind === 'sheet' ? { ...item, header_row: 1 } : { ...item }
       return next
     })
     if (dept && item.kind !== 'file' && !metas[item.token]) {
