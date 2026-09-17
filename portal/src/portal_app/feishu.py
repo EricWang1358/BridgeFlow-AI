@@ -57,7 +57,8 @@ class FeishuOAuth:
         try:
             body = response.json()
         except ValueError as exc:
-            raise FeishuError(f"Feishu returned HTTP {response.status_code} without a JSON body") from exc
+            raise FeishuError(f"Feishu returned HTTP {response.status_code} without a JSON body",
+                              status=response.status_code) from exc
         if response.status_code >= 400 or body.get("code", 0) != 0:
             raise FeishuError(f"Feishu refused (code {body.get('code')}): {body.get('msg', 'no message')}",
                               code=body.get("code"), status=response.status_code)

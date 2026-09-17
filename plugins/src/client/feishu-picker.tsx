@@ -108,11 +108,19 @@ function WikiBrowser({ row, currentLocation, extra }: {
   // space/parent (or space-less state) that asked for it is still current.
   const locationRef = useRef({ space: '', parent: '' })
   locationRef.current = { space: space?.space_id ?? '', parent }
+  // A second load-more while one is in flight would race the append merge; ignore
+  // it until the first settles. Initial loads (no page token) always run.
+  const spacesBusy = useRef(false)
   const loadSpaces = (pageToken = '') => {
+    if (pageToken) {
+      if (spacesBusy.current) return
+      spacesBusy.current = true
+    }
     setError('')
     listSpaces(pageToken)
       .then(p => { if (!locationRef.current.space) setSpaces(prev => pageToken && prev ? { ...p, spaces: [...prev.spaces, ...p.spaces] } : p) })
       .catch(e => { if (locationRef.current.space) return; setSpaces(null); setError(describeError(e, t)) })
+      .finally(() => { if (pageToken) spacesBusy.current = false })
   }
   const loadNodes = (pageToken = '') => {
     if (!space) return
