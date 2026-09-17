@@ -6,6 +6,11 @@
 **结论在前：五步，前两步是纯代码可离线验证，第三步插件，第四步联调；阻塞项是
 `32` 第六节的人工前置（scope 发版 + 全员重登），没做完联调全挂 99991672。**
 
+实施状态（2026-09-17）：第 1–3 步已落地，后端 595 测试全绿（其中本篇新增 10 个）、
+插件 typecheck/build 过。第 4 步联调等人工前置。与计划的出入：每条 files 项的表头字段名
+用单数 `header_row`（与 `Layout.header_row` 对齐）；bitable meta 按拍板改为两段
+（不带 `table_id` 返表清单，带 `table_id` 返该表字段定义）。
+
 ## 〇、现状锚点（复用面）
 
 计划建立在以下既有件上，不重写：
@@ -99,8 +104,8 @@ quarantine 语义是「行被拦下待人工处置」，塞列级事实会把两
 **端点**（全部 user 身份、浏览器点击即审批、不注册为模型工具，同 docs/30 契约）：
 
 - `POST /tools/feishu-sheet-meta`：入参 `{token}`，出参 `[{sheet_id, title, rows, cols}]`。
-- `POST /tools/feishu-bitable-meta`：入参 `{token}`，出参 `{tables: [{table_id, name, fields: [字段名]}]}`。
-  表数通常个位数，一次取齐字段名省一轮前端往返；实测表多再拆。
+- `POST /tools/feishu-bitable-meta`：入参 `{token}` 返 `{tables: [{table_id, name}]}`；
+  带 `table_id` 返 `{table_id, fields: [{name, ui_type}]}`（两段式，见拍板 2）。
 - `ImportFile` 扩展：`kind: Literal["file", "sheet", "bitable"] = "file"`，
   `sheet_id`、`table_id`、`header_rows: int | None`。validator：
   `file` 不得带三个新字段；`sheet` 必须有 `sheet_id` + `header_rows ≥ 1`；`bitable` 必须有 `table_id`。
@@ -154,10 +159,9 @@ quarantine 语义是「行被拦下待人工处置」，塞列级事实会把两
 | 4 返回值无单元格/记录内容 | 1、2 的 `secret_cell` 探针 | 断言无泄漏 |
 | 5 行数-耗时-调用数记 `00` | 4 | 数字入库 |
 
-## 四、待 review 拍板的点
+## 四、拍板结果（2026-09-17）
 
-1. 决策 5：`dropped_columns` 进 `BatchSummary` 新字段，还是复用 quarantine 行级语义？
-2. bitable meta 一次取齐全部表的字段名（N+1 次调用）vs 前端选中表后二次调用取字段。
-   计划取前者，表多实测再拆。
-3. sheet range 单块 5000 行的起始值，联调前不锁死。
-4. tenant 路径本期拒 `kind != file`（决策 4），是否有联调/演示场景需要 tenant 读在线表格？
+1. 剔除列进 `BatchSummary.dropped_columns` 新字段（决策 5），不复用 quarantine 行级语义。
+2. bitable meta 两段式：前端选中数据表后再二次调用取字段定义。
+3. sheet range 单块 5000 行，联调按实测配额调。
+4. 无 tenant 读在线表格场景：tenant 路径拒 `kind != file`（决策 4）成立。

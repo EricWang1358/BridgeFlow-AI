@@ -8,6 +8,7 @@
 - 全项目需求与逐 UC 状态：[requirements/README](docs/requirements/README.md)；一份双语 Markdown 对应一个 Epic，既有能力与历史延期范围也已纳入。14x 只是其中三个 Epic。实现顺序：[implementation-plan](docs/requirements/implementation-plan.md)；issue/PRD 对照：[traceability](docs/requirements/traceability.md)。
 - 2026-09-17 需求复核（仅文档，未写代码）：按项目完整性、流程便民性、结论直观性与专业性三个视角补充 [00-foundations](docs/requirements/00-foundations.md)（角色目录、逐 UC 参与者与触发、非功能需求、结论呈现规范、优先级与 Given/When/Then 验收写法），新增 [E13 月度结论呈现与口径治理](docs/requirements/13-conclusions.md) 与 [E14 月度流程便民](docs/requirements/14-monthly-convenience.md) 共 12 个 UC，以及 [类设计](docs/requirements/class-design.md)；目录现为 14 个 Epic、85 个 UC。看板 Epic #189（E13）、#196（E14），每个 UC 一个子 issue。第一轮已实现 E13-UC01 一页结论主流程（#190）、E13-UC06 依据等级（#195）、E14-UC03 提交前自检（#199，离线完成），证据见 docs/00；下一轮建议 E13-UC05 口径确认与 E14-UC04 单部门补传。
 - 测试数量、命令、截图及验收边界仅记录于 [docs/00](docs/00-status.md)。不要从“代码存在”“issue 已关闭”或离线通过推定企业验收。
+- 2026-09-17 飞书在线表格/多维表格读取（分支 `feature/feishu-user-docs-20260916`）：规格 [docs/32](docs/32-feishu-sheets-bitable-read.md)，计划与实现 [docs/33](docs/33-feishu-sheets-bitable-impl.md)。后端 595 测试全绿、插件 typecheck/build 过；剩第 4 步真实联调，等 docs/32 第六节的人工前置（用户态 `sheets:spreadsheet:readonly` 与 `bitable:app:readonly` 发版 + 全员重登），联调数字记 docs/00。
 - 必读硬约束：[CLAUDE.md](CLAUDE.md)、[架构权威 docs/13](docs/13-golden-standard.md)、[产品扩展契约 docs/23](docs/23-extension-contracts.md)。
 
 ## 当前交付范围
