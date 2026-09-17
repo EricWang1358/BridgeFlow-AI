@@ -16,8 +16,10 @@ from __future__ import annotations
 import csv
 import io
 import re
-from collections.abc import AsyncIterator, Callable
+import tempfile
+from collections.abc import AsyncIterator, Callable, Iterable, Iterator
 from datetime import UTC, datetime
+from typing import Self
 
 from fastapi import HTTPException
 
@@ -81,29 +83,93 @@ def _safe_name(text: str) -> str:
     return re.sub(r'[\\/:*?"<>|\r\n]', "-", text).strip() or "unnamed"
 
 
-async def _csv(pages: AsyncIterator[list[list[object]]], skip_rows: int = 0) -> tuple[bytes, int]:
-    """Stream rows into CSV bytes under the batch row cap. Fully empty rows are dropped:
-    a sheet's grid size counts formatting, not data, and blank lines carry no fact."""
-    buffer = io.StringIO()
-    writer = csv.writer(buffer, lineterminator="\n")
-    rows_written = 0
+#: A spool stays in memory up to this many bytes, then rolls over to a temp file.
+_SPOOL_MEMORY_BYTES = 8 * 1024 * 1024
+
+
+class _Spool:
+    """CSV bytes under a hard ceiling: memory up to a threshold, disk past it.
+
+    Bytes are counted as each row is encoded, so an oversized table is refused while
+    it is being written — the 413 lands before the payload is fully allocated.
+    """
+
+    def __init__(self, limit: int) -> None:
+        # The spool's lifetime is owned by this class (close()/__exit__), which outlives
+        # any single with-block at the call site.
+        self._raw = tempfile.SpooledTemporaryFile(max_size=_SPOOL_MEMORY_BYTES, mode="w+b")  # noqa: SIM115
+        self._line = io.StringIO()
+        self._writer = csv.writer(self._line, lineterminator="\n")
+        self._limit = limit
+        self._written = 0
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.close()
+
+    def writerow(self, row: Iterable[object]) -> None:
+        self._line.seek(0)
+        self._line.truncate(0)
+        self._writer.writerow(row)
+        data = self._line.getvalue().encode("utf-8")
+        self._written += len(data)
+        if self._written > self._limit:
+            raise HTTPException(
+                413, "Table exceeds the configured upload size limit; nothing was imported")
+        self._raw.write(data)
+
+    def rows(self) -> Iterator[list[str]]:
+        """The spooled rows back, for the bitable's drop-columns second pass."""
+        self._raw.seek(0)
+        return iter(csv.reader(io.TextIOWrapper(self._raw, encoding="utf-8", newline="")))
+
+    def payload(self) -> bytes:
+        self._raw.seek(0)
+        return self._raw.read()
+
+    def close(self) -> None:
+        self._raw.close()
+
+
+async def _data_rows(pages: AsyncIterator[list[list[object]]],
+                     skip_rows: int) -> AsyncIterator[list[object]]:
+    """Rows below the selected header. The first row after skip_rows is the header the
+    user picked: an empty one is a refusal, never a silent slide to the next row. Fully
+    empty rows below it are dropped — a sheet's grid size counts formatting, not data."""
     skipped = skip_rows
+    header_seen = False
     async for page in pages:
         for row in page:
             if skipped:
                 skipped -= 1
                 continue
             if not any(value not in (None, "") for value in row):
+                if not header_seen:
+                    raise FeishuError(f"The selected header row {skip_rows + 1} is empty")
                 continue
+            header_seen = True
+            yield row
+    if not header_seen:
+        raise FeishuError("The selected range is empty below the header")
+
+
+async def _csv(pages: AsyncIterator[list[list[object]]], skip_rows: int = 0) -> tuple[bytes, int]:
+    """Stream rows into CSV bytes under the batch row and byte caps."""
+    spool = _Spool(settings.bridgeflow_max_upload_bytes)
+    try:
+        rows_written = 0
+        async for row in _data_rows(pages, skip_rows):
             if rows_written - 1 >= settings.bridgeflow_max_batch_rows:
                 raise HTTPException(
                     413, f"Table exceeds the {settings.bridgeflow_max_batch_rows}-row import limit "
                          f"after reading {rows_written - 1} data rows; nothing was imported")
-            writer.writerow(["" if value is None else value for value in row])
+            spool.writerow(["" if value is None else value for value in row])
             rows_written += 1
-    if not rows_written:
-        raise FeishuError("The selected range is empty below the header")
-    return buffer.getvalue().encode("utf-8"), rows_written
+        return spool.payload(), rows_written
+    finally:
+        spool.close()
 
 
 async def materialize_sheet(drive: FeishuDrive, spreadsheet_token: str, sheet_id: str,
@@ -127,25 +193,12 @@ async def materialize_sheet(drive: FeishuDrive, spreadsheet_token: str, sheet_id
     return filename, payload, []
 
 
-async def materialize_bitable(drive: FeishuDrive, app_token: str,
-                              table_id: str) -> tuple[str, bytes, list[dict]]:
-    """One bitable table as CSV bytes, field names as the header (docs/33, FR-3/FR-5).
-
-    Scalars import as-is; people, attachments, links and formulas import as their display
-    text; a column with no representable value in any record is dropped and reported.
-    """
-    tables = await drive.bitable_tables(app_token)
-    name = next((t["name"] for t in tables if t["table_id"] == table_id), None)
-    if name is None:
-        raise FeishuError(
-            f"table {table_id!r} not found; the bitable has: {[t['name'] for t in tables]}")
-    fields = await drive.bitable_fields(app_token, table_id)
-    if not fields:
-        raise FeishuError(f"table {name!r} declares no fields")
-    extractors = [_extractor(f["ui_type"]) for f in fields]
-
-    rows: list[list[str]] = []
-    representable = [f["ui_type"] in _DETERMINISTIC_UI_TYPES for f in fields]
+async def _spool_records(drive: FeishuDrive, app_token: str, table_id: str, fields: list[dict],
+                         extractors: list[Callable[[object], object]], representable: list[bool],
+                         spool: _Spool) -> None:
+    """Every record's normalized cells (all columns) into the spool, marking which columns
+    produced a representation. The row cap is enforced while paging — an oversized table is
+    refused with the counts and nothing is materialized (truncation would be a silent error)."""
     count = 0
     async for page in drive.bitable_records(app_token, table_id):
         for record in page:
@@ -163,18 +216,46 @@ async def materialize_bitable(drive: FeishuDrive, app_token: str,
                 elif text:
                     representable[index] = True
                 cells.append(str(text))
-            rows.append(cells)
+            spool.writerow(cells)
 
-    keep = [i for i in range(len(fields)) if representable[i]]
-    dropped = [{"column": fields[i]["name"], "field_type": fields[i]["ui_type"],
-                "reason": "no representable value; column dropped"}
-               for i in range(len(fields)) if i not in keep]
-    if not keep:
-        raise FeishuError(f"table {name!r} has no importable columns")
 
-    buffer = io.StringIO()
-    writer = csv.writer(buffer, lineterminator="\n")
-    writer.writerow([fields[i]["name"] for i in keep])
-    writer.writerows([[row[i] for i in keep] for row in rows])
-    filename = f"feishu-bitable-{app_token[:8]}-{_safe_name(name)}.csv"
-    return filename, buffer.getvalue().encode("utf-8"), dropped
+async def materialize_bitable(drive: FeishuDrive, app_token: str,
+                              table_id: str) -> tuple[str, bytes, list[dict]]:
+    """One bitable table as CSV bytes, field names as the header (docs/33, FR-3/FR-5).
+
+    Scalars import as-is; people, attachments, links and formulas import as their display
+    text; a column with no representable value in any record is dropped and reported.
+    """
+    tables = await drive.bitable_tables(app_token)
+    name = next((t["name"] for t in tables if t["table_id"] == table_id), None)
+    if name is None:
+        raise FeishuError(
+            f"table {table_id!r} not found; the bitable has: {[t['name'] for t in tables]}")
+    fields = await drive.bitable_fields(app_token, table_id)
+    if not fields:
+        raise FeishuError(f"table {name!r} declares no fields")
+    extractors = [_extractor(f["ui_type"]) for f in fields]
+    representable = [f["ui_type"] in _DETERMINISTIC_UI_TYPES for f in fields]
+
+    # Which columns survive is known only after every record is read, so the normalized
+    # cells spool to disk first, then a second pass writes the kept columns.
+    spool = _Spool(settings.bridgeflow_max_upload_bytes)
+    try:
+        await _spool_records(drive, app_token, table_id, fields, extractors, representable, spool)
+        keep = [i for i in range(len(fields)) if representable[i]]
+        dropped = [{"column": fields[i]["name"], "field_type": fields[i]["ui_type"],
+                    "reason": "no representable value; column dropped"}
+                   for i in range(len(fields)) if i not in keep]
+        if not keep:
+            raise FeishuError(f"table {name!r} has no importable columns")
+        final = _Spool(settings.bridgeflow_max_upload_bytes)
+        try:
+            final.writerow([fields[i]["name"] for i in keep])
+            for row in spool.rows():
+                final.writerow([row[i] for i in keep])
+            filename = f"feishu-bitable-{app_token[:8]}-{_safe_name(name)}.csv"
+            return filename, final.payload(), dropped
+        finally:
+            final.close()
+    finally:
+        spool.close()

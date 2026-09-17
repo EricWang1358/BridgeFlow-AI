@@ -223,9 +223,13 @@ class FeishuDrive:
         FormattedValue means a formula arrives as the result Feishu computed — it is
         never re-evaluated here. The caller passes the dimensions from sheet_meta.
         """
+        if rows <= 0:
+            return
+        if chunk <= 0:
+            raise ValueError("chunk must be a positive row count")
         last_col = _column_letter(max(cols, 1))
         start = 1
-        while start <= max(rows, 1):
+        while start <= rows:
             stop = min(start + chunk - 1, rows)
             body = await self._get_json(
                 f"/open-apis/sheets/v2/spreadsheets/{spreadsheet_token}/values/{sheet_id}!A{start}:{last_col}{stop}",
@@ -234,10 +238,20 @@ class FeishuDrive:
             start = stop + 1
 
     async def bitable_tables(self, app_token: str) -> list[dict]:
-        """A bitable's data tables: id and name only (docs/33)."""
-        body = await self._get_json(f"/open-apis/bitable/v1/apps/{app_token}/tables")
-        return [{"table_id": str(item.get("table_id", "")), "name": str(item.get("name", ""))}
-                for item in (body.get("data") or {}).get("items") or []]
+        """A bitable's data tables: id and name only, paged (docs/33)."""
+        tables: list[dict] = []
+        page_token = ""
+        while True:
+            params = {"page_size": "100"}
+            if page_token:
+                params["page_token"] = page_token
+            body = await self._get_json(f"/open-apis/bitable/v1/apps/{app_token}/tables", params)
+            data = body.get("data") or {}
+            tables += [{"table_id": str(item.get("table_id", "")), "name": str(item.get("name", ""))}
+                       for item in data.get("items") or []]
+            if not data.get("has_more"):
+                return tables
+            page_token = str(data.get("page_token") or "")
 
     async def bitable_fields(self, app_token: str, table_id: str) -> list[dict]:
         """One table's field definitions: name and type, paged, never record content."""

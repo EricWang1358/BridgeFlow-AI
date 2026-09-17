@@ -107,7 +107,11 @@ async def _import_with(drive: feishu.FeishuDrive, request: ImportRequest,
         # Owner: the signed-in user for browser imports; the verified approver in portal mode.
         owner = user.sub if user else (actor if settings.portal_base_url else "")
         summary = await _import_batch(request.period, [f.department for f in request.files], uploads,
-                                      owner=owner, dropped_columns=dropped)
+                                      owner=owner, dropped_columns=dropped,
+                                      # A materialized sheet's CSV starts at its header, but row
+                                      # numbers in provenance map back to the original sheet.
+                                      source_header_rows=[f.header_row if f.kind == "sheet" else None
+                                                          for f in request.files])
     except feishu.FeishuError as exc:
         raise HTTPException(502, str(exc)) from exc
     finally:

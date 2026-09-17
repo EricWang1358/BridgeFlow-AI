@@ -31,7 +31,7 @@
 逗号/换行/引号天然转义。
 
 **决策 2 — sheet 的表头在物化时切片，不进 `Layout`。**
-按用户选的 `header_rows` 从第 N 行开始物化，物化后的 CSV 表头恒为第 1 行。
+按用户选的 `header_row` 从第 N 行开始物化，物化后的 CSV 表头恒为第 1 行。
 sheet 公式取飞书算好的值（`valueRenderOption=FormattedValue`，`32` 第五节已定不重算）。
 
 **决策 3 — 超限在分页侧提前拒，不依赖 `_import_batch` 兜底。**
@@ -86,9 +86,10 @@ quarantine 语义是「行被拦下待人工处置」，塞列级事实会把两
 
 **物化函数**（新文件 `bridgeflow/feishu_tabular.py`，保持 `feishu.py` 纯客户端）：
 
-- `materialize_sheet(drive, token, sheet_id, header_rows) -> tuple[str, bytes]`：
-  读 meta 取行列数 → 按 `header_rows` 切片分页 → CSV 字节。文件名为
+- `materialize_sheet(drive, token, sheet_id, header_row) -> tuple[str, bytes, list[dict]]`：
+  读 meta 取行列数 → 按 `header_row` 切片分页 → CSV 字节。文件名为
   `feishu-sheet-{token 前 8 位}-{标签页名}.csv`（清洗/summary 里可见来源）。
+  第三个返回值是 `dropped_columns`，sheet 不剔列、恒为空表，形状与 `materialize_bitable` 一致。
 - `materialize_bitable(drive, token, table_id) -> tuple[str, bytes, list[dict]]`：
   取 fields → 逐字段归一化（FR-5）→ 字段名作 CSV 第 1 行 → 分页写记录。
   返回第三个值是 `dropped_columns` 清单。
@@ -107,8 +108,8 @@ quarantine 语义是「行被拦下待人工处置」，塞列级事实会把两
 - `POST /tools/feishu-bitable-meta`：入参 `{token}` 返 `{tables: [{table_id, name}]}`；
   带 `table_id` 返 `{table_id, fields: [{name, ui_type}]}`（两段式，见拍板 2）。
 - `ImportFile` 扩展：`kind: Literal["file", "sheet", "bitable"] = "file"`，
-  `sheet_id`、`table_id`、`header_rows: int | None`。validator：
-  `file` 不得带三个新字段；`sheet` 必须有 `sheet_id` + `header_rows ≥ 1`；`bitable` 必须有 `table_id`。
+  `sheet_id`、`table_id`、`header_row: int | None`。validator：
+  `file` 不得带三个新字段；`sheet` 必须有 `sheet_id` + `header_row ≥ 1`；`bitable` 必须有 `table_id`。
   违反一律 422，不带默认值猜（字典缺席报「未配置」的同一条原则）。
 - `_import_with` 按 `kind` 分流：`file` 走既有 `download`；`sheet`/`bitable` 走物化。
   分流后殊途同归进 `_import_batch`，`dropped_columns` 并入 summary（决策 5）。
@@ -117,13 +118,13 @@ quarantine 语义是「行被拦下待人工处置」，塞列级事实会把两
 **单元测试**：
 
 - sheet 导入：假飞书出两页 values → 导入成正常批次，行数与假数据一致；
-  `header_rows=3` 时列名来自第 3 行。
+  `header_row=3` 时列名来自第 3 行。
 - bitable 导入：含 User / Attachment / Formula / 不可表示四类字段，断言标量取值、
   复杂字段取显示文本、不可表示列剔除且 `dropped_columns` 有据。
 - 超限：假数据行数 > 上限 → 413，报已读行数与上限；断言无批次落盘。
 - 无泄漏：meta 与 import 两个端点的完整响应 JSON 断言无 `secret_cell`（单元格内容）。
 - 权限：假 transport 对 meta 调用回 403 → 端点 502 透传 code/msg。
-- kind 校验六个组合（缺 sheet_id、缺 header_rows、file 带 table_id 等）全部 422。
+- kind 校验六个组合（缺 sheet_id、缺 header_row、file 带 table_id 等）全部 422。
 
 回归：`cd backend && ruff check src tests && pytest -q`。
 
@@ -140,7 +141,7 @@ quarantine 语义是「行被拦下待人工处置」，塞列级事实会把两
 - 批次详情页显示 `dropped_columns`（若有）。
 
 **测试**：`plugins/tests/` 加 picker 二级选择的 smoke（假 meta 响应 → 选择 → 断言请求体
-带 `kind`/`sheet_id`/`header_rows`）；`pnpm build` 通过；既有 web-smoke 回归不红。
+带 `kind`/`sheet_id`/`header_row`）；`pnpm build` 通过；既有 web-smoke 回归不红。
 
 ### 第 4 步 — 真实联调与记录
 
