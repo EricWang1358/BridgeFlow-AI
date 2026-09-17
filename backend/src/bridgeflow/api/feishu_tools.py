@@ -7,12 +7,12 @@ import io
 import json
 import re
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 
-from bridgeflow import feishu
+from bridgeflow import feishu, feishu_tabular
 from bridgeflow.api.batches import _check_upload_scope, _import_batch, _visible, load_batch
 from bridgeflow.api.reviews import saved_review
 from bridgeflow.config import settings
@@ -50,6 +50,22 @@ def _user_client(http_request: Request) -> feishu.FeishuDrive:
 class ImportFile(BaseModel):
     department: Department
     file_token: Token
+    #: What file_token addresses (docs/33): a Drive file, an online sheet, or a bitable.
+    kind: Literal["file", "sheet", "bitable"] = "file"
+    sheet_id: Token | None = None
+    table_id: Token | None = None
+    header_row: int | None = Field(None, ge=1)
+
+    @model_validator(mode="after")
+    def _kind_fields(self) -> ImportFile:
+        # Each kind declares its addressing exactly; a missing piece is a 422, never a guess.
+        if self.kind == "file" and (self.sheet_id or self.table_id or self.header_row):
+            raise ValueError("kind=file takes no sheet_id, table_id or header_row")
+        if self.kind == "sheet" and (not self.sheet_id or not self.header_row or self.table_id):
+            raise ValueError("kind=sheet needs sheet_id and header_row, and no table_id")
+        if self.kind == "bitable" and (not self.table_id or self.sheet_id or self.header_row):
+            raise ValueError("kind=bitable needs table_id only")
+        return self
 
 
 class ImportRequest(BaseModel):
@@ -64,6 +80,10 @@ async def feishu_import(request: ImportRequest, http_request: Request) -> dict:
     """Download department files from Feishu Drive and import them as one batch."""
     if not settings.bridgeflow_allow_workflow_write:
         raise HTTPException(403, "Workflow writes disabled by deployment policy")
+    if any(f.kind != "file" for f in request.files):
+        # Sheets and bitables are read as the signed-in user only (docs/33, decision 4):
+        # the tenant identity is never pointed at people's documents.
+        raise HTTPException(422, "Sheets and bitables import through the user endpoint only")
     actor = consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(), "feishu_import")
     return await _import_with(_client(), request, actor=actor)
 
@@ -71,14 +91,23 @@ async def feishu_import(request: ImportRequest, http_request: Request) -> dict:
 async def _import_with(drive: feishu.FeishuDrive, request: ImportRequest,
                        user: UserIdentity | None = None, actor: str = "") -> dict:
     uploads: list[UploadFile] = []
+    dropped: list[dict] = []
     try:
         for item in request.files:
-            name, payload = await drive.download(item.file_token)
+            if item.kind == "sheet":
+                name, payload, _ = await feishu_tabular.materialize_sheet(
+                    drive, item.file_token, item.sheet_id or "", item.header_row or 1)
+            elif item.kind == "bitable":
+                name, payload, dropped_columns = await feishu_tabular.materialize_bitable(
+                    drive, item.file_token, item.table_id or "")
+                dropped += [{"department": item.department, **d} for d in dropped_columns]
+            else:
+                name, payload = await drive.download(item.file_token)
             uploads.append(UploadFile(io.BytesIO(payload), filename=name))
         # Owner: the signed-in user for browser imports; the verified approver in portal mode.
         owner = user.sub if user else (actor if settings.portal_base_url else "")
         summary = await _import_batch(request.period, [f.department for f in request.files], uploads,
-                                      owner=owner)
+                                      owner=owner, dropped_columns=dropped)
     except feishu.FeishuError as exc:
         raise HTTPException(502, str(exc)) from exc
     finally:
@@ -248,3 +277,46 @@ async def feishu_wiki_upload(http_request: Request, file: UploadFile,
     finally:
         await drive.close()
     return {"wiki_token": wiki_token, "name": filename}
+
+
+# --- Sheet & bitable reads (docs/33) ---------------------------------------------------
+# Same browser-only contract as the docs/30/31 endpoints: the click is the approval and
+# the token rides the header. The meta endpoints answer names, dimensions and field
+# definitions only — a cell or record value never crosses into a response.
+
+
+class SheetMetaRequest(BaseModel):
+    token: Token
+
+
+@router.post("/feishu-sheet-meta")
+async def feishu_sheet_meta(request: SheetMetaRequest, http_request: Request) -> dict:
+    """Worksheets of one online sheet, for the second-level pick: id, title, dimensions."""
+    drive = _user_client(http_request)
+    try:
+        return {"sheets": await drive.sheet_meta(request.token)}
+    except feishu.FeishuError as exc:
+        raise HTTPException(502, str(exc)) from exc
+    finally:
+        await drive.close()
+
+
+class BitableMetaRequest(BaseModel):
+    """Tables of one bitable; with table_id, that table's field definitions instead."""
+    token: Token
+    table_id: Token | None = None
+
+
+@router.post("/feishu-bitable-meta")
+async def feishu_bitable_meta(request: BitableMetaRequest, http_request: Request) -> dict:
+    drive = _user_client(http_request)
+    try:
+        if request.table_id:
+            fields = await drive.bitable_fields(request.token, request.table_id)
+            return {"table_id": request.table_id,
+                    "fields": [{"name": f["name"], "ui_type": f["ui_type"]} for f in fields]}
+        return {"tables": await drive.bitable_tables(request.token)}
+    except feishu.FeishuError as exc:
+        raise HTTPException(502, str(exc)) from exc
+    finally:
+        await drive.close()

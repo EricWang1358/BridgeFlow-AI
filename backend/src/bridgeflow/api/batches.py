@@ -67,6 +67,9 @@ class BatchSnapshot(PipelineResult):
     #: the identity layer. Visibility: the batch's departments ⊆ the viewer's
     #: authorized departments, or the viewer is the owner (docs/27).
     owner: str = ""
+    #: Intake columns dropped because nothing in them was representable (docs/33, FR-5).
+    #: Column-level fact, kept apart from quarantine, which is row-level disposition.
+    dropped_columns: list[dict] = Field(default_factory=list)
 
 
 def _visible(batch: BatchSnapshot, user: UserIdentity | None) -> BatchSnapshot:
@@ -131,6 +134,8 @@ class BatchSummary(BaseModel):
     #: this department is missing. Non-zero means the captain has something to propose.
     column_questions: int = 0
     derived_from: str | None = None
+    #: Intake columns dropped as unrepresentable (docs/33); empty for plain file uploads.
+    dropped_columns: list[dict] = Field(default_factory=list)
 
 
 def _declared_entities(snapshot: dict | None) -> dict[str, list[str]]:
@@ -169,6 +174,7 @@ def summary(batch_id: str, result: BatchSnapshot) -> BatchSummary:
         stale_matches=result.stale_matches,
         column_questions=column_matches.count_questions(result.dictionary_snapshot, result.clean_tables),
         derived_from=result.derived_from,
+        dropped_columns=result.dropped_columns,
     )
 
 
@@ -437,7 +443,8 @@ async def self_check(
 
 async def _import_batch(period: str, departments: list[Department], files: list[UploadFile],
                         source_dictionary: Path | None = None, demo_case: str | None = None,
-                        choices: list[Layout] | None = None, owner: str = "") -> BatchSummary:
+                        choices: list[Layout] | None = None, owner: str = "",
+                        dropped_columns: list[dict] | None = None) -> BatchSummary:
     if len(files) != len(departments) or not 1 <= len(files) <= 4:
         raise HTTPException(422, "Provide one file per department (1–4 departments)")
     if len(set(departments)) != len(departments):
@@ -475,7 +482,8 @@ async def _import_batch(period: str, departments: list[Department], files: list[
         intake_reports[department] = report.model_dump(mode="json")
         tables.append(table)
     result = BatchSnapshot(period=period, clean_tables=tables, dictionary_snapshot=dictionary_raw or {},
-                           integration_snapshot=integration_snapshot, owner=owner, intake_checks=intake_reports)
+                           integration_snapshot=integration_snapshot, owner=owner, intake_checks=intake_reports,
+                           dropped_columns=dropped_columns or [])
     if not dictionary.is_empty:
         # Before anything reads the tables: a remembered match makes this upload look
         # the way the dictionary already describes it. Frozen batches are never redone.

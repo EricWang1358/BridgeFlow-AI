@@ -1,5 +1,8 @@
 """Feishu Drive shortcuts (#140), tested against a simulated tenant — no real Feishu call."""
+import csv as csvlib
+import io
 import json
+import re
 
 import httpx
 import pytest
@@ -7,7 +10,7 @@ from conftest import receipt
 from fastapi.testclient import TestClient
 from test_business_mvp import CASES, judgement
 
-from bridgeflow import business, feishu
+from bridgeflow import business, feishu, store
 from bridgeflow.api import feishu_tools
 from bridgeflow.api.main import app
 from bridgeflow.config import REPO_ROOT, settings
@@ -30,6 +33,30 @@ class Tenant:
         self.moves: list[dict] = []
         self.calls: list[str] = []
         self.fail_move = False
+        # Sheet & bitable side (docs/33): the production CSV served two ways — as a sheet
+        # with a title row above the header, and as a bitable table with complex fields.
+        production_rows = list(csvlib.reader(io.StringIO((CASES / "risk" / "production.csv").read_text())))
+        self.sheet_rows = {"shtok1": [["月度生产总表"]] + production_rows}
+        self.sheet_meta = {"shtok1": [{"sheet_id": "s1sheet", "title": "生产数据",
+                                       "grid_properties": {"row_count": 6, "column_count": 6},
+                                       "secret_cell": "must-not-leak"}]}
+        self.flaky_values = False
+        self.values_calls = 0
+        header = production_rows[0]
+        self.bitable_tables = {"bitok1": [{"table_id": "tbl1main", "name": "生产台账",
+                                           "secret_cell": "must-not-leak"}]}
+        self.bitable_fields = [{"field_name": h, "type": 1, "ui_type": "Text"} for h in header] + [
+            {"field_name": "负责人", "type": 11, "ui_type": "User"},
+            {"field_name": "凭证", "type": 17, "ui_type": "Attachment"},
+            {"field_name": "校验", "type": 20, "ui_type": "Formula"},
+            {"field_name": "关联原料", "type": 21, "ui_type": "Link"}]
+        self.bitable_records = [
+            {"record_id": f"rec{i}", "fields": {**dict(zip(header, row)),
+                                                "负责人": [{"name": "张三"}],
+                                                "凭证": [{"name": "发票.pdf"}],
+                                                "校验": 42,
+                                                "关联原料": {"record_ids": ["rec9"], "table_id": "tbl2"}}}
+            for i, row in enumerate(production_rows[1:])]
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -63,6 +90,29 @@ class Tenant:
         if path.endswith("/upload_all"):
             self.uploaded["new-file-token"] = request.content
             return httpx.Response(200, json={"code": 0, "data": {"file_token": "new-file-token"}})
+        parts = path.split("/")
+        if path.endswith("/sheets/query"):  # /open-apis/sheets/v3/spreadsheets/{token}/sheets/query
+            if parts[5] == "denied1":
+                return httpx.Response(403, json={"code": 99991679, "msg": "forbidden"})
+            return httpx.Response(200, json={"code": 0, "data": {"sheets": self.sheet_meta.get(parts[5], [])}})
+        if "/values/" in path:  # /open-apis/sheets/v2/spreadsheets/{token}/values/{sheet!A1:C6}
+            self.values_calls += 1
+            if self.flaky_values and self.values_calls == 1:
+                return httpx.Response(429, json={"code": 99991400, "msg": "frequency limit"})
+            bounds = re.search(r"!A(\d+):[A-Z]+(\d+)", parts[7])
+            rows = self.sheet_rows.get(parts[5], [])[int(bounds.group(1)) - 1:int(bounds.group(2))]
+            return httpx.Response(200, json={"code": 0, "data": {"valueRange": {"values": rows}}})
+        if "/bitable/v1/apps/" in path:  # /open-apis/bitable/v1/apps/{token}/tables[/{id}/fields|records]
+            if path.endswith("/tables"):
+                return httpx.Response(200, json={"code": 0, "data": {"items": self.bitable_tables.get(parts[5], [])}})
+            if path.endswith("/fields"):
+                return httpx.Response(200, json={"code": 0, "data": {"items": self.bitable_fields, "has_more": False}})
+            if path.endswith("/records"):
+                page = 1 if request.url.params.get("page_token") else 0
+                items = self.bitable_records[page * 2:page * 2 + 2]
+                has_more = (page + 1) * 2 < len(self.bitable_records)
+                return httpx.Response(200, json={"code": 0, "data": {
+                    "items": items, "has_more": has_more, "page_token": "p2" if has_more else ""}})
         return httpx.Response(404, json={"code": 404, "msg": "unknown"})
 
 
@@ -289,3 +339,115 @@ def test_user_upload_needs_exactly_one_target(client, tenant):
     for payload in (both, neither):
         response = client.post("/tools/feishu-upload-user", headers=USER, content=json.dumps(payload))
         assert response.status_code == 422, payload
+
+
+# --- Sheet & bitable reads (docs/33): metadata is metadata; reads import as batches. ----
+
+
+def sheet_import_payload(**change):
+    return {"period": "2025-11", "files": [{"department": "production", "file_token": "shtok1",
+                                            "kind": "sheet", "sheet_id": "s1sheet", "header_row": 2}],
+            **change}
+
+
+def test_sheet_and_bitable_meta_require_a_user_token(client, tenant):
+    for path, payload in (("/tools/feishu-sheet-meta", {"token": "shtok1"}),
+                          ("/tools/feishu-bitable-meta", {"token": "bitok1"})):
+        response = client.post(path, content=json.dumps(payload), headers={"content-type": "application/json"})
+        assert response.status_code == 401, path
+    assert tenant.token_calls == 0  # a missing user token never falls back to the tenant
+
+
+def test_sheet_meta_is_metadata_only(client, tenant):
+    response = client.post("/tools/feishu-sheet-meta", content=json.dumps({"token": "shtok1"}), headers=USER)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["sheets"] == [{"sheet_id": "s1sheet", "title": "生产数据", "rows": 6, "cols": 6}]
+    assert "must-not-leak" not in json.dumps(body)  # metadata only: no cell content, ever
+
+
+def test_bitable_meta_lists_tables_then_fields(client, tenant):
+    tables = client.post("/tools/feishu-bitable-meta", content=json.dumps({"token": "bitok1"}), headers=USER)
+    assert tables.status_code == 200, tables.text
+    assert tables.json() == {"tables": [{"table_id": "tbl1main", "name": "生产台账"}]}
+    fields = client.post("/tools/feishu-bitable-meta", headers=USER,
+                         content=json.dumps({"token": "bitok1", "table_id": "tbl1main"}))
+    body = fields.json()
+    assert {f["name"] for f in body["fields"]} >= {"sku", "负责人", "关联原料"}
+    assert all(set(f) == {"name", "ui_type"} for f in body["fields"])  # definitions, never record content
+    assert "must-not-leak" not in json.dumps(tables.json()) + json.dumps(body)
+
+
+def test_meta_refusal_is_passed_through(client, tenant):
+    response = client.post("/tools/feishu-sheet-meta", content=json.dumps({"token": "denied1"}), headers=USER)
+    assert response.status_code == 502
+    assert "99991679" in response.json()["detail"]
+
+
+def test_sheet_import_uses_the_chosen_header_row(client, tenant):
+    response = client.post("/tools/feishu-import-user", content=json.dumps(sheet_import_payload()), headers=USER)
+    assert response.status_code == 200, response.text
+    batch = response.json()["batch"]
+    assert batch["master_rows"] > 0
+    assert batch["departments"][0]["rows"] == 4  # title row skipped, header at row 2
+    sources = client.get(f"/batches/{batch['batch_id']}/sources").json()["sources"]
+    assert sources[0]["filename"] == "feishu-sheet-shtok1-生产数据.csv"
+    assert "SKU-A1" not in json.dumps(response.json())  # cell content never crosses into a response
+
+
+def test_sheet_import_retries_frequency_control_once(client, tenant):
+    tenant.flaky_values = True
+    response = client.post("/tools/feishu-import-user", content=json.dumps(sheet_import_payload()), headers=USER)
+    assert response.status_code == 200, response.text
+    assert tenant.values_calls == 2  # one 429, then the retried read
+
+
+def test_bitable_import_flattens_complex_fields(client, tenant):
+    payload = {"period": "2025-11", "files": [{"department": "production", "file_token": "bitok1",
+                                               "kind": "bitable", "table_id": "tbl1main"}]}
+    response = client.post("/tools/feishu-import-user", content=json.dumps(payload), headers=USER)
+    assert response.status_code == 200, response.text
+    batch = response.json()["batch"]
+    assert batch["departments"][0]["rows"] == 4
+    assert batch["master_rows"] > 0
+    # FR-5: the link column has no display text, so it is dropped with a reason, not silently.
+    assert batch["dropped_columns"] == [{"department": "production", "column": "关联原料",
+                                         "field_type": "Link",
+                                         "reason": "no representable value; column dropped"}]
+    stored = json.loads((store._root() / "batches" / "sources" / batch["batch_id"] / "production.json")
+                        .read_text(encoding="utf-8"))
+    assert "张三" in json.dumps(stored, ensure_ascii=False)  # person field imports as its display name
+    assert "发票.pdf" in json.dumps(stored, ensure_ascii=False)  # attachment as its file name
+    assert "rec9" not in json.dumps(stored, ensure_ascii=False)  # link record ids never imported
+    assert "张三" not in json.dumps(response.json(), ensure_ascii=False)  # and never in a response
+
+
+def test_oversized_sheet_is_refused_with_counts(client, tenant, monkeypatch):
+    monkeypatch.setattr(settings, "bridgeflow_max_batch_rows", 3)
+    before = set((store._root() / "batches").glob("*.json"))
+    response = client.post("/tools/feishu-import-user", content=json.dumps(sheet_import_payload()), headers=USER)
+    assert response.status_code == 413
+    detail = response.json()["detail"]
+    assert "3-row import limit" in detail and "nothing was imported" in detail
+    assert set((store._root() / "batches").glob("*.json")) == before  # no partial batch persisted
+
+
+def test_kind_declares_its_addressing_exactly(client, tenant):
+    bad = [
+        {"department": "production", "file_token": "shtok1", "kind": "sheet"},  # no sheet_id, no header_row
+        {"department": "production", "file_token": "shtok1", "kind": "sheet", "sheet_id": "s1sheet"},  # no header_row
+        {"department": "production", "file_token": "bitok1", "kind": "bitable"},  # no table_id
+        {"department": "production", "file_token": "bitok1", "kind": "bitable", "table_id": "tbl1main", "header_row": 1},
+        {"department": "production", "file_token": "tokproduction", "kind": "file", "sheet_id": "s1sheet"},
+    ]
+    for item in bad:
+        response = client.post("/tools/feishu-import-user", headers=USER,
+                               content=json.dumps({"period": "2025-11", "files": [item]}))
+        assert response.status_code == 422, item
+
+
+def test_tenant_endpoint_refuses_sheets_and_bitables(client, tenant):
+    response = post(client, "/tools/feishu-import",
+                    sheet_import_payload(confirmed_by="captain", call_id="c1"))
+    assert response.status_code == 422
+    assert "user endpoint" in response.json()["detail"]

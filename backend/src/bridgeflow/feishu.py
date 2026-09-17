@@ -15,6 +15,7 @@ injectable so the protocol can be tested without a tenant.
 
 from __future__ import annotations
 
+import asyncio
 import re
 import time
 from dataclasses import dataclass
@@ -24,6 +25,11 @@ import httpx
 from bridgeflow.config import settings
 
 MAX_FILE_BYTES = 25 * 1024 * 1024
+#: One range read of an online sheet covers at most this many rows (docs/33).
+SHEET_CHUNK_ROWS = 5000
+#: Frequency control answers worth one bounded backoff-and-retry, never an endless loop.
+_RATE_LIMIT_CODES = {99991400, 99991401}
+_MAX_ATTEMPTS = 3
 
 
 class FeishuError(Exception):
@@ -179,6 +185,91 @@ class FeishuDrive:
         node = data.get("node") or {}
         return str(node.get("token") or data.get("wiki_token") or "")
 
+    # --- Online sheets & bitables (docs/33): paged reads, metadata stays metadata --------
+
+    async def _get_json(self, path: str, params: dict[str, str] | None = None) -> dict:
+        """GET with bounded backoff on frequency control; every other refusal surfaces as-is."""
+        delay = 0.5
+        for attempt in range(_MAX_ATTEMPTS):
+            response = await self._client.get(path, headers=await self._headers(), params=params)
+            try:
+                body = response.json()
+            except ValueError as exc:
+                raise FeishuError(f"Feishu returned HTTP {response.status_code} without a JSON body") from exc
+            code = body.get("code", 0)
+            if response.status_code < 400 and code == 0:
+                return body
+            retryable = response.status_code == 429 or code in _RATE_LIMIT_CODES
+            if not retryable or attempt == _MAX_ATTEMPTS - 1:
+                raise FeishuError(f"Feishu refused (code {code}): {body.get('msg', 'no message')}")
+            await asyncio.sleep(delay)
+            delay *= 2
+        raise FeishuError("unreachable")  # pragma: no cover
+
+    async def sheet_meta(self, spreadsheet_token: str) -> list[dict]:
+        """One online sheet's worksheets: id, title, dimensions — never cell content (docs/33)."""
+        body = await self._get_json(f"/open-apis/sheets/v3/spreadsheets/{spreadsheet_token}/sheets/query")
+        sheets = []
+        for item in (body.get("data") or {}).get("sheets") or []:
+            grid = item.get("grid_properties") or {}
+            sheets.append({"sheet_id": str(item.get("sheet_id", "")), "title": str(item.get("title", "")),
+                           "rows": int(grid.get("row_count") or 0), "cols": int(grid.get("column_count") or 0)})
+        return sheets
+
+    async def sheet_values(self, spreadsheet_token: str, sheet_id: str, rows: int, cols: int,
+                           chunk: int = SHEET_CHUNK_ROWS):
+        """One worksheet's values, chunk by chunk, exactly as Feishu displays them.
+
+        FormattedValue means a formula arrives as the result Feishu computed — it is
+        never re-evaluated here. The caller passes the dimensions from sheet_meta.
+        """
+        last_col = _column_letter(max(cols, 1))
+        start = 1
+        while start <= max(rows, 1):
+            stop = min(start + chunk - 1, rows)
+            body = await self._get_json(
+                f"/open-apis/sheets/v2/spreadsheets/{spreadsheet_token}/values/{sheet_id}!A{start}:{last_col}{stop}",
+                params={"valueRenderOption": "FormattedValue"})
+            yield ((body.get("data") or {}).get("valueRange") or {}).get("values") or []
+            start = stop + 1
+
+    async def bitable_tables(self, app_token: str) -> list[dict]:
+        """A bitable's data tables: id and name only (docs/33)."""
+        body = await self._get_json(f"/open-apis/bitable/v1/apps/{app_token}/tables")
+        return [{"table_id": str(item.get("table_id", "")), "name": str(item.get("name", ""))}
+                for item in (body.get("data") or {}).get("items") or []]
+
+    async def bitable_fields(self, app_token: str, table_id: str) -> list[dict]:
+        """One table's field definitions: name and type, paged, never record content."""
+        fields: list[dict] = []
+        page_token = ""
+        while True:
+            params = {"page_size": "100"}
+            if page_token:
+                params["page_token"] = page_token
+            body = await self._get_json(f"/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/fields", params)
+            data = body.get("data") or {}
+            fields += [{"name": str(item.get("field_name", "")), "type": int(item.get("type") or 0),
+                        "ui_type": str(item.get("ui_type", ""))} for item in data.get("items") or []]
+            if not data.get("has_more"):
+                return fields
+            page_token = str(data.get("page_token") or "")
+
+    async def bitable_records(self, app_token: str, table_id: str, page_size: int = 500):
+        """One table's records, page by page: record_id plus the raw fields mapping."""
+        page_token = ""
+        while True:
+            params = {"page_size": str(min(max(page_size, 1), 500))}
+            if page_token:
+                params["page_token"] = page_token
+            body = await self._get_json(f"/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records", params)
+            data = body.get("data") or {}
+            yield [{"record_id": str(item.get("record_id", "")), "fields": item.get("fields") or {}}
+                   for item in data.get("items") or []]
+            if not data.get("has_more"):
+                return
+            page_token = str(data.get("page_token") or "")
+
     async def _root_folder_token(self) -> str:
         """The caller's Drive root: the staging point every wiki upload passes through."""
         body = await self._json(await self._client.get(
@@ -198,6 +289,15 @@ class FeishuDrive:
             raise FeishuError(
                 f"{filename!r} reached your Feishu My Space root but could not be attached "
                 f"to the wiki ({exc}); move it manually or try again") from exc
+
+
+def _column_letter(index: int) -> str:
+    """1-based column number as spreadsheet letters: 1 → A, 27 → AA."""
+    letters = ""
+    while index:
+        index, rem = divmod(index - 1, 26)
+        letters = chr(ord("A") + rem) + letters
+    return letters or "A"
 
 
 def from_settings(transport: httpx.AsyncBaseTransport | None = None) -> FeishuDrive:
