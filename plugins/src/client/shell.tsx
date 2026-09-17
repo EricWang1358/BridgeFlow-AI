@@ -62,7 +62,7 @@ function Shell({ ctx }: { ctx: Context }) {
     return () => window.removeEventListener('bridgeflow:add-sources', open)
   }, [])
   useEffect(() => { setOffset(0); setPreview(null); setReport(null); }, [batchId, selected.source, selected.report])
-  useEffect(() => { setArtifactOffset(0); setCopied(false) }, [batchId])
+  useEffect(() => { setArtifactOffset(0); setCopied(false); setFeishuNotice('') }, [batchId])
   useEffect(() => {
     setSummary(null); setSources([]); setArtifacts([]); setArtifactTotal(0); setError('')
     if (!batchId) return
@@ -153,7 +153,7 @@ function Shell({ ctx }: { ctx: Context }) {
         </div>
         {!summary && <p className="bf-hint">{t('studioStartHelp')}</p>}
         {(error || notebook.error) && <p role="alert" className="bf-error">{error || notebook.error}{notebook.error && <button onClick={notebook.retry}>{t('refresh')}</button>}</p>}
-        <section data-tour-id="artifacts" className="bf-artifacts" aria-label={t('artifacts')}><header><h3>{t('artifacts')} <span className="bf-badge">{artifactTotal + (summary?.master_rows ? 1 : 0)}</span></h3>{artifacts.length > 0 && <button aria-label={t('feishuUpload')} title={t('feishuUpload')} onClick={() => feishuUploader.current?.showModal()}>⇪</button>}<button aria-label={t('refreshArtifacts')} onClick={() => setRevision(n => n + 1)}>↻</button></header>
+        <section data-tour-id="artifacts" className="bf-artifacts" aria-label={t('artifacts')}><header><h3>{t('artifacts')} <span className="bf-badge">{artifactTotal + (summary?.master_rows ? 1 : 0)}</span></h3>{artifacts.length > 0 && <button aria-label={t('feishuUpload')} title={t('feishuUpload')} onClick={() => { setFeishuNotice(''); feishuUploader.current?.showModal() }}>⇪</button>}<button aria-label={t('refreshArtifacts')} onClick={() => setRevision(n => n + 1)}>↻</button></header>
           {feishuNotice && <p className="bf-hint" role="status">{feishuNotice}</p>}
           {!!summary?.master_rows && <button className="bf-artifact" data-kind="master" onClick={() => navigate({ batch: batchId, view: 'master' })}><span aria-hidden="true">▦</span><span><strong>{summary.period} · {t('master')}</strong><small>{summary.master_rows} {t('rows')}</small><Chip status={summary.status}/></span><span aria-hidden="true">↗</span></button>}
           {artifacts.map(item => <button className="bf-artifact" data-kind="review" key={item.report_id} aria-pressed={selected.report === item.report_id} onClick={() => navigate({ batch: batchId, view: 'artifact', report: item.report_id })}><span aria-hidden="true">▤</span><span><strong>{item.period} · {t('review')}</strong><small>{formatDateTime(item.created_at * 1000, language)}</small><Chip status={item.status}/></span><span aria-hidden="true">↗</span></button>)}

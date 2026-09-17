@@ -268,12 +268,18 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
             if not tokens.get("refresh_token"):
                 raise HTTPException(503, "Feishu granted no refresh token; the app needs the "
                                          "offline_access scope, then sign in again")
-            client = feishu()
             try:
-                fresh = await client.refresh(tokens["refresh_token"])
+                client = feishu()
             except NotConfigured as exc:
                 raise HTTPException(503, str(exc)) from exc
+            try:
+                fresh = await client.refresh(tokens["refresh_token"])
             except FeishuError as exc:
+                # A 4xx means this grant is dead (invalid or revoked refresh
+                # token) — the browser's login recovery flow keys off 401.
+                # Anything else is upstream trouble and stays 502.
+                if exc.status is not None and 400 <= exc.status < 500:
+                    raise HTTPException(401, str(exc)) from exc
                 raise HTTPException(502, str(exc)) from exc
             finally:
                 await client.close()
@@ -282,9 +288,12 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
                       "access_exp": int(now) + fresh["access_expires_in"]}
             session["feishu"] = seal_secret(json.dumps(tokens), cfg.session_secret)
             # Feishu rotates the refresh token on use: persist the new one now.
-            response.set_cookie(SESSION_COOKIE, seal(session, cfg.session_secret, cfg.session_ttl_seconds),
+            # The reseal keeps the session's original expiry — a token refresh
+            # must not extend how long the session itself lives.
+            remaining = max(1, int(session.get("exp", now)) - int(now))
+            response.set_cookie(SESSION_COOKIE, seal(session, cfg.session_secret, remaining),
                                 httponly=True, samesite="lax", secure=cfg.cookie_secure,
-                                max_age=cfg.session_ttl_seconds, domain=cfg.cookie_domain or None)
+                                max_age=remaining, domain=cfg.cookie_domain or None)
         return {"access_token": tokens["access_token"], "expires_at": tokens["access_exp"]}
 
     @app.post("/logout")

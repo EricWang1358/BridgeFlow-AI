@@ -13,7 +13,18 @@ import httpx
 
 
 class FeishuError(Exception):
-    """Feishu refused, or could not be reached. No session was created."""
+    """Feishu refused, or could not be reached. No session was created.
+
+    `code` is Feishu's own error code and `status` the HTTP status of the
+    refusal (both None when the response never got that far); callers use
+    them to tell "this grant is dead" apart from "Feishu is down".
+    """
+
+    def __init__(self, message: str, *, code: int | None = None,
+                 status: int | None = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.status = status
 
 
 class NotConfigured(FeishuError):
@@ -48,7 +59,8 @@ class FeishuOAuth:
         except ValueError as exc:
             raise FeishuError(f"Feishu returned HTTP {response.status_code} without a JSON body") from exc
         if response.status_code >= 400 or body.get("code", 0) != 0:
-            raise FeishuError(f"Feishu refused (code {body.get('code')}): {body.get('msg', 'no message')}")
+            raise FeishuError(f"Feishu refused (code {body.get('code')}): {body.get('msg', 'no message')}",
+                              code=body.get("code"), status=response.status_code)
         return body
 
     async def _app_access_token(self) -> str:

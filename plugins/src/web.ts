@@ -147,10 +147,13 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
         // Feishu user-identity calls (docs/30, docs/31): the browser relays the user's own
         // token; these endpoints are never model tools, so the click is the approval.
         const feishuUser = req.method === 'POST' && /^\/tools\/feishu-(list|import-user|upload-user|wiki-spaces|wiki-list|wiki-upload)$/.test(path)
+        // The route match alone is not enough: a feishu call without the user's own
+        // token must stop here with the same 403 as any other unauthorized route.
         const feishuToken = req.headers['x-feishu-user-token']
-        const feishuAuth = feishuUser && typeof feishuToken === 'string' && feishuToken ? { 'x-feishu-user-token': feishuToken } : {}
+        const feishuOk = feishuUser && typeof feishuToken === 'string' && feishuToken.length > 0
+        const feishuAuth = feishuOk ? { 'x-feishu-user-token': String(feishuToken) } : {}
         // No generic proxy. Browser requests cannot mint approval receipts or call writes.
-        if (!read && !upload && !feishuUser) { res.writeHead(403).end('Route not authorized'); return }
+        if (!read && !upload && !feishuOk) { res.writeHead(403).end('Route not authorized'); return }
         const abort = new AbortController()
         req.on('aborted', () => abort.abort())
         res.on('close', () => { if (!res.writableEnded) abort.abort() })

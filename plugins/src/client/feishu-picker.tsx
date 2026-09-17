@@ -58,9 +58,16 @@ function Browser({ row, currentFolder, extra }: {
   const [page, setPage] = useState<DrivePage | null>(null)
   const [error, setError] = useState('')
   const folder = trail.length ? trail[trail.length - 1]!.token : ''
+  // Navigation changes folder while a list call is in flight; a late answer must
+  // not overwrite the new location's page (or load-more merge into it).
+  const folderRef = useRef(folder)
+  folderRef.current = folder
   const load = (pageToken = '') => {
     setError('')
-    listFolder(folder, pageToken).then(setPage).catch(e => { setPage(null); setError(describeError(e, t)) })
+    const at = folder
+    listFolder(at, pageToken)
+      .then(p => { if (folderRef.current === at) setPage(prev => pageToken && prev ? { ...p, files: [...prev.files, ...p.files] } : p) })
+      .catch(e => { if (folderRef.current !== at) return; setPage(null); setError(describeError(e, t)) })
   }
   useEffect(() => { load() }, [folder])
   useEffect(() => { currentFolder?.(folder) }, [folder])
@@ -97,14 +104,23 @@ function WikiBrowser({ row, currentLocation, extra }: {
   const [page, setPage] = useState<WikiNodePage | null>(null)
   const [error, setError] = useState('')
   const parent = trail.length ? trail[trail.length - 1]!.token : ''
+  // Same late-answer guard as Browser: a response is only live while the
+  // space/parent (or space-less state) that asked for it is still current.
+  const locationRef = useRef({ space: '', parent: '' })
+  locationRef.current = { space: space?.space_id ?? '', parent }
   const loadSpaces = (pageToken = '') => {
     setError('')
-    listSpaces(pageToken).then(setSpaces).catch(e => { setSpaces(null); setError(describeError(e, t)) })
+    listSpaces(pageToken)
+      .then(p => { if (!locationRef.current.space) setSpaces(prev => pageToken && prev ? { ...p, spaces: [...prev.spaces, ...p.spaces] } : p) })
+      .catch(e => { if (locationRef.current.space) return; setSpaces(null); setError(describeError(e, t)) })
   }
   const loadNodes = (pageToken = '') => {
     if (!space) return
     setError('')
-    listNodes(space.space_id, parent, pageToken).then(setPage).catch(e => { setPage(null); setError(describeError(e, t)) })
+    const at = locationRef.current
+    listNodes(at.space, at.parent, pageToken)
+      .then(p => { const now = locationRef.current; if (now.space === at.space && now.parent === at.parent) setPage(prev => pageToken && prev ? { ...p, nodes: [...prev.nodes, ...p.nodes] } : p) })
+      .catch(e => { const now = locationRef.current; if (now.space !== at.space || now.parent !== at.parent) return; setPage(null); setError(describeError(e, t)) })
   }
   useEffect(() => { if (!space) loadSpaces() }, [space])
   useEffect(() => { if (space) loadNodes() }, [space, parent])

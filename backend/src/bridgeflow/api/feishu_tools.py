@@ -231,7 +231,7 @@ async def feishu_wiki_upload(http_request: Request, file: UploadFile,
                              parent_wiki_token: Annotated[str, Form(max_length=64)] = "") -> dict:
     """Upload a local file into a wiki position the signed-in user picked (docs/31)."""
     drive = _user_client(http_request)  # the token gate answers before the body is read
-    payload = await file.read()
+    payload = await file.read(feishu.MAX_FILE_BYTES + 1)  # one byte past the cap says "too big"
     if len(payload) > feishu.MAX_FILE_BYTES:
         raise HTTPException(413, "Upload exceeds the size limit")
     filename = Path(file.filename or "upload").name  # strip any client-side path
