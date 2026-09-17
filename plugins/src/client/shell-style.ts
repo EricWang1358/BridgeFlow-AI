@@ -198,4 +198,7 @@ body[data-ds-dark-theme] .bf-save-state[data-dirty=true] { color: #dfbd76 }
 .bf-feishu-item select { margin-left: auto }
 .bf-feishu-go { display: flex; gap: 8px; align-items: center; margin-top: 10px }
 .bf-feishu-upload-dialog .bf-feishu-browser, .bf-feishu-import .bf-feishu-browser { max-height: 46vh; overflow-y: auto }
+.bf-feishu-mode { display: flex; gap: 6px; margin: 8px 0 }
+.bf-feishu-mode button { border: 1px solid #ffffff2a; background: transparent; color: inherit; cursor: pointer; padding: 3px 10px; border-radius: 999px; opacity: 0.75 }
+.bf-feishu-mode button[aria-pressed=true] { opacity: 1; font-weight: 600; background: #ffffff14 }
 `

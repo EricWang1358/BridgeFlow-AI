@@ -9,7 +9,7 @@ launching shell as `FEISHU_APP_ID` / `FEISHU_APP_SECRET` — never written to a 
 the repository. Without them every call says "not configured" instead of pretending.
 
 The client is deliberately small and synchronous-free of framework state: one class,
-three calls, errors surfaced with Feishu's own code and message. The transport is
+a handful of calls, errors surfaced with Feishu's own code and message. The transport is
 injectable so the protocol can be tested without a tenant.
 """
 
@@ -130,6 +130,74 @@ class FeishuDrive:
                  for item in data.get("files") or []]
         return {"files": files, "has_more": bool(data.get("has_more")),
                 "next_page_token": str(data.get("next_page_token") or "")}
+
+    # --- Wiki (docs/31): two-level addressing ----------------------------------------
+    # A wiki node is browsed by its node token but the file body lives at obj_token,
+    # which download() accepts directly. The two never substitute for each other.
+
+    async def list_wiki_spaces(self, page_token: str = "", page_size: int = 50) -> dict:
+        """The knowledge bases the caller may see, metadata only (docs/31)."""
+        params: dict[str, str] = {"page_size": str(min(max(page_size, 1), 50))}
+        if page_token:
+            params["page_token"] = page_token
+        body = await self._json(await self._client.get(
+            "/open-apis/wiki/v2/spaces", headers=await self._headers(), params=params))
+        data = body.get("data") or {}
+        spaces = [{"space_id": str(item.get("space_id", "")), "name": str(item.get("name", "")),
+                   "description": str(item.get("description", ""))}
+                  for item in data.get("items") or []]
+        return {"spaces": spaces, "has_more": bool(data.get("has_more")),
+                "next_page_token": str(data.get("page_token") or "")}
+
+    async def list_wiki_nodes(self, space_id: str, parent_node_token: str = "",
+                              page_token: str = "", page_size: int = 50) -> dict:
+        """One level of a wiki's node tree, metadata only — never the content behind it."""
+        params: dict[str, str] = {"page_size": str(min(max(page_size, 1), 50))}
+        if parent_node_token:
+            params["parent_node_token"] = parent_node_token
+        if page_token:
+            params["page_token"] = page_token
+        body = await self._json(await self._client.get(
+            f"/open-apis/wiki/v2/spaces/{space_id}/nodes", headers=await self._headers(), params=params))
+        data = body.get("data") or {}
+        nodes = [{"token": str(item.get("node_token", "")), "obj_token": str(item.get("obj_token", "")),
+                  "obj_type": str(item.get("obj_type", "")), "title": str(item.get("title", "")),
+                  "has_child": bool(item.get("has_child"))}
+                 for item in data.get("items") or []]
+        return {"nodes": nodes, "has_more": bool(data.get("has_more")),
+                "next_page_token": str(data.get("page_token") or "")}
+
+    async def move_to_wiki(self, space_id: str, parent_wiki_token: str, obj_token: str) -> str:
+        """Attach an existing Drive file into a wiki position; returns the new node token."""
+        payload = {"obj_type": "file", "obj_token": obj_token}
+        if parent_wiki_token:
+            payload["parent_wiki_token"] = parent_wiki_token
+        body = await self._json(await self._client.post(
+            f"/open-apis/wiki/v2/spaces/{space_id}/nodes/move_docs_to_wiki",
+            headers=await self._headers(), json=payload))
+        data = body.get("data") or {}
+        node = data.get("node") or {}
+        return str(node.get("token") or data.get("wiki_token") or "")
+
+    async def _root_folder_token(self) -> str:
+        """The caller's Drive root: the staging point every wiki upload passes through."""
+        body = await self._json(await self._client.get(
+            "/open-apis/drive/explorer/v2/root_folder/meta", headers=await self._headers()))
+        return str(body["data"]["token"])
+
+    async def upload_to_wiki(self, space_id: str, parent_wiki_token: str,
+                             filename: str, payload: bytes) -> str:
+        """Feishu has no direct-to-wiki upload: land in the Drive root, then attach (docs/31).
+
+        If the attach fails the file stays in the caller's own Drive root — visible to
+        them, never auto-deleted, and the error says so."""
+        file_token = await self.upload(await self._root_folder_token(), filename, payload)
+        try:
+            return await self.move_to_wiki(space_id, parent_wiki_token, file_token)
+        except FeishuError as exc:
+            raise FeishuError(
+                f"{filename!r} reached your Feishu My Space root but could not be attached "
+                f"to the wiki ({exc}); move it manually or try again") from exc
 
 
 def from_settings(transport: httpx.AsyncBaseTransport | None = None) -> FeishuDrive:

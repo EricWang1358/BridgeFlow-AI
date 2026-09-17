@@ -20,6 +20,16 @@ class Tenant:
         self.files = {f"tok{role}": (f"{role}.csv", (CASES / "risk" / f"{role}.csv").read_bytes()) for role in business.ROLES}
         self.uploaded: dict[str, bytes] = {}
         self.token_calls = 0
+        # Wiki side (docs/31): one space, a two-level node tree, and the calls in order.
+        self.wiki_spaces = [{"space_id": "spc1", "name": "生产知识库", "description": "d",
+                             "secret_cell": "must-not-leak"}]
+        self.wiki_nodes = [{"node_token": "wikinode1", "obj_token": "tokproduction", "obj_type": "file",
+                            "title": "production.csv", "has_child": False, "secret_cell": "must-not-leak"},
+                           {"node_token": "wikidir1", "obj_token": "dirdoc", "obj_type": "docx",
+                            "title": "子目录", "has_child": True}]
+        self.moves: list[dict] = []
+        self.calls: list[str] = []
+        self.fail_move = False
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -28,6 +38,18 @@ class Tenant:
             return httpx.Response(200, json={"code": 0, "tenant_access_token": "t-1", "expire": 7200})
         if request.headers.get("authorization") not in ("Bearer t-1", "Bearer u-1"):
             return httpx.Response(401, json={"code": 99991663, "msg": "invalid token"})
+        self.calls.append(f"{request.method} {path}")
+        if path.endswith("/move_docs_to_wiki"):
+            if self.fail_move:
+                return httpx.Response(200, json={"code": 131006, "msg": "no permission to add nodes"})
+            self.moves.append(json.loads(request.content))
+            return httpx.Response(200, json={"code": 0, "data": {"node": {"token": "wikinew1"}}})
+        if path.endswith("/root_folder/meta"):
+            return httpx.Response(200, json={"code": 0, "data": {"token": "rootfld"}})
+        if path.endswith("/nodes"):
+            return httpx.Response(200, json={"code": 0, "data": {"items": self.wiki_nodes, "has_more": False, "page_token": ""}})
+        if path.endswith("/wiki/v2/spaces"):
+            return httpx.Response(200, json={"code": 0, "data": {"items": self.wiki_spaces, "has_more": False, "page_token": ""}})
         if path.endswith("/files"):
             files = [{"token": token, "name": name, "type": "file", "size": len(content), "modified_time": "1700000000",
                       "secret_cell": "must-not-leak"} for token, (name, content) in self.files.items()]
@@ -184,3 +206,86 @@ def test_user_upload_round_trip(client, tenant):
                            content=json.dumps({"batch_id": batch_id, "folder_token": "fldcn123456", "report_id": report["report_id"]}))
     assert response.status_code == 200, response.text
     assert report["report_id"].encode() in tenant.uploaded["new-file-token"]
+
+
+# --- Wiki endpoints (docs/31): browse is metadata only; upload lands in Drive, then attaches. ---
+
+
+def test_wiki_endpoints_require_a_user_token(client, tenant):
+    for path, payload in (("/tools/feishu-wiki-spaces", {}),
+                          ("/tools/feishu-wiki-list", {"space_id": "spc1"})):
+        response = client.post(path, content=json.dumps(payload), headers={"content-type": "application/json"})
+        assert response.status_code == 401, path
+    upload = client.post("/tools/feishu-wiki-upload", data={"space_id": "spc1"},
+                         files={"file": ("a.csv", b"x")})
+    assert upload.status_code == 401
+    assert tenant.token_calls == 0  # a missing user token never falls back to the tenant
+
+
+def test_wiki_spaces_and_nodes_are_metadata_only(client, tenant):
+    spaces = client.post("/tools/feishu-wiki-spaces", content="{}", headers=USER)
+    assert spaces.status_code == 200, spaces.text
+    assert spaces.json()["spaces"][0]["space_id"] == "spc1"
+    nodes = client.post("/tools/feishu-wiki-list", content=json.dumps({"space_id": "spc1"}), headers=USER)
+    assert nodes.status_code == 200, nodes.text
+    body = nodes.json()
+    assert {n["obj_type"] for n in body["nodes"]} == {"file", "docx"}
+    assert body["nodes"][0]["token"] == "wikinode1"
+    assert body["nodes"][0]["obj_token"] == "tokproduction"
+    assert "secret_cell" not in json.dumps(spaces.json()) + json.dumps(body)  # metadata only, ever
+
+
+def test_wiki_upload_lands_in_drive_then_attaches(client, tenant):
+    response = client.post("/tools/feishu-wiki-upload", data={"space_id": "spc1", "parent_wiki_token": "wikidir1"},
+                           files={"file": ("notes.csv", b"a,b\n1,2")}, headers={"x-feishu-user-token": "u-1"})
+    assert response.status_code == 200, response.text
+    assert response.json() == {"wiki_token": "wikinew1", "name": "notes.csv"}
+    paths = [call.split(" ", 1)[1] for call in tenant.calls]
+    assert paths.index("/open-apis/drive/v1/files/upload_all") < paths.index(
+        "/open-apis/wiki/v2/spaces/spc1/nodes/move_docs_to_wiki")  # land first, attach second
+    assert tenant.moves == [{"obj_type": "file", "obj_token": "new-file-token", "parent_wiki_token": "wikidir1"}]
+
+
+def test_wiki_upload_attach_failure_says_where_the_file_is(client, tenant):
+    tenant.fail_move = True
+    response = client.post("/tools/feishu-wiki-upload", data={"space_id": "spc1"},
+                           files={"file": ("notes.csv", b"a,b\n1,2")}, headers={"x-feishu-user-token": "u-1"})
+    assert response.status_code == 502
+    assert "My Space root" in response.json()["detail"]  # the leftover is named, never silent
+
+
+def test_wiki_upload_rejects_oversized_files(client, tenant):
+    response = client.post("/tools/feishu-wiki-upload", data={"space_id": "spc1"},
+                           files={"file": ("big.csv", b"x" * (feishu.MAX_FILE_BYTES + 1))},
+                           headers={"x-feishu-user-token": "u-1"})
+    assert response.status_code == 413
+    assert tenant.uploaded == {}
+
+
+def _saved_report(client) -> tuple[str, str]:
+    batch_id = client.post("/tools/feishu-import-user", content=json.dumps(import_payload()), headers=USER).json()["batch"]["batch_id"]
+    context = client.post("/tools/review-context", json={"batch_id": batch_id}).json()
+    runs = [{"role": p["role"], "session_id": p["role"], "status": "completed", "judgement": judgement(p)} for p in context["roles"]]
+    report = client.post("/tools/review-finalize", json={"batch_id": batch_id, "parent_session_id": "p", "runs": runs}).json()
+    return batch_id, report["report_id"]
+
+
+def test_user_upload_report_to_wiki(client, tenant):
+    batch_id, report_id = _saved_report(client)
+    response = client.post("/tools/feishu-upload-user", headers=USER,
+                           content=json.dumps({"batch_id": batch_id, "report_id": report_id,
+                                               "wiki_space_id": "spc1", "parent_wiki_token": "wikidir1"}))
+    assert response.status_code == 200, response.text
+    assert response.json()["wiki_token"] == "wikinew1"
+    assert report_id.encode() in tenant.uploaded["new-file-token"]
+    assert tenant.moves[0]["parent_wiki_token"] == "wikidir1"
+
+
+def test_user_upload_needs_exactly_one_target(client, tenant):
+    batch_id, report_id = _saved_report(client)
+    both = {"batch_id": batch_id, "report_id": report_id,
+            "folder_token": "fldcn123456", "wiki_space_id": "spc1"}
+    neither = {"batch_id": batch_id, "report_id": report_id}
+    for payload in (both, neither):
+        response = client.post("/tools/feishu-upload-user", headers=USER, content=json.dumps(payload))
+        assert response.status_code == 422, payload
