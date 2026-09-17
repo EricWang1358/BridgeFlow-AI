@@ -2,9 +2,9 @@
  * Feishu Drive browsing with the signed-in user's own permissions (docs/30).
  *
  * The list answers carry metadata only — token, name, type, size, mtime — so this
- * panel stays bounded no matter how large the files behind it are. Sheets and
- * bitables are listed but not importable this phase; picking one is a dead end
- * that says so, not a silent skip.
+ * panel stays bounded no matter how large the files behind it are. Online sheets and
+ * bitables import too (docs/33): picking one asks a second question — which worksheet
+ * and header row, or which data table — answered from metadata calls, never cell reads.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { api, describeError, feishuUserToken, useUI, type Summary } from './ui.ts'
@@ -20,32 +20,30 @@ type SpacePage = { spaces: WikiSpace[]; has_more: boolean; next_page_token: stri
 type WikiNode = { token: string; obj_token: string; obj_type: string; title: string; has_child: boolean }
 type WikiNodePage = { nodes: WikiNode[]; has_more: boolean; next_page_token: string }
 
-async function listFolder(folder: string, pageToken = ''): Promise<DrivePage> {
+// docs/33 second-level answers: worksheets with dimensions, or tables with names.
+type SheetMeta = { sheet_id: string; title: string; rows: number; cols: number }
+type BitableTable = { table_id: string; name: string }
+type Picked = { token: string; name: string; kind: 'file' | 'sheet' | 'bitable'
+                sheet_id?: string; table_id?: string; header_row?: number }
+
+async function postUser<T>(path: string, body: unknown): Promise<T> {
   const token = await feishuUserToken()
-  return api<DrivePage>('/tools/feishu-list', {
+  return api<T>(path, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-feishu-user-token': token },
-    body: JSON.stringify({ folder_token: folder, page_token: pageToken }),
+    body: JSON.stringify(body),
   })
 }
 
-async function listSpaces(pageToken = ''): Promise<SpacePage> {
-  const token = await feishuUserToken()
-  return api<SpacePage>('/tools/feishu-wiki-spaces', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-feishu-user-token': token },
-    body: JSON.stringify({ page_token: pageToken }),
-  })
-}
+const listFolder = (folder: string, pageToken = '') =>
+  postUser<DrivePage>('/tools/feishu-list', { folder_token: folder, page_token: pageToken })
 
-async function listNodes(spaceId: string, parent: string, pageToken = ''): Promise<WikiNodePage> {
-  const token = await feishuUserToken()
-  return api<WikiNodePage>('/tools/feishu-wiki-list', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-feishu-user-token': token },
-    body: JSON.stringify({ space_id: spaceId, parent_node_token: parent, page_token: pageToken }),
-  })
-}
+const listSpaces = (pageToken = '') =>
+  postUser<SpacePage>('/tools/feishu-wiki-spaces', { page_token: pageToken })
+
+const listNodes = (spaceId: string, parent: string, pageToken = '') =>
+  postUser<WikiNodePage>('/tools/feishu-wiki-list',
+    { space_id: spaceId, parent_node_token: parent, page_token: pageToken })
 
 /** Breadcrumb + paged folder listing. `row` renders one item; `currentFolder` gets the open folder's token. */
 function Browser({ row, currentFolder, extra }: {
@@ -161,33 +159,76 @@ function WikiBrowser({ row, currentLocation, extra }: {
 export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void }) {
   const { t } = useUI()
   const [source, setSource] = useState<'drive' | 'wiki'>('drive')
-  const [assign, setAssign] = useState<Partial<Record<string, DriveItem>>>({})
+  const [assign, setAssign] = useState<Partial<Record<string, Picked>>>({})
+  // Second-level metadata per picked sheet/bitable token (docs/33): names and
+  // dimensions only, fetched on pick and cached for the panel's lifetime.
+  const [metas, setMetas] = useState<Record<string, { sheets?: SheetMeta[]; tables?: BitableTable[] }>>({})
   const [period, setPeriod] = useState('')
   const [busy, setBusy] = useState(false), [error, setError] = useState('')
   const chosen = departments.filter(d => assign[d])
-  const importable = (item: DriveItem) => item.type === 'file' && /\.(csv|xlsx)$/i.test(item.name)
-  const importableNode = (node: WikiNode) => node.obj_type === 'file' && /\.(csv|xlsx)$/i.test(node.title)
+  const importable = (item: DriveItem) =>
+    item.type === 'sheet' || item.type === 'bitable' ||
+    (item.type === 'file' && /\.(csv|xlsx)$/i.test(item.name))
+  const importableNode = (node: WikiNode) =>
+    node.obj_type === 'sheet' || node.obj_type === 'bitable' ||
+    (node.obj_type === 'file' && /\.(csv|xlsx)$/i.test(node.title))
   const usedBy = (token: string) => chosen.find(d => assign[d]?.token === token)
-  const choose = (token: string, name: string, dept: string) => setAssign(prev => {
-    const next = { ...prev }
-    for (const d of departments) if (next[d]?.token === token) delete next[d]
-    if (dept) next[dept] = { token, name, type: 'file', size: 0, modified_time: '' }
-    return next
-  })
-  const deptSelect = (token: string, name: string) =>
-    <select aria-label={t('feishuAssign')} value={usedBy(token) ?? ''} onChange={e => choose(token, name, e.target.value)}>
+  const choose = (item: { token: string; name: string; kind: Picked['kind'] }, dept: string) => {
+    setAssign(prev => {
+      const next = { ...prev }
+      for (const d of departments) if (next[d]?.token === item.token) delete next[d]
+      if (dept) next[dept] = { ...item }
+      return next
+    })
+    if (dept && item.kind !== 'file' && !metas[item.token]) {
+      // Metadata for the second question; a refusal (e.g. no permission) surfaces as-is.
+      const path = item.kind === 'sheet' ? '/tools/feishu-sheet-meta' : '/tools/feishu-bitable-meta'
+      postUser<{ sheets?: SheetMeta[]; tables?: BitableTable[] }>(path, { token: item.token })
+        .then(res => setMetas(prev => ({ ...prev, [item.token]: res })))
+        .catch(e => setError(describeError(e, t)))
+    }
+  }
+  const patch = (dept: string, part: Partial<Picked>) =>
+    setAssign(prev => ({ ...prev, [dept]: { ...prev[dept]!, ...part } }))
+  const deptSelect = (item: { token: string; name: string; kind: Picked['kind'] }) =>
+    <select aria-label={t('feishuAssign')} value={usedBy(item.token) ?? ''} onChange={e => choose(item, e.target.value)}>
       <option value="">—</option>
       {departments.map(d => <option key={d} value={d}>{t(d)}</option>)}
     </select>
+  /** The second question a sheet or bitable pick asks before it can import. */
+  const subSelect = (dept: string, p: Picked) => {
+    if (p.kind === 'sheet') {
+      const sheets = metas[p.token]?.sheets
+      return <>
+        <select aria-label={t('sheetName')} value={p.sheet_id ?? ''} onChange={e => patch(dept, { sheet_id: e.target.value })}>
+          <option value="">—</option>
+          {sheets?.map(s => <option key={s.sheet_id} value={s.sheet_id}>{s.title} ({s.rows}×{s.cols})</option>)}
+        </select>
+        <input type="number" min={1} aria-label={t('headerRow')} title={t('headerRow')} style={{ width: '4.5em' }}
+               value={p.header_row ?? 1} onChange={e => patch(dept, { header_row: Math.max(1, Number(e.target.value) || 1) })} />
+      </>
+    }
+    const tables = metas[p.token]?.tables
+    return <select aria-label={t('feishuTablePick')} value={p.table_id ?? ''} onChange={e => patch(dept, { table_id: e.target.value })}>
+      <option value="">—</option>
+      {tables?.map(tb => <option key={tb.table_id} value={tb.table_id}>{tb.name}</option>)}
+    </select>
+  }
+  // A pick is ready when its second question is answered; files are ready at once.
+  const ready = (p: Picked) =>
+    p.kind === 'file' || (p.kind === 'sheet' ? !!p.sheet_id && (p.header_row ?? 0) >= 1 : !!p.table_id)
   async function run() {
     if (!period || !chosen.length) return
     setBusy(true); setError('')
     try {
-      const token = await feishuUserToken()
-      const result = await api<{ batch: Summary }>('/tools/feishu-import-user', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-feishu-user-token': token },
-        body: JSON.stringify({ period, files: chosen.map(d => ({ department: d, file_token: assign[d]!.token })) }),
+      const result = await postUser<{ batch: Summary }>('/tools/feishu-import-user', {
+        period,
+        files: chosen.map(d => {
+          const p = assign[d]!
+          return { department: d, file_token: p.token, kind: p.kind,
+                   ...(p.kind === 'sheet' ? { sheet_id: p.sheet_id, header_row: p.header_row } : {}),
+                   ...(p.kind === 'bitable' ? { table_id: p.table_id } : {}) }
+        }),
       })
       onSaved(result.batch)
     } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
@@ -205,7 +246,8 @@ export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void })
       if (!importable(item)) {
         return <span className="bf-feishu-item" data-disabled="true"><span aria-hidden="true">▤</span> {item.name} <small>{t('feishuUnsupported')}</small></span>
       }
-      return <span className="bf-feishu-item"><span aria-hidden="true">▤</span> {item.name} {deptSelect(item.token, item.name)}</span>
+      const kind: Picked['kind'] = item.type === 'sheet' ? 'sheet' : item.type === 'bitable' ? 'bitable' : 'file'
+      return <span className="bf-feishu-item"><span aria-hidden="true">▤</span> {item.name} {deptSelect({ token: item.token, name: item.name, kind })}</span>
     }} />}
     {source === 'wiki' && <WikiBrowser extra={(page, loadMore) => MORE(page, loadMore, t)} row={(node, enter) => {
       const pickable = importableNode(node)
@@ -214,12 +256,15 @@ export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void })
           ? <button className="bf-feishu-folder" onClick={() => enter(node)}><span aria-hidden="true">▸</span> {node.title}</button>
           : <><span aria-hidden="true">▤</span> {node.title}</>}
         {!pickable && !node.has_child && <small>{t('feishuUnsupported')}</small>}
-        {pickable && deptSelect(node.obj_token, node.title)}
+        {pickable && deptSelect({ token: node.obj_token, name: node.title,
+                                  kind: node.obj_type === 'sheet' ? 'sheet' : node.obj_type === 'bitable' ? 'bitable' : 'file' })}
       </span>
     }} />}
+    {chosen.filter(d => assign[d]!.kind !== 'file').map(d =>
+      <p key={d} className="bf-hint">{assign[d]!.name} · {t(d)} → {subSelect(d, assign[d]!)}</p>)}
     <div className="bf-feishu-go">
       <input type="month" aria-label={t('month')} value={period} onChange={e => setPeriod(e.target.value)} required />
-      <button className="bf-primary" disabled={busy || !period || !chosen.length} onClick={() => void run()}>
+      <button className="bf-primary" disabled={busy || !period || !chosen.length || chosen.some(d => !ready(assign[d]!))} onClick={() => void run()}>
         {busy ? t('busy') : `${t('feishuImportGo')} (${chosen.length})`}
       </button>
     </div>

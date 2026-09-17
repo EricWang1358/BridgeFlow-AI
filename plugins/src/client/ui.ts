@@ -92,14 +92,15 @@ const labels = {
   approval_feishu_upload_report: ['上传到飞书审批', 'Feishu upload approval'], approvalTitle_feishu_upload_report: ['把这份研判报告上传到飞书文件夹', 'Upload this review report to the Feishu folder'],
   feishu_import: ['从飞书导入', 'Import from Feishu'], feishu_upload_report: ['上传报告到飞书', 'Upload report to Feishu'],
   feishuPick: ['从飞书选择', 'Choose from Feishu'],
-  feishuPickHelp: ['浏览你有权访问的飞书云文档，选中文件并指定部门后导入。只能看到你自己有权限的内容；在线表格与多维表格暂不支持导入。', 'Browse the Feishu files your own account can access; pick files, assign departments, then import. Sheets and bitables cannot be imported yet.'],
+  feishuPickHelp: ['浏览你有权访问的飞书云文档，选中文件、在线表格或多维表格并指定部门后导入；表格需再选工作表与表头行，多维表格需再选数据表。只能看到你自己有权限的内容。', 'Browse the Feishu files your own account can access; pick files, sheets or bitables, assign departments, then import. A sheet also needs its worksheet and header row; a bitable needs its data table. You only see what your own account may access.'],
   feishuRoot: ['我的空间', 'My space'], feishuEmpty: ['这个文件夹是空的', 'This folder is empty'], feishuMore: ['加载更多', 'Load more'],
   feishuUnsupported: ['此类型暂不支持导入', 'This type cannot be imported yet'], feishuAssign: ['部门', 'Department'],
   feishuImportGo: ['导入选中文件', 'Import selected files'], feishuPickFolder: ['选择当前文件夹', 'Choose this folder'],
   feishuUpload: ['上传报告到飞书', 'Upload report to Feishu'], feishuUploadHere: ['上传到当前文件夹', 'Upload to this folder'],
   feishuUploaded: ['已上传到飞书', 'Uploaded to Feishu'], feishuNoReport: ['先完成一次研判，才能把报告传回飞书。', 'Finish a review before sending a report back to Feishu.'],
   feishuTarget: ['目标', 'Target'], feishuWiki: ['知识库', 'Wiki'],
-  feishuWikiHelp: ['浏览你有权访问的知识库（个人文档库与团队知识库）。选中文件节点并指定部门后导入；在线表格与多维表格暂不支持导入。', 'Browse the wiki spaces your own account can access (personal library and team spaces); pick file nodes, assign departments, then import. Sheets and bitables cannot be imported yet.'],
+  feishuWikiHelp: ['浏览你有权访问的知识库（个人文档库与团队知识库）。选中文件、在线表格或多维表格节点并指定部门后导入；表格需再选工作表与表头行，多维表格需再选数据表。', 'Browse the wiki spaces your own account can access (personal library and team spaces); pick file, sheet or bitable nodes, assign departments, then import. A sheet also needs its worksheet and header row; a bitable needs its data table.'],
+  feishuTablePick: ['数据表', 'Data table'],
   feishuSpaces: ['选择知识库', 'Choose a wiki space'], feishuSpacesEmpty: ['没有可见的知识库', 'No wiki spaces visible'],
   feishuUploadFileWiki: ['上传本地文件到知识库', 'Upload a local file to wiki'], feishuPickFile: ['选择文件', 'Choose file'],
   feishuWikiUploaded: ['已上传到知识库', 'Uploaded to wiki'], feishuUploadWikiHere: ['上传到当前位置', 'Upload here'],
@@ -216,6 +217,7 @@ const labels = {
   columnQuestions: ['个上传列可能对应字典已声明的列', 'uploaded column(s) may match a declared column'],
   matchedColumns: ['按已批准的决定匹配的列', 'Columns matched by approved decisions'],
   staleMatches: ['列的形状变了，之前的决定没有沿用，需要重新确认', 'Column shape changed, so these earlier decisions were not reused and need confirming again'],
+  droppedColumns: ['导入时剔除的列（无可提取的显示值）', 'Columns dropped at import (no displayable value)'],
   dictionaryInForce: ['本批次冻结的字典', 'Dictionary frozen into this batch'],
   declaresEntities: ['它为各部门声明的可连接列', 'Joinable columns it declares'],
   declaresNothing: ['未声明任何可连接列', 'declares none'],
@@ -415,7 +417,9 @@ export type Summary = { demo_case?: string | null; batch_id: string; period: str
   matched_columns?: string[]
   stale_matches?: string[]
   column_questions?: number
-  derived_from?: string | null }
+  derived_from?: string | null
+  /** Intake columns dropped as unrepresentable (docs/33): names and types, never values. */
+  dropped_columns?: { department: string; column: string; field_type: string; reason: string }[] }
 
 let runtime: { sessions: ISessions; conversation: Context['conversation'] }
 export function configureRuntime(ctx: Context) { runtime = ctx as unknown as typeof runtime; configureLocale(ctx.locale) }
