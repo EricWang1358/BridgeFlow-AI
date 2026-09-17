@@ -64,6 +64,7 @@
 | [`27-login-portal.md`](27-login-portal.md) | 参考 | 中 | 开发、接手认证的人 | 统一登录门户与飞书 RBAC：JWT/JWKS 为什么是形态、权限映射为什么应用自持、本期粒度与明确不做 |
 | [`30-feishu-user-docs.md`](30-feishu-user-docs.md) | 权威 | 中 | 开发 | 飞书用户态云文档读写实施计划：user token 管线、加密 Cookie、三步端点、明确不做与人工前置项 |
 | [`31-feishu-wiki.md`](31-feishu-wiki.md) | 权威 | 中 | 开发 | 飞书知识库读写实施计划：wiki_token/obj_token 双轨、先落 Drive 再挂载的两步写回、scope 与人工前置项 |
+| [`32-feishu-sheets-bitable-read.md`](32-feishu-sheets-bitable-read.md) | 权威 | 中 | 开发 | 在线表格/多维表格读取需求规格：合理性、接口面、FR-1~7、复杂字段降级与 20 万行纪律 |
 
 两份 README 是同一套图文操作指引的中英版本（顶部可切换）：[`../README.md`](../README.md)（English）
 与 [`../README.zh.md`](../README.zh.md)（简体中文）。截图是 `../docs/images/` 里的稳定副本，
