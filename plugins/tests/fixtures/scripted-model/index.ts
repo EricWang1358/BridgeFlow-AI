@@ -56,14 +56,24 @@ class ScriptedModel extends LlmAdapter {
       return
     }
     const step = this.step++
-    if (step > 5) throw new Error('Offline test script exhausted')
+    if (step > (process.env.BRIDGEFLOW_TEST_DISCOVERY === '1' ? 33 : 5)) throw new Error('Offline test script exhausted')
     if (step % 2 === 0) {
       const id = ToolCallId(`approval-fixture-${step}`)
-      const args = JSON.stringify({ source: `sku:test-${step}`, target: 'customer:test',
+      let args = JSON.stringify({ source: `sku:test-${step}`, target: 'customer:test',
         relation: 'ordered_by', accepted: true, evidence: 'Offline browser test', period: '2025-11' })
+      let toolName = 'confirm_mapping'
+      if (step >= 6 && process.env.BRIDGEFLOW_TEST_DISCOVERY === '1') {
+        const texts = (value: any): string[] => value && typeof value === 'object'
+          ? [typeof value.text === 'string' ? value.text : '', ...Object.values(value).flatMap(texts)] : []
+        const requestedTool = step >= 22 ? ['discovery_decision_propose', 'discovery_decision_vote', 'discovery_decision_vote', 'discovery_decision_finalize', 'discovery_decision_resolve', 'discovery_decision_finalize'][(step - 22) / 2]! : step === 6 ? 'discovery_register' : step >= 18 ? 'discovery_meeting_save' : step >= 14 ? 'discovery_score_save' : step >= 12 ? 'discovery_graph_save' : 'discovery_propose'
+        const request = texts(options.messages).reverse().find(text => text.startsWith(`Please call ${requestedTool}`))
+        if (!request) throw new Error('Missing browser registration request')
+        args = JSON.stringify(JSON.parse(request.slice(request.indexOf('\n') + 1)))
+        toolName = requestedTool
+      }
       yield { type: 'block-start', index: 0, blockType: 'tool-call' }
-      yield { type: 'tool-call-delta', index: 0, id, name: 'confirm_mapping', argumentsDelta: args }
-      yield { type: 'block-end', index: 0, block: { type: 'tool-call', id, name: 'confirm_mapping', arguments: args } }
+      yield { type: 'tool-call-delta', index: 0, id, name: toolName, argumentsDelta: args }
+      yield { type: 'block-end', index: 0, block: { type: 'tool-call', id, name: toolName, arguments: args } }
       yield { type: 'usage', usage: { inputTokens: 10, outputTokens: 10 } }
       yield { type: 'finish', reason: { kind: 'tool-calls' } }
     } else {

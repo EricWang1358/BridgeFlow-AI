@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from pydantic import BaseModel, Field
 
 from bridgeflow import column_matches
-from bridgeflow.access import departments_for
+from bridgeflow.access import departments_for, operations_for
 from bridgeflow.agents import DataSanitizerAgent, SanitizerInput
 from bridgeflow.agents.semantic_resolver import FieldDictionary, SemanticResolverAgent
 from bridgeflow.agents.sop_flow import MissingRollup, SOPFlowEngine, SOPInput, UnjoinableTables
@@ -27,7 +27,8 @@ from bridgeflow.column_matches import AppliedMatch
 from bridgeflow.config import REPO_ROOT, settings
 from bridgeflow.identity import UserIdentity, require_user
 from bridgeflow.metrics import dictionary_path
-from bridgeflow.schemas import Department, PipelineResult
+from bridgeflow.monthly import checks
+from bridgeflow.schemas import CleanTable, Department, PipelineResult
 from bridgeflow.store import _root, _write
 
 router = APIRouter(prefix="/batches", tags=["batches"])
@@ -60,6 +61,8 @@ class BatchSnapshot(PipelineResult):
     #: The frozen batch this one was derived from by applying quarantine decisions (#88).
     derived_from: str | None = None
     dispositions: list[dict] = Field(default_factory=list)
+    #: Per department, the shared intake check report (E14-UC03): identical to what self-check returns.
+    intake_checks: dict[str, dict] = Field(default_factory=dict)
     #: Portal union_id of whoever imported it; "" = system/tool import or predates
     #: the identity layer. Visibility: the batch's departments ⊆ the viewer's
     #: authorized departments, or the viewer is the owner (docs/27).
@@ -182,6 +185,8 @@ def _check_upload_scope(departments: list[Department], user: UserIdentity | None
     """With the identity layer on, you may only upload departments you may also see."""
     if user is None:
         return
+    if "batch_import" not in operations_for(user.sub):
+        raise HTTPException(403, "This employee is not authorized to import batches")
     denied = set(departments) - departments_for(user.sub)
     if denied:
         raise HTTPException(403, f"Not authorized for departments: {sorted(denied)}")
@@ -304,15 +309,7 @@ async def demo_batch(user: Annotated[UserIdentity | None, Depends(require_user)]
             await upload.close()
 
 
-async def _import_batch(period: str, departments: list[Department], files: list[UploadFile],
-                        source_dictionary: Path | None = None, demo_case: str | None = None,
-                        choices: list[Layout] | None = None, owner: str = "") -> BatchSummary:
-    if len(files) != len(departments) or not 1 <= len(files) <= 4:
-        raise HTTPException(422, "Provide one file per department (1–4 departments)")
-    if len(set(departments)) != len(departments):
-        raise HTTPException(422, "Duplicate department; combine its sheets explicitly first")
-    batch_id = uuid.uuid4().hex
-    path = source_dictionary or dictionary_path()
+def _load_dictionary(path: Path) -> tuple[dict, FieldDictionary, dict]:
     try:
         dictionary_raw = yaml.safe_load(path.read_text(encoding="utf-8")) if path.is_file() else {}
         if dictionary_raw is None:
@@ -324,67 +321,161 @@ async def _import_batch(period: str, departments: list[Department], files: list[
         date_orders = dictionary_raw.get("date_order") or {}
         if not isinstance(date_orders, dict) or not set(date_orders.values()) <= {"day_first", "month_first"}:
             raise ValueError("date_order must map departments to day_first or month_first")
-        # Where each department's table sits in its workbook, declared by the dictionary owner (#47).
-        layouts = [Layout.declared(dictionary_raw.get("sheet_layout"), d) for d in departments]
     except (yaml.YAMLError, OSError, UnicodeError, ValueError, TypeError, AttributeError, KeyError) as exc:
         raise HTTPException(503, "Field dictionary configuration is invalid; ask the administrator to correct it before importing") from exc
+    return dictionary_raw, dictionary, date_orders
+
+
+def _integration_spec():
     # Imported locally because the evaluator also uses BatchSnapshot for its arithmetic.
     from bridgeflow import integration
 
-    integration_snapshot = (integration.load_spec().model_dump(mode="json")
-                            if integration.spec_path().is_file() else None)
+    return integration.load_spec() if integration.spec_path().is_file() else None
+
+
+def _declaration_label(dictionary_raw: dict, spec) -> str:
+    digest = hashlib.sha256(json.dumps(dictionary_raw, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()[:12]
+    return f"dictionary {digest}" + (f" · {spec.version}" if spec is not None else "")
+
+
+@dataclass
+class ParsedFile:
+    department: str
+    filename: str
+    sheet: str
+    header_row: int
+    frame: pd.DataFrame
+    sha256: str
+    size: int
+
+
+def _parse_department_file(department: str, filename: str, payload: bytes, layout: Layout) -> ParsedFile:
+    """Read one department file exactly as import does; refusals are HTTP errors with a reason."""
+    filename = filename.replace("\\", "/").rsplit("/", 1)[-1]
+    sheet = ""
+    header_row = 1
+    try:
+        if filename.lower().endswith(".xlsx"):
+            with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+                if sum(i.file_size for i in archive.infolist()) > 100 * 1024 * 1024:
+                    raise HTTPException(413, "Expanded workbook exceeds 100 MiB")
+            sheet, frame, header_row = _read_xlsx(payload, filename, layout)
+        elif filename.lower().endswith(".csv"):
+            frame = pd.read_csv(io.BytesIO(payload), skip_blank_lines=False, nrows=settings.bridgeflow_max_batch_rows + 1)
+        else:
+            raise HTTPException(415, "Use CSV or an XLSX workbook")
+    except HTTPException:
+        raise
+    except (ValueError, OSError, zipfile.BadZipFile, UnicodeError) as exc:
+        raise HTTPException(422, f"Cannot parse {filename}") from exc
+    if len(frame) > settings.bridgeflow_max_batch_rows:
+        raise HTTPException(413, "Batch exceeds configured row limit")
+    if frame.empty:
+        raise HTTPException(422, f"{filename} has no data rows")
+    return ParsedFile(department, filename, sheet, header_row, frame, hashlib.sha256(payload).hexdigest(), len(payload))
+
+
+def _source_record(parsed: ParsedFile) -> dict:
+    # Browser-only originals live outside the model-readable batch snapshot.
+    # Capture before sanitation mutates values; this is a parsed table preview.
+    # Python's own JSON keeps every double exactly; pandas' writer caps at 15 digits, and
+    # the retained original must not be a rounded copy of the sheet.
+    frame = parsed.frame
+    return {"id": parsed.department, "filename": parsed.filename, "sheet": parsed.sheet,
+            "sha256": parsed.sha256, "bytes": parsed.size,
+            "columns": [str(c) for c in frame.columns],
+            "rows": [[_json_cell(v) for v in row] for row in frame.astype(object).where(frame.notna(), None).values.tolist()],
+            "header_row": parsed.header_row,
+            "row_numbers": list(range(parsed.header_row + 1, parsed.header_row + 1 + len(frame)))}
+
+
+async def _clean(parsed: ParsedFile, period: str, date_order: str | None, batch_id: str) -> CleanTable:
+    table = await DataSanitizerAgent().run(SanitizerInput(parsed.department, period, parsed.frame, date_order))
+    table.filename, table.sheet, table.batch = parsed.filename, parsed.sheet, batch_id
+    table.source_rows = [n + parsed.header_row - 1 for n in table.source_rows]
+    for correction in table.corrections:
+        correction.source.filename = parsed.filename
+        correction.source.sheet = parsed.sheet
+        correction.source.batch = batch_id
+        correction.source.source_row = correction.row + parsed.header_row + 1
+    return table
+
+
+@router.post("/self-check", response_model=checks.CheckReport)
+async def self_check(
+    period: Annotated[str, Form(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")],
+    department: Annotated[Department, Form()],
+    file: Annotated[UploadFile, File()],
+    user: Annotated[UserIdentity | None, Depends(require_user)],
+    sheet: Annotated[str, Form()] = "",
+    header_row: Annotated[str, Form()] = "",
+) -> checks.CheckReport:
+    """Run import's own check chain on one department file without creating a batch (E14-UC03).
+
+    Nothing is written: no batch, no retained original, no mapping memory.
+    """
+    _check_upload_scope([department], user)
+    dictionary_raw, _, date_orders = _load_dictionary(dictionary_path())
+    try:
+        declared_layout = Layout.declared(dictionary_raw.get("sheet_layout"), department)
+    except (ValueError, TypeError, AttributeError, KeyError) as exc:
+        raise HTTPException(503, "Field dictionary configuration is invalid; ask the administrator to correct it before importing") from exc
+    spec = _integration_spec()
+    declared = _declaration_label(dictionary_raw, spec)
+    payload = await file.read(settings.bridgeflow_max_upload_bytes + 1)
+    filename = (file.filename or "").replace("\\", "/").rsplit("/", 1)[-1]
+    if len(payload) > settings.bridgeflow_max_upload_bytes:
+        return checks.CHAIN.run(checks.CheckSubject(department, filename, declared, refusal="Batch exceeds configured upload size limit"))
+    try:
+        parsed = _parse_department_file(department, filename, payload, Layout.from_form(sheet, header_row).over(declared_layout))
+    except HTTPException as exc:
+        return checks.CHAIN.run(checks.CheckSubject(department, filename, declared, refusal=str(exc.detail)))
+    table = await _clean(parsed, period, date_orders.get(department), "")
+    return checks.CHAIN.run(checks.CheckSubject(department, parsed.filename, declared, table=table,
+                                                source=_source_record(parsed), spec=spec))
+
+
+async def _import_batch(period: str, departments: list[Department], files: list[UploadFile],
+                        source_dictionary: Path | None = None, demo_case: str | None = None,
+                        choices: list[Layout] | None = None, owner: str = "") -> BatchSummary:
+    if len(files) != len(departments) or not 1 <= len(files) <= 4:
+        raise HTTPException(422, "Provide one file per department (1–4 departments)")
+    if len(set(departments)) != len(departments):
+        raise HTTPException(422, "Duplicate department; combine its sheets explicitly first")
+    batch_id = uuid.uuid4().hex
+    path = source_dictionary or dictionary_path()
+    dictionary_raw, dictionary, date_orders = _load_dictionary(path)
+    try:
+        # Where each department's table sits in its workbook, declared by the dictionary owner (#47).
+        layouts = [Layout.declared(dictionary_raw.get("sheet_layout"), d) for d in departments]
+    except (ValueError, TypeError, AttributeError, KeyError) as exc:
+        raise HTTPException(503, "Field dictionary configuration is invalid; ask the administrator to correct it before importing") from exc
+    spec = _integration_spec()
+    integration_snapshot = spec.model_dump(mode="json") if spec is not None else None
+    declared = _declaration_label(dictionary_raw, spec)
     tables = []
     sources = []
     byte_count = row_count = 0
-    for department, upload, declared, chosen in zip(departments, files, layouts, choices or [Layout()] * len(files), strict=True):
+    intake_reports: dict[str, dict] = {}
+    for department, upload, declared_layout, chosen in zip(departments, files, layouts, choices or [Layout()] * len(files), strict=True):
         payload = await upload.read(settings.bridgeflow_max_upload_bytes + 1)
         byte_count += len(payload)
         if byte_count > settings.bridgeflow_max_upload_bytes:
             raise HTTPException(413, "Batch exceeds configured upload size limit")
-        filename = (upload.filename or "").replace("\\", "/").rsplit("/", 1)[-1]
-        sheet = ""
-        header_row = 1
-        try:
-            if filename.lower().endswith(".xlsx"):
-                with zipfile.ZipFile(io.BytesIO(payload)) as archive:
-                    if sum(i.file_size for i in archive.infolist()) > 100 * 1024 * 1024:
-                        raise HTTPException(413, "Expanded workbook exceeds 100 MiB")
-                sheet, frame, header_row = _read_xlsx(payload, filename, chosen.over(declared))
-            elif filename.lower().endswith(".csv"):
-                frame = pd.read_csv(io.BytesIO(payload), skip_blank_lines=False, nrows=settings.bridgeflow_max_batch_rows + 1)
-            else:
-                raise HTTPException(415, "Use CSV or an XLSX workbook")
-        except HTTPException:
-            raise
-        except (ValueError, OSError, zipfile.BadZipFile, UnicodeError) as exc:
-            raise HTTPException(422, f"Cannot parse {filename}") from exc
+        parsed = _parse_department_file(department, upload.filename or "", payload, chosen.over(declared_layout))
+        frame = parsed.frame
         row_count += len(frame)
         if row_count > settings.bridgeflow_max_batch_rows:
             raise HTTPException(413, "Batch exceeds configured row limit")
-        if frame.empty:
-            raise HTTPException(422, f"{filename} has no data rows")
-        # Browser-only originals live outside the model-readable batch snapshot.
-        # Capture before sanitation mutates values; this is a parsed table preview.
-        # Python's own JSON keeps every double exactly; pandas' writer caps at 15 digits, and
-        # the retained original must not be a rounded copy of the sheet.
-        parsed = {"columns": [str(c) for c in frame.columns], "data": [[_json_cell(v) for v in row]
-                  for row in frame.astype(object).where(frame.notna(), None).values.tolist()]}
-        sources.append({"id": department, "filename": filename, "sheet": sheet,
-                        "sha256": hashlib.sha256(payload).hexdigest(), "bytes": len(payload),
-                        "columns": parsed["columns"], "rows": parsed["data"],
-                        "header_row": header_row,
-                        "row_numbers": list(range(header_row + 1, header_row + 1 + len(frame)))})
-        table = await DataSanitizerAgent().run(SanitizerInput(department, period, frame, date_orders.get(department)))
-        table.filename, table.sheet, table.batch = filename, sheet, batch_id
-        table.source_rows = [n + header_row - 1 for n in table.source_rows]
-        for correction in table.corrections:
-            correction.source.filename = filename
-            correction.source.sheet = sheet
-            correction.source.batch = batch_id
-            correction.source.source_row = correction.row + header_row + 1
+        source = _source_record(parsed)
+        sources.append(source)
+        table = await _clean(parsed, period, date_orders.get(department), batch_id)
+        report = checks.CHAIN.run(checks.CheckSubject(department, parsed.filename, declared, table=table,
+                                                      source=source, spec=spec))
+        intake_reports[department] = report.model_dump(mode="json")
         tables.append(table)
     result = BatchSnapshot(period=period, clean_tables=tables, dictionary_snapshot=dictionary_raw or {},
-                           integration_snapshot=integration_snapshot, owner=owner)
+                           integration_snapshot=integration_snapshot, owner=owner, intake_checks=intake_reports)
     if not dictionary.is_empty:
         # Before anything reads the tables: a remembered match makes this upload look
         # the way the dictionary already describes it. Frozen batches are never redone.

@@ -42,10 +42,10 @@ class DecideRequest(BaseModel):
 async def quarantine_decide(request: DecideRequest, http_request: Request) -> dict:
     _writes_allowed()
     batch = load_batch(request.batch_id)
-    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body())
+    actor = consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(), "quarantine_decide")
     book = quarantine.decide(request.batch_id, batch, quarantine.Disposition(
         department=request.department, index=request.index, action=request.action, reason=request.reason,
-        fixes=request.fixes, shift=request.shift, decided_by=request.confirmed_by, authorised_by="dsh-authenticated-session"))
+        fixes=request.fixes, shift=request.shift, decided_by=actor, authorised_by=actor))
     return {"batch_id": request.batch_id, "decisions": len(book.decisions),
             "next_step": "Decide the remaining rows, then apply to create a new batch; this batch stays frozen."}
 
@@ -60,6 +60,6 @@ class ApplyRequest(BaseModel):
 async def quarantine_apply(request: ApplyRequest, http_request: Request) -> dict:
     _writes_allowed()
     batch = load_batch(request.batch_id)
-    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body())
+    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(), "quarantine_apply")
     return await quarantine.apply(request.batch_id, batch, batch_path=batch_path, load_batch=load_batch,
                                   assemble=assemble, summary=summary)

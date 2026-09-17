@@ -153,6 +153,14 @@ business_review:
   - {id: collection_rate, owner: marketing, metric: settlement_collection_rate, attention_when: below, threshold: 80, title: 结算收款率, actions: {attention: [对低收款率项目制定催收计划], ok: [按合同节点跟进回款]}}
   - {id: advance, owner: marketing, metric: advance_ratio, attention_when: above, threshold: 30, title: 垫资比例, actions: {attention: [暂停新增垫资并与财务核对资金占用], ok: [维持现有垫资额度]}}
   - {id: collection_gap, owner: marketing, metric: collection_gap, attention_when: above, threshold: 0, title: 收款计划缺口, actions: {attention: [补充收款计划并明确责任人], ok: [收款计划覆盖已结算金额]}}
+  # 一页月度结论（E13-UC01）：关键指标与顺序、需关注事项的严重度（从高到低）、指标依赖的口径（E13-UC06）。
+  # 口径键与 data/company_templates/integration.yaml 的 assumptions 同名；未确认的口径使依赖它的结论为 G3。
+  brief:
+    key_metrics: [net_margin, material_cost_ratio, settlement_collection_rate, receivable_months, sign_rate]
+    severity: [net_margin, collection_gap, material_cost, receivable_months, advance, collection_rate, unit_margin, volume_gap, sign_rate, leftover]
+    conventions:
+      collection_gap: [市场_缺口]
+      weighted_unit_margin: [增值税税率]
   manager_decision: 生产部核对签收差额，物资部确认测算与毛利，财务部复核利润与应收，市场部落实催收与垫资控制；本报告不自动调整结算、售价或授信。
   limitations:
   - 模拟商砼公司数据，用于演示业务方 v2 模板的月度对账，不代表真实经营结论

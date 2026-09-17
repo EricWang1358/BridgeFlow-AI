@@ -1,0 +1,260 @@
+"""Employee authorization supplements, but never replaces, native DSH approval."""
+from __future__ import annotations
+
+import hashlib
+import json
+import secrets
+import sqlite3
+import time
+from typing import Any
+
+from fastapi import HTTPException
+
+from bridgeflow.access import KNOWN_DEPARTMENTS, departments_for, operations_for
+from bridgeflow.identity import UserIdentity
+from bridgeflow.store import _root
+
+OPERATIONS = frozenset({"confirm_mapping", "confirm_column_match", "quarantine_decide",
+                       "quarantine_apply", "workflow_record", "workflow_approve_submit",
+                       "workflow_handoff", "feishu_import", "feishu_upload_report", "discovery_propose", "discovery_register", "discovery_graph_save", "discovery_score_save", "discovery_meeting_save", "discovery_decision_propose", "discovery_decision_vote",
+                       "discovery_decision_resolve", "discovery_decision_finalize"})
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS employee_permits (
+ token TEXT PRIMARY KEY, subject TEXT NOT NULL, operation TEXT NOT NULL,
+ digest TEXT NOT NULL, expires REAL NOT NULL, used INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS employee_authorizations (
+ nonce TEXT PRIMARY KEY, subject TEXT NOT NULL, operation TEXT NOT NULL,
+ digest TEXT NOT NULL, call_id TEXT, consumed_at REAL NOT NULL);
+"""
+
+
+def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
+    """Recheck both operation grant and current data scope immediately before mutation."""
+    if operation not in OPERATIONS or operation not in operations_for(user.sub):
+        raise HTTPException(403, "This employee is not authorized for this operation")
+    from bridgeflow.api.batches import _visible, load_batch
+
+    if operation in {"confirm_column_match", "quarantine_decide", "quarantine_apply", "feishu_upload_report"}:
+        _visible(load_batch(str(body.get("batch_id", ""))), user)
+    elif operation in {"discovery_decision_propose", "discovery_decision_vote",
+                       "discovery_decision_resolve", "discovery_decision_finalize"}:
+        from bridgeflow.api.discovery import authorize_decision
+        authorize_decision(user, operation, body)
+    elif operation == "discovery_meeting_save":
+        from pydantic import ValidationError
+
+        from bridgeflow.access import workflow_departments_for
+        from bridgeflow.api.discovery import MeetingWrite, service
+        from bridgeflow.workflow.discovery import DiscoveryError
+
+        try:
+            meeting = MeetingWrite.model_validate(body).meeting
+        except ValidationError as exc:
+            raise HTTPException(422, "Invalid discovery meeting") from exc
+        domain, allowed = service(), workflow_departments_for(user.sub)
+        try:
+            refs = [ref.model_dump() for statement in meeting.statements() for ref in statement.references]
+            for binding in meeting.candidates:
+                # Both current and referenced scopes must be visible; approval is
+                # not a way to resurrect access to an old candidate snapshot.
+                for version in (None, binding.version):
+                    candidate = domain.read("opportunity", meeting.project_id, binding.id, version)
+                    if not set(candidate["departments"]) <= allowed:
+                        raise HTTPException(404, "Meeting candidate not found")
+                    refs.extend(ref for claim in candidate["claims"] for ref in claim["references"])
+            for ref in refs:
+                source = domain.read("material", meeting.project_id, ref["material_id"], ref["version"])
+                if source["department"] not in allowed:
+                    raise HTTPException(404, "Meeting source not found")
+        except DiscoveryError as exc:
+            raise HTTPException(404, "Meeting candidate or source not found") from exc
+        try:
+            old = domain.read("meeting", meeting.project_id, meeting.id)
+        except DiscoveryError:
+            old = None
+        if old is not None and not set(old["departments"]) <= allowed:
+            raise HTTPException(404, "Meeting not found")
+    elif operation == "discovery_score_save":
+        from pydantic import ValidationError
+
+        from bridgeflow.access import workflow_departments_for
+        from bridgeflow.api.discovery import ScoreWrite, scoring_policy, service
+        from bridgeflow.workflow.discovery import DiscoveryError
+
+        try:
+            score = ScoreWrite.model_validate(body).score
+        except ValidationError as exc:
+            raise HTTPException(422, "Invalid discovery score") from exc
+        policy = scoring_policy(score.project_id, user)
+        if score.policy_fingerprint != policy.fingerprint:
+            raise HTTPException(409, "Scoring policy changed; read it again")
+        allowed, domain = workflow_departments_for(user.sub), service()
+        try:
+            candidate = domain.read("opportunity", score.project_id, score.opportunity_id)
+            if not set(candidate["departments"]) <= allowed:
+                raise HTTPException(404, "Score candidate not found")
+            refs = [ref for claim in candidate["claims"] for ref in claim["references"]]
+            refs += [ref.model_dump() for rating in [score.effort, score.value] if rating for ref in rating.references]
+            for ref in refs:
+                source = domain.read("material", score.project_id, ref["material_id"], ref["version"])
+                if source["department"] not in allowed:
+                    raise HTTPException(404, "Score source not found")
+        except DiscoveryError as exc:
+            raise HTTPException(404, "Score candidate or source not found") from exc
+        try:
+            old = domain.read("score", score.project_id, score.id)
+        except DiscoveryError:
+            old = None
+        if old is not None and not set(old["departments"]) <= allowed:
+            raise HTTPException(404, "Score not found")
+    elif operation == "discovery_graph_save":
+        from pydantic import ValidationError
+
+        from bridgeflow.access import workflow_departments_for
+        from bridgeflow.api.discovery import GraphWrite, service
+        from bridgeflow.workflow.discovery import DiscoveryError
+
+        try:
+            graph = GraphWrite.model_validate(body).graph
+        except ValidationError as exc:
+            raise HTTPException(422, "Invalid discovery graph") from exc
+        allowed = workflow_departments_for(user.sub)
+        if not set(graph.departments) <= allowed:
+            raise HTTPException(403, "Graph departments are outside this employee's scope")
+        domain = service()
+        try:
+            candidate = domain.read("opportunity", graph.project_id, graph.opportunity_id)
+            if not set(candidate["departments"]) <= allowed:
+                raise HTTPException(404, "Graph opportunity not found")
+            refs = [ref for claim in candidate["claims"] for ref in claim["references"]]
+            refs += [ref.model_dump() for item in [*graph.nodes, *graph.edges] for ref in item.references]
+            for ref in refs:
+                source = domain.read("material", graph.project_id, ref["material_id"], ref["version"])
+                if source["department"] not in allowed:
+                    raise HTTPException(404, "Graph source not found")
+        except DiscoveryError as exc:
+            raise HTTPException(404, "Graph opportunity or source not found") from exc
+        try:
+            old = domain.read("graph", graph.project_id, graph.id)
+        except DiscoveryError:
+            old = None
+        if old is not None and not set(old["departments"]) <= allowed:
+            raise HTTPException(404, "Graph not found")
+    elif operation == "discovery_register":
+        from pydantic import ValidationError
+
+        from bridgeflow.access import workflow_departments_for
+        from bridgeflow.api.discovery import MaterialRegistration, service, uploads
+        from bridgeflow.workflow.discovery import DiscoveryError
+
+        try:
+            registration = MaterialRegistration.model_validate(body)
+        except ValidationError as exc:
+            raise HTTPException(422, "Invalid material registration") from exc
+        allowed = workflow_departments_for(user.sub)
+        if registration.material.department not in allowed:
+            raise HTTPException(403, "Material department is outside this employee's scope")
+        try:
+            uploads().checked(registration.upload_id, registration.material, registration.digest)
+        except DiscoveryError as exc:
+            raise HTTPException(404, "Matching staged upload not found") from exc
+        try:
+            old = service().read("material", registration.material.project_id, registration.material.id)
+        except DiscoveryError:
+            old = None
+        if old is not None and old["department"] not in allowed:
+            raise HTTPException(404, "Material not found")
+    elif operation == "discovery_propose":
+        from pydantic import ValidationError
+
+        from bridgeflow.access import workflow_departments_for
+        from bridgeflow.api.discovery import ProposalWrite, service
+        from bridgeflow.workflow.discovery import DiscoveryError
+
+        try:
+            proposal = ProposalWrite.model_validate(body).proposal
+        except ValidationError as exc:
+            raise HTTPException(422, "Invalid discovery proposal") from exc
+        allowed = workflow_departments_for(user.sub)
+        if not set(proposal.departments) <= allowed:
+            raise HTTPException(403, "Candidate departments are outside this employee's scope")
+        domain = service()
+        try:
+            for claim in proposal.claims:
+                for ref in claim.references:
+                    material = domain.read("material", proposal.project_id, ref.material_id, ref.version)
+                    if material["department"] not in allowed:
+                        raise HTTPException(404, "Discovery source not found")
+            try:
+                previous = domain.read("opportunity", proposal.project_id, proposal.id)
+            except DiscoveryError:
+                previous = None
+            if previous is not None and not set(previous["departments"]) <= allowed:
+                raise HTTPException(404, "Discovery object not found")
+        except DiscoveryError as exc:
+            raise HTTPException(404, "Discovery source or object not found") from exc
+    elif operation == "confirm_mapping":
+        if not KNOWN_DEPARTMENTS <= departments_for(user.sub):
+            raise HTTPException(403, "Global mapping decisions require all department scopes")
+    elif operation == "feishu_import":
+        files = body.get("files")
+        if not isinstance(files, list) or not files or any(
+            not isinstance(f, dict) or not isinstance(f.get("department"), str)
+            or not f["department"].strip() for f in files
+        ):
+            raise HTTPException(422, "Declared import files are required")
+        if not {f.get("department") for f in files} <= departments_for(user.sub):
+            raise HTTPException(403, "Imported departments are outside this employee's scope")
+    else:
+        from bridgeflow.api.workflow import _domain_errors, service
+        from bridgeflow.workflow.visibility import Visibility
+
+        workflow = service()
+        visible = Visibility(workflow.catalogue, user)
+        with _domain_errors():
+            if operation == "workflow_handoff":
+                permitted = visible.stage(workflow.handoff(str(body.get("handoff_id", ""))).stage)
+            elif body.get("artifact_id"):
+                permitted = visible.template(workflow.artifact(str(body["artifact_id"])).template)
+            else:
+                permitted = visible.template(str(body.get("template", "")))
+        if not permitted:
+            raise HTTPException(404, "Workflow object not found")
+
+
+def issue(user: UserIdentity, operation: str, raw_body: str) -> str:
+    try:
+        body = json.loads(raw_body)
+        if not isinstance(body, dict):
+            raise TypeError("Object required")
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(422, "Invalid operation body") from exc
+    authorize(user, operation, body)
+    token = secrets.token_hex(32)
+    path = _root() / "approval-receipts.sqlite3"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(path) as connection:
+        connection.executescript(SCHEMA)
+        connection.execute("DELETE FROM employee_permits WHERE expires < ?", (time.time(),))
+        connection.execute("INSERT INTO employee_permits VALUES (?, ?, ?, ?, ?, 0)",
+                           (token, user.sub, operation, hashlib.sha256(raw_body.encode()).hexdigest(),
+                            time.time() + 60))
+    return token
+
+
+def consume(connection: sqlite3.Connection, token: str, operation: str | None,
+            body: bytes, nonce: str) -> str:
+    connection.executescript(SCHEMA)
+    row = connection.execute("SELECT subject, operation, digest, expires, used FROM employee_permits WHERE token = ?",
+                             (token,)).fetchone()
+    digest = hashlib.sha256(body).hexdigest()
+    if not row or row[1] != operation or row[2] != digest or row[3] < time.time() or row[4]:
+        raise HTTPException(403, "A current employee authorization for this exact operation is required")
+    parsed = json.loads(body)
+    authorize(UserIdentity(sub=row[0], name="", email=""), row[1], parsed)
+    changed = connection.execute("UPDATE employee_permits SET used = 1 WHERE token = ? AND used = 0", (token,))
+    if changed.rowcount != 1:
+        raise HTTPException(403, "Employee authorization already consumed")
+    connection.execute("INSERT INTO employee_authorizations VALUES (?, ?, ?, ?, ?, ?)",
+                       (nonce, row[0], operation, digest, parsed.get("call_id"), time.time()))
+    return row[0]

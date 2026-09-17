@@ -7,9 +7,182 @@
 「每个数字都量过、可追溯」是本项目对评委的核心叙事，评委抓到一处对不上，整个叙事就打折。
 所以改数字只改这一处。
 
-最后更新：2026-09-14。新增一轮时照第三节的格式写，并附上复现命令。
+最后更新：2026-09-17。新增一轮时照第三节的格式写，并附上复现命令。
 
 ---
+
+## E13/E14 第一轮：一页结论、依据等级、提交前自检（2026-09-17，#190 / #195 / #199）
+
+均为离线实现与验证，未调用模型，也没有真实员工或业务方验收。
+**依据等级（E13-UC06）**：示例批次总表 **4** 行的已溯源单元格中，G1 **232**、G3 **71**、出处缺失 **1**（客户名称部门写法不一致而留空）。单方不含税毛利依赖未确认的增值税口径，判为 G3；各行一致即可的标识字段不计按日汇总口径，判为 G1。
+**一页结论（E13-UC01）**：脚本化研判后，关注项按声明的严重度排为净利率、收款计划缺口、材料成本占收入 **3** 项，等级分别为 G2、G3、G2，建议动作均为 G4；财务部研判失败时财务部标为缺失，其指标不出现；较早的报告标为过期；无报告返回 409；生成过程替换全部模型入口后仍成功。
+**提交前自检（E14-UC03）**：自检与导入共用 `CheckChain`。7 月模拟留出四部门文件，自检报告与导入存入批次的报告逐项相等，自检前后批次文件不变；v1 物资部模板报「表头不在第 1 行（疑似第 2 行）」；市场部「可争取」写文字时，报出声明核对的非数字与清洗器的错列隔离（第 2 行，引用清洗器原因）。
+反向验证 **4** 处：去掉严重度排序、取消最弱等级传递、取消声明核对（2 条失败），均被测试抓到。
+Python **574 passed**（新增 `test_conclusions.py` 9 条、`test_self_check.py` 5 条）；TS typecheck、build、**71 passed**；离线 `smoke:web`、`smoke:tour` 与新增 `plugins/tests/round1-journey.mjs` 通过，截图在 `docs/evidence/round1-e13-e14/`（本月结论、总表单元格等级、导入框自检），页面错误 **0**。
+
+## PR 提交前完整回归（2026-09-17）
+
+按用户要求发布本阶段改动并在远端检查通过后合并，未继续增加产品功能。
+
+- 本地 Ruff（与 CI 相同范围）通过；后端 **560 passed**，2 项已有依赖弃用警告。
+- 插件 TypeScript、构建通过，单元测试 **71 passed**；diff 检查通过。
+- 连续离线浏览器证据沿用下节同一功能版本的验证，本次不声称新增真实企业验收。
+- 远端以 `.github/workflows/deploy.yml` 的实际运行记录为准；PR 阶段执行测试，合并 main 后在 DEPLOY_ENABLED=true 时部署并检查公开服务存活。
+
+## 阶段暂停前的决策浏览器验证（2026-09-16）
+
+用户要求整理 handoff 后停止本阶段开发。本节记录当时已经启动的检查结果；后续 Agent 2 消费端和其他工作包留到下一阶段。
+
+- 决策页面已接规则/验签身份与动作展示、提案/条件编辑、本人投票、指定条件确认及明确决定。政策 GET 响应新增服务端验签 viewer.subject/actions，后端授权依然独立检查。
+- `BRIDGEFLOW_TEST_DISCOVERY=1 BRIDGEFLOW_TEST_EMPLOYEE=1 BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web`：**passed**。在既有材料/候选/图/评分/会议旅程后，两个签名测试身份顺序投票，核对非决定人没有批准按钮；达标仍 proposed，首次批准为 conditional，条件确认后仍无批准范围，再次批准才显示范围；政策修订撤下范围。
+- 本轮 **17 次原生审批、34 次脚本化模型请求、浏览器错误 0**。产物 `/tmp/bridgeflow-web-e2e-iHxWZp`，已查看 `discovery-decision.png`。这是同一浏览器中切换签名身份的验证，不证明原生会话隔离、多人并发或真实企业 SSO。
+- 最终 `pytest -q backend/tests/test_discovery_decisions_api.py`：**4 passed**；最终 TypeScript 检查和构建通过，diff 检查通过。此前完整后端/插件结果见下节；新增 UI 后没有再次重跑全部套件，不将前一次结果当作最终全量。
+- 无真实模型计费、消息外发或部署。本地修改尚未提交/推送；完整交接与下阶段顺序已集中到 HANDOFF.md。E01-UC06 仍 PARTIAL，Agent 2 消费端未接。
+
+## MVP 决策领域、授权与原生操作（2026-09-16）
+
+新增人工声明决策政策、纪要版本提案、验签本人选票、指定条件确认、明确批准/拒绝和当前有效范围清单。政策无默认规则；原生四操作均需 ACL 权限及政策角色，批准前/执行前重查。满足票数不自动批准，条件满足也不自动释放；历史或来源/政策过期撤下 Agent 2 范围。
+
+- 决策领域/API 定向 `pytest -q backend/tests/test_discovery_decisions.py backend/tests/test_discovery_decisions_api.py`：**15 passed**。覆盖阈值/弃权/反对规则、重投、角色和伪造 actor 拒绝、条件确认与再次批准、修订清票、历史批准不可用、会议/候选/来源/政策变化、事务并发、部门读取、审批后撤权及缺政策。
+- 在 `backend/` 执行 `/home/eric/Hackathon2026/.venv/bin/pytest -q`：**560 passed**，2 项已有依赖弃用警告。
+- 插件 `pnpm --dir plugins test`：**71 passed**，新验证四个原生操作完整批准展示、版本绑定、超长动作不截断及 allow 策略不能绕过原生审批。最终 typecheck、build、相关 Ruff 和 diff 检查通过。
+- 本轮没有决策浏览器旅程，未声称多员工真实投票或企业验收。Agent 2 范围清单已由领域投影，模板治理尚未消费；不会创建执行交接或通知。真实政策、决定角色及业务签核仍为外部输入，测试全部为明确合成规则。
+
+## 会议授权与浏览器旅程（2026-09-16）
+
+会议清单/历史详情按员工部门过滤；discovery_meeting_save 通过原生审批保存准备或纪要，执行前重查操作权限和全部来源范围。工作室支持从候选准备会议、逐项编辑阶段/假设/依据、修订纪要并阅读结构化详情。
+
+- 在 `backend/` 执行 `/home/eric/Hackathon2026/.venv/bin/pytest -q`：**545 passed**，2 项已有依赖弃用警告。会议 API 新增 4 项测试，覆盖原生批准缺失、验签记录人、读取范围/历史、越权来源、操作撤权、旧序号及审批后来源变化。首次从仓库根运行误收集 portal 测试，因独立 portal_app 未安装停止；更正为 backend 项目目录后全量通过，不将 portal 测试记为已跑。
+- 插件完整 `pnpm --dir plugins test`：**70 passed**；最终 TypeScript 检查、构建、相关 Ruff 和 diff 检查通过。新测试检查完整会议批准展示、精确版本/内容绑定和 allow 策略不能绕过原生审批。
+- `BRIDGEFLOW_TEST_DISCOVERY=1 BRIDGEFLOW_TEST_EMPLOYEE=1 BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web`：**passed**。连续材料/候选/图/评分后，从候选准备会议 v1，原生批准，再编辑为纪要 v2，批准并读取详情。**11 次原生审批、22 次脚本化模型请求，浏览器错误 0**。产物 `/tmp/bridgeflow-web-e2e-MG36xe`，会议截图 `discovery-meeting.png`，已查看最终截图。
+- 浏览器验证发现修订表单的下拉框及非空 textarea 可访问名称包含内容，补明确 aria-label 后重跑通过。截图复核发现全局 form 样式覆盖 hidden 属性，补显式隐藏样式和非材料页不可见断言，最终重跑通过。
+- 仅合成材料/离线模型。会议保存不是 MVP 决策或投票，未做真实业务签核、自动会议摘要、多人共编或未批准草稿持久恢复；E01-UC05 保持 PARTIAL。
+
+## 评分浏览器旅程与会议领域（2026-09-16）
+
+评分表单显示声明量表并准备原生审批请求；四象限显示当前政策下完整评分、可点击依据，缺项/版本变化不落点。材料上传表单限定在材料页，避免遮挡图表。
+
+- `pnpm --dir plugins typecheck`、`build`、`test`：通过，插件 **69 passed**。
+- `pytest -q backend/tests/test_discovery_scoring.py backend/tests/test_discovery_scoring_api.py`：**10 passed**，2 项已有依赖弃用警告。
+- `BRIDGEFLOW_TEST_DISCOVERY=1 BRIDGEFLOW_TEST_EMPLOYEE=1 BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web`：**passed**。涵盖完整/缺项评分、原生审批、点击依据、政策修订后撤点，连续材料/候选/图旅程继续通过。**9 次原生审批、18 次脚本化模型请求，浏览器错误 0**。产物 `/tmp/bridgeflow-web-e2e-YHaACT`，已查看 `discovery-quadrants.png`。仅使用合成量表和离线模型。
+- 首次评分 smoke 失败于测试等待内部 policy_revised 文案，而页面显示“量表已改变”；修正用户可见断言，并将其他未落点原因双语化，重跑通过。
+- 新会议领域 `pytest -q backend/tests/test_discovery_meetings.py`：**6 passed**，覆盖冻结候选快照、会前/会后版本、陈述来源、假设、阶段依赖环、身份/范围、陈旧序号和候选/材料并发保护；相关 Ruff、diff 检查通过。会议尚无 API/原生工具/浏览器旅程，不据领域测试声明端到端完成。
+- 本轮未重跑后端完整套件；先前完整结果保留在下节。真实量表、业务签核和会议决定规则仍待业务输入。
+
+## 评分配置、授权与原生审批（2026-09-16）
+
+接入 DISCOVERY_SCORING_POLICY_PATH、政策部门范围及指纹读取、评分授权列表/历史和 discovery_score_save 原生工具。保存同时要求员工操作权限和原生回执，执行时重查政策指纹。默认缺配置报 503，不发明量表。
+
+- 后端完整 `pytest -q`：**535 passed**，2 项已有依赖弃用警告。新增政策/评分读取权限、验签评分人、审批后政策变化拒绝、缺文件、不完整评分不落点、撤权不修订覆盖。
+- 插件完整 `test`：**69 passed**，包含完整评分展示、政策/候选/序号绑定及 allow 策略不能绕过原生审批。TypeScript 检查、构建、相关 Ruff 和 diff 检查通过。
+- 此轮当时仅 API/工具；评分表单与浏览器证据现见上节。测试采用合成量表，真实尺度及企业签核仍待业务输入。
+
+## 声明量表与评分领域（2026-09-16）
+
+新增人工声明政策指纹/快照、候选版本评分、Decimal 坐标和显式分界点规则。不完整评分不落点，政策/候选/来源变更标为过期；不自动排序或批准立项。
+
+`pytest -q backend/tests/test_discovery_scoring.py`：**7 passed**，覆盖边界相等归属、坐标、缺轴/依据不落点、越界/非有限数字拒绝、缺政策拒绝、政策/候选变更和来源并发保护。Ruff 和 diff 检查通过；无新增 API、原生审批或浏览器旅程证据，E01-UC04 仅更新为 PARTIAL。
+
+## 流程图编辑与可视化浏览器旅程（2026-09-16）
+
+候选清单可创建关联精确候选版本的流程草图；逐项编辑节点/来源、关系状态/条件/返工，经原生审批保存。图清单展示 SVG 和可键盘选择的节点/关系详情；缺失关系仍明确未知。
+
+- 插件完整测试 **68 passed**，最终 TypeScript 检查、构建、diff 检查通过。后端未改领域行为，此轮未重复后端全量。
+- `BRIDGEFLOW_TEST_DISCOVERY=1 BRIDGEFLOW_TEST_EMPLOYEE=1 BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web`：**passed**。连续材料登记/原件下载、候选 v1/v2 保存，再从候选 v2 建图、原生批准图 v1、打开 SVG、选择返工边/节点验证来源。
+- 本轮共 **7 次原生审批、14 次脚本化模型请求**，浏览器脚本错误 **0**，另断言无客户端 slot 崩溃、无非法 HTML pattern。产物 `/tmp/bridgeflow-web-e2e-lmzi9P`，图截图 `discovery-flow-edit.png`、`discovery-flow.png`，已查看最终截图。
+- 浏览器实测修复了候选→图切换时旧详情误渲染、下拉框可访问名称及标识 pattern 兼容问题，修复后重跑通过。
+- 图形布局不推断业务顺序。真实业务共创、图内原件跳转、未批准编辑恢复/协作等边界仍在 E01/HANDOFF；不将离线旅程描述为企业验收。
+
+## 流程图授权与原生审批（2026-09-16）
+
+图列表/历史详情新增部门授权；原生 `discovery_graph_save` 校验图、候选及全部来源范围，员工操作授权及原生回执均不可省略。批准展示完整有界图；写入保持 draft，返回不复制节点/边正文。
+
+- 后端完整 `pytest -q`：**525 passed**，2 项已有依赖弃用警告。新图 API 测试覆盖缺少审批、越权来源/读取、撤权、真实员工署名、历史、来源过期和旧版本冲突。
+- 插件完整 `test`：**68 passed**，含完整审批展示、候选版本绑定、后续 allow 策略无法绕过批准。TypeScript 检查、构建、Ruff 及 diff 检查通过。
+- 尚未运行图专用浏览器旅程；图形展示/编辑未接，不声称 E01-UC03 完成。
+
+## 信息流与文件流草图领域（2026-09-16）
+
+新增版本化图模型，保留节点角色/触发/输入输出、边的来源/确认状态/条件/返工，以及候选与材料版本。图不生成业务交接或通知。
+
+`pytest -q backend/tests/test_discovery_graph.py`：**5 passed**，覆盖分支/环路/未知边、证据与确认要求、非法端点、历史恢复、来源过期、候选并发更新时事务拒绝、图版本及范围保护。相关 Ruff 和 diff 检查通过。没有新增 API/原生工具/浏览器验证，E01-UC03 仅从 DESIGNED 更新为 PARTIAL。
+
+## 候选编辑与版本修订浏览器旅程（2026-09-16）
+
+候选页面提供逐项陈述、多来源位置、推断标记、待确认问题及原生审批请求。修订读取当前版本并锁定标识/范围；不从页面直接执行业务写入。
+
+- 插件 `typecheck`、构建、完整 `test` **67 passed**，diff 检查通过。此轮没有修改后端领域行为，未重复后端全量。
+- `BRIDGEFLOW_TEST_DISCOVERY=1 BRIDGEFLOW_TEST_EMPLOYEE=1 BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web`：**passed**。在材料登记/下载旅程后，填写新候选、原生批准保存 v1、从页面载入并修订、再次批准保存 v2，详情验证 approval 为 not_decided。共 **6 次原生审批、12 次脚本化模型请求**；不是付费模型质量评测。
+- 产物 `/tmp/bridgeflow-web-e2e-PuHCS8`，含 `discovery-opportunity.png` 和材料旅程截图；浏览器脚本错误 **0**。
+- 尚无图形共创、语义自动抽取、源材料选择器或草稿跨页面保存；真实员工/企业验收另需样例与参与，UC 状态保持 PARTIAL。
+
+## 暂存配额与独立清理（2026-09-16）
+
+暂存增加可配置员工数量/字节及全局字节限额，检查与插入在同一 SQLite 写事务；拒绝返回 429。独立清理命令默认预览，仅 `--apply` 删除过期暂存，正式事件/原件不参与。
+
+- 后端完整回归 **515 passed**；随后新增 HTTP 429 与 CLI 真实子进程测试，针对登记/配额模块再次验证 **9 passed**。这两个测试加入后没有重复全量运行，不把总数推算成一次完整跑数。
+- 覆盖两并发上传争抢最后一个名额、员工/全局额度、删除后额度释放、清理预览无删除、apply 幂等、保留未过期材料。Ruff 和 diff 检查通过。
+- CLI 测试仅操作临时目录；没有清理用户运行数据或安装调度。生产调度、SQLite 物理缩容/擦除及未引用正式 blob 的保留策略仍有边界，见 E01/HANDOFF。
+
+## 工作室材料页与员工浏览器旅程（2026-09-16）
+
+工作室新增材料上传表单、项目材料/候选分页清单、待登记请求复制、只读详情和授权版本原件下载。复制请求由人粘贴原生对话；不会自行发送或批准。原件下载在读取前校验范围，读取后校验摘要。
+
+- 后端完整 `pytest -q`：**512 passed**，2 项已有依赖弃用警告。新测试覆盖原件身份/部门范围、精确历史版本、摘要损坏拒绝及文件缺失。
+- 插件完整 `test`：**67 passed**；`typecheck`、构建通过。
+- `BRIDGEFLOW_TEST_DISCOVERY=1 BRIDGEFLOW_TEST_EMPLOYEE=1 BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web`：**passed**。页面上传 → 复制的登记请求进入原生对话 → 员工授权与原生批准 → 正式材料版本出现 → 下载字节一致；零浏览器脚本错误。保留原有映射批准/拒绝/超时、键盘拒绝和冷启动验证。
+- 最终浏览器产物 `/tmp/bridgeflow-web-e2e-bcjdKs`，截图 `discovery-staged.png`、`discovery-registered.png`。截图检查后修复窄栏表单布局，并完成重跑。测量含新增登记审批，共 4 次审批；8 次脚本化离线模型请求，非真实模型用量。
+- 真实 OAuth/企业材料/候选共创及全部生命周期未验收；暂存治理仍有独立任务。不能将上述材料旅程推广为整个 E01 已完成。
+
+## 材料暂存与原生批准登记（2026-09-16）
+
+新增受操作/部门权限和部署开关保护的 multipart 暂存 API，及 `discovery_register` 原生工具。上传不创建正式材料；批准精确绑定暂存 ID、摘要与元数据，登记后记录验签员工并消费暂存记录。暂存逻辑到期为 24 小时，清理为后续上传时惰性执行。
+
+- 后端全量 `pytest -q`：**511 passed**，2 项已有依赖弃用警告。新增上传与登记分离、缺审批拒绝、操作/部门/开关约束、摘要/元数据篡改、过期、重复登记和版本冲突覆盖。
+- 插件 `pnpm --dir plugins test`：**67 passed**，含登记内容完整展示、摘要绑定及后续 allow 策略无法绕过原生审批；TypeScript 检查、构建与相关 Ruff 通过。
+- 未完成浏览器上传表单/送审批交互及连续旅程；没有使用真实企业材料或真实模型。暂存配额、独立清理与授权原件下载仍待实现。
+
+## 原生材料结构检索（2026-09-16）
+
+`discovery_materials` 原生只读工具提供项目材料及工作表分页、准确版本和物理位置；返回不包含原始行、表头标签、标题、来源描述或会议正文。声明与检测类型分别保留，结构不代表业务含义。
+
+- 后端全量 `pytest -q`：**507 passed**，2 项已有依赖弃用警告。新增测试验证材料分页/总数、表格及文本内容排除、工作表总数/截断/继续翻页、非法项目/页长拒绝和主机认证。
+- 插件 `pnpm --dir plugins test`：**66 passed**；`typecheck` 和相关 Ruff 检查通过。
+- 本轮没有新增浏览器旅程证据。材料上传及批准登记仍未接产品入口；模型读取继续采用可信主机权限，不宣称员工会话隔离。
+
+## 候选原生审批保存（2026-09-16）
+
+新增 `discovery_propose` 原生工具、精确请求审批、门户员工许可/来源范围核查，以及不截断候选正文的有界审批展示。后端返回简短保存凭据，不复制完整材料或候选正文。
+
+- 后端 `pytest -q`：**505 passed**，2 项已有依赖弃用警告；覆盖缺少原生/员工批准、操作拒绝、来源越权、权限撤销、员工署名、单次消费，既有领域测试覆盖来源/版本冲突。
+- `pnpm --dir plugins test`：**66 passed**，包括工具目录、完整提案展示/容量拒绝及后续 allow 策略不能绕过审批。
+- TypeScript 类型检查、插件构建通过。未运行此新工具的浏览器旅程，材料上传/模型检索/候选页面尚未接好；不宣称完整 UC 或真实业务验收。
+
+## 来源位置与授权读取（2026-09-16）
+
+在材料/候选领域基础上增加结构化来源位置检查、部门授权分页与历史读取 API。修复 WorkflowStore 流前缀查询将下划线/大小写视作 SQL LIKE 模式的问题，改为精确前缀，避免项目混查。
+
+- `cd backend && ../../.venv/bin/pytest -q`：**503 passed**，2 项已有依赖弃用警告。
+- 新增/扩展测试覆盖不存在的工作表、越界/非法行区间、文本与表格格式不匹配、空行位置、授权后计数和分页、历史版本权限、来源修订及项目前缀隔离。
+- `pnpm --dir plugins typecheck`、相关 Python Ruff 与 `git diff --check` 通过。
+- 尚未接审批写工具、材料上传产品入口和候选页面；本轮不是浏览器旅程验收，也未做真实模型或企业验收。
+
+## 材料与候选领域存储（2026-09-16）
+
+`../../.venv/bin/pytest -q tests/test_discovery.py`（backend 目录）针对性验证 **7 passed**：空模板与实际记录区分、历史版本跨服务恢复、原始数据不出投影、并发写拒绝、依据过期、解析失败/格式不支持、范围与项目约束、文本正文隔离、来源检查和提交之间的并发竞态。使用合成数据，尚未覆盖产品 API、原生工具或浏览器；这些入口仍待实现，不能当作完整 UC 验收。
+
+## 员工授权与原生审批联通（2026-09-16）
+
+批准写入新增验签员工许可：精确操作/请求绑定、60 秒有效、一次使用、执行前重查权限；仍须原生批准回执。上传、报告备注分别受独立操作权限约束。员工身份由后端验签取得，不信任模型填写姓名。访问配置迁移与剩余边界见 [登录门户](27-login-portal.md) 及 [E09-UC06](requirements/09-security-approval.md)。
+
+本轮最终验证：
+
+- `cd backend && ../../.venv/bin/pytest -q`：**484 passed**，2 项已有依赖弃用警告。包含过期、重放、请求篡改、跨操作、撤权、数据范围、上传/备注授权与非法导入部门。
+- `pnpm --dir plugins test`：**65 passed**；`pnpm --dir plugins typecheck` 与后端 Ruff 检查通过。
+- 构建后 `BRIDGEFLOW_TEST_EMPLOYEE=1 BRIDGEFLOW_LIVE=0 pnpm --dir plugins smoke:web`：**passed**，原生 allowed-once / rejected / cancelled 均覆盖，映射持久记录为 `offline-employee`，并断言不存在共享会话身份回退。浏览器脚本错误 **0**。涵盖上传、总表、代理拒绝、审批详情重试、键盘拒绝、冷启动恢复。产物 `/tmp/bridgeflow-web-e2e-TnV8Gh`，包含 `data-workspace.png`、`native-approval.png`。
+- 前次同改动本地模式冒烟：`BRIDGEFLOW_LIVE=0 PORTAL_BASE_URL='' pnpm --dir plugins smoke:web` 通过，产物 `/tmp/bridgeflow-web-e2e-4SLK3h`。
+
+员工浏览器测试使用本地临时 JWKS 和签名 JWT、脚本化离线模型，不是飞书 OAuth 或真实模型验收。初次失败分别暴露旧共享身份断言、测试初始化脚本在无存储源文档读取 sessionStorage；已修复并完成上述重跑。授权消费账本不等于业务成功；拒绝/取消个人审计、原生会话和模型读取的员工隔离仍未完成，不宣称多租户隔离。
 
 ## 页面内引导与案例留档（2026-09-14）
 
@@ -943,3 +1116,41 @@ BRIDGEFLOW_LIVE=1 node plugins/tests/web-smoke.mjs
 | aggregate-metric「13 次」 | 按日志重数是 14 次 | 14 次全拒；日志里另有 4 次 200 属于手工 curl，不属于本次运行 |
 | 旧样本的业务总额 | 歧义日期现在会被隔离，折叠规则也改了 | 重新跑，不要沿用 |
 | 下方各轮的「smoke 通过」 | 本机复跑为红（#97） | 引用前先复跑，见第二节 |
+## 14x 需求基线与下游工具（2026-09-16）
+
+代码基线 `4a38904`；本轮工作分支 `feat/14x-requirements-delivery`。已只读核对 #127/#125/#140/#141/#143/#144/#145/#147 的正文与评论。
+需求目录为 [requirements](requirements/README.md)，三个双语 epic、21 个 UC、八步工作包；E02-UC07/08 更新为离线实现，E03-UC01 为部分实现。
+
+| 验证 | 命令（仓库根目录） | 结果 |
+| --- | --- | --- |
+| 针对性工作流行为 | `../.venv/bin/python -m pytest backend/tests/test_workflow_tools.py backend/tests/test_workflow_foundation.py -q` | 39 passed |
+| 后端完整离线回归 | `../.venv/bin/python -m pytest backend/tests -q` | 453 passed；2 条依赖弃用警告 |
+| 改动 Python 静态检查 | `../.venv/bin/ruff check backend/src/bridgeflow/api/workflow_tools.py backend/src/bridgeflow/workflow/service.py backend/src/bridgeflow/workflow/guidance.py backend/tests/test_workflow_tools.py backend/tests/test_workflow_foundation.py` | 通过 |
+| 插件类型检查 | `pnpm --dir plugins typecheck` | 通过 |
+| 插件完整回归 | `pnpm --dir plugins test` | 62 passed（随后新增的一项审批绕过测试由下一行验证） |
+| 最终原生运行时测试 | `pnpm --dir plugins exec tsx --test tests/runtime.test.ts` | 32 passed，包含新增审批绕过拒绝测试 |
+| 插件构建 | `pnpm --dir plugins build` | 通过 |
+
+首次后端测试因拉取的新身份模块缺少已声明的 PyJWT 依赖而收集失败；执行 `../.venv/bin/python -m pip install -e 'backend[dev]'` 同步现有依赖后重跑通过，未修改依赖清单。
+
+行为覆盖：没有审批不得改变下游状态；后来注册的 allow 策略不能绕过原生审批；审批绑定 ID、动作、seq 和原因；waiting 不可直接完成；过期 seq 拒绝；退回必须有原因；部署写开关生效；上游未重新就绪不可确认修订；stale 时不可开始/完成；确认新版本后可继续。岗位指引只使用声明，未知阶段 404，本地目标明确为 demo，未配置联系人不编造，读取不写业务事件。
+
+边界：这些是离线行为与构建证据。没有新增浏览器截图、真实模型对话、飞书/目标系统调用、一线参与或业务签核。原生工具接入不代表完整岗位页面已验收，#143/#144/#145 仍有明确开发缺口；未对远端 issue 发评论或关闭。
+
+## 全项目 UC 盘点补全（2026-09-16）
+
+纠正上一轮只覆盖 14x 的范围遗漏：`docs/requirements/` 扩展到既有产品能力、新主线与历史延期范围，保留 E01–E03 编号。新增 E04–E12 双语 epic，分别覆盖导入清洗、字典映射、总表整合、四角色研判、报价、安全审批、原生工作室、运维评测及历史知识库范围。
+
+本轮只修改需求与交接文档，没有新增运行时代码或模型调用。通过 GitHub CLI 读取所有 96 条 issue 的状态与正文，补读 #17/#22/#121/#128–135 的关闭评论，结合现有实现、测试和历史验收记录确定状态。#128–131 明确因本轮不做而关闭；#132–135 没有关闭说明，不从 CLOSED 推断已经交付。
+
+盘点结果：12 个 epic、73 个唯一 UC。状态为 IMPLEMENTED 38、IMPLEMENTED_OFFLINE 2、PARTIAL 14、DESIGNED 11、DEFERRED 5、BLOCKED_EXTERNAL 3。这里的已实现状态是代码与验证资产盘点，不能作为真实公司签核比例。
+
+文档校验通过：所有 UC 编号唯一、索引与正文状态一致、双语段落存在、本地引用目标存在；追溯矩阵覆盖 FR01–26 及全部 96 条 issue；`git diff --check` 通过。没有为这次纯文档补全重复运行产品测试，已有运行时变更的回归结果见上节。
+
+## 未完成边界实施：浏览器读取授权（2026-09-16）
+
+目标及后续顺序见 [implementation-plan](requirements/implementation-plan.md)。本轮实际补齐总表 JSON/XLSX 的门户身份及批次范围检查，工作流目录/血缘/看板/草稿/落地信号的显式部门范围检查；JWT 必需身份和有效期字段、无效 JWKS 配置拒绝也有覆盖。
+
+验证：`../.venv/bin/python -m pytest backend/tests -q` → **473 passed**，2 条既有依赖弃用警告。针对身份、工作流与旧填报路径的中间检查通过；最终完整回归包含新增 JWKS 异常测试。改动文件 `ruff check` 通过，`git diff --check` 通过。
+
+测试区分无 token/伪造 token（401）、已认证越权（404）、未授予工作流权限（空集合）、跨部门依赖隐藏、合法拥有者仍可读取/导出、错误授权配置（503）、缺少 JWT 必需字段（401）及无效 JWKS（503）。门户关闭的已有工作流行为仍通过回归。未新增真实门户/浏览器实测，不声称个人工具审批已经完成；下一工作包仍需将真实批准人身份贯穿原生审批、操作权限及审计。

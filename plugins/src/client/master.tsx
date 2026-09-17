@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { tourEvent } from './tour/state.ts'
 import { api, cellText, describeError, navigate, useUI } from './ui.ts'
+import { GradeMark } from './brief.tsx'
 import { Chip } from './workspace.tsx'
 
 /**
@@ -10,7 +11,8 @@ import { Chip } from './workspace.tsx'
  */
 type Issue = { kind: string; field: string; key: string[]; departments: string[]; message: string }
 type Row = { key: string[]; values: Record<string, unknown>; provenance: Record<string, Record<string, unknown>>; complete: boolean }
-type Master = { version: string; columns: string[]; rows: Row[]; issues: Issue[]; assumptions?: Record<string, string> }
+type Grade = { grade: string | null; chain: string[]; missing: string[] }
+type Master = { version: string; columns: string[]; rows: Row[]; issues: Issue[]; assumptions?: Record<string, string>; grades?: Record<string, Grade>[]; grade_summary?: Record<string, number> }
 
 function origin(p: Record<string, unknown> | undefined): string {
   if (!p) return ''
@@ -54,10 +56,12 @@ export function MasterTable({ batchId }: { batchId: string }) {
   if (!master) return <p role="status" className="bf-loading">{t('loading')}</p>
   const traceColumn = master.columns.find(c => typeof master.rows[0]?.values[c] === 'number' && master.rows[0]?.provenance[c]?.department)
   const evidence = selection ? selection.row.provenance[selection.column] : null
+  const selectedGrade = selection ? master.grades?.[master.rows.indexOf(selection.row)]?.[selection.column] : undefined
   return <section aria-label={t('integrationMaster')}>
     <div className="bf-card-head"><h3>{t('integrationMaster')}</h3><button data-tour-id="master-download" onClick={() => void download()}>{t('downloadMaster')}</button></div>
     <p data-tour-id="master-status" role="status">{master.rows.filter(row => row.complete).length} / {master.rows.length} {t('masterCompleteRows')} · {master.issues.length} {t('masterOpenQuestions')}</p>
     <p className="bf-hint">{t('integrationHelp')} · {master.version}</p>
+    {master.grade_summary && <p className="bf-hint">{t('evidenceGrades')}：{['G1', 'G2', 'G3', 'G4'].map(g => `${g} ${master.grade_summary![g] ?? 0}`).join(' · ')}{master.grade_summary.missing ? ` · ${t('gradeMissing')} ${master.grade_summary.missing}` : ''} · {t('gradeLegend')}</p>}
     {Object.keys(master.assumptions ?? {}).length > 0 && <details className="bf-callout" data-tone="info">
       <summary>{t('integrationAssumptions')}（{Object.keys(master.assumptions!).length}）</summary>
       <ul>{Object.entries(master.assumptions!).map(([name, text]) => <li key={name}><strong>{name}</strong>：{text}</li>)}</ul>
@@ -68,7 +72,7 @@ export function MasterTable({ batchId }: { batchId: string }) {
     </div>)}
     </details>
     {selection && evidence && <aside className="bf-cell-evidence" aria-label={t('masterEvidence')}>
-      <h4>{t('masterEvidence')} · {selection.column}</h4><p>{cellText(selection.row.values[selection.column]).text}</p><p>{origin(evidence)}</p>
+      <h4>{t('masterEvidence')} · {selection.column} {selectedGrade && <GradeMark grade={selectedGrade} />}</h4><p>{cellText(selection.row.values[selection.column]).text}</p><p>{origin(evidence)}</p>
       {typeof evidence.department === 'string' && <button data-tour-id="evidence-source" onClick={() => navigate({ batch: batchId, view: 'source', source: String(evidence.department) })}>{t('masterOpenSource')}</button>}
     </aside>}
     {!master.rows.length && <div className="bf-empty"><strong>{t('empty')}</strong>{t('integrationNoRows')}</div>}

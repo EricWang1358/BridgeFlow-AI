@@ -413,3 +413,30 @@ def test_no_business_name_is_written_into_the_workflow_code():
         code = ast.unparse(tree)
         for name in names:
             assert name not in code, f"{name} is written into {path.name}"
+
+
+@pytest.mark.parametrize("started", [False, True])
+def test_revision_must_be_ready_and_acknowledged_before_work_continues(tmp_path, started):
+    service = build(tmp_path)
+    artifact_id = ready(service)
+    handoff = service.handoffs()[0]
+    if started:
+        handoff = service.act(handoff.id, "start", "", handoff.seq)
+    artifact = service.artifact(artifact_id)
+    artifact = service.answer(artifact_id, actual_answer("96 方"), artifact.seq)
+    handoff = service.handoff(handoff.id)
+    action = "complete" if started else "start"
+    with pytest.raises(TransitionError, match="Acknowledge"):
+        service.act(handoff.id, action, "", handoff.seq)
+    with pytest.raises(TransitionError, match="not ready"):
+        service.act(handoff.id, "acknowledge", "", handoff.seq)
+    assert service.handoff(handoff.id).seq == handoff.seq
+    artifact = service.review(artifact_id, artifact.draft.digest, "reviewer", artifact.seq)
+    service.submit(artifact_id)
+    handoff = service.handoff(handoff.id)
+    with pytest.raises(TransitionError, match="Acknowledge"):
+        service.act(handoff.id, action, "", handoff.seq)
+    handoff = service.act(handoff.id, "acknowledge", "", handoff.seq)
+    assert not handoff.view.stale
+    assert service.act(handoff.id, action, "", handoff.seq).view.state == (
+        HandoffState.COMPLETED if started else HandoffState.IN_PROGRESS)

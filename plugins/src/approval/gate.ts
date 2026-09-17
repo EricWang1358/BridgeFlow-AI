@@ -103,10 +103,13 @@ export function gate(ctx: Context, details: PendingDetails, receipts: ApprovalRe
     }
 
     let outcome: string
+    let employeePermit: string | undefined
     let nativeNote: string | undefined
     let closeNote: (() => void) | undefined
     try {
-      if (exec.callId) closeNote = notes.open(agent, exec.callId)
+      if (exec.callId) closeNote = notes.open(agent, exec.callId, {
+        operation: exec.name, body: JSON.stringify(access.body(exec.arguments as Record<string, unknown>, agent.id, exec.callId)),
+      })
       outcome = await ctx.approval.request({
         agent,
         toolName: exec.name,
@@ -115,6 +118,7 @@ export function gate(ctx: Context, details: PendingDetails, receipts: ApprovalRe
           .map(item => `${item.label}: ${item.value}`).join('\n'),
         signal: AbortSignal.any([exec.signal, AbortSignal.timeout(decisionTimeoutMs)]),
       })
+      employeePermit = exec.callId ? notes.permit(agent.id, exec.callId) : undefined
       nativeNote = exec.callId ? notes.get(agent.id, exec.callId) : undefined
       if (exec.callId) await notes.settle(agent.id, exec.callId, outcome).catch(() => undefined)
     } catch (error) {
@@ -139,7 +143,7 @@ export function gate(ctx: Context, details: PendingDetails, receipts: ApprovalRe
     details.discard(exec.callId)
 
     if (outcome === GRANT && exec.callId && !exec.signal.aborted) {
-      receipts.authorize(JSON.stringify([agent.id, exec.callId]), access.body(exec.arguments as Record<string, unknown>, agent.id, exec.callId))
+      receipts.authorize(JSON.stringify([agent.id, exec.callId]), access.body(exec.arguments as Record<string, unknown>, agent.id, exec.callId), employeePermit)
       return { kind: 'allow' }
     }
     return { kind: 'deny', reason: denialReason(exec.name, outcome, access.denialEffect, note) }

@@ -9,7 +9,7 @@ import ToolRuntime, { defineTool } from '@deepseek-ai/dsh-tools'
 import * as bridgeflow from '../src/index.ts'
 import { ApprovalReceipts, mappingBody } from '../src/approval/receipts.ts'
 import { columnMatchBody } from '../src/tools/confirm-column-match.ts'
-import { approveBody, recordBody } from '../src/tools/workflow.ts'
+import { approveBody, handoffBody, recordBody } from '../src/tools/workflow.ts'
 import { decideBody } from '../src/tools/quarantine.ts'
 import { summarise } from '../src/approval/detail.ts'
 import { ApprovalNotes, settledNote } from '../src/approval/notes.ts'
@@ -211,6 +211,8 @@ test('workflow reads stay available when workflow writes are switched off', asyn
   const ctx = await runtime(true, false)
   const names = ctx.tools.schemas().map(tool => tool.name)
   for (const name of ['workflow_catalogue', 'workflow_draft', 'workflow_board']) assert(names.includes(name))
+  assert(names.includes('workflow_guidance'))
+  assert(!names.includes('workflow_handoff'))
   assert(!names.includes('workflow_record') && !names.includes('workflow_approve_submit'))
   await ctx.fiber.dispose()
 })
@@ -454,9 +456,9 @@ test('the product tool catalogue is pinned: a new or missing tool must be a deli
   const ctx = await runtime()
   const product = ctx.tools.schemas().map(tool => tool.name).sort()
   assert.deepEqual(product, [
-    'aggregate_metric', 'batch_summary', 'column_candidates', 'confirm_column_match', 'confirm_mapping', 'feishu_import', 'feishu_upload_report', 'integration_summary', 'list_metrics',
+    'aggregate_metric', 'batch_summary', 'column_candidates', 'confirm_column_match', 'confirm_mapping', 'discovery_decision_finalize', 'discovery_decision_propose', 'discovery_decision_resolve', 'discovery_decision_vote', 'discovery_graph_save', 'discovery_materials', 'discovery_meeting_save', 'discovery_propose', 'discovery_register', 'discovery_score_save', 'feishu_import', 'feishu_upload_report', 'integration_summary', 'list_metrics',
     'lookup_field_dictionary', 'profile_batch', 'quarantine_apply', 'quarantine_decide', 'quarantine_list', 'review_context',
-    'review_finalize', 'workflow_approve_submit', 'workflow_board', 'workflow_catalogue', 'workflow_draft', 'workflow_record',
+    'review_finalize', 'workflow_approve_submit', 'workflow_board', 'workflow_catalogue', 'workflow_draft', 'workflow_guidance', 'workflow_handoff', 'workflow_record',
   ])
   await ctx.fiber.dispose()
 })
@@ -486,4 +488,147 @@ test('batch_summary accepts the full host summary, including absent optional val
     const result = await ctx.tools.execute(execution('batch_summary', { batch_id: 'a'.repeat(32) }))
     assert.equal(result.isError, false, JSON.stringify(result.content))
   } finally { await ctx.fiber.dispose() }
+})
+
+test('handoff approval binds action, version and return reason', () => {
+  const args = { handoff_id: 'stage:abc', action: 'return', expected_seq: 3, reason: 'Check source' }
+  const body = JSON.stringify(handoffBody(args, 'agent', 'call'))
+  for (const changed of [{ action: 'complete' }, { expected_seq: 4 }, { reason: 'Different' }, { handoff_id: 'other' }]) {
+    assert.notEqual(JSON.stringify(handoffBody({ ...args, ...changed }, 'agent', 'call')), body)
+  }
+})
+
+test('handoff mutations cannot bypass native approval through a later allow policy', async () => {
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  const result = await ctx.tools.execute(execution('workflow_handoff', {
+    handoff_id: 'stage:abc', action: 'start', expected_seq: 1,
+  }))
+  assert.equal(result.isError, true)
+  assert.match(JSON.stringify(result.content), /No current approval/)
+  await ctx.fiber.dispose()
+})
+
+test('discovery proposal cannot bypass native approval and its displayed content is complete', async () => {
+  const { summarise } = await import('../src/approval/detail.ts')
+  const { proposalBody } = await import('../src/tools/discovery.ts')
+  const proposal = { id: 'candidate', project_id: 'project', title: 'Opportunity', expected_seq: 0,
+    departments: ['production'], open_questions: ['Confirm actual handoff'], claims: [{
+      kind: 'problem', text: 'x'.repeat(600), basis: 'inferred', references: [{
+        material_id: 'source', version: 1, locator: { kind: 'header', sheet: 'csv' },
+      }],
+    }],
+  }
+  assert.deepEqual(JSON.parse(summarise({ proposal })[0]!.value), proposal)
+  const bound = JSON.stringify(proposalBody({ proposal }, 'agent', 'call'))
+  assert.notEqual(bound, JSON.stringify(proposalBody({ proposal: { ...proposal, expected_seq: 1 } }, 'agent', 'call')))
+  assert.throws(() => summarise({ proposal: { text: 'x'.repeat(65000) } }), /display limit/)
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  const result = await ctx.tools.execute(execution('discovery_propose', { proposal }))
+  assert.equal(result.isError, true)
+  assert.match(JSON.stringify(result.content), /No current approval/)
+  await ctx.fiber.dispose()
+})
+
+test('material registration displays and binds the complete staged upload without bypassing native approval', async () => {
+  const { registrationBody } = await import('../src/tools/discovery.ts')
+  const { summarise } = await import('../src/approval/detail.ts')
+  const args = { upload_id: 'a'.repeat(64), digest: 'b'.repeat(64), material: {
+    id: 'source', project_id: 'project', department: 'production', period: '2026-09',
+    filename: 'source.csv', expected_seq: 0, declared_kind: 'template', source_description: 'Uploaded by department',
+  } }
+  assert.deepEqual(JSON.parse(summarise(args)[0]!.value), args)
+  const bound = JSON.stringify(registrationBody(args, 'agent', 'call'))
+  assert.notEqual(bound, JSON.stringify(registrationBody({ ...args, digest: 'c'.repeat(64) }, 'agent', 'call')))
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  const result = await ctx.tools.execute(execution('discovery_register', args))
+  assert.equal(result.isError, true)
+  assert.match(JSON.stringify(result.content), /No current approval/)
+  await ctx.fiber.dispose()
+})
+
+test('graph draft approval displays the full graph and binds its candidate version', async () => {
+  const { graphBody } = await import('../src/tools/discovery-graph.ts')
+  const { summarise } = await import('../src/approval/detail.ts')
+  const graph = { id: 'diagram', project_id: 'project', opportunity_id: 'candidate', opportunity_version: 1,
+    title: 'Draft flow', departments: ['production'], expected_seq: 0,
+    nodes: [{ id: 'start', title: 'Receive', department: 'production', role: 'owner', trigger: 'Review requested',
+      references: [{ material_id: 'source', version: 1, locator: { kind: 'header', sheet: 'csv' } }] }], edges: [],
+  }
+  assert.deepEqual(JSON.parse(summarise({ graph })[0]!.value), { graph })
+  assert.notEqual(JSON.stringify(graphBody({ graph }, 'agent', 'call')),
+    JSON.stringify(graphBody({ graph: { ...graph, opportunity_version: 2 } }, 'agent', 'call')))
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  const result = await ctx.tools.execute(execution('discovery_graph_save', { graph }))
+  assert.equal(result.isError, true)
+  assert.match(JSON.stringify(result.content), /No current approval/)
+  await ctx.fiber.dispose()
+})
+
+test('score approval binds policy and candidate versions and cannot bypass native approval', async () => {
+  const { scoreBody } = await import('../src/tools/discovery-score.ts')
+  const { summarise } = await import('../src/approval/detail.ts')
+  const score = { id: 'rating', project_id: 'project', opportunity_id: 'candidate', opportunity_version: 1,
+    policy_fingerprint: 'a'.repeat(64), expected_seq: 0, effort: { score: '5', rationale: 'Needs evidence' } }
+  assert.deepEqual(JSON.parse(summarise({ score })[0]!.value), { score })
+  const body = JSON.stringify(scoreBody({ score }, 'agent', 'call'))
+  for (const changed of [{ policy_fingerprint: 'b'.repeat(64) }, { opportunity_version: 2 }, { expected_seq: 1 }]) {
+    assert.notEqual(body, JSON.stringify(scoreBody({ score: { ...score, ...changed } }, 'agent', 'call')))
+  }
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  const result = await ctx.tools.execute(execution('discovery_score_save', { score }))
+  assert.equal(result.isError, true)
+  assert.match(JSON.stringify(result.content), /No current approval/)
+  await ctx.fiber.dispose()
+})
+
+test('meeting approval displays full scope and binds input versions without bypass', async () => {
+  const { meetingBody } = await import('../src/tools/discovery-meeting.ts')
+  const { summarise } = await import('../src/approval/detail.ts')
+  const meeting = { id: 'workshop', project_id: 'project', title: 'Pilot discussion', expected_seq: 0,
+    candidates: [{ id: 'candidate', version: 1 }], scope: [{ text: 'Proposed pilot', basis: 'assumption' }],
+    stages: [{ id: 'pilot', title: 'Review', owner_role: 'reviewer', exit_criteria: ['Owner confirms evidence'],
+      rationale: { text: 'Proposed stage', basis: 'assumption' } }], change_reason: 'Prepare agenda' }
+  assert.deepEqual(JSON.parse(summarise({ meeting })[0]!.value), { meeting })
+  const body = JSON.stringify(meetingBody({ meeting }, 'agent', 'call'))
+  for (const changed of [{ candidates: [{ id: 'candidate', version: 2 }] }, { expected_seq: 1 }, { change_reason: 'Revised scope' }]) {
+    assert.notEqual(body, JSON.stringify(meetingBody({ meeting: { ...meeting, ...changed } }, 'agent', 'call')))
+  }
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  const result = await ctx.tools.execute(execution('discovery_meeting_save', { meeting }))
+  assert.equal(result.isError, true)
+  assert.match(JSON.stringify(result.content), /No current approval/)
+  await ctx.fiber.dispose()
+})
+
+test('MVP decision tools bind exact versions and cannot bypass native employee approval', async () => {
+  const { decisionBody } = await import('../src/tools/discovery-decision.ts')
+  const { summarise } = await import('../src/approval/detail.ts')
+  const proposal = { id: 'mvp', project_id: 'project', meeting_id: 'meeting', meeting_version: 1,
+    selected_candidates: ['candidate'], scope: ['Pilot only'], rationale: 'Discussed', expected_seq: 0, policy_fingerprint: 'a'.repeat(64) }
+  const common = { id: 'mvp', project_id: 'project', expected_seq: 1, proposal_version: 1, rationale: 'Review this exact proposal' }
+  const actions = [
+    ['discovery_decision_propose', { proposal }],
+    ['discovery_decision_vote', { ...common, choice: 'yes' }],
+    ['discovery_decision_resolve', { ...common, condition_id: 'check', references: [{ material_id: 'source', version: 1, locator: { kind: 'header', sheet: 'csv' } }] }],
+    ['discovery_decision_finalize', { ...common, outcome: 'approve' }],
+  ] as const
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  for (const [tool, args] of actions) {
+    assert.deepEqual(JSON.parse(summarise(args)[0]!.value), 'proposal' in args ? args.proposal : args)
+    const result = await ctx.tools.execute(execution(tool, args))
+    assert.equal(result.isError, true, tool)
+    assert.match(JSON.stringify(result.content), /No current approval/, tool)
+  }
+  const body = JSON.stringify(decisionBody(common, '', 'call'))
+  assert.notEqual(body, JSON.stringify(decisionBody({ ...common, proposal_version: 2 }, '', 'call')))
+  assert.notEqual(body, JSON.stringify(decisionBody({ ...common, expected_seq: 2 }, '', 'call')))
+  assert.throws(() => summarise({ ...common, rationale: 'x'.repeat(64001) }), /approval display limit/)
+  await ctx.fiber.dispose()
 })
