@@ -15,11 +15,11 @@
 # 用户授权部门，或批次由该用户导入。
 spaces:
   departments:                # 键必须是四个业务部门的固定 ID，缺一不可
-    production:  {space_id: "spc_production_example",  member: production_member,  admin: production_admin}
-    procurement: {space_id: "spc_procurement_example", member: procurement_member, admin: procurement_admin}
-    finance:     {space_id: "spc_finance_example",     member: finance_member,     admin: finance_admin}
-    marketing:   {space_id: "spc_marketing_example",   member: marketing_member,   admin: marketing_admin}
-  master_office: {space_id: "spc_master_example", member: master_office_member, admin: master_office_admin}
+    production:  {space_id: "7686136266059959272",  member: production_member,  admin: production_admin}
+    procurement: {space_id: "7686304258668366823", member: procurement_member, admin: procurement_admin}
+    finance:     {space_id: "7686136089186175957",     member: finance_member,     admin: finance_admin}
+    marketing:   {space_id: "7686136327422626786",   member: marketing_member,   admin: marketing_admin}
+  master_office: {space_id: "7686753513279343836", member: master_office_member, admin: master_office_admin}
 
 roles:
   # 部门成员：本部门上传 + 读取。改/删文件走飞书原生申请，BridgeFlow 不参与。
@@ -74,7 +74,7 @@ roles:
     operations: [batch_import, review_note, confirm_mapping, confirm_column_match,
                  quarantine_decide, quarantine_apply, workflow_record, workflow_approve_submit,
                  workflow_handoff, feishu_import, feishu_upload_report, discovery_propose,
-                 discovery_register, discovery_graph_save, discovery_score_save,
+                 discovery_upload, discovery_register, discovery_graph_save, discovery_score_save,
                  discovery_meeting_save]
     # MVP decisions additionally: discovery_decision_propose, discovery_decision_vote,
     # discovery_decision_resolve, discovery_decision_finalize; declared policy roles also required.

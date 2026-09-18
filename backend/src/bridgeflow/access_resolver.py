@@ -158,8 +158,9 @@ def fetch_space_members(space_id: str) -> dict[str, str]:
         headers = {"authorization": f"Bearer {_tenant_token(client)}"}
         members: dict[str, str] = {}
         page_token = ""
+        seen_tokens: set[str] = set()
         while True:
-            params = {"page_size": "100"}
+            params = {"page_size": "50"}  # the members endpoint rejects >50 with 131002
             if page_token:
                 params["page_token"] = page_token
             body = _get_json(client, f"/open-apis/wiki/v2/spaces/{space_id}/members", params, headers)
@@ -175,7 +176,13 @@ def fetch_space_members(space_id: str) -> dict[str, str]:
                     members[member_id] = role
             if not data.get("has_more"):
                 return members
-            page_token = str(data.get("page_token") or "")
+            # A continuation token must be fresh: an empty or repeated one would
+            # re-request the same page forever, so refuse instead of looping.
+            next_token = str(data.get("page_token") or "")
+            if not next_token or next_token in seen_tokens:
+                raise FeishuError(f"Feishu membership pagination did not advance (space {space_id})")
+            seen_tokens.add(next_token)
+            page_token = next_token
 
 
 # --- Resolution -------------------------------------------------------------------------

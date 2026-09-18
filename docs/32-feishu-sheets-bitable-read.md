@@ -42,8 +42,8 @@
 | --- | --- |
 | 20 万行 × 500/页 = 400 次分页调用，撞频率限制 | 后端流式分页落 DataFrame，页间自重试退避；超上限（FR-6）明确报错不截断静默 |
 | 免费版 sheets/bitable 接口配额未实测 | 联调实测记录进 [`00`](00-status.md)，被拒原样记 code/msg，不绕过 |
-| bitable 复杂字段（附件、人员、关联、公式） | FR-5：标量字段取值，复杂字段取显示文本；取不到的整列剔除并进 quarantine 说明，不猜 |
-| sheet 的表头位置、多标签页语义 | 复用现有导入表单的 sheet 选择 + header_rows（本地 xlsx 导入已有此 UI） |
+| bitable 复杂字段（附件、人员、关联、公式） | FR-5：标量字段取值，复杂字段取显示文本；取不到的整列剔除并记入 `BatchSummary.dropped_columns`，不猜 |
+| sheet 的表头位置、多标签页语义 | 复用现有导入表单的 sheet 选择 + header_row（本地 xlsx 导入已有此 UI） |
 
 ## 三、需求规格
 
@@ -53,7 +53,7 @@
 选中后弹出二级选择 — sheet 选标签页 + 表头行数；bitable 选数据表。
 
 **FR-2 sheet 导入**：`sheets/query` 取标签页元数据（名称、行列数）供选择；
-按所选标签页与 header_rows，分页读 `values` 组装 DataFrame，复用 `_import_batch`。
+按所选标签页与 header_row，分页读 `values` 组装 DataFrame，复用 `_import_batch`。
 列名只来自表头行；匹配走既有字典流程，模型不发明字段（硬约束不变）。
 
 **FR-3 bitable 导入**：`tables` + `fields` 取表与字段元数据供选择；
@@ -65,10 +65,11 @@
 
 **FR-5 复杂字段降级**：bitable 标量（文本、数字、日期、单选、复选、勾选）直接取值；
 人员、关联、附件、公式取飞书返回的显示文本；无任何可取表示的列剔除，
-在批次 quarantine 里记「列 X 类型 Y 不可导入」，不静默丢列。
+记入 `BatchSummary.dropped_columns`（部门、列名、字段类型、原因，见 [`33`](33-feishu-sheets-bitable-impl.md) 决策 5），
+不猜值、不静默丢列。
 
-**FR-6 上限明确**：单次导入上限 20 万行（与 PRD 一致）；超限 413/502 明确报错，
-报已读行数与上限，**不返回截断的部分数据**（截断 = 静默出错）。
+**FR-6 上限明确**：单次导入上限 20 万行（与 PRD 一致）；超限以 HTTP 413 明确报错
+（502 保留给上游重试耗尽的失败），报已读行数与上限，**不返回截断的部分数据**（截断 = 静默出错）。
 
 **FR-7 权限边界**：user token 一路到底；用户无权的表格，元数据调用即被飞书 403，
 透传报错。部门批次级仍由 `access-control.yaml` enforce（成员关系自 #204 起解析自
@@ -80,13 +81,14 @@
 | 端点 | 入参 | 出参 |
 | --- | --- | --- |
 | `POST /tools/feishu-sheet-meta` | token | `[{sheet_id, title, rows, cols}]` |
-| `POST /tools/feishu-bitable-meta` | token | `[{table_id, name}]` + 字段名清单 |
-| `POST /tools/feishu-import-user`（扩展） | files 项加 `kind: file\|sheet\|bitable`、`sheet_id`/`table_id`、`header_rows` | 不变（batch summary） |
+| `POST /tools/feishu-bitable-meta`（第一段） | token（不带 table_id） | `{tables: [{table_id, name}]}` |
+| `POST /tools/feishu-bitable-meta`（第二段） | token + table_id | `{table_id, fields: [{name, ui_type}]}` |
+| `POST /tools/feishu-import-user`（扩展） | files 项加 `kind: file\|sheet\|bitable`、`sheet_id`/`table_id`、`header_row` | 不变（batch summary） |
 
 ### 验收
 
 1. 真实账号：从 wiki/我的空间选中在线表格 → 选标签页 → 导入成批次，行数与飞书一致；
-2. bitable 同上，复杂字段列按 FR-5 处理，quarantine 有据；
+2. bitable 同上，复杂字段列按 FR-5 处理，`dropped_columns` 有据；
 3. 无权限账号 B 对 A 的表格：meta 调用即 403；
 4. 全测试断言返回值无单元格/记录内容（沿用 secret_cell 探针模式）；
 5. 实测行数-耗时-调用数记 [`00`](00-status.md)。
@@ -104,7 +106,7 @@
 两个 meta 端点 + import 扩展。测试：假飞书分页、复杂字段降级、超限报错、无泄漏探针。
 
 **第 3 步 — 插件**：sheet/bitable 节点可选中；选中弹二级选择（标签页/数据表 +
-header_rows for sheet）；提交扩展后的 import 请求。i18n 补齐。
+header_row for sheet）；提交扩展后的 import 请求。i18n 补齐。
 
 **第 4 步 — 真实联调**：两账号互验；大表压测分页路径；结果记 docs/00。
 

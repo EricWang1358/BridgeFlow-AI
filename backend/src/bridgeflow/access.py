@@ -13,9 +13,10 @@ A user no space lists sees nothing.
 
 from __future__ import annotations
 
-from bridgeflow.access_resolver import KNOWN_DEPARTMENTS, access_path, resolve
+from bridgeflow.access_resolver import KNOWN_DEPARTMENTS, Resolved, access_path, resolve
 
-__all__ = ["KNOWN_DEPARTMENTS", "access_path", "departments_for", "operations_for", "workflow_departments_for"]
+__all__ = ["KNOWN_DEPARTMENTS", "Resolved", "access_path", "departments_for", "operations_for", "resolve",
+           "workflow_departments_for"]
 
 
 def departments_for(union_id: str) -> set[str]:

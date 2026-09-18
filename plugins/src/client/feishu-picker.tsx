@@ -313,7 +313,7 @@ export function FeishuUpload({ batchId, reportId, onDone }: { batchId: string; r
             : <span className="bf-feishu-item" data-disabled="true"><span aria-hidden="true">▤</span> {item.name}</span>
         } />
       : <WikiBrowser currentLocation={(space, parent) => setWikiLoc({ space, parent })} extra={(page, loadMore) => MORE(page, loadMore, t)} row={wikiNodeRow} />}
-    <button className="bf-primary" disabled={busy || (target === 'wiki' && !wikiLoc.space)} onClick={() => void run()}>
+    <button className="bf-primary" disabled={busy || (target === 'drive' ? !folder : !wikiLoc.space)} onClick={() => void run()}>
       {busy ? t('busy') : t(target === 'drive' ? 'feishuUploadHere' : 'feishuUploadWikiHere')}
     </button>
     {error && <p role="alert" className="bf-error">{error}</p>}

@@ -380,7 +380,9 @@ def test_bitable_meta_lists_tables_then_fields(client, tenant):
 
 def test_meta_refusal_is_passed_through(client, tenant):
     response = client.post("/tools/feishu-sheet-meta", content=json.dumps({"token": "denied1"}), headers=USER)
-    assert response.status_code == 502
+    # A user-side authorization refusal (Feishu 403) stays a 403 (docs/32 FR-7);
+    # 502 is reserved for backend/upstream failures.
+    assert response.status_code == 403
     assert "99991679" in response.json()["detail"]
 
 

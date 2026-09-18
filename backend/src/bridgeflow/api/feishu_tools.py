@@ -205,11 +205,11 @@ async def feishu_upload_user(request: UserUploadRequest, http_request: Request,
     """Upload a saved review report where the signed-in user picked: a Drive folder, or a
     wiki position (docs/31 — land in the Drive root, then attach)."""
     drive = _user_client(http_request)  # the token gate answers before anything exists
-    _visible(load_batch(request.batch_id), user)
-    report = saved_review(request.batch_id, request.report_id)
-    filename = re.sub(r"[^A-Za-z0-9_.-]", "-", f"bridgeflow-review-{report['period']}-{report['report_id'][:8]}.json")
-    payload = json.dumps(report, ensure_ascii=False, indent=2).encode("utf-8")
     try:
+        _visible(load_batch(request.batch_id), user)
+        report = saved_review(request.batch_id, request.report_id)
+        filename = re.sub(r"[^A-Za-z0-9_.-]", "-", f"bridgeflow-review-{report['period']}-{report['report_id'][:8]}.json")
+        payload = json.dumps(report, ensure_ascii=False, indent=2).encode("utf-8")
         if request.wiki_space_id:
             wiki_token = await drive.upload_to_wiki(request.wiki_space_id, request.parent_wiki_token or "",
                                                     filename, payload)
@@ -270,11 +270,11 @@ async def feishu_wiki_upload(http_request: Request, file: UploadFile,
                              parent_wiki_token: Annotated[str, Form(max_length=64)] = "") -> dict:
     """Upload a local file into a wiki position the signed-in user picked (docs/31)."""
     drive = _user_client(http_request)  # the token gate answers before the body is read
-    payload = await file.read(feishu.MAX_FILE_BYTES + 1)  # one byte past the cap says "too big"
-    if len(payload) > feishu.MAX_FILE_BYTES:
-        raise HTTPException(413, "Upload exceeds the size limit")
-    filename = Path(file.filename or "upload").name  # strip any client-side path
     try:
+        payload = await file.read(feishu.MAX_FILE_BYTES + 1)  # one byte past the cap says "too big"
+        if len(payload) > feishu.MAX_FILE_BYTES:
+            raise HTTPException(413, "Upload exceeds the size limit")
+        filename = Path(file.filename or "upload").name  # strip any client-side path
         wiki_token = await drive.upload_to_wiki(space_id, parent_wiki_token, filename, payload)
     except feishu.FeishuError as exc:
         raise HTTPException(502, str(exc)) from exc
@@ -289,6 +289,12 @@ async def feishu_wiki_upload(http_request: Request, file: UploadFile,
 # definitions only — a cell or record value never crosses into a response.
 
 
+def _meta_error(exc: feishu.FeishuError) -> HTTPException:
+    """A user-side authorization refusal (Feishu 403) stays a 403 with Feishu's own
+    code/msg (docs/32 FR-7); anything else is upstream trouble and maps to 502."""
+    return HTTPException(403 if exc.status == 403 else 502, str(exc))
+
+
 class SheetMetaRequest(BaseModel):
     token: Token
 
@@ -300,7 +306,7 @@ async def feishu_sheet_meta(request: SheetMetaRequest, http_request: Request) ->
     try:
         return {"sheets": await drive.sheet_meta(request.token)}
     except feishu.FeishuError as exc:
-        raise HTTPException(502, str(exc)) from exc
+        raise _meta_error(exc) from exc
     finally:
         await drive.close()
 
@@ -321,6 +327,6 @@ async def feishu_bitable_meta(request: BitableMetaRequest, http_request: Request
                     "fields": [{"name": f["name"], "ui_type": f["ui_type"]} for f in fields]}
         return {"tables": await drive.bitable_tables(request.token)}
     except feishu.FeishuError as exc:
-        raise HTTPException(502, str(exc)) from exc
+        raise _meta_error(exc) from exc
     finally:
         await drive.close()

@@ -33,7 +33,16 @@ _MAX_ATTEMPTS = 3
 
 
 class FeishuError(Exception):
-    """Feishu refused, or could not be reached. Nothing was imported or uploaded."""
+    """Feishu refused, or could not be reached. Nothing was imported or uploaded.
+
+    `status` is the HTTP status of Feishu's refusal (None when the response
+    never got that far); callers use it to tell "this user may not see this"
+    apart from "Feishu is down".
+    """
+
+    def __init__(self, message: str, *, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
 
 
 class NotConfigured(FeishuError):
@@ -90,7 +99,8 @@ class FeishuDrive:
         except ValueError as exc:
             raise FeishuError(f"Feishu returned HTTP {response.status_code} without a JSON body") from exc
         if response.status_code >= 400 or body.get("code", 0) != 0:
-            raise FeishuError(f"Feishu refused (code {body.get('code')}): {body.get('msg', 'no message')}")
+            raise FeishuError(f"Feishu refused (code {body.get('code')}): {body.get('msg', 'no message')}",
+                              status=response.status_code)
         return body
 
     async def download(self, file_token: str) -> tuple[str, bytes]:
@@ -201,7 +211,8 @@ class FeishuDrive:
                 return body
             retryable = response.status_code == 429 or code in _RATE_LIMIT_CODES
             if not retryable or attempt == _MAX_ATTEMPTS - 1:
-                raise FeishuError(f"Feishu refused (code {code}): {body.get('msg', 'no message')}")
+                raise FeishuError(f"Feishu refused (code {code}): {body.get('msg', 'no message')}",
+                                  status=response.status_code)
             await asyncio.sleep(delay)
             delay *= 2
         raise FeishuError("unreachable")  # pragma: no cover
@@ -249,9 +260,12 @@ class FeishuDrive:
             data = body.get("data") or {}
             tables += [{"table_id": str(item.get("table_id", "")), "name": str(item.get("name", ""))}
                        for item in data.get("items") or []]
-            if not data.get("has_more"):
+            # Read the continuation token before deciding to continue: has_more
+            # without a fresh token must stop the loop, not repeat the request.
+            next_token = str(data.get("page_token") or "")
+            if not data.get("has_more") or not next_token:
                 return tables
-            page_token = str(data.get("page_token") or "")
+            page_token = next_token
 
     async def bitable_fields(self, app_token: str, table_id: str) -> list[dict]:
         """One table's field definitions: name and type, paged, never record content."""
@@ -265,9 +279,10 @@ class FeishuDrive:
             data = body.get("data") or {}
             fields += [{"name": str(item.get("field_name", "")), "type": int(item.get("type") or 0),
                         "ui_type": str(item.get("ui_type", ""))} for item in data.get("items") or []]
-            if not data.get("has_more"):
+            next_token = str(data.get("page_token") or "")
+            if not data.get("has_more") or not next_token:
                 return fields
-            page_token = str(data.get("page_token") or "")
+            page_token = next_token
 
     async def bitable_records(self, app_token: str, table_id: str, page_size: int = 500):
         """One table's records, page by page: record_id plus the raw fields mapping."""
@@ -280,9 +295,10 @@ class FeishuDrive:
             data = body.get("data") or {}
             yield [{"record_id": str(item.get("record_id", "")), "fields": item.get("fields") or {}}
                    for item in data.get("items") or []]
-            if not data.get("has_more"):
+            next_token = str(data.get("page_token") or "")
+            if not data.get("has_more") or not next_token:
                 return
-            page_token = str(data.get("page_token") or "")
+            page_token = next_token
 
     async def _root_folder_token(self) -> str:
         """The caller's Drive root: the staging point every wiki upload passes through."""

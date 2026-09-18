@@ -36,6 +36,10 @@ from portal_app.tokens import Signer, seal, seal_secret, unseal, unseal_secret
 SESSION_COOKIE = "portal_session"
 # A login state lives only for the redirect round-trip.
 STATE_TTL_SECONDS = 600
+#: Feishu codes that mean the stored refresh token is dead (invalid, revoked or
+#: expired) — only these justify sending the browser back through login (401).
+#: Rate limits (429) and every other refusal are transient upstream trouble (502).
+_DEAD_GRANT_CODES = {20037}
 
 logger = logging.getLogger("portal_app")
 
@@ -275,10 +279,11 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
             try:
                 fresh = await client.refresh(tokens["refresh_token"])
             except FeishuError as exc:
-                # A 4xx means this grant is dead (invalid or revoked refresh
-                # token) — the browser's login recovery flow keys off 401.
-                # Anything else is upstream trouble and stays 502.
-                if exc.status is not None and 400 <= exc.status < 500:
+                # A dead grant (invalid or revoked refresh token) means
+                # re-login — the browser's recovery flow keys off 401.
+                # Rate limits and other transient refusals must NOT force
+                # re-login; they are upstream trouble and stay 502.
+                if exc.code in _DEAD_GRANT_CODES:
                     raise HTTPException(401, str(exc)) from exc
                 raise HTTPException(502, str(exc)) from exc
             finally:

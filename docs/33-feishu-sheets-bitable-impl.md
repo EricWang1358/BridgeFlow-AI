@@ -19,7 +19,7 @@
 | --- | --- | --- |
 | user token 管线（`for_user`、头部传 token、不落盘） | `backend/src/bridgeflow/feishu.py:56`、`api/feishu_tools.py:40` | 新端点全部走 `_user_client` |
 | 批次导入主路径（字节上限、行数上限 413、quarantine、字典匹配） | `api/batches.py:438` `_import_batch` | sheet/bitable 物化成 CSV 后原样进 |
-| 表头行/工作表选择的 `Layout` | `api/batches.py:220` | sheet 的 header_rows 直接复用 |
+| 表头行/工作表选择的 `Layout` | `api/batches.py:220` | sheet 的 header_row 直接复用 |
 | 浏览面与灰显节点 | `plugins/src/client/feishu-picker.tsx:169`（`importableNode`） | 放开 sheet/bitable，加二级选择 |
 | 无泄漏探针（`secret_cell`） | `backend/tests/test_feishu.py:25` | 新端点沿用同一模式 |
 
@@ -123,7 +123,8 @@ quarantine 语义是「行被拦下待人工处置」，塞列级事实会把两
   复杂字段取显示文本、不可表示列剔除且 `dropped_columns` 有据。
 - 超限：假数据行数 > 上限 → 413，报已读行数与上限；断言无批次落盘。
 - 无泄漏：meta 与 import 两个端点的完整响应 JSON 断言无 `secret_cell`（单元格内容）。
-- 权限：假 transport 对 meta 调用回 403 → 端点 502 透传 code/msg。
+- 权限：假 transport 对 meta 调用回 403 → 端点 403 透传飞书 code/msg（用户授权失败保持 403，
+  与 `32` FR-7 一致；502 保留给后端/上游失败）。
 - kind 校验六个组合（缺 sheet_id、缺 header_row、file 带 table_id 等）全部 422。
 
 回归：`cd backend && ruff check src tests && pytest -q`。
@@ -155,7 +156,7 @@ quarantine 语义是「行被拦下待人工处置」，塞列级事实会把两
 | `32` 验收 | 落在哪一步 | 判据 |
 | --- | --- | --- |
 | 1 在线表格选中→导入，行数一致 | 4 | 真实账号端到端 |
-| 2 bitable 复杂字段按 FR-5，quarantine/摘要有据 | 2（单测）+ 4 | `dropped_columns` 非空且准确 |
+| 2 bitable 复杂字段按 FR-5，摘要有据 | 2（单测）+ 4 | `dropped_columns` 非空且准确 |
 | 3 无权账号 403 | 2（假 403 单测）+ 4（真实两账号） | meta 调用即拒 |
 | 4 返回值无单元格/记录内容 | 1、2 的 `secret_cell` 探针 | 断言无泄漏 |
 | 5 行数-耗时-调用数记 `00` | 4 | 数字入库 |

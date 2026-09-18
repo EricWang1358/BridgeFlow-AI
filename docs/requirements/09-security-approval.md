@@ -216,7 +216,7 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 实现与验证 / Implementation and verification
 
-[代码或范围记录 / Code or scope record](../../backend/src/bridgeflow/security.py)；[行为测试 / Behavioral tests](../../backend/tests/test_approvals.py)。
+[代码或范围记录 / Code or scope record](../../backend/src/bridgeflow/write_authorization.py)（员工授权与消费时刻角色快照）与 [原生回执](../../backend/src/bridgeflow/security.py)；[行为测试 / Behavioral tests](../../backend/tests/test_employee_approval.py)、[回执测试](../../backend/tests/test_approvals.py)。
 
 验收应同时检查主流程和上列拒绝路径、引用及版本；不能仅凭 issue 关闭或 HTTP 200 标记完成。IMPLEMENTED 表示已找到现行实现和相关验证资产，不代表本轮重新跑过每条用户旅程，也不表示真实企业签核。
 

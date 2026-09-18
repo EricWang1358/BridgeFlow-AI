@@ -22,6 +22,14 @@ pkill -f "start_web.py" 2>/dev/null || true
 sleep 1
 
 # The portal cannot boot without its Ed25519 key; mint a local one if absent.
+# A relative PORTAL_KEY_PATH means repository-root-relative — the check below and
+# the keygen (which runs from portal/) must agree, so normalize to absolute first.
+if [[ -n "${PORTAL_KEY_PATH:-}" && "$PORTAL_KEY_PATH" != /* ]]; then
+  PORTAL_KEY_PATH="$(pwd)/$PORTAL_KEY_PATH"
+fi
+if [[ -n "${PORTAL_KEY_PATH:-}" ]]; then
+  export PORTAL_KEY_PATH
+fi
 if [[ -n "${PORTAL_KEY_PATH:-}" && ! -f "$PORTAL_KEY_PATH" ]]; then
   echo "==> generating portal key at $PORTAL_KEY_PATH"
   (cd portal && PYTHONPATH=src "$PY" -m portal_app.keygen "$PORTAL_KEY_PATH")

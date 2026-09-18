@@ -359,7 +359,13 @@ cookie（此后直到 cookie 过期都直达，重启不影响）。
 `wiki:member:retrieve`，且应用本体已加为每个知识库成员。
 
 文件缺失时数据面是 503「未配置」，这是设计的中间态（fail-closed），不是故障。
-跑 `python scripts/feishu_membership_check.py` 可在放行前确认五个库的成员可读。
+放行前跑侦察脚本确认五个库的成员可读——脚本只认 shell 导出的凭据，先 `source env.sh`
+（其中必须有 `FEISHU_APP_ID` 与 `FEISHU_APP_SECRET`，缺了脚本会报 `not_configured`）：
+
+```bash
+source env.sh   # 导出 FEISHU_APP_ID / FEISHU_APP_SECRET
+python scripts/feishu_membership_check.py
+```
 
 ---
 

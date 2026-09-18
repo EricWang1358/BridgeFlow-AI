@@ -10,7 +10,7 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from bridgeflow.access import KNOWN_DEPARTMENTS, departments_for, operations_for
+from bridgeflow.access import KNOWN_DEPARTMENTS, Resolved, resolve
 from bridgeflow.identity import UserIdentity
 from bridgeflow.store import _root
 
@@ -32,13 +32,22 @@ def _ensure_roles_column(connection: sqlite3.Connection) -> None:
     """Ledgers from before issue #204 lack the role snapshot; add it once, in place."""
     try:
         connection.execute("ALTER TABLE employee_authorizations ADD COLUMN roles TEXT NOT NULL DEFAULT ''")
-    except sqlite3.OperationalError:  # column already there
-        pass
+    except sqlite3.OperationalError as exc:
+        # Only "already migrated" is expected; lock, read-only and schema
+        # failures must surface, not be swallowed.
+        if "duplicate column" not in str(exc).lower():
+            raise
 
 
-def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
-    """Recheck both operation grant and current data scope immediately before mutation."""
-    if operation not in OPERATIONS or operation not in operations_for(user.sub):
+def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> Resolved:
+    """Recheck both operation grant and current data scope immediately before mutation.
+
+    The caller's policy is resolved once here; every check below reads that single
+    snapshot, and consume() records its roles into the ledger — the audited roles
+    are exactly the ones that justified the grant.
+    """
+    resolved = resolve(user.sub)
+    if operation not in OPERATIONS or operation not in resolved.operations:
         raise HTTPException(403, "This employee is not authorized for this operation")
     from bridgeflow.api.batches import _visible, load_batch
 
@@ -51,7 +60,6 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
     elif operation == "discovery_meeting_save":
         from pydantic import ValidationError
 
-        from bridgeflow.access import workflow_departments_for
         from bridgeflow.api.discovery import MeetingWrite, service
         from bridgeflow.workflow.discovery import DiscoveryError
 
@@ -59,7 +67,7 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
             meeting = MeetingWrite.model_validate(body).meeting
         except ValidationError as exc:
             raise HTTPException(422, "Invalid discovery meeting") from exc
-        domain, allowed = service(), workflow_departments_for(user.sub)
+        domain, allowed = service(), resolved.workflow_departments
         try:
             refs = [ref.model_dump() for statement in meeting.statements() for ref in statement.references]
             for binding in meeting.candidates:
@@ -85,7 +93,6 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
     elif operation == "discovery_score_save":
         from pydantic import ValidationError
 
-        from bridgeflow.access import workflow_departments_for
         from bridgeflow.api.discovery import ScoreWrite, scoring_policy, service
         from bridgeflow.workflow.discovery import DiscoveryError
 
@@ -96,7 +103,7 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
         policy = scoring_policy(score.project_id, user)
         if score.policy_fingerprint != policy.fingerprint:
             raise HTTPException(409, "Scoring policy changed; read it again")
-        allowed, domain = workflow_departments_for(user.sub), service()
+        allowed, domain = resolved.workflow_departments, service()
         try:
             candidate = domain.read("opportunity", score.project_id, score.opportunity_id)
             if not set(candidate["departments"]) <= allowed:
@@ -118,7 +125,6 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
     elif operation == "discovery_graph_save":
         from pydantic import ValidationError
 
-        from bridgeflow.access import workflow_departments_for
         from bridgeflow.api.discovery import GraphWrite, service
         from bridgeflow.workflow.discovery import DiscoveryError
 
@@ -126,7 +132,7 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
             graph = GraphWrite.model_validate(body).graph
         except ValidationError as exc:
             raise HTTPException(422, "Invalid discovery graph") from exc
-        allowed = workflow_departments_for(user.sub)
+        allowed = resolved.workflow_departments
         if not set(graph.departments) <= allowed:
             raise HTTPException(403, "Graph departments are outside this employee's scope")
         domain = service()
@@ -151,7 +157,6 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
     elif operation == "discovery_register":
         from pydantic import ValidationError
 
-        from bridgeflow.access import workflow_departments_for
         from bridgeflow.api.discovery import MaterialRegistration, service, uploads
         from bridgeflow.workflow.discovery import DiscoveryError
 
@@ -159,7 +164,7 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
             registration = MaterialRegistration.model_validate(body)
         except ValidationError as exc:
             raise HTTPException(422, "Invalid material registration") from exc
-        allowed = workflow_departments_for(user.sub)
+        allowed = resolved.workflow_departments
         if registration.material.department not in allowed:
             raise HTTPException(403, "Material department is outside this employee's scope")
         try:
@@ -175,7 +180,6 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
     elif operation == "discovery_propose":
         from pydantic import ValidationError
 
-        from bridgeflow.access import workflow_departments_for
         from bridgeflow.api.discovery import ProposalWrite, service
         from bridgeflow.workflow.discovery import DiscoveryError
 
@@ -183,7 +187,7 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
             proposal = ProposalWrite.model_validate(body).proposal
         except ValidationError as exc:
             raise HTTPException(422, "Invalid discovery proposal") from exc
-        allowed = workflow_departments_for(user.sub)
+        allowed = resolved.workflow_departments
         if not set(proposal.departments) <= allowed:
             raise HTTPException(403, "Candidate departments are outside this employee's scope")
         domain = service()
@@ -202,7 +206,7 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
         except DiscoveryError as exc:
             raise HTTPException(404, "Discovery source or object not found") from exc
     elif operation == "confirm_mapping":
-        if not KNOWN_DEPARTMENTS <= departments_for(user.sub):
+        if not KNOWN_DEPARTMENTS <= resolved.departments:
             raise HTTPException(403, "Global mapping decisions require all department scopes")
     elif operation == "feishu_import":
         files = body.get("files")
@@ -211,7 +215,7 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
             or not f["department"].strip() for f in files
         ):
             raise HTTPException(422, "Declared import files are required")
-        if not {f.get("department") for f in files} <= departments_for(user.sub):
+        if not {f.get("department") for f in files} <= resolved.departments:
             raise HTTPException(403, "Imported departments are outside this employee's scope")
     else:
         from bridgeflow.api.workflow import _domain_errors, service
@@ -228,6 +232,7 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
                 permitted = visible.template(str(body.get("template", "")))
         if not permitted:
             raise HTTPException(404, "Workflow object not found")
+    return resolved
 
 
 def issue(user: UserIdentity, operation: str, raw_body: str) -> str:
@@ -260,14 +265,13 @@ def consume(connection: sqlite3.Connection, token: str, operation: str | None,
     if not row or row[1] != operation or row[2] != digest or row[3] < time.time() or row[4]:
         raise HTTPException(403, "A current employee authorization for this exact operation is required")
     parsed = json.loads(body)
-    authorize(UserIdentity(sub=row[0], name="", email=""), row[1], parsed)
+    granted = authorize(UserIdentity(sub=row[0], name="", email=""), row[1], parsed)
     changed = connection.execute("UPDATE employee_permits SET used = 1 WHERE token = ? AND used = 0", (token,))
     if changed.rowcount != 1:
         raise HTTPException(403, "Employee authorization already consumed")
     # The ledger records which roles justified the grant at consumption time;
     # a later Feishu-side change never rewrites this snapshot.
-    from bridgeflow.access_resolver import resolve
-    roles = ",".join(sorted(resolve(row[0]).roles))
+    roles = ",".join(sorted(granted.roles))
     connection.execute("INSERT INTO employee_authorizations VALUES (?, ?, ?, ?, ?, ?, ?)",
                        (nonce, row[0], operation, digest, parsed.get("call_id"), time.time(), roles))
     return row[0]
