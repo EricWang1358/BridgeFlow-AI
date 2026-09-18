@@ -1,12 +1,10 @@
 import json
-from pathlib import Path
 
-import yaml
 from test_discovery_api import grant
 from test_discovery_decisions import policy, prepared, proposal
 from test_discovery_meetings import REF
 from test_employee_approval import grants, native, permit
-from test_identity import auth, make_token
+from test_identity import auth, edit_role, make_token
 from test_identity import client as client  # noqa: PLC0414 -- pytest fixture re-export
 
 from bridgeflow.api.discovery import DECISION_OPERATIONS, service
@@ -16,10 +14,7 @@ from bridgeflow.config import settings
 def setup(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "bridgeflow_allow_workflow_write", True)
     grant()
-    access = Path(settings.access_control_path)
-    acl = yaml.safe_load(access.read_text())
-    acl["users"]["ou_bob"]["workflow_departments"] = ["production"]
-    access.write_text(yaml.safe_dump(acl))
+    edit_role("ou_bob", "workflow_departments", ["production"])
     for sub in ("ou_alice", "ou_bob"):
         grants(sub, list(DECISION_OPERATIONS))
     rules = policy(proposers=["ou_alice"], voters=["ou_alice", "ou_bob"],

@@ -7,9 +7,28 @@
 「每个数字都量过、可追溯」是本项目对评委的核心叙事，评委抓到一处对不上，整个叙事就打折。
 所以改数字只改这一处。
 
-最后更新：2026-09-17。新增一轮时照第三节的格式写，并附上复现命令。
+最后更新：2026-09-18。新增一轮时照第三节的格式写，并附上复现命令。
 
 ---
+
+## #204 授权数据源迁移到飞书知识库（2026-09-18）
+
+离线实现与测试，**未连真实飞书租户**：成员解析、缓存、fail-closed 行为全部由
+假飞书（MockTransport / 字典缝合点）验证。真实租户数字待 Phase 0/3
+（`scripts/feishu_membership_check.py`，需先发版 `wiki:member:retrieve` 并把
+应用加为五个知识库成员）。
+
+- 后端 **620 passed**（基线 595 + 新增 `test_access_resolver.py` **25** 条：
+  角色绑定、多空间并集、open_id 桥、TTL 缓存与失败不缓存、结构文件 7 类非法 → 503、
+  429 重试后 503、HTTP 级分页与非人员成员过滤）。Ruff 通过。
+  复现：`cd backend && pytest -q`（v0.1 离线，无计费）。
+- 逐人花名册删除：共享身份夹具从「写 users 名单」翻转为「写 spaces+roles 映射 +
+  假成员表」，7 个测试文件的授权助手改键路径不改结构。
+- `employee_authorizations` 账本新增 `roles` 列（消费时刻角色快照，旧库 ALTER 原地迁移）。
+- `.gitignore` 补上 `data/mappings/access-control.yaml`（docs/22 此前声称已忽略，实测未含）。
+- 已知边界（待真实租户确认）：wiki members 接口的 envelope 字段名（`members` vs `items`）
+  与 ID 前缀形态由侦察脚本断言；进程重启后 open_id 观察对为空，60 秒许可窗口内重启
+  会导致消费端 403（fail-closed，瞬时）。
 
 ## E13/E14 第一轮：一页结论、依据等级、提交前自检（2026-09-17，#190 / #195 / #199）
 

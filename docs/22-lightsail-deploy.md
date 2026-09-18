@@ -342,7 +342,7 @@ curl -sI https://<domain>/                                # 主站过 forward_au
 journalctl -u bridgeflow-portal -n 5 --no-pager           # 启动日志打印 registry（app → redirect_uri），配置错这里现形
 ```
 
-### 9c 后端开身份层 + 首登拿 union_id
+### 9c 后端开身份层 + 配置结构映射（#204）
 
 ```bash
 sudo systemctl restart bridgeflow   # 后端与 web 代理拿到 PORTAL_BASE_URL
@@ -350,12 +350,16 @@ sudo systemctl restart bridgeflow   # 后端与 web 代理拿到 PORTAL_BASE_URL
 
 浏览器打开主站：forward_auth 401 → 引导页送去门户 → 飞书 OAuth →
 回调落门户 `/enter` → 带当次 launch token 进主站，dsh web 签出原生会话
-cookie（此后直到 cookie 过期都直达，重启不影响）→
-浏览器直接访问 `https://portal.<domain>/me` 拿到自己的 union_id →
-写 `data/mappings/access-control.yaml`（格式见同目录 `.example`；gitignored，
-部署不动它）→ 再 `sudo systemctl restart bridgeflow`。
+cookie（此后直到 cookie 过期都直达，重启不影响）。
+
+授权不再登记逐人名单：把五个知识库（四部门 + 总经办）的 space_id 与角色策略写进
+`data/mappings/access-control.yaml`（格式见同目录 `.example`；已 gitignored——
+此前本节声称忽略但 `.gitignore` 实际未含该文件，#204 已补上并仍要求部署不动它）→
+再 `sudo systemctl restart bridgeflow`。飞书侧前提：应用已发版带
+`wiki:member:retrieve`，且应用本体已加为每个知识库成员。
 
 文件缺失时数据面是 503「未配置」，这是设计的中间态（fail-closed），不是故障。
+跑 `python scripts/feishu_membership_check.py` 可在放行前确认五个库的成员可读。
 
 ---
 

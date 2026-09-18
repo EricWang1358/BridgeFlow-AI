@@ -1,6 +1,8 @@
 """Portal identity and department-scoped batch visibility (docs/27).
 
-Offline: JWKS comes from a stub, tokens are signed with a throwaway test key.
+Offline: JWKS comes from a stub, tokens are signed with a throwaway test key,
+and Feishu wiki membership is faked at the access_resolver.fetch_space_members
+seam — Alice sits in the master-office space, Bob in production's.
 """
 import json
 import time
@@ -12,7 +14,7 @@ import yaml
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi.testclient import TestClient
 
-from bridgeflow import business, identity
+from bridgeflow import access_resolver, business, identity
 from bridgeflow.api.batches import load_batch
 from bridgeflow.api.main import app
 from bridgeflow.config import REPO_ROOT, settings
@@ -22,6 +24,17 @@ PRIVATE = Ed25519PrivateKey.generate()
 OTHER_PRIVATE = Ed25519PrivateKey.generate()
 JWK = json.loads(jwt.algorithms.OKPAlgorithm.to_jwk(PRIVATE.public_key())) | {
     "kid": "k1", "use": "sig", "alg": "EdDSA"}
+
+#: Which role each fixture subject holds through their wiki-space membership.
+ROLE_OF = {"ou_alice": "master_office_member", "ou_bob": "production_member"}
+
+
+def edit_role(subject: str, field: str, value):
+    """Rewrite one grant of the role a subject holds; the resolver re-reads per call."""
+    path = Path(settings.access_control_path)
+    config = yaml.safe_load(path.read_text())
+    config["roles"][ROLE_OF[subject]][field] = value
+    path.write_text(yaml.safe_dump(config))
 
 
 def make_token(sub="ou_alice", key=PRIVATE, kid="k1", **claims):
@@ -37,25 +50,42 @@ def auth(token: str) -> dict:
 
 @pytest.fixture
 def client(monkeypatch, tmp_path):
-    """Identity layer ON: portal settings plus a two-user access-control file."""
+    """Identity layer ON: portal settings plus a Feishu-membership-backed access file."""
     monkeypatch.setattr(settings, "field_dictionary_path", str(CASES / "dictionary.yaml"))
     monkeypatch.setattr(settings, "portal_base_url", "http://portal.test")
     monkeypatch.setattr(settings, "portal_audience", "bridgeflow")
     acl = tmp_path / "access-control.yaml"
-    acl.write_text(yaml.safe_dump({"users": {
-        "ou_alice": {"name": "Alice", "departments": list(business.ROLES), "operations": ["batch_import"]},
-        "ou_bob": {"name": "Bob", "departments": ["production"], "operations": ["batch_import"]},
-    }}), encoding="utf-8")
+    acl.write_text(yaml.safe_dump({
+        "spaces": {
+            "departments": {d: {"space_id": f"spc_{d}", "member": f"{d}_member", "admin": f"{d}_admin"}
+                            for d in business.ROLES},
+            "master_office": {"space_id": "spc_master", "member": "master_office_member",
+                              "admin": "master_office_admin"},
+        },
+        "roles": {
+            "master_office_member": {"departments": list(business.ROLES), "operations": ["batch_import"]},
+            "master_office_admin": {"departments": list(business.ROLES)},
+            "production_member": {"departments": ["production"], "operations": ["batch_import"]},
+            "production_admin": {"departments": ["production"]},
+            **{f"{d}_{seat}": {"departments": [d]}
+               for d in business.ROLES if d != "production" for seat in ("member", "admin")},
+        },
+    }), encoding="utf-8")
     monkeypatch.setattr(settings, "access_control_path", str(acl))
+    membership = {"spc_master": {"ou_alice": "member"}, "spc_production": {"ou_bob": "member"}}
+    monkeypatch.setattr(access_resolver, "fetch_space_members",
+                        lambda space_id: dict(membership.get(space_id, {})))
 
     async def fake_jwks(url):
         return [JWK]
 
     identity.reset_cache()
+    access_resolver.reset_cache()
     monkeypatch.setattr(identity, "_fetch_jwks", fake_jwks)
     with TestClient(app) as client:
         yield client
     identity.reset_cache()
+    access_resolver.reset_cache()
 
 
 def upload(client, headers=None):
@@ -164,14 +194,10 @@ def workflow_setup(monkeypatch):
     demo = REPO_ROOT / "data/workflow_demo/catalogue.yaml"
     monkeypatch.setattr(settings, "workflow_catalogue_path", str(demo))
     declared = yaml.safe_load(demo.read_text())
-    acl_path = settings.access_control_path
-    acl = yaml.safe_load(Path(acl_path).read_text())
-    acl["users"]["ou_alice"]["workflow_departments"] = sorted(
+    edit_role("ou_alice", "workflow_departments", sorted(
         {t["department"] for t in declared["templates"].values()}
-        | {s["department"] for s in declared["stages"].values()})
-    acl["users"]["ou_bob"]["workflow_departments"] = [declared["templates"]["production_record"]["department"]]
-    with open(acl_path, "w") as stream:
-        yaml.safe_dump(acl, stream)
+        | {s["department"] for s in declared["stages"].values()}))
+    edit_role("ou_bob", "workflow_departments", [declared["templates"]["production_record"]["department"]])
     domain = service()
     draft = domain.receive("production_record", employee_submission())
     draft = domain.answer(draft.id, actual_answer(), draft.seq)
@@ -214,11 +240,7 @@ def test_workflow_department_scope_filters_cross_department_dependencies(client,
 
 @pytest.mark.parametrize("grant", ["production", [123], [" "], None])
 def test_malformed_access_grants_fail_closed(client, grant):
-    acl_path = settings.access_control_path
-    acl = yaml.safe_load(Path(acl_path).read_text())
-    acl["users"]["ou_bob"]["workflow_departments"] = grant
-    with open(acl_path, "w") as stream:
-        yaml.safe_dump(acl, stream)
+    edit_role("ou_bob", "workflow_departments", grant)
     # Access rules are validated before data is exposed, independently of which
     # employee owns another batch. A list-shaped contract cannot become a string.
     from fastapi import HTTPException
@@ -252,10 +274,7 @@ async def test_invalid_portal_key_sets_report_configuration_failure(monkeypatch,
 
 def test_read_scope_does_not_grant_batch_import_permission(client):
     batch_id = upload(client, auth(make_token()))
-    path = Path(settings.access_control_path)
-    acl = yaml.safe_load(path.read_text())
-    acl["users"]["ou_alice"]["operations"] = []
-    path.write_text(yaml.safe_dump(acl))
+    edit_role("ou_alice", "operations", [])
     assert client.get(f"/batches/{batch_id}", headers=auth(make_token())).status_code == 200
     assert client.post("/batches/demo", headers=auth(make_token())).status_code == 403
 
@@ -274,10 +293,7 @@ def test_review_notes_require_identity_write_grant_and_scope(client):
     assert client.post("/tools/review-note", json=body).status_code == 401
     assert client.post("/tools/review-note", json=body, headers=auth(make_token(sub="ou_bob"))).status_code == 404
     assert client.post("/tools/review-note", json=body, headers=auth(make_token())).status_code == 403
-    path = Path(settings.access_control_path)
-    acl = yaml.safe_load(path.read_text())
-    acl["users"]["ou_alice"]["operations"].append("review_note")
-    path.write_text(yaml.safe_dump(acl))
+    edit_role("ou_alice", "operations", ["batch_import", "review_note"])
     assert client.post("/tools/review-note", json=body, headers=auth(make_token())).status_code == 200
     assert notes(batch_id, report_id)[0].author == "ou_alice"
     assert (folder / f"{report_id}.json").read_text() == '{}'

@@ -1,8 +1,6 @@
-from pathlib import Path
 
-import yaml
 from test_discovery import material, opportunity
-from test_identity import auth, make_token
+from test_identity import auth, edit_role, make_token
 from test_identity import client as client  # noqa: PLC0414 -- pytest fixture re-export
 
 from bridgeflow.api.discovery import service
@@ -10,10 +8,7 @@ from bridgeflow.config import settings
 
 
 def grant():
-    path = Path(settings.access_control_path)
-    data = yaml.safe_load(path.read_text())
-    data["users"]["ou_alice"]["workflow_departments"] = ["production"]
-    path.write_text(yaml.safe_dump(data))
+    edit_role("ou_alice", "workflow_departments", ["production"])
 
 
 def test_inventory_filters_before_counting_and_pagination(client):

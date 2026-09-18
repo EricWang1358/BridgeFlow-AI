@@ -28,16 +28,34 @@
 shell export，与 `DSH_*` 同一条边界），应用只需要公钥。撤销靠 15 分钟过期，不靠在线
 查验——本期没有踢人需求，真有了再加黑名单。
 
-## 为什么权限映射应用自持
+## 为什么权限映射应用自持，但成员关系不自持（2026-09-18，#204）
 
-门户只管「你是谁」。「张三能看财务部的表」是 BridgeFlow 的业务规则，不是门户的：
-门户每接一个应用都要懂它的数据模型，就再也不是统一门户了。所以映射放在
-`data/mappings/access-control.yaml`，**人预设**，键是飞书 union_id：
+门户只管「你是谁」。「张三能看财务部的表」曾经也是 BridgeFlow 自抄的一份逐人花名册
+（`access-control.yaml` 以 union_id 为键逐人登记）——会腐烂、每个新客户部署都要维护、
+与飞书通讯录双重事实来源。2026-09-18 评审确认后拆分：
 
-- 未列出的用户看到空集 = 看不到任何批次；
-- 文件缺失或非法 = 503「未配置」，绝不退回猜测。
+- **成员关系以飞书为唯一事实来源**：每个业务部门与总经理办公室各对应一个飞书知识库，
+  运行时以 tenant token 查 `wiki/v2/spaces/{id}/members`（5 分钟缓存），库里是 member
+  还是 admin 决定角色。入离调岗在飞书生效后（缓存过期内除外）自动跟随，BridgeFlow
+  零改动。
+- **BridgeFlow 只自持「角色 → 操作」业务规则**：`access-control.yaml` 瘦身为
+  「结构映射 + 角色策略」——哪个知识库代表哪个单位（`spaces`）、每个角色能看哪些部门、
+  能做哪些操作（`roles`）。这是飞书表达不了的业务判断，仍由人预设，改 YAML 不改代码。
 
-这与字段字典（`data/mappings/field-dictionary.yaml`）是同一条约定：改 YAML，不改代码。
+wiki 成员接口返回 open_id，与登录用的 union_id 不同源；桥是门户 JWT 里早已携带的
+`open_id` claim，后端验签时记录观察到的 union_id ↔ open_id 对。
+
+三条不变：
+
+- 未在任何知识库里的用户看到空集 = 看不到任何批次；
+- 结构映射缺失或非法 = 503「未配置」，绝不退回猜测；
+- 飞书不可达 = 503，绝不退回过期缓存或静默空集。
+
+前置条件（飞书管理后台，人工一次）：应用加 `wiki:member:retrieve` 权限并发版
+（tenant token 调用，发版即生效，无需全员重登）；把应用本体加为每个知识库的成员，
+否则查询被拒。群组/部门型成员不会被展开——授权以「人直接加进知识库」为准。
+
+这与字段字典（`data/mappings/field-dictionary.yaml`）仍是同一条约定：改 YAML，不改代码。
 
 ## 可见性规则（本期粒度：按部门过滤批次）
 
@@ -52,7 +70,8 @@ shell export，与 `DSH_*` 同一条边界），应用只需要公钥。撤销�
 复用 #140 的自建应用即可（凭据同一对，权限范围不同）：
 
 1. 「网页应用」能力，回调地址配置为 `$PORTAL_EXTERNAL_BASE_URL/callback`；
-2. 获取用户 user_id 的通讯录只读权限（否则 user_info 没有 union_id，门户会报错而不是猜）。
+2. 获取用户 user_id 的通讯录只读权限（否则 user_info 没有 union_id，门户会报错而不是猜）；
+3. `wiki:member:retrieve` 并发版（角色解析用，tenant token；应用本体须加为各知识库成员，见上节）。
 
 Drive 快捷调用（tenant token）与登录（user token）互不依赖：一个配了另一个不配，
 各自报各自的「未配置」。
@@ -71,7 +90,7 @@ Drive 快捷调用（tenant token）与登录（user token）互不依赖：一�
 
 ## 员工操作与原生批准（2026-09-16）
 
-ACL 新增 `operations`，省略为空集；查看权限不隐含上传、备注或批准权限。配置示例见 `data/mappings/access-control.example.yaml`。上传使用 `batch_import`，备注使用 `review_note`；批准写入使用工具名称作为操作名。
+ACL 的 `operations`（现在挂在角色上，#204）省略为空集；查看权限不隐含上传、备注或批准权限。配置示例见 `data/mappings/access-control.example.yaml`。上传使用 `batch_import`，备注使用 `review_note`；批准写入使用工具名称作为操作名。
 
 浏览器 `/bridgeflow/approval-authorize` 只接受活动原生审批的会话、调用与票据；准确操作/请求体由主机取得，浏览器不能替换。后端 `/identity/authorize-write` 同时要求主机认证和员工 JWT，再检查操作及数据范围。许可短期有效、精确内容绑定、一次使用，仅留在主机内存。原生 Allow 后才签发带许可的回执；后端消费时重新核对 ACL，模型填写的姓名不参与身份判定。
 

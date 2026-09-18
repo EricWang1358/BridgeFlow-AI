@@ -28,6 +28,14 @@ CREATE TABLE IF NOT EXISTS employee_authorizations (
 """
 
 
+def _ensure_roles_column(connection: sqlite3.Connection) -> None:
+    """Ledgers from before issue #204 lack the role snapshot; add it once, in place."""
+    try:
+        connection.execute("ALTER TABLE employee_authorizations ADD COLUMN roles TEXT NOT NULL DEFAULT ''")
+    except sqlite3.OperationalError:  # column already there
+        pass
+
+
 def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> None:
     """Recheck both operation grant and current data scope immediately before mutation."""
     if operation not in OPERATIONS or operation not in operations_for(user.sub):
@@ -245,6 +253,7 @@ def issue(user: UserIdentity, operation: str, raw_body: str) -> str:
 def consume(connection: sqlite3.Connection, token: str, operation: str | None,
             body: bytes, nonce: str) -> str:
     connection.executescript(SCHEMA)
+    _ensure_roles_column(connection)
     row = connection.execute("SELECT subject, operation, digest, expires, used FROM employee_permits WHERE token = ?",
                              (token,)).fetchone()
     digest = hashlib.sha256(body).hexdigest()
@@ -255,6 +264,10 @@ def consume(connection: sqlite3.Connection, token: str, operation: str | None,
     changed = connection.execute("UPDATE employee_permits SET used = 1 WHERE token = ? AND used = 0", (token,))
     if changed.rowcount != 1:
         raise HTTPException(403, "Employee authorization already consumed")
-    connection.execute("INSERT INTO employee_authorizations VALUES (?, ?, ?, ?, ?, ?)",
-                       (nonce, row[0], operation, digest, parsed.get("call_id"), time.time()))
+    # The ledger records which roles justified the grant at consumption time;
+    # a later Feishu-side change never rewrites this snapshot.
+    from bridgeflow.access_resolver import resolve
+    roles = ",".join(sorted(resolve(row[0]).roles))
+    connection.execute("INSERT INTO employee_authorizations VALUES (?, ?, ?, ?, ?, ?, ?)",
+                       (nonce, row[0], operation, digest, parsed.get("call_id"), time.time(), roles))
     return row[0]

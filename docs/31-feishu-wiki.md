@@ -139,9 +139,21 @@ scope 准确名称与免费版可用性**待实测**，同 docs/30 的纪律：�
 - wiki 内在线表格／多维表格节点解析导入（与 docs/30 同一条边界）；
 - docx 节点正文抽取；
 - 知识库创建、成员管理、设置变更；
-- wiki 权限镜像到 `access-control.yaml`；
 - 节点移动、重命名、删除（只增不改）；
 - 全盘扫描与搜索（只浏览）。
+
+注：原「wiki 权限镜像到 `access-control.yaml`」一条已被 #204 重开并反向落地——
+不是把飞书 ACL 抄进名单，而是**成员关系只读解析自知识库**（角色规则仍在 YAML），
+见 [`27`](27-login-portal.md)「为什么权限映射应用自持，但成员关系不自持」。
+
+## 知识库成员作为角色来源（2026-09-18，#204）
+
+每个业务部门与总经理办公室各对应一个知识库；`access_resolver` 以 tenant token 查
+`GET /open-apis/wiki/v2/spaces/{space_id}/members`（scope `wiki:member:retrieve`，
+tenant 态发版即生效，无需全员重登），`member_role` 的 admin/member 绑定到角色。
+缓存 5 分钟；接口不可达一律 503。接口返回 open_id，经门户 JWT 的 `open_id` claim
+桥接回 union_id。两个运维要点：**应用本体必须是每个知识库的成员**（否则 131006）；
+**群组/部门型成员不展开**，授权以「人直接加进知识库」为准。
 
 ## 需要人工操作与输入（阻塞项）
 

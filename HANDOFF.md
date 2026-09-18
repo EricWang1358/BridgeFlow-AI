@@ -10,6 +10,7 @@
 - 测试数量、命令、截图及验收边界仅记录于 [docs/00](docs/00-status.md)。不要从“代码存在”“issue 已关闭”或离线通过推定企业验收。
 - 2026-09-17 飞书在线表格/多维表格读取（分支 `feature/feishu-user-docs-20260916`）：规格 [docs/32](docs/32-feishu-sheets-bitable-read.md)，计划与实现 [docs/33](docs/33-feishu-sheets-bitable-impl.md)。后端 595 测试全绿、插件 typecheck/build 过；第 4 步真实联调进行中：docs/32 第六节人工前置（用户态 `sheets:spreadsheet:readonly` 与 `bitable:app:readonly` 发版 + 全员重登）已验证生效（curl 直连 sheets v3 返回 code 0）。联调暴露一个漏改：dsh web 代理的路由白名单（`plugins/src/web.ts` 的 `feishuUser` 正则）没加 `sheet-meta`/`bitable-meta`，浏览器调用被 403「Route not authorized」拦在代理层，已补上并重新 build。联调又暴露两处：①选中 sheet 后导入按钮不亮——`choose()` 没初始化 `header_row`，显示默认 1 与 `ready()` 的 `?? 0` 不一致，已改为选中即置 1；②`feishu-import-user` 报 503「Access control is not configured」——`data/mappings/access-control.yaml` 未按 docs/27 创建，需按 `access-control.example.yaml` 以登录用户的 union_id 声明 `departments` 与 `operations: [batch_import]`。剩余：导入端到端与大表分页压测，数字记 docs/00。
 - 必读硬约束：[CLAUDE.md](CLAUDE.md)、[架构权威 docs/13](docs/13-golden-standard.md)、[产品扩展契约 docs/23](docs/23-extension-contracts.md)。
+- 2026-09-18 #204 授权数据源迁移（分支 `feature/feishu-user-docs-20260916`，本条目所记代码未提交）：`access-control.yaml` 从逐人花名册改为「结构映射 + 角色策略」，成员关系运行时解析自飞书知识库成员（wiki-only 路径，不申请 contact 高敏权限；总经办也建知识库，其 admin = 总表管理者）。已拍板：fail-closed（映射缺失/飞书不可达均 503）、成员表 5 分钟缓存、飞书侧调岗无需改 BridgeFlow 文件。实现：`access_resolver.py` 新模块（同步 httpx、tenant token、`wiki/v2/spaces/{id}/members` 分页、429 有界重试），`access.py` 瘦身为门面（三函数签名不动，下游零改动），`identity.py` 记录 JWT 里的 open_id 桥（wiki 接口返回 open_id ≠ union_id）。后端 620 测试全绿（新增 test_access_resolver.py 25 项），ruff 过。**人工阻塞项**：飞书管理后台加 `wiki:member:retrieve` 并发版、把应用本体加为五个知识库成员（否则 131006）、群组/部门型成员不会被展开（人须直接加库）。放行前跑 `python scripts/feishu_membership_check.py` 侦察（确认 scope、envelope 字段形态、ID 前缀）。真实租户验收数字待记 docs/00。另：`.gitignore` 补上 `access-control.yaml`（docs/22 此前声称已忽略，实际没有）。
 
 ## 当前交付范围
 
@@ -69,7 +70,7 @@ python scripts/start_web.py --demo
 - `DSH_*` 和 `DEEPSEEK_BASE_URL` 只由 shell 导出，不能进 `.env`。仓库根启动不读取 `backend/.env`。
 - `FIELD_DICTIONARY_PATH` 指定人工字典；缺失拒绝猜测。`--demo` 使用合成样例声明，不会为新评分/决策自动配置真实政策。
 - `DISCOVERY_SCORING_POLICY_PATH`、`DISCOVERY_DECISION_POLICY_PATH` 为人工 YAML/JSON，默认空；当前各支持一个项目文件。缺文件/非法政策返回 503，历史评分/决策详情也要求当前政策可读。不要把测试政策放入生产。
-- 门户开启后，ACL 需显式 `workflow_departments`（准确部门名）及 `operations`；省略不扩权。示例：[access-control.example.yaml](data/mappings/access-control.example.yaml)。真实门户接入见 [docs/27-login](docs/27-login-portal.md)。
+- 门户开启后，ACL 的角色需显式 `workflow_departments`（准确部门名）及 `operations`；省略不扩权。成员名单不登记在文件里，由飞书知识库成员实时解析（#204）。示例：[access-control.example.yaml](data/mappings/access-control.example.yaml)。真实门户接入见 [docs/27-login](docs/27-login-portal.md)。
 - 暂存支持 `DISCOVERY_UPLOAD_OWNER_COUNT/BYTES/TOTAL_BYTES` 配额。`scripts/cleanup_discovery_uploads.py` 默认预览，`--apply` 才删除过期暂存；使用服务相同 `RESULT_STORE_PATH`。未安装生产调度，不保证 SQLite 缩容/安全擦除；失败写入留下的无引用正式 blob 清理策略未定。
 
 ## 复测入口

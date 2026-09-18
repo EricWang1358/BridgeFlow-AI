@@ -4,12 +4,10 @@ import hmac
 import json
 import sqlite3
 import time
-from pathlib import Path
 
 import pytest
-import yaml
 from conftest import receipt
-from test_identity import auth, make_token, workflow_setup
+from test_identity import auth, edit_role, make_token, workflow_setup
 from test_identity import client as client  # noqa: PLC0414 -- pytest fixture re-export
 from test_workflow_tools import first_submission
 
@@ -18,10 +16,7 @@ from bridgeflow.store import _root
 
 
 def grants(subject, operations):
-    path = Path(settings.access_control_path)
-    config = yaml.safe_load(path.read_text())
-    config["users"][subject]["operations"] = operations
-    path.write_text(yaml.safe_dump(config))
+    edit_role(subject, "operations", operations)
 
 
 def body():
@@ -54,10 +49,7 @@ def test_employee_permit_requires_identity_operation_and_data_scope(client, monk
     assert permit(client, payload).status_code == 403
     grants("ou_bob", ["workflow_record"])
     assert permit(client, payload).status_code == 200
-    path = Path(settings.access_control_path)
-    config = yaml.safe_load(path.read_text())
-    config["users"]["ou_bob"]["workflow_departments"] = []
-    path.write_text(yaml.safe_dump(config))
+    edit_role("ou_bob", "workflow_departments", [])
     assert permit(client, payload).status_code == 404
 
 
