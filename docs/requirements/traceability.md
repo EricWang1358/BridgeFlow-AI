@@ -122,6 +122,7 @@ OPEN/CLOSED is tracker state, not delivery state. Use UC details and implementat
 | [#113](https://github.com/EricWang1358/BridgeFlow-AI/issues/113) | CLOSED | Recover or terminate in-flight reviews and make finalization idempotent | [E07-UC03](07-review.md), [E07-UC05](07-review.md) |
 | [#119](https://github.com/EricWang1358/BridgeFlow-AI/issues/119) | CLOSED | 参考ERP/ACP系统设计，对比目前实现分析优化之处 | [E01-UC02](01-discovery.md), [E02-UC01](02-standardization.md), [E03-UC05](03-adoption.md) |
 | [#120](https://github.com/EricWang1358/BridgeFlow-AI/issues/120) | CLOSED | Agent运维 | [E11-UC05](11-operations-evaluation.md) |
+| [#205](https://github.com/EricWang1358/BridgeFlow-AI/issues/205) | OPEN | [需求] AI 辅助生成统一字段字典 / AI-assisted dictionary drafting | [E05-UC07](05-mapping.md), [E05-UC08](05-mapping.md) |
 | [#121](https://github.com/EricWang1358/BridgeFlow-AI/issues/121) | CLOSED | [需求评审] 业务规则上下文接入：会议纪要音频与文档作为映射依据 | [E05-UC06](05-mapping.md), [E01-UC01](01-discovery.md) |
 | [#122](https://github.com/EricWang1358/BridgeFlow-AI/issues/122) | CLOSED | [需求评审] 基于规则上下文的跨部门字段映射（同义列归并到标准字典） | [E05-UC02](05-mapping.md), [E05-UC03](05-mapping.md) |
 | [#123](https://github.com/EricWang1358/BridgeFlow-AI/issues/123) | CLOSED | [需求评审] 字典映射持久化：构成数据中台的一部分 | [E05-UC05](05-mapping.md) |

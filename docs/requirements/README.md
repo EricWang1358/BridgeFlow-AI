@@ -26,9 +26,9 @@ Each epic has one bilingual file. The table above covers only the 14x subset: 3 
 
 ## 全项目盘点 / Full project inventory
 
-截至 2026-09-17，目录共有 **14 个 epic、85 个 UC**：14x 主线 3 个 epic / 21 UC，既有能力及历史范围 9 个 epic / 52 UC（2026-09-16 补录），以及结论呈现与流程便民 2 个 epic / 12 UC（2026-09-17 新增）。既有实现按用户目标归类，工具、接口和测试本身不各算一个 UC。原 E01–E03 编号保持不变。
+截至 2026-09-19，目录共有 **14 个 epic、87 个 UC**（2026-09-19 按 #205 新增 E05-UC07/UC08 两条「AI 辅助起草字典」需求）：14x 主线 3 个 epic / 21 UC，既有能力及历史范围 9 个 epic / 52 UC（2026-09-16 补录），以及结论呈现与流程便民 2 个 epic / 12 UC（2026-09-17 新增）。既有实现按用户目标归类，工具、接口和测试本身不各算一个 UC。原 E01–E03 编号保持不变。
 
-As of 2026-09-17, this directory contains **14 epics and 85 UCs**: 3 epics / 21 UCs for the 14x track, 9 epics / 52 UCs for existing capabilities and historical scope (added 2026-09-16), and 2 epics / 12 UCs for conclusions and monthly convenience (added 2026-09-17). Grouping follows user goals, not a separate UC per tool/endpoint/test. E01–E03 IDs are unchanged.
+As of 2026-09-19, this directory contains **14 epics and 87 UCs** (E05-UC07/UC08 for AI-assisted dictionary drafting were added on 2026-09-19 from #205): 3 epics / 21 UCs for the 14x track, 9 epics / 52 UCs for existing capabilities and historical scope (added 2026-09-16), and 2 epics / 12 UCs for conclusions and monthly convenience (added 2026-09-17). Grouping follows user goals, not a separate UC per tool/endpoint/test. E01–E03 IDs are unchanged.
 
 | Epic | 文件 / File | UC 数 / Count |
 | --- | --- | ---: |
@@ -56,7 +56,7 @@ As of 2026-09-17, this directory contains **14 epics and 85 UCs**: 3 epics / 21 
 | IMPLEMENTED | 38 |
 | IMPLEMENTED_OFFLINE | 14 |
 | PARTIAL | 19 |
-| DESIGNED | 6 |
+| DESIGNED | 8 |
 | BLOCKED_EXTERNAL | 3 |
 | DEFERRED | 5 |
 

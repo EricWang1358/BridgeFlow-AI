@@ -42,9 +42,9 @@ Reviewed against `main@692d3d5` and the existing 12 epics / 73 UCs. The core mon
 | 数字格式、单位、状态用词、禁用表述没有统一规范 / no standard for number formats, units, status words or prohibited claims | 本文件第 5 节 |
 | 73 个 UC 的触发句、52 个 UC 的参与者是同一句模板话；验收条件多为定性描述 / boilerplate triggers and actors; qualitative acceptance | 第 3 节逐 UC 给出参与者与触发事件，并已替换各 epic 正文；新 UC 用第 6 节的可测写法 |
 
-补充后目录为 **14 个 epic、85 个 UC**。新增 12 个 UC 均未实现或部分实现，不改变已有 UC 的状态。
+补充后目录为 **14 个 epic、85 个 UC**（2026-09-19 按 #205 增补 E05-UC07/UC08 后为 87 个）。新增 12 个 UC 均未实现或部分实现，不改变已有 UC 的状态。
 
-After this change the catalogue has **14 epics and 85 UCs**. The 12 new UCs are designed or partial; no existing status changes.
+After this change the catalogue has **14 epics and 85 UCs** (87 after E05-UC07/UC08 were added from #205 on 2026-09-19). The 12 new UCs are designed or partial; no existing status changes.
 
 ## 2 角色目录 / Actor catalogue
 
