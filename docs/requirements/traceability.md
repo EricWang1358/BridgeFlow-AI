@@ -160,7 +160,7 @@ These UCs come from the three-perspective review rather than individual issues; 
 | [E13-UC05](13-conclusions.md) 口径假设确认 / Convention confirmation | 完整性 / Completeness | [#23](https://github.com/EricWang1358/BridgeFlow-AI/issues/23) | IMPLEMENTED_OFFLINE |
 | [E13-UC06](13-conclusions.md) 依据等级 / Evidence grades | 专业性 / Professionalism | [#195](https://github.com/EricWang1358/BridgeFlow-AI/issues/195) | PARTIAL |
 | [E14-UC01](14-monthly-convenience.md) 进度清单 / Close checklist | 便民性 / Ease of use | [#197](https://github.com/EricWang1358/BridgeFlow-AI/issues/197) | IMPLEMENTED_OFFLINE |
-| [E14-UC02](14-monthly-convenience.md) 模板预填 / Template carry-over | 便民性 / Ease of use | — | DESIGNED |
+| [E14-UC02](14-monthly-convenience.md) 模板预填 / Template carry-over | 便民性 / Ease of use | [#198](https://github.com/EricWang1358/BridgeFlow-AI/issues/198) | IMPLEMENTED_OFFLINE |
 | [E14-UC03](14-monthly-convenience.md) 提交前自检 / Self-check | 便民性 / Ease of use | [#47](https://github.com/EricWang1358/BridgeFlow-AI/issues/47)、[#199](https://github.com/EricWang1358/BridgeFlow-AI/issues/199) | IMPLEMENTED_OFFLINE |
 | [E14-UC04](14-monthly-convenience.md) 单部门补传 / Single-department correction | 便民性 / Ease of use | [#200](https://github.com/EricWang1358/BridgeFlow-AI/issues/200) | IMPLEMENTED_OFFLINE |
 | [E14-UC05](14-monthly-convenience.md) 待确认收件箱 / Open-item inbox | 便民性 / Ease of use | [#201](https://github.com/EricWang1358/BridgeFlow-AI/issues/201) | IMPLEMENTED_OFFLINE |

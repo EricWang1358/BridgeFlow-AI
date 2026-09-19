@@ -121,6 +121,13 @@ try {
   await dialog.locator('input[name=period]').fill('2024-07')
   await dialog.locator('input[name=marketing]').setInputFiles(`${root}/data/mock_business/monthly/2024-07-模拟留出/市场部.xlsx`)
   await dialog.locator('input[name=finance]').setInputFiles(`${root}/data/mock_business/monthly/2024-07-模拟留出/财务部.xlsx`)
+  // E14-UC02: the approved template downloads from the same panel, prefilled where declared
+  const templateFile = page.waitForEvent('download')
+  await dialog.locator('.bf-template-download button').click()
+  assert.match((await templateFile).suggestedFilename(), /^生产部-2024-07-.*\.xlsx$/)
+  await dialog.locator('.bf-template-download [role=status]').waitFor()
+  await shot('template-download')
+
   await dialog.getByRole('button', { name: 'Check first', exact: true }).click()
   await dialog.locator('.bf-callout[data-tone="warn"]').filter({ hasText: '市场_可争取' }).waitFor()
   await dialog.locator('.bf-callout[data-tone="ok"]').filter({ hasText: 'Ready to submit' }).waitFor()
