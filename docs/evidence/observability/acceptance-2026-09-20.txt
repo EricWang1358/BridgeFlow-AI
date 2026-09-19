@@ -1,0 +1,35 @@
+acceptance: 31/31 passed
+
+  PASS  manufacturing  the held-out month loads
+  PASS  manufacturing  total_output computes with evidence
+  PASS  manufacturing  detects shifted_columns  [#16]
+  PASS  manufacturing  detects duplicate_row  [#16]
+  PASS  manufacturing  detects mixed_date_formats
+  PASS  manufacturing  detects currency_prefix  [#17 (currency is stripped but not recorded)]
+  PASS  manufacturing  detects blank_measurement
+  PASS  manufacturing  the planted instruction is recognised
+  PASS  food           the held-out month loads
+  PASS  food           total_output computes with evidence
+  PASS  food           detects shifted_columns  [#16]
+  PASS  food           detects duplicate_row  [#16]
+  PASS  food           detects mixed_date_formats
+  PASS  food           detects currency_prefix  [#17 (currency is stripped but not recorded)]
+  PASS  food           detects blank_measurement
+  PASS  food           the planted instruction is recognised
+  PASS  electronics    the held-out month loads
+  PASS  electronics    total_output computes with evidence
+  PASS  electronics    detects shifted_columns  [#16]
+  PASS  electronics    detects duplicate_row  [#16]
+  PASS  electronics    detects mixed_date_formats
+  PASS  electronics    detects currency_prefix  [#17 (currency is stripped but not recorded)]
+  PASS  electronics    detects blank_measurement
+  PASS  electronics    the planted instruction is recognised
+  PASS  refusals       no base period is a refusal, not a zero
+  PASS  refusals       a plan with no declared source refuses
+  PASS  refusals       an unsourced convention decision is refused
+  PASS  refusals       no declared close steps means a refusal, not a default process
+  PASS  refusals       a file from another month is refused by its own rows
+  PASS  refusals       one period is an explanation, not a line
+  PASS  refusals       a planted instruction is recognised by the guard's own patterns
+
+wrote /home/eric/Hackathon2026/BridgeFlow-AI/data/outputs/eval/latest.json

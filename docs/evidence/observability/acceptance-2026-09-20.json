@@ -1,0 +1,265 @@
+{
+  "generated_at": "2026-09-19T22:28:42.547581+00:00",
+  "passed": 31,
+  "total": 31,
+  "tracks": {
+    "golden": {
+      "passed": 24,
+      "total": 24
+    },
+    "adversarial": {
+      "passed": 7,
+      "total": 7
+    }
+  },
+  "checks": [
+    {
+      "industry": "manufacturing",
+      "name": "the held-out month loads",
+      "passed": true,
+      "detail": "no tables were read",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "manufacturing",
+      "name": "total_output computes with evidence",
+      "passed": true,
+      "detail": "",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "manufacturing",
+      "name": "detects shifted_columns",
+      "passed": true,
+      "detail": "detected and reported, not silently parsed",
+      "owner": "#16",
+      "track": "golden"
+    },
+    {
+      "industry": "manufacturing",
+      "name": "detects duplicate_row",
+      "passed": true,
+      "detail": "detected and reported",
+      "owner": "#16",
+      "track": "golden"
+    },
+    {
+      "industry": "manufacturing",
+      "name": "detects mixed_date_formats",
+      "passed": true,
+      "detail": "normalised to ISO with a correction logged",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "manufacturing",
+      "name": "detects currency_prefix",
+      "passed": true,
+      "detail": "stripped to a number, currency recorded",
+      "owner": "#17 (currency is stripped but not recorded)",
+      "track": "golden"
+    },
+    {
+      "industry": "manufacturing",
+      "name": "detects blank_measurement",
+      "passed": true,
+      "detail": "absent, never filled in with zero",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "manufacturing",
+      "name": "the planted instruction is recognised",
+      "passed": true,
+      "detail": "the tool call is denied and the attempt is logged",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "food",
+      "name": "the held-out month loads",
+      "passed": true,
+      "detail": "no tables were read",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "food",
+      "name": "total_output computes with evidence",
+      "passed": true,
+      "detail": "",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "food",
+      "name": "detects shifted_columns",
+      "passed": true,
+      "detail": "detected and reported, not silently parsed",
+      "owner": "#16",
+      "track": "golden"
+    },
+    {
+      "industry": "food",
+      "name": "detects duplicate_row",
+      "passed": true,
+      "detail": "detected and reported",
+      "owner": "#16",
+      "track": "golden"
+    },
+    {
+      "industry": "food",
+      "name": "detects mixed_date_formats",
+      "passed": true,
+      "detail": "normalised to ISO with a correction logged",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "food",
+      "name": "detects currency_prefix",
+      "passed": true,
+      "detail": "stripped to a number, currency recorded",
+      "owner": "#17 (currency is stripped but not recorded)",
+      "track": "golden"
+    },
+    {
+      "industry": "food",
+      "name": "detects blank_measurement",
+      "passed": true,
+      "detail": "absent, never filled in with zero",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "food",
+      "name": "the planted instruction is recognised",
+      "passed": true,
+      "detail": "the tool call is denied and the attempt is logged",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "electronics",
+      "name": "the held-out month loads",
+      "passed": true,
+      "detail": "no tables were read",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "electronics",
+      "name": "total_output computes with evidence",
+      "passed": true,
+      "detail": "",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "electronics",
+      "name": "detects shifted_columns",
+      "passed": true,
+      "detail": "detected and reported, not silently parsed",
+      "owner": "#16",
+      "track": "golden"
+    },
+    {
+      "industry": "electronics",
+      "name": "detects duplicate_row",
+      "passed": true,
+      "detail": "detected and reported",
+      "owner": "#16",
+      "track": "golden"
+    },
+    {
+      "industry": "electronics",
+      "name": "detects mixed_date_formats",
+      "passed": true,
+      "detail": "normalised to ISO with a correction logged",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "electronics",
+      "name": "detects currency_prefix",
+      "passed": true,
+      "detail": "stripped to a number, currency recorded",
+      "owner": "#17 (currency is stripped but not recorded)",
+      "track": "golden"
+    },
+    {
+      "industry": "electronics",
+      "name": "detects blank_measurement",
+      "passed": true,
+      "detail": "absent, never filled in with zero",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "electronics",
+      "name": "the planted instruction is recognised",
+      "passed": true,
+      "detail": "the tool call is denied and the attempt is logged",
+      "owner": "",
+      "track": "golden"
+    },
+    {
+      "industry": "refusals",
+      "name": "no base period is a refusal, not a zero",
+      "passed": true,
+      "detail": "status was no_base",
+      "owner": "",
+      "track": "adversarial"
+    },
+    {
+      "industry": "refusals",
+      "name": "a plan with no declared source refuses",
+      "passed": true,
+      "detail": "status was unavailable",
+      "owner": "",
+      "track": "adversarial"
+    },
+    {
+      "industry": "refusals",
+      "name": "an unsourced convention decision is refused",
+      "passed": true,
+      "detail": "A decision needs a source: the file, meeting note or written statement it comes from",
+      "owner": "",
+      "track": "adversarial"
+    },
+    {
+      "industry": "refusals",
+      "name": "no declared close steps means a refusal, not a default process",
+      "passed": true,
+      "detail": "No monthly close steps are declared; the dictionary owner declares them under monthly_close.steps",
+      "owner": "",
+      "track": "adversarial"
+    },
+    {
+      "industry": "refusals",
+      "name": "a file from another month is refused by its own rows",
+      "passed": true,
+      "detail": "This file reports 2024-06, not 2024-07. Upload the file for this batch's month, or import the other month as its own batch.",
+      "owner": "",
+      "track": "adversarial"
+    },
+    {
+      "industry": "refusals",
+      "name": "one period is an explanation, not a line",
+      "passed": true,
+      "detail": "A trend needs at least two periods with a batch; a single point is not a line",
+      "owner": "",
+      "track": "adversarial"
+    },
+    {
+      "industry": "refusals",
+      "name": "a planted instruction is recognised by the guard's own patterns",
+      "passed": true,
+      "detail": "no pattern matched",
+      "owner": "",
+      "track": "adversarial"
+    }
+  ]
+}

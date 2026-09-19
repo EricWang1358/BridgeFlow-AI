@@ -548,4 +548,33 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 }
 .bf-brief-layer[data-layer="1"] { margin-top: 6px; border-top: 0; padding-top: 0 }
 .bf-brief-fold > summary { font-size: 14px; font-weight: 640; cursor: pointer; padding: 4px 0 }
+
+/* ---- decision journal and acceptance report ---------------------------- */
+
+.bf-journal { margin-top: 18px }
+.bf-journal-summary { grid-template-columns: auto 1fr auto 1fr }
+.bf-journal-reasons { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px }
+.bf-journal-reasons li { display: flex; gap: 10px; align-items: baseline; font-size: 12px }
+.bf-journal-reasons li > span:first-child { flex: 1 1 auto; min-width: 0 }
+
+.bf-journal-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 2px }
+.bf-journal-list li {
+  display: grid; align-items: baseline; gap: 8px;
+  grid-template-columns: 4.5rem 4.5rem minmax(8rem, 1fr) 4rem;
+  padding: 5px 6px; border-radius: 6px; font-size: 12px;
+}
+.bf-journal-list li:nth-child(odd) { background: var(--bf-surface-2) }
+/* A refusal is the interesting line, so it gets the whole row and the accent. */
+.bf-journal-list li[data-outcome=refused] { grid-template-columns: 4.5rem 4.5rem minmax(8rem, 1fr) 4rem; box-shadow: inset 2px 0 var(--bf-danger) }
+.bf-journal-time, .bf-journal-ms, .bf-journal-trace { color: var(--bf-muted); font-variant-numeric: tabular-nums }
+.bf-journal-ms { text-align: right }
+.bf-journal-outcome { font-weight: 640 }
+.bf-journal-outcome[data-outcome=refused] { color: var(--bf-danger) }
+.bf-journal-outcome[data-outcome=wrote] { color: var(--bf-warn) }
+.bf-journal-outcome[data-outcome=served] { color: var(--bf-muted) }
+.bf-journal-surface { overflow-wrap: anywhere }
+.bf-journal-reason { grid-column: 2 / -1; color: var(--bf-text); line-height: 1.5 }
+.bf-journal-trace { grid-column: 1 / -1; font-size: 11px; opacity: .55 }
+
+.bf-eval { margin-top: 18px }
 `

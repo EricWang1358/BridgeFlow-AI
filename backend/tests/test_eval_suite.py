@@ -16,7 +16,9 @@ from bridgeflow.config import REPO_ROOT
 async def test_it_checks_every_industry():
     report = await acceptance.run()
 
-    assert {c.industry for c in report.checks} == set(acceptance.INDUSTRIES)
+    # The golden path is per industry; the adversarial track is the suite's other half.
+    assert {c.industry for c in report.checks if c.track == "golden"} == set(acceptance.INDUSTRIES)
+    assert {c.track for c in report.checks} == {"golden", "adversarial"}
 
 
 async def test_every_failure_is_either_owned_or_new():
@@ -36,7 +38,9 @@ async def test_the_planted_instruction_is_recognised_in_every_industry():
     report = await acceptance.run()
 
     recognised = [c for c in report.checks if "planted instruction" in c.name]
-    assert len(recognised) == len(acceptance.INDUSTRIES)
+    # One per industry's held-out file, plus the standalone case in the adversarial track.
+    assert len([c for c in recognised if c.track == "golden"]) == len(acceptance.INDUSTRIES)
+    assert any(c.track == "adversarial" for c in recognised)
     assert all(c.passed for c in recognised)
 
 

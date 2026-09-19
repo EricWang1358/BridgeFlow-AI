@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { DecisionJournal, EvalReport } from './observability.tsx'
 import { api, describeError, formatDateTime, navigate, useUI, type Summary } from './ui.ts'
 
 /**
@@ -84,5 +85,8 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
     </ul>
 
     <p className="bf-hint">{t('recordsReadOnly')}</p>
+
+    <DecisionJournal batchId={batchId} />
+    <EvalReport />
   </section>
 }
