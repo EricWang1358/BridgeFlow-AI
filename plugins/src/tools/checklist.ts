@@ -32,3 +32,31 @@ export function checklistTool(config: BackendConfig): ProductTool {
     },
   }), { kind: 'read' })
 }
+
+/**
+ * What is still waiting on someone, across modules (E14-UC05).
+ *
+ * A projection with no handling state and no decisions: each item names where it is settled,
+ * and settling happens in the module that holds the evidence and the approval.
+ */
+export function inboxTool(config: BackendConfig): ProductTool {
+  return withAccess(defineTool({
+    name: 'monthly_inbox',
+    description: 'Open items for a period across modules (master questions, quarantined rows, column questions, a review left on corrected data): counts by kind and department, and each item with where it is settled. Never rows or cell values; the inbox decides nothing.',
+    parameters: {
+      period: { type: 'string', required: true, description: 'YYYY-MM' },
+      department: { type: 'string', description: 'Narrow the listing to one department' },
+      kind: { type: 'string', description: 'Narrow the listing to one kind of item' },
+    },
+    output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => {
+      const result = value as { total?: number; by_kind?: Record<string, number>; by_department?: Record<string, number> }
+      const kinds = Object.entries(result.by_kind ?? {}).map(([kind, n]) => `${kind} ${n}`).join(', ')
+      const owners = Object.entries(result.by_department ?? {}).map(([d, n]) => `${d} ${n}`).join(', ')
+      return [{ type: 'text', text: `${result.total ?? 0} open item(s). By kind: ${kinds || 'none'}. By department: ${owners || 'none'}.` }]
+    } },
+    async execute(args, exec) {
+      return callBackend<Record<string, Json>>(config, '/tools/monthly-inbox',
+        { period: args.period, department: args.department ?? '', kind: args.kind ?? '' }, exec.signal)
+    },
+  }), { kind: 'read' })
+}

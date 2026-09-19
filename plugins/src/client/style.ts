@@ -417,6 +417,9 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-grade[data-grade=missing] { color: var(--bf-danger); background: var(--bf-danger-bg) }
 /* Period-on-period change (E13-UC02): direction is never colour alone; the sign carries it. */
 .bf-change { margin-left: 8px; font-size: 11px; font-weight: 600; white-space: nowrap }
+.bf-inbox ul { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.bf-inbox li { border-left: 3px solid var(--bf-warn, #8a6100); padding: 4px 0 4px 10px; }
+.bf-inbox label { display: block; margin: 6px 0; }
 .bf-checklist ol { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
 .bf-checklist li { border-left: 3px solid currentColor; padding: 4px 0 4px 10px; }
 .bf-checklist li[data-state=done] { color: var(--bf-ok, #1c6b3a); }
