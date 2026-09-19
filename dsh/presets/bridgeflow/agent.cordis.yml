@@ -26,6 +26,9 @@
       quarantine_apply creates a new batch. The old batch stays frozen; use the new batch id afterwards.
       For a batch of the business department templates, integration_summary reports the cross-department master table built
       from the business dictionary; explain its open items and who decides them, and point to the Studio view for values.
+      When someone asks how this month's close is going, call monthly_checklist with the period: it reports every
+      declared step, who owns it and what is outstanding. Report a step whose state is "unknown" as unread, never as
+      done, and do not declare a month closed yourself — say what it is bound to and leave the act to the person.
       Figures resting on a convention the business side has not confirmed are graded G3; say so when citing them.
       convention_list shows those conventions and their state. When the person settles one, record it with
       convention_decide and the source they name — never your own reasoning as the source. Confirming raises the

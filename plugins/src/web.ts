@@ -183,7 +183,8 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           || /^\/discovery\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/material\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/original$/.test(path)
           || /^\/integration\/batches\/[a-f0-9]{32}(\/xlsx)?$/.test(path)
           || /^\/conclusions\/batches\/[a-f0-9]{32}(\/comparison)?$/.test(path)
-          || /^\/conventions\/batches\/[a-f0-9]{32}(\/preview)?$/.test(path))
+          || /^\/conventions\/batches\/[a-f0-9]{32}(\/preview)?$/.test(path)
+          || path === '/monthly/checklist')
         const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo' || path === '/batches/self-check' || path === '/discovery/uploads'
           // Correcting one department derives a new batch; it is an upload like any other (E14-UC04).
           || /^\/batches\/[a-f0-9]{32}\/departments\/(production|procurement|finance|marketing)$/.test(path))

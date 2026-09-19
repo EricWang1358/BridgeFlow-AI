@@ -417,6 +417,14 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-grade[data-grade=missing] { color: var(--bf-danger); background: var(--bf-danger-bg) }
 /* Period-on-period change (E13-UC02): direction is never colour alone; the sign carries it. */
 .bf-change { margin-left: 8px; font-size: 11px; font-weight: 600; white-space: nowrap }
+.bf-checklist ol { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.bf-checklist li { border-left: 3px solid currentColor; padding: 4px 0 4px 10px; }
+.bf-checklist li[data-state=done] { color: var(--bf-ok, #1c6b3a); }
+.bf-checklist li[data-state=open] { color: var(--bf-warn, #8a6100); }
+.bf-checklist li[data-state=blocked] { color: var(--bf-danger, #a12b2b); }
+.bf-checklist li[data-state=unknown] { color: var(--bf-muted, #6b6b6b); }
+.bf-checklist li b, .bf-checklist li .bf-hint, .bf-checklist li button { color: initial; }
+.bf-step-state { font-size: .85em; border: 1px solid currentColor; border-radius: .6em; padding: 0 .4em; margin-right: .4em; }
 .bf-convention { font-size: .85em; padding: 0 .4em; border-radius: .6em; border: 1px solid currentColor; }
 .bf-convention[data-state=unconfirmed] { color: var(--bf-warn, #8a6100); }
 .bf-convention[data-state=confirmed] { color: var(--bf-ok, #1c6b3a); }

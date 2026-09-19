@@ -121,6 +121,16 @@ try {
   await state.locator('.bf-resupply .bf-error').filter({ hasText: 'identical' }).waitFor()
   await shot('resupply-unchanged')
 
+  // E14-UC01: the close checklist reads the same state the pages do
+  await state.locator('header button').first().click()
+  await target('state-open').click()
+  const checklist = page.locator('.bf-checklist')
+  await checklist.waitFor()
+  const done = await checklist.locator('li[data-state=done] b').allInnerTexts()
+  assert.ok(done.includes('Department files submitted'), `files step should be done: ${done}`)
+  await checklist.locator('li[data-state=open]').first().waitFor()
+  await shot('close-checklist')
+
   assert.deepEqual(errors, [])
   console.log(JSON.stringify({ status: 'passed', batch, attention: items, evidence }))
 } catch (error) { console.error(logs.slice(-3000)); await page?.screenshot({ path: `${evidence}/failure.png` }).catch(() => {}); throw error }
