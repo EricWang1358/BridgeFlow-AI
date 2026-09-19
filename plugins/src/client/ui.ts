@@ -104,6 +104,7 @@ const labels = {
   monthly_checklist: ['月度对账进度', 'Monthly close checklist'], monthly_inbox: ['待确认事项', 'Open items'],
   openItems: ['待确认事项', 'Open items'],
   metricCharts: ['指标图', 'Metric charts'],
+  exportReport: ['导出月度报告（Word）', 'Export the monthly report (Word)'],
   chart_sign_rate_trend: ['现场签收率趋势', 'Sign-off rate trend'],
   chart_net_margin_trend: ['项目净利率趋势', 'Net margin trend'],
   chart_output_variance: ['实际量变化分解', 'Output variance decomposition'],
