@@ -22,7 +22,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 | UC | 中文 / English | Status | 优先级 / Priority |
 | --- | --- | --- | --- |
 | E14-UC01 | 月度对账进度清单 / Monthly close checklist | IMPLEMENTED_OFFLINE | Must |
-| E14-UC02 | 模板下载与上月预填 / Template download with carry-over | DESIGNED | Should |
+| E14-UC02 | 模板下载与上月预填 / Template download with carry-over | IMPLEMENTED_OFFLINE | Should |
 | E14-UC03 | 提交前自检 / Self-check before submission | IMPLEMENTED_OFFLINE | Must |
 | E14-UC04 | 单部门补传生成新版本 / Replace one department's file as a new version | IMPLEMENTED_OFFLINE | Must |
 | E14-UC05 | 待确认事项收件箱 / Open-item inbox by owner | IMPLEMENTED_OFFLINE | Should |
@@ -64,7 +64,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 
 ## E14-UC02 — 模板下载与上月预填 / Template download with carry-over
 
-**Status: DESIGNED**
+**Status: IMPLEMENTED_OFFLINE**
 
 ### 中文需求与验收
 
@@ -82,7 +82,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
   - AC-3 Given 下载的模板 When 读取表头 Then 与该部门批准模板版本逐列一致，并包含版本号。
 - 后置：下载记录模板版本与预填来源批次；预填值在导入时仍按普通单元格校验。
 - 依赖：E02-UC02（模板版本）、E04-UC01、E14-UC03。
-- 当前证据与缺口：业务方模板以文件形式存在于 [data/company_templates/source](../../data/company_templates/source)；没有下载入口、沿用声明与预填。
+- 当前证据与缺口（2026-09-19 第九轮）：沿用关系由 `integration.yaml` 的 `carry_over` 声明（哪一列续哪个声明字段、往前几期），schema 层校验该字段确实由该部门提供；[monthly/templates.py](../../backend/src/bridgeflow/monthly/templates.py) 以批准模板的表头逐列复制生成工作簿（因此交回来的文件能被同一份声明导入），按声明预填上期数值，每个预填单元格带「预填自 2024-06，请核对」批注与浅色底（颜色不单独承载含义），并追加「填写说明」页写明期间、声明版本、本次是否预填及字段含义与必填。接口 `GET /batches/templates/{department}?period=`，界面在导入面板内选择部门后一键下载（[workspace.tsx](../../plugins/src/client/workspace.tsx) 的 `TemplateDownload`）。无上期批次、上期总表读不出、该部门没有沿用声明三种情况都不预填并在说明页写明原因；未声明的部门 404。[行为测试](../../backend/tests/test_templates.py) 覆盖 AC-1–3，并额外验证生成的工作簿能被 E14-UC03 的自检读取；[浏览器旅程](../../plugins/tests/round1-journey.mjs) 实际下载到 `生产部-2024-07-*.xlsx`。剩余：预填只按实体键取上期值，不处理上期该值被隔离的单元格（D24）；模板版本即声明版本，没有独立的模板批准流程（E02-UC02 仍为原状）。
 
 ### English requirements and acceptance
 
@@ -93,7 +93,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 - Exceptions: no prior batch or a quarantined prior value means no prefill with the reason stated; no approved version refuses the download.
 - Acceptance: AC-1 PRJ2024011 previous actual prefilled 5,650.0 with annotation; AC-2 no prior batch means no prefill with a note; AC-3 headers match the approved version.
 - Postcondition: downloads record template version and prefill source; prefilled values are validated like any cell at import.
-- Evidence and gap: business templates exist as files; no download, carry-over declaration or prefill.
+- Previous evidence and gap: business templates exist as files; no download, carry-over declaration or prefill.
 
 ## E14-UC03 — 提交前自检 / Self-check before submission
 
@@ -256,6 +256,8 @@ Where the requirement left a choice open, it was decided during implementation; 
 | D12 | 版本链**正向查出**（谁从我派生），不把 `superseded_by` 写回原批次 | 「原批次不改变」是本 UC 的验收条件之一；为了写一个指针去改写冻结文件，会让「未改变」这句话需要加注释才成立。索引本来就按批次记了 `derived_from` | `periods.successors`；测试 `test_the_original_batch_its_master_and_its_report_are_unchanged` 逐字节比对原批次文件 |
 | D13 | 补传**不强制**先过自检，但补传件照样跑同一条检查链，结果落在新批次的 `intake_checks` | 自检（E14-UC03）是给填报员的事前工具，强制它会让「文件明明是对的、系统不让我交」成为新的卡点；而检查结果必须存在，否则新批次比原批次少一份记录 | `replace_department` 调用 `checks.CHAIN`；新批次 `intake_checks[department]` 被替换 |
 | D14 | 月份是否相符，以**文件自身的行**为准（按声明找到期间字段再读），表单里的月份只做第二道校验 | 表单里的月份是上传者的说法，而这个 UC 的触发场景正是「拿错了文件」。按行判断才抓得住 AC-4 | `integration.periods_in` + `resupply.periods_refusal`；测试上传 6 月文件但表单填 7 月，仍被拒 |
+| D24 | 预填只取**上期总表里该实体的值**；上期没有该实体、值为空或总表读不出，就不填，并在说明页写明原因 | 预填是给人省手抄，不是替人补数。填一个来历不明的数，比空着更难发现错 | `templates.build` 跳过 `None`，`reason` 打印在说明页；测试覆盖无上期批次与无沿用声明两种情况 |
+| D25 | 模板表头**逐列复制批准模板**，不按声明重新拼表头 | 交回来的文件要能被同一份声明导入；若按字段重拼表头，列序或写法一变，自检和导入就会拒绝人刚刚下载的那份文件 | 测试逐列比对生成件与 `source/*-v2.xlsx`，并把生成件交给自检 |
 | D18 | 收件箱**不保存处理状态**，也不提供任何决定按钮；来源读不到时只报「这个来源读不到」，其余照常显示 | 若收件箱保存自己的状态，就会出现「收件箱说已处理、原模块说没有」的两套事实；决定需要证据与审批，而两者都在原模块 | `inbox.collect` 每次重算，`unreadable` 单列；测试断言事项字段里没有任何动作字段 |
 | D16 | 「可结账」是**算出来的读数**，不写「已结账」记录；响应里带上它绑定的批次、报告与声明版本 | 后置条件要的是「完成记录绑定批次与报告版本」，而本 UC 没有任何授权动作。系统自己写一条没人批准的「已结账」，就是它自己做出的断言——与「无证据的结论被拒绝」是同一条原则 | `Checklist.ready_to_close` 与 `bound`；界面文案写明结账仍由人执行 |
 | D17 | 步骤**必须声明**才出现，字典没声明就拒绝整张清单而不是给一份默认流程 | 每月要走哪些步骤是公司流程；给一份看似合理的默认清单，会让人以为系统知道他们的流程 | `checklist.declared_steps` 只认 `EVALUATORS` 里有的 kind；测试 `test_a_dictionary_that_declares_no_steps_refuses_instead_of_inventing_them` |

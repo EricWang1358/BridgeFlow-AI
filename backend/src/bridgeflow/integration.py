@@ -112,6 +112,18 @@ class ComparisonDecl(_Strict):
     thresholds: dict[str, ComparisonThreshold] = Field(default_factory=dict)
 
 
+class CarryOverRule(_Strict):
+    """One template column continued from a declared field of an earlier period (E14-UC02)."""
+    column: str
+    from_field: str
+    #: How many periods back, negative. -1 is last month.
+    offset: int = Field(default=-1, ge=-12, le=-1)
+
+
+class DepartmentCarryOver(_Strict):
+    rules: list[CarryOverRule] = Field(default_factory=list)
+
+
 class DepartmentDecl(_Strict):
     label: str
     template: str
@@ -131,6 +143,8 @@ class IntegrationSpec(_Strict):
     rollup: dict[str, Rollup] = Field(default_factory=dict)
     checks: list[Check] = Field(default_factory=list)
     comparison: ComparisonDecl = Field(default_factory=ComparisonDecl)
+    #: Which template column of a department continues which declared field of an earlier period.
+    carry_over: dict[str, DepartmentCarryOver] = Field(default_factory=dict)
     #: Gaps filled by convention, keyed by constant, field, or `rollup.<department>`.
     assumptions: dict[str, str] = Field(default_factory=dict)
     undeclared_rules: dict[str, str] = Field(default_factory=dict)
@@ -175,6 +189,15 @@ class IntegrationSpec(_Strict):
                      if n not in self.comparison.additive]
         known = set(self.constants) | set(self.fields) | {f"rollup.{d}" for d in self.rollup}
         problems += [f"assumption {k} names nothing declared" for k in self.assumptions if k not in known]
+        for department, policy in self.carry_over.items():
+            if department not in self.departments:
+                problems.append(f"carry_over names unknown department {department}")
+                continue
+            for rule in policy.rules:
+                decl = self.fields.get(rule.from_field)
+                if decl is None or department not in decl.sources:
+                    problems.append(f"carry_over.{department} continues {rule.from_field}, "
+                                    "which that department does not supply")
         for check in self.checks:
             problems += [f"check {check.id} uses undeclared field {f}" for f in (check.left, check.right) if f not in self.fields]
         if problems:

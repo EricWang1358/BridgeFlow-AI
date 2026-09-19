@@ -14,7 +14,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from bridgeflow.api.batches import _visible, load_batch
+from bridgeflow import integration as integration_module
+from bridgeflow.api.batches import _integration_spec, _visible, load_batch
+from bridgeflow.conclusions import comparison as comparison_module
 from bridgeflow.conclusions import periods
 from bridgeflow.identity import UserIdentity, require_user
 from bridgeflow.monthly import checklist as checklist_module
@@ -152,3 +154,54 @@ async def open_item_inbox_tool(request: dict) -> dict:
                                   department=str(request.get("department", "")), kind=str(request.get("kind", "")))
     return result | {"next_step": ("Say what is waiting, on whom, and where it is settled. The inbox itself decides "
                                    "nothing: each item is handled in its own module, with its own approval.")}
+
+
+@router.get("/batches/templates/{department}")
+async def department_template(department: str, user: Annotated[UserIdentity | None, Depends(require_user)],
+                              period: Annotated[str, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")],
+                              ) -> dict:
+    """The approved template for a month, prefilled from the declared carry-over (E14-UC02).
+
+    The header is the approved template's own, so what comes back can be imported by the same
+    declaration that produced it. Prior-period values are read through the reader's own
+    visibility, and every prefilled cell says which period it came from.
+    """
+    from bridgeflow.api.integration import _result
+    from bridgeflow.monthly import templates
+
+    spec_model = _integration_spec()
+    if spec_model is None:
+        raise HTTPException(503, "No integration declaration is configured; its owner declares the templates")
+    spec = spec_model.model_dump(mode="json")
+    if department not in (spec.get("departments") or {}):
+        raise HTTPException(404, "That department is not declared")
+    relative = (spec["departments"][department] or {}).get("template") or ""
+    path = (integration_module.spec_path().parent / relative) if relative else None
+    if path is None or not path.is_file():
+        raise HTTPException(409, "This department has no approved template file; the dictionary owner publishes one")
+
+    rules = templates.declared(spec, department)
+    prior_period = comparison_module.shift(period, rules[0].offset if rules else -1)
+    prior, reason = None, ""
+    if not rules:
+        reason = "本部门没有声明任何沿用字段，本模板不预填。/ No carry-over is declared for this department."
+    else:
+        entry = periods.latest_for(prior_period, _visibility(user))
+        if entry is None:
+            reason = (f"没有 {prior_period} 的批次，本次不预填沿用字段。/ No batch for {prior_period}; nothing was prefilled.")
+        else:
+            try:
+                prior = _result(entry["batch_id"], user)
+            except HTTPException as exc:
+                reason = f"{prior_period} 的总表读不出来（{exc.detail}），本次不预填。"
+    payload = templates.build(
+        spec=spec, department=department, period=period, template=path.read_bytes(),
+        prior=prior, prior_period=prior_period,
+        axis=comparison_module.entity_axis(spec), reason=reason)
+    label = (spec["departments"][department] or {}).get("label", department)
+    import base64
+
+    return {"filename": f"{label}-{period}-{spec.get('version', '')}.xlsx".replace("/", "-"),
+            "base64": base64.b64encode(payload).decode(),
+            "declaration": spec.get("version", ""), "prefilled_from": prior_period if prior is not None else "",
+            "reason": reason, "template": relative}

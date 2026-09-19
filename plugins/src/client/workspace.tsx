@@ -12,6 +12,7 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
   const [limits, setLimits] = useState<Limits | null>(null)
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [reports, setReports] = useState<CheckReport[]>([])
   const formRef = useRef<HTMLFormElement>(null)
+  const [period, setPeriod] = useState('')
   useEffect(() => { const controller = new AbortController(); void api<Limits>('/config', { signal: controller.signal }).then(setLimits).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) }); return () => controller.abort() }, [])
   async function selfCheck() {
     if (!formRef.current) return
@@ -54,12 +55,13 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
   return <form ref={formRef} onSubmit={upload} className="bf-steps">
     <div className="bf-step">
       <h3>{t('stepMonth')}</h3>
-      <input type="month" name="period" aria-label={t('month')} required />
+      <input type="month" name="period" aria-label={t('month')} required value={period} onChange={e => setPeriod(e.target.value)} />
     </div>
     <div className="bf-step">
       <h3>{t('stepFiles')}</h3>
       <p className="bf-hint">{t('stepFilesHint')} {t('uploadHelp')}</p>
       <div className="bf-files">{departments.map(name => <FileRow key={name} name={name} />)}</div>
+      <TemplateDownload period={period} />
       <p className="bf-hint">{t('selfCheckHelp')}</p>
       <button type="button" disabled={busy} onClick={() => void selfCheck()}>{t('selfCheck')}</button>
       {reports.map(report => <div key={report.department} className="bf-callout" data-tone={report.accepts ? 'ok' : 'warn'} role="status">
@@ -75,6 +77,41 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
       <button className="bf-primary" disabled={busy || !limits} type="submit">{t(busy ? 'busy' : 'import')}</button>
     </div>
   </form>
+}
+
+/**
+ * Download the approved template for a month, prefilled where the declaration says a column
+ * continues last month's figure (E14-UC02).
+ *
+ * The carry-over is a draft, not a measurement: each prefilled cell carries the period it came
+ * from and asks to be checked, and the instructions sheet repeats it in words.
+ */
+export function TemplateDownload({ period }: { period: string }) {
+  const { t } = useUI()
+  const [department, setDepartment] = useState<string>(departments[0])
+  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [note, setNote] = useState('')
+  async function download() {
+    setError(''); setNote(''); setBusy(true)
+    try {
+      const file = await api<{ filename: string; base64: string; prefilled_from: string; reason: string }>(
+        `/batches/templates/${department}?period=${encodeURIComponent(period)}`)
+      const bytes = Uint8Array.from(atob(file.base64), c => c.charCodeAt(0))
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
+      link.download = file.filename
+      link.click()
+      URL.revokeObjectURL(link.href)
+      setNote(file.prefilled_from ? `${t('templatePrefilled')} ${file.prefilled_from}` : file.reason)
+    } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
+  }
+  return <div className="bf-template-download">
+    <p className="bf-hint">{t('templateDownloadHelp')}</p>
+    <label>{t('department')} <select value={department} onChange={e => setDepartment(e.target.value)}>
+      {departments.map(name => <option key={name} value={name}>{t(name)}</option>)}</select></label>
+    <button type="button" disabled={busy || !period} onClick={() => void download()}>{t(busy ? 'busy' : 'templateDownload')}</button>
+    {note && <p className="bf-hint" role="status">{note}</p>}
+    {error && <p role="alert" className="bf-error">{error}</p>}
+  </div>
 }
 
 /** One department's file, showing what was actually chosen.
