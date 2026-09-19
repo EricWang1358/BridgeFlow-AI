@@ -7,9 +7,32 @@
 「每个数字都量过、可追溯」是本项目对评委的核心叙事，评委抓到一处对不上，整个叙事就打折。
 所以改数字只改这一处。
 
-最后更新：2026-09-18。新增一轮时照第三节的格式写，并附上复现命令。
+最后更新：2026-09-19。新增一轮时照第三节的格式写，并附上复现命令。
 
 ---
+
+## 部署配置通道故障与修复（2026-09-19）
+
+现象：线上飞书导入报 503「Access control is not configured」，本地同一操作正常。
+实测根因链（证据来自 GitHub Actions run **35419647049**，main，2026-09-19T03:51）：
+
+1. `access-control.yaml` 此前 gitignored，git 部署不携带，靠 deploy.yml 的 secret 通道下发。
+2. 该通道的同步步骤排在 `deploy.sh` **之前**，`config-put.sh` 的校验因此跑在实例上
+   **尚未更新**的代码上。`access_resolver.py` 恰是同一次 PR 新增的模块，于是校验失败：
+   `ImportError: cannot import name 'access_resolver' from 'bridgeflow'`（03:51:38）。
+3. `config-put.sh` 的 `set -e` 在校验处中止，**文件一个字节没写**。
+4. `appleboy/ssh-action@v1` 已删除 `script_stop` 输入（实测 action.yml 无此 input，
+   README 指明用 `set -e` 替代），整段脚本的退出码取自最后一条命令——那是
+   field-dictionary 分支的 `echo`，返回 0。该步骤打印
+   `✅ Successfully executed commands to all hosts.`，部署整体绿灯。
+5. `deploy.sh` 随后把新代码装上，新代码要这个文件，`FileNotFoundError` → 503。
+6. 存活检查看不见：它只查 `/`（接受 401）与 `portal/health`（200），
+   503 只出现在带登录态的数据路由上。
+
+修复：`access-control.yaml` 改为仓库跟踪（无凭证，space_id 对组织外无意义）；
+secret 通道只留给 `field-dictionary.yaml` 并移到 `deploy.sh` 之后；同步脚本首行
+`set -eo pipefail`；新增仓库内 ACL 合法性守卫测试。**后端 621 passed**
+（基线 620 + 守卫 1），Ruff 通过。复现：`cd backend && pytest -q`（离线，无计费）。
 
 ## #204 授权数据源迁移到飞书知识库（2026-09-18）
 
@@ -33,6 +56,7 @@ admin 成员疑为应用本体，**真人尚未加入任何知识库**，登录�
   假成员表」，7 个测试文件的授权助手改键路径不改结构。
 - `employee_authorizations` 账本新增 `roles` 列（消费时刻角色快照，旧库 ALTER 原地迁移）。
 - `.gitignore` 补上 `data/mappings/access-control.yaml`（docs/22 此前声称已忽略，实测未含）。
+  **2026-09-19 已反转**：该忽略正是线上 503 的起点，文件改为仓库跟踪，见本文第一节。
 - 已知边界：进程重启后 open_id 观察对为空，60 秒许可窗口内重启
   会导致消费端 403（fail-closed，瞬时）；成员表缓存 5 分钟，飞书侧调岗后
   最长延迟 5 分钟生效。
@@ -51,7 +75,7 @@ admin 成员疑为应用本体，**真人尚未加入任何知识库**，登录�
   2. 选中 sheet 后导入按钮不亮：`choose()` 未初始化 `header_row`，显示默认 1 与
      `ready()` 的 `?? 0` 不一致；已改为选中即置 1。
   3. `feishu-import-user` 报 503「Access control is not configured」：运行环境未按 docs/27
-     创建 `data/mappings/access-control.yaml`；按 `access-control.example.yaml` 声明后解除
+     创建 `data/mappings/access-control.yaml`；按示例声明后解除
      （当时为逐人名单格式；#204 起改为 spaces+roles 映射）。
 
 ## E13/E14 第一轮：一页结论、依据等级、提交前自检（2026-09-17，#190 / #195 / #199）

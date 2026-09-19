@@ -158,15 +158,33 @@ chmod 600 env.sh
 source env.sh && [ -n "$DEEPSEEK_API_KEY" ] && [ -d "$DSH_HOME" ] && echo ok
 ```
 
-### 5b 配置经流水线同步（可选）
+### 5b 两份配置各走各的通道
 
-实例侧的两个 gitignored 配置可以改由流水线分发，不再 SSH 手改：文件内容存为
-`production` 环境的 GitHub secrets（`ACCESS_CONTROL_YAML`、`FIELD_DICTIONARY_YAML`），
-部署时 base64 经 SSH 管道送到实例，由 `deploy/config-put.sh` 先用产品自己的
-加载器校验（`access_resolver.structure()` / 导入侧 `_load_dictionary`），再原子替换。
+改配置都不需要 SSH 上机器，但两份文件的路径不同，因为敏感度不同。
+
+**`access-control.yaml` 随代码走 git。** 它只声明知识库 space_id 与角色策略，
+没有任何凭证；space_id 对组织外的人无意义，对组织内没权限的人也打不开对应知识库。
+而它恰恰是最该被评审的文件，所以改权限策略 = 提 PR = 有 diff、有评审、有回滚。
+`deploy.sh` 的 `git reset --hard` 直接把它带上实例，`backend/tests/test_access_resolver.py`
+里有一条守卫：仓库里这份文件非法，PR 就红，而不是上线后数据面 503。
+
+一个后果要知道：**回滚到旧 commit，这个文件会跟着回到那个 commit 的版本**；
+实例上同路径的手改文件会被 `git reset --hard` 静默覆盖。两者都是想要的行为。
+
+**`field-dictionary.yaml` 走流水线密文通道。** 它是真实业务数据，不入库：内容存为
+`production` 环境的 GitHub secret `FIELD_DICTIONARY_YAML`，部署时 base64 经 SSH 管道
+送到实例，由 `deploy/config-put.sh` 先用导入侧自己的 `_load_dictionary` 校验再原子替换。
 **非法配置让部署失败，而不是到达运行时**；内容没变就不写；被替换的旧文件保留为
-`*.bak` 一代。某个 secret 留空则跳过该文件，实例上已有文件继续生效。env.sh 里的
-真凭证（`DEEPSEEK_API_KEY`、`FEISHU_APP_SECRET`、`PORTAL_*`）**不走这条通道**，
+`*.bak` 一代。secret 留空则跳过，实例上已有文件继续生效。
+
+> 顺序要求：同步步骤必须排在 `deploy.sh` **之后**。`config-put.sh` 用产品自己的加载器
+> 校验，那就必须是**被部署的那个 commit** 的加载器。2026-09-19 的部署把同步排在前面，
+> 校验撞上旧代码里还不存在的模块（`ImportError: cannot import name 'access_resolver'`），
+> 文件一个字节没落地，而 `ssh-action` v1 取最后一条命令的退出码，整步报成 ✅。
+> 现在 deploy.yml 的同步脚本首行有 `set -eo pipefail`（v1 删掉了 `script_stop`，
+> 官方替代写法就是它）。配置落地后**不需要重启**：两个加载器都每次调用重读文件。
+
+env.sh 里的真凭证（`DEEPSEEK_API_KEY`、`FEISHU_APP_SECRET`、`PORTAL_*`）**两条通道都不走**，
 维持「凭证只住实例」的既有决策（deploy.yml 文件头）。
 
 ---
@@ -363,10 +381,9 @@ sudo systemctl restart bridgeflow   # 后端与 web 代理拿到 PORTAL_BASE_URL
 回调落门户 `/enter` → 带当次 launch token 进主站，dsh web 签出原生会话
 cookie（此后直到 cookie 过期都直达，重启不影响）。
 
-授权不再登记逐人名单：把五个知识库（四部门 + 总经办）的 space_id 与角色策略写进
-`data/mappings/access-control.yaml`（格式见同目录 `.example`；已 gitignored——
-此前本节声称忽略但 `.gitignore` 实际未含该文件，#204 已补上并仍要求部署不动它）→
-再 `sudo systemctl restart bridgeflow`。飞书侧前提：应用已发版带
+授权不再登记逐人名单：五个知识库（四部门 + 总经办）的 space_id 与角色策略写在
+`data/mappings/access-control.yaml`。这份文件**跟踪在仓库里**（理由与通道见 §5b），
+部署自动带上，实例侧不需要手动创建，改它走 PR 而不是 SSH。飞书侧前提：应用已发版带
 `wiki:member:retrieve`，且应用本体已加为每个知识库成员。
 
 文件缺失时数据面是 503「未配置」，这是设计的中间态（fail-closed），不是故障。
@@ -440,5 +457,7 @@ echo 'deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart bridgeflow, /usr/bi
 4. UI 走全链路：传演示月度表 → review 流程 → notebook 渲染
 5. `sudo systemctl restart bridgeflow bridgeflow-portal` 自愈；
    `sudo reboot` 后两个单元自启
-6. 演示前排练一次回滚：`bash deploy/deploy.sh <prev-sha>`，确认字典、
-   uploads 与 `access-control.yaml` 存活（实例 `git status` 干净）
+6. 演示前排练一次回滚：`bash deploy/deploy.sh <prev-sha>`，确认字典与 uploads
+   存活（实例 `git status` 干净）。注意 `access-control.yaml` 现在跟踪在仓库里，
+   **会跟着回到那个 commit 的版本**——回滚到 #204 之前的 sha，它会消失、数据面回到
+   503「未配置」。这是配置与代码同版本的正确行为，别当故障（§5b）

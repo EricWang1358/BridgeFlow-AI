@@ -6,6 +6,9 @@
 # See docs/22-lightsail-deploy.md for the instance-side runbook.
 #
 # Required GitHub secrets: SSH_HOST, SSH_USER, SSH_PRIVATE_KEY.
+# Optional production-environment secret: FIELD_DICTIONARY_YAML (see "Sync
+# instance configuration"). access-control.yaml is tracked in the repo instead —
+# it holds no credentials and it is the file that most needs review.
 # Required GitHub variable: PUBLIC_DOMAIN.
 # DEEPSEEK_API_KEY never enters GitHub — it lives only in env.sh on the
 # instance (see CLAUDE.md: bootstrap variables come from the launching shell).
@@ -90,46 +93,6 @@ jobs:
           source: "deploy/deploy.sh,deploy/config-put.sh"
           target: "/tmp/bf-deploy"
 
-      # Instance-side config (docs/22 §5/§9c) is gitignored, so code deploys never
-      # carry it. The file contents live as production-environment secrets and are
-      # piped to the instance base64-encoded — a plain export would break on the
-      # apostrophes in YAML comments. config-put.sh validates with the product's
-      # own loaders before an atomic swap; an invalid file fails here, before
-      # deploy.sh restarts anything. An unset secret is skipped, not an error:
-      # a hand-placed instance file keeps serving until a secret replaces it.
-      - name: Encode configuration for transfer
-        id: config_b64
-        run: |
-          echo "acl=$(printf '%s' "$ACCESS_CONTROL_YAML" | base64 -w0)" >> "$GITHUB_OUTPUT"
-          echo "dictionary=$(printf '%s' "$FIELD_DICTIONARY_YAML" | base64 -w0)" >> "$GITHUB_OUTPUT"
-        env:
-          ACCESS_CONTROL_YAML: ${{ secrets.ACCESS_CONTROL_YAML }}
-          FIELD_DICTIONARY_YAML: ${{ secrets.FIELD_DICTIONARY_YAML }}
-
-      - name: Sync instance configuration
-        uses: appleboy/ssh-action@v1
-        env:
-          # base64 of a secret is NOT masked in logs (it is not the literal);
-          # these are piped into config-put.sh, never echoed.
-          ACL_B64: ${{ steps.config_b64.outputs.acl }}
-          DICT_B64: ${{ steps.config_b64.outputs.dictionary }}
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: ACL_B64,DICT_B64
-          script: |
-            if [ -n "$ACL_B64" ]; then
-              printf '%s' "$ACL_B64" | bash /tmp/bf-deploy/deploy/config-put.sh access-control.yaml
-            else
-              echo "config-put: skip access-control.yaml (secret ACCESS_CONTROL_YAML is empty)"
-            fi
-            if [ -n "$DICT_B64" ]; then
-              printf '%s' "$DICT_B64" | bash /tmp/bf-deploy/deploy/config-put.sh field-dictionary.yaml
-            else
-              echo "config-put: skip field-dictionary.yaml (secret FIELD_DICTIONARY_YAML is empty)"
-            fi
-
       - name: Run deploy on instance
         uses: appleboy/ssh-action@v1
         with:
@@ -139,6 +102,51 @@ jobs:
           # Pass the exact tested commit: deploy.sh defaults to origin/main,
           # which could have moved on while the test job ran.
           script: bash /tmp/bf-deploy/deploy/deploy.sh ${{ github.sha }}
+
+      # Only the field dictionary travels this way: it is real business data and
+      # stays out of the repo (docs/22 §5b). access-control.yaml is tracked, so
+      # deploy.sh's own checkout carries it.
+      #
+      # This runs AFTER deploy.sh, not before: config-put.sh validates with the
+      # product's own loaders, and those must be the loaders of the commit being
+      # deployed. Validating against the not-yet-updated tree is what shipped
+      # 2026-09-19's deploy without its configuration (ImportError on a module
+      # the new commit introduced). No restart is needed afterwards — both
+      # loaders re-read their file on every call.
+      #
+      # The content is piped base64-encoded: a plain export would break on the
+      # apostrophes in YAML comments. An unset secret is skipped, not an error —
+      # a hand-placed instance file keeps serving until a secret replaces it.
+      - name: Encode configuration for transfer
+        id: config_b64
+        run: |
+          echo "dictionary=$(printf '%s' "$FIELD_DICTIONARY_YAML" | base64 -w0)" >> "$GITHUB_OUTPUT"
+        env:
+          FIELD_DICTIONARY_YAML: ${{ secrets.FIELD_DICTIONARY_YAML }}
+
+      - name: Sync instance configuration
+        uses: appleboy/ssh-action@v1
+        env:
+          # base64 of a secret is NOT masked in logs (it is not the literal);
+          # this is piped into config-put.sh, never echoed.
+          DICT_B64: ${{ steps.config_b64.outputs.dictionary }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DICT_B64
+          # ssh-action v1 removed script_stop; `set -e` is its documented
+          # replacement. Without it this step's exit code is the LAST command's,
+          # so a failed config-put is reported as success — that is how a broken
+          # sync passed unnoticed on 2026-09-19. `envs` does not export an empty
+          # value, hence ${DICT_B64:-} rather than set -u.
+          script: |
+            set -eo pipefail
+            if [ -n "${DICT_B64:-}" ]; then
+              printf '%s' "$DICT_B64" | bash /tmp/bf-deploy/deploy/config-put.sh field-dictionary.yaml
+            else
+              echo "config-put: skip field-dictionary.yaml (secret FIELD_DICTIONARY_YAML is empty)"
+            fi
 
       # dsh web's session fence (Feishu auth) answers anonymous / with 401 —
       # that proves both the process and the fence are up. Only 000 (no

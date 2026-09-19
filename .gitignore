@@ -32,6 +32,9 @@ data/uploads/
 data/outputs/
 # Real OA master data — only the example is tracked.
 data/mappings/field-dictionary.yaml
+# access-control.yaml is deliberately NOT ignored: it declares only wiki space_ids
+# and role policy — no credentials — and it is the file that most needs review.
+# It ships with the code so a policy change is a PR, not an SSH session (docs/22 §5b).
 *.xlsx
 *.xls
 !data/samples/*.csv
@@ -49,4 +52,3 @@ Thumbs.db
 .vscode/
 
 logs/
-data/mappings/access-control.yaml

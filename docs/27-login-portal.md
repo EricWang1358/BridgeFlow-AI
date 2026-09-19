@@ -90,7 +90,7 @@ Drive 快捷调用（tenant token）与登录（user token）互不依赖：一�
 
 ## 员工操作与原生批准（2026-09-16）
 
-ACL 的 `operations`（现在挂在角色上，#204）省略为空集；查看权限不隐含上传、备注或批准权限。配置示例见 `data/mappings/access-control.example.yaml`。上传使用 `batch_import`，备注使用 `review_note`；批准写入使用工具名称作为操作名。
+ACL 的 `operations`（现在挂在角色上，#204）省略为空集；查看权限不隐含上传、备注或批准权限。配置见 `data/mappings/access-control.yaml`（跟踪在仓库里，随部署下发；见 docs/22 §5b）。上传使用 `batch_import`，备注使用 `review_note`；批准写入使用工具名称作为操作名。
 
 浏览器 `/bridgeflow/approval-authorize` 只接受活动原生审批的会话、调用与票据；准确操作/请求体由主机取得，浏览器不能替换。后端 `/identity/authorize-write` 同时要求主机认证和员工 JWT，再检查操作及数据范围。许可短期有效、精确内容绑定、一次使用，仅留在主机内存。原生 Allow 后才签发带许可的回执；后端消费时重新核对 ACL，模型填写的姓名不参与身份判定。
 
