@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from bridgeflow import business, column_matches
 from bridgeflow.api.batches import _visible, load_batch
 from bridgeflow.api.reviews import saved_review
-from bridgeflow.conclusions import charts, conventions
+from bridgeflow.conclusions import charts, conventions, report
 from bridgeflow.conclusions import comparison as comparison_module
 from bridgeflow.conclusions.brief import BriefBuilder, ConclusionBrief, declaration
 from bridgeflow.identity import UserIdentity, require_user
@@ -152,3 +152,31 @@ def _metric_series(spec: charts.ChartSpec, batch, user: UserIdentity | None) -> 
 
 def _recent_periods(period: str, count: int) -> list[str]:
     return [comparison_module.shift(period, offset) for offset in range(-(count - 1), 1)]
+
+
+@router.get("/conclusions/batches/{batch_id}/report")
+async def monthly_report(batch_id: str, user: Annotated[UserIdentity | None, Depends(require_user)],
+                         report_id: Annotated[str | None, Query(pattern=r"^[a-f0-9]{32}$")] = None) -> dict:
+    """The monthly report as a Word document (E13-UC04).
+
+    Generated from the brief, so it cannot say anything the page does not, and refused when
+    that brief is stale: exporting superseded conclusions makes a document that outlives the
+    data it was true of.
+    """
+    brief = await monthly_brief(batch_id, user, report_id)
+    if brief.stale:
+        raise HTTPException(409, "This brief is superseded by a newer review; rebuild it before exporting")
+    batch = _visible(load_batch(batch_id), user)
+    declared = conventions.views(batch.integration_snapshot or {})
+    used = {key for metric in brief.key_metrics for key in
+            (declaration(batch.dictionary_snapshot or {}).conventions.get(metric.metric, []))}
+    filename, payload = report.build(
+        brief.model_dump(mode="json"),
+        # Only the conventions the reported figures actually rest on; the rest are not this
+        # report's limitations (AC-2).
+        conventions=[view.model_dump(mode="json") for view in declared if not used or view.id in used],
+        case=str((batch.dictionary_snapshot or {}).get("business_review", {}).get("case", "")))
+    import base64
+
+    return {"filename": filename, "base64": base64.b64encode(payload).decode(),
+            "bound": brief.bound, "stale": False}

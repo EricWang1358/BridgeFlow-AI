@@ -103,6 +103,12 @@ try {
   assert.ok(cells.includes('—'), 'a month without a batch stays a gap in the table too')
   await shot('metric-charts')
 
+  // E13-UC04: the report downloads as a Word file generated from this same brief
+  const download = page.waitForEvent('download')
+  await target('brief-export').click()
+  const saved = await download
+  assert.match(saved.suggestedFilename(), /^月度经营结论-2024-07-.*\.docx$/)
+
   // E13-UC06 in the master view: a selected cell shows its grade
   await target('master-open').click(); await target('master-status').waitFor()
   await target('master-evidence-open').click()

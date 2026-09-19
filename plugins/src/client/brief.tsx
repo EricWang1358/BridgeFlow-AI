@@ -48,6 +48,7 @@ export function GradeMark({ grade }: { grade: Grade }) {
 export function MonthlyBrief({ batchId }: { batchId: string }) {
   const { t } = useUI()
   const [brief, setBrief] = useState<Brief | null>(null), [error, setError] = useState(''), [needsReview, setNeedsReview] = useState(false), [revision, setRevision] = useState(0)
+  const [exporting, setExporting] = useState(false), [exportError, setExportError] = useState('')
   useEffect(() => {
     const controller = new AbortController()
     setBrief(null); setError(''); setNeedsReview(false)
@@ -58,12 +59,27 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
     })
     return () => controller.abort()
   }, [batchId, revision])
+  async function exportReport() {
+    // Generated from this same brief, so the document cannot say anything this page does not.
+    setExportError(''); setExporting(true)
+    try {
+      const file = await api<{ filename: string; base64: string }>(`/conclusions/batches/${batchId}/report`)
+      const bytes = Uint8Array.from(atob(file.base64), c => c.charCodeAt(0))
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }))
+      link.download = file.filename
+      link.click()
+      URL.revokeObjectURL(link.href)
+    } catch (e) { setExportError(describeError(e, t)) } finally { setExporting(false) }
+  }
   if (needsReview) return <div className="bf-empty"><strong>{t('briefNeedsReview')}</strong>{t('briefNeedsReviewHelp')}</div>
   if (error) return <div><p role="alert" className="bf-error">{error}</p><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button></div>
   if (!brief) return <p role="status" className="bf-loading">{t('loading')}</p>
   const grades = ['G1', 'G2', 'G3', 'G4'].map(g => `${g} ${brief.grade_summary[g] ?? 0}`).join(' · ')
   return <section className="bf-brief" aria-label={t('monthlyBrief')}>
-    <div className="bf-card-head"><h3>{t('monthlyBrief')} · {brief.period}</h3><Chip status={brief.report_status} /></div>
+    <div className="bf-card-head"><h3>{t('monthlyBrief')} · {brief.period}</h3><Chip status={brief.report_status} />
+      <button data-tour-id="brief-export" disabled={brief.stale || exporting} onClick={() => void exportReport()}>{t(exporting ? 'busy' : 'exportReport')}</button></div>
+    {exportError && <p role="alert" className="bf-error">{exportError}</p>}
     {brief.stale && <div className="bf-callout" data-tone="warn"><p>{t('briefStale')}</p></div>}
     {brief.missing_departments.length > 0 && <div className="bf-callout" data-tone="warn"><h3>{t('partial')}</h3><p>{t('briefMissing')}：{brief.missing_departments.map(d => t(d)).join('、')}</p></div>}
     <p className="bf-brief-headline" role="status">
