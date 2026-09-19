@@ -21,7 +21,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 
 | UC | 中文 / English | Status | 优先级 / Priority |
 | --- | --- | --- | --- |
-| E14-UC01 | 月度对账进度清单 / Monthly close checklist | PARTIAL | Must |
+| E14-UC01 | 月度对账进度清单 / Monthly close checklist | IMPLEMENTED_OFFLINE | Must |
 | E14-UC02 | 模板下载与上月预填 / Template download with carry-over | DESIGNED | Should |
 | E14-UC03 | 提交前自检 / Self-check before submission | IMPLEMENTED_OFFLINE | Must |
 | E14-UC04 | 单部门补传生成新版本 / Replace one department's file as a new version | IMPLEMENTED_OFFLINE | Must |
@@ -30,7 +30,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 
 ## E14-UC01 — 月度对账进度清单 / Monthly close checklist
 
-**Status: PARTIAL**
+**Status: IMPLEMENTED_OFFLINE**
 
 ### 中文需求与验收
 
@@ -49,7 +49,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
   - AC-3 Given 研判状态接口超时 When 打开清单 Then 研判步骤显示「状态未知」，整体不显示「可结账」。
 - 后置：清单是只读投影；完成记录绑定批次与报告版本。
 - 依赖：E04-UC01、E06-UC03、E07-UC06、E13-UC01、E14-UC05。
-- 当前证据与缺口：批次弹窗已有「下一步」提示与笔记本状态指引（[workspace.tsx](../../plugins/src/client/workspace.tsx) `NEXT_STEP`、[state.tsx](../../plugins/src/client/state.tsx)）；没有按月、按部门的步骤清单与完成记录。
+- 当前证据与缺口（2026-09-19 第五轮）：[monthly/checklist.py](../../backend/src/bridgeflow/monthly/checklist.py) 是只读投影：步骤由字典 `monthly_close.steps` 声明（id、kind、owner_role、required），每个 kind 一个求值策略，分别读批次、总表与已保存报告；读不出来的一步为 `unknown`，且只要有必需步骤不是 `done` 就不显示「可结账」。接口 `GET /monthly/checklist?period=` 与 `POST /tools/monthly-checklist`（[api/checklist.py](../../backend/src/bridgeflow/api/checklist.py)），插件工具 `monthly_checklist`。界面在工作室状态区（[checklist.tsx](../../plugins/src/client/checklist.tsx)），每个未完成步骤带负责人角色与跳转按钮。[行为测试](../../backend/tests/test_checklist.py) 覆盖 AC-1–3 与「未声明步骤则拒绝」，[浏览器旅程](../../plugins/tests/round1-journey.mjs) 截图 `docs/evidence/round1-e13-e14/close-checklist.png`。剩余：没有「导出」步骤（E13-UC04 未实现），完成时间未持久化（D16）。
 
 ### English requirements and acceptance
 
@@ -60,7 +60,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 - Exceptions: unreadable states show “unknown”, never done; undeclared steps do not appear.
 - Acceptance: AC-1 a missing marketing file blocks review with a reason; AC-2 one open disagreement keeps the step open with a link; AC-3 an unknown review state prevents “ready to close”.
 - Postcondition: read-only projection; completion bound to batch and report versions.
-- Evidence and gap: next-step hints and notebook status guidance exist; no per-month, per-department checklist or completion record.
+- Evidence and gap (2026-09-19, round 5): `monthly/checklist.py` is a read-only projection. Steps are declared in the dictionary under `monthly_close.steps` (id, kind, owner_role, required) and each kind has one evaluator reading the batch, the master or the saved review; a step that cannot be read is `unknown`, and any required step that is not `done` withholds “ready to close”. Served by `GET /monthly/checklist?period=` and `POST /tools/monthly-checklist`, with the `monthly_checklist` tool and a studio panel that names each step's owner and opens the page that settles it. `backend/tests/test_checklist.py` covers AC-1–3 and the undeclared-steps refusal; the browser journey screenshots it. Remaining: no export step (E13-UC04 is not built) and no persisted completion time (D16).
 
 ## E14-UC02 — 模板下载与上月预填 / Template download with carry-over
 
@@ -256,6 +256,8 @@ Where the requirement left a choice open, it was decided during implementation; 
 | D12 | 版本链**正向查出**（谁从我派生），不把 `superseded_by` 写回原批次 | 「原批次不改变」是本 UC 的验收条件之一；为了写一个指针去改写冻结文件，会让「未改变」这句话需要加注释才成立。索引本来就按批次记了 `derived_from` | `periods.successors`；测试 `test_the_original_batch_its_master_and_its_report_are_unchanged` 逐字节比对原批次文件 |
 | D13 | 补传**不强制**先过自检，但补传件照样跑同一条检查链，结果落在新批次的 `intake_checks` | 自检（E14-UC03）是给填报员的事前工具，强制它会让「文件明明是对的、系统不让我交」成为新的卡点；而检查结果必须存在，否则新批次比原批次少一份记录 | `replace_department` 调用 `checks.CHAIN`；新批次 `intake_checks[department]` 被替换 |
 | D14 | 月份是否相符，以**文件自身的行**为准（按声明找到期间字段再读），表单里的月份只做第二道校验 | 表单里的月份是上传者的说法，而这个 UC 的触发场景正是「拿错了文件」。按行判断才抓得住 AC-4 | `integration.periods_in` + `resupply.periods_refusal`；测试上传 6 月文件但表单填 7 月，仍被拒 |
+| D16 | 「可结账」是**算出来的读数**，不写「已结账」记录；响应里带上它绑定的批次、报告与声明版本 | 后置条件要的是「完成记录绑定批次与报告版本」，而本 UC 没有任何授权动作。系统自己写一条没人批准的「已结账」，就是它自己做出的断言——与「无证据的结论被拒绝」是同一条原则 | `Checklist.ready_to_close` 与 `bound`；界面文案写明结账仍由人执行 |
+| D17 | 步骤**必须声明**才出现，字典没声明就拒绝整张清单而不是给一份默认流程 | 每月要走哪些步骤是公司流程；给一份看似合理的默认清单，会让人以为系统知道他们的流程 | `checklist.declared_steps` 只认 `EVALUATORS` 里有的 kind；测试 `test_a_dictionary_that_declares_no_steps_refuses_instead_of_inventing_them` |
 | D15 | 其余部门**沿用原批次的清洗结果**，不重新清洗 | 重新清洗会让没出错的部门的行号、修正记录与摘要发生变化，AC-1「其余三部门来源摘要与原批次相同」就不成立；也会把一次更正变成四次重算 | `replace_department` 只替换一个 `CleanTable`，其余原样复制；测试比对三部门 `sha256` |
 
 ## 发布与状态维护 / Release and status maintenance

@@ -57,6 +57,17 @@ rollups:
   advance: sum
   collection_gap: sum
   contract_price: average
+# 月度对账的步骤由公司流程决定，必须声明（E14-UC01）：没有声明的步骤不会出现，
+# 代码不替公司发明流程。owner_role 是本公司的角色名；required 为 false 的步骤不挡「可结账」。
+monthly_close:
+  steps:
+  - {id: files_submitted, kind: departments_submitted, owner_role: 部门填报员, required: true}
+  - {id: intake_accepted, kind: intake_accepted, owner_role: 部门填报员, required: true}
+  - {id: quarantine_cleared, kind: quarantine_cleared, owner_role: 月度汇总负责人, required: true}
+  - {id: open_items_cleared, kind: master_open_items, owner_role: 月度汇总负责人, required: true}
+  - {id: review_validated, kind: review_validated, owner_role: 各部门负责人, required: true}
+  - {id: brief_ready, kind: brief_ready, owner_role: 月度汇总负责人, required: true}
+
 business_review:
   case: 模拟商砼公司 2024-07 月度对账（业务方 v2 模板，虚构数据）
   inputs:
