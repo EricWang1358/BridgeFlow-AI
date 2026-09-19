@@ -6,8 +6,10 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
 import { api, formatDateTime, navigate, portalLoginUrl, route, startReview, takeRouteError, useUI, type Summary, describeError } from './ui.ts'
-import { ImportForm, Chip, ResupplyForm } from './workspace.tsx'
-import { CloseChecklist, OpenItemInbox } from './checklist.tsx'
+import { ImportForm, Chip } from './workspace.tsx'
+import { TasksView } from './tasks.tsx'
+import { DataView } from './data.tsx'
+import { RecordsView } from './records.tsx'
 import { FeishuImport, FeishuUpload, WikiFileUpload } from './feishu-picker.tsx'
 import { Quotation } from './quotation.tsx'
 import { Handoff } from './handoff.tsx'
@@ -15,7 +17,6 @@ import { MasterTable } from './master.tsx'
 import { MonthlyBrief } from './brief.tsx'
 import { BusinessReview, type Review } from './review.tsx'
 import { projectAudit, type AuditEvent } from './audit.ts'
-import { WorkflowProgress } from './workflow-progress.tsx'
 import { useNotebook } from './notebook-session.tsx'
 import { PanelResizers, useNativeSidebar } from './shell-layout.tsx'
 import { shellStyle } from './shell-style.ts'
@@ -42,7 +43,6 @@ function Shell({ ctx }: { ctx: Context }) {
   const [preview, setPreview] = useState<Preview | null>(null), [report, setReport] = useState<Review | null>(null), [offset, setOffset] = useState(0)
   const [panel, setPanel] = useState(''), [copied, setCopied] = useState(false)
   const navigation = useNativeSidebar(ctx), notebook = useNotebook(ctx, selected, batchId)
-  const showState = selected.view === 'state'
   const [expanded, setExpanded] = useState(false)
   const [hiddenSources, setHiddenSources] = useState(false), [hiddenStudio, setHiddenStudio] = useState(false)
   const viewport = useSyncExternalStore(viewportSubscribe, () => window.innerWidth)
@@ -53,6 +53,15 @@ function Shell({ ctx }: { ctx: Context }) {
   }, [hiddenSources, hiddenStudio, viewport])
   const importer = useRef<HTMLDialogElement>(null), viewer = useRef<HTMLDialogElement>(null), feishuUploader = useRef<HTMLDialogElement>(null)
   const [feishuNotice, setFeishuNotice] = useState('')
+  // One count for the tasks destination, read from the same projection its page shows.
+  const [openItems, setOpenItems] = useState(0)
+  useEffect(() => {
+    if (!summary?.period) { setOpenItems(0); return }
+    const controller = new AbortController()
+    void api<{ total: number }>(`/monthly/inbox?period=${encodeURIComponent(summary.period)}`, { signal: controller.signal })
+      .then(value => setOpenItems(value.total)).catch(() => setOpenItems(0))
+    return () => controller.abort()
+  }, [summary?.period, batchId, revision])
   useEffect(() => {
     document.body.toggleAttribute('data-bf-nav', navigation.open)
     const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') { navigation.close(); setPanel('') } }
@@ -89,11 +98,19 @@ function Shell({ ctx }: { ctx: Context }) {
     void task?.catch(e => { if (!signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
   }, [batchId, selected.source, selected.report, selected.view, offset, revision])
-  const viewing = ['discovery', 'quotation', 'handoff', 'integration', 'brief', 'source', 'artifact'].includes(selected.view ?? '')
+  const viewing = ['discovery', 'quotation', 'handoff', 'integration', 'brief', 'source', 'artifact', 'tasks', 'data', 'records'].includes(selected.view ?? '')
   useEffect(() => { if (viewing) { setPanel('studio'); setHiddenStudio(false); ctx.layout.closeDetails() } else viewer.current?.close() }, [viewing, selected.source, selected.report, selected.view, ctx])
   const openSource = (source: Source) => { setError(''); navigate({ batch: batchId, view: 'source', source: source.id }) }
-  const closePreview = () => { viewer.current?.close(); navigate({ ...(batchId ? { batch: batchId } : {}), kind:notebook.kind, view: 'state' }) }
-  const previewContent = selected.view === 'discovery' ? <Discovery /> : selected.view === 'quotation' ? <Quotation /> : selected.view === 'handoff' ? <Handoff /> : selected.view === 'integration' && batchId ? <MasterTable batchId={batchId} /> : selected.view === 'brief' && batchId ? <MonthlyBrief batchId={batchId} /> : preview ? <section aria-label={t('sourcePreview')}>
+  const closePreview = () => { viewer.current?.close(); navigate({ ...(batchId ? { batch: batchId } : {}), kind:notebook.kind }) }
+  const previewContent = selected.view === 'tasks' && batchId
+    ? <TasksView batchId={batchId} summary={summary} audit={audit} savedReportStatus={artifacts[0]?.status}
+        notebookKind={notebook.kind} onImport={() => importer.current?.showModal()} onRefresh={() => setRevision(n => n + 1)} />
+    : selected.view === 'data' && batchId
+      ? <DataView batchId={batchId} summary={summary} sources={sources}
+          onImport={() => importer.current?.showModal()} onRefresh={() => setRevision(n => n + 1)} />
+      : selected.view === 'records' && batchId
+        ? <RecordsView batchId={batchId} summary={summary} artifacts={artifacts} language={language} />
+        : selected.view === 'discovery' ? <Discovery /> : selected.view === 'quotation' ? <Quotation /> : selected.view === 'handoff' ? <Handoff /> : selected.view === 'integration' && batchId ? <MasterTable batchId={batchId} /> : selected.view === 'brief' && batchId ? <MonthlyBrief batchId={batchId} /> : preview ? <section aria-label={t('sourcePreview')}>
     <h3>{preview.filename}</h3><p className="bf-hint">{t('parsedOriginal')} {preview.sheet}</p>
     <div className="bf-source-table"><table><thead><tr><th>{t('sourceRow')}</th>{preview.columns.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>
       <tbody>{preview.rows.map((row, i) => <tr key={preview.offset + i}><th>{preview.row_numbers?.[i] ?? preview.offset + i + 2}</th>{row.map((cell, j) => <td key={j}>{cell === null ? '—' : String(cell)}</td>)}</tr>)}</tbody></table></div>
@@ -140,21 +157,23 @@ function Shell({ ctx }: { ctx: Context }) {
         </button></li>)}</ul>
         {!sources.length && <div className="bf-shell-empty"><span aria-hidden="true">▤</span><strong>{t('emptySources')}</strong><p>{t('emptySourcesHelp')}</p><p>{t('sampleNotebookHelp')}</p></div>}
         <button data-tour-id="sample" disabled={notebook.busy || !notebook.loaded} onClick={notebook.sample}>{t('sampleNotebook')}</button>
-        <details className="bf-existing"><summary>{t('existing')}</summary><form onSubmit={e => { e.preventDefault(); const form = new FormData(e.currentTarget); navigate({ batch: String(form.get('batch')), view: 'state' }) }}><input name="batch" aria-label={t('batchId')} pattern="[a-f0-9]{32}" required/><button>{t('open')}</button></form></details>
+        <details className="bf-existing"><summary>{t('existing')}</summary><form onSubmit={e => { e.preventDefault(); const form = new FormData(e.currentTarget); navigate({ batch: String(form.get('batch')), view: 'tasks' }) }}><input name="batch" aria-label={t('batchId')} pattern="[a-f0-9]{32}" required/><button>{t('open')}</button></form></details>
       </div>
     </aside>
     <aside className="bf-shell-pane bf-shell-studio bf-state" data-mobile-open={panel === 'studio'} aria-label={t('studio')}>
       <header><h2>{t('studio')}</h2><button className="bf-mobile-close" onClick={() => setPanel('')}>{t('close')}</button></header>
       <div className="bf-shell-scroll">
         <div className="bf-studio-tools" aria-label={t('tools')}>
-          <button data-tour-id="review-start" data-tone="blue" disabled={!summary || busy} onClick={async () => { if (!summary) return; setBusy(true); setError(''); try { await startReview(batchId, summary.period) } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) } }}><span aria-hidden="true">◈</span>{t('startReview')}<span aria-hidden="true">›</span></button>
+          {/* Four destinations, named after what a person is doing, not after our modules.
+              Everything that used to have two entries now has exactly one, inside one of these. */}
+          <button data-tour-id="state-open" data-tone="pink" aria-pressed={selected.view === 'tasks'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'tasks' })}><span aria-hidden="true">◷</span>{t('monthlyTasks')}<span className="bf-badge">{openItems}</span><span aria-hidden="true">›</span></button>
+          <button data-tone="blue" aria-pressed={selected.view === 'data'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'data' })}><span aria-hidden="true">▤</span>{t('dataWorkspace')}<span aria-hidden="true">›</span></button>
+          <button data-tone="green" aria-pressed={selected.view === 'brief'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'brief' })}><span aria-hidden="true">◎</span>{t('monthlyBrief')}<span aria-hidden="true">›</span></button>
+          <button data-tone="teal" aria-pressed={selected.view === 'records'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'records' })}><span aria-hidden="true">⇄</span>{t('records')}<span aria-hidden="true">›</span></button>
+          <div className="bf-studio-group">{t('otherWorkspaces')}</div>
           <button data-tour-id="quotation-open" data-tone="gold" aria-pressed={selected.view === 'quotation'} onClick={() => { navigate({ ...(batchId ? { batch: batchId } : {}), view: 'quotation' }); window.dispatchEvent(new Event('bridgeflow:quotation-opened')) }}><span aria-hidden="true">▧</span>{t('quotationWorkspace')}<span aria-hidden="true">›</span></button>
-          <button data-tone="teal" aria-pressed={selected.view === 'discovery'} onClick={() => navigate({ view: 'discovery' })}><span aria-hidden="true">▤</span>{t('discoveryWorkspace')}<span aria-hidden="true">›</span></button>
+          <button data-tone="teal" aria-pressed={selected.view === 'discovery'} onClick={() => navigate({ view: 'discovery' })}><span aria-hidden="true">▥</span>{t('discoveryWorkspace')}<span aria-hidden="true">›</span></button>
           <button data-tone="teal" aria-pressed={selected.view === 'handoff'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'handoff' })}><span aria-hidden="true">⇄</span>{t('handoffWorkspace')}<span aria-hidden="true">›</span></button>
-          <button data-tour-id="master-open" data-tone="blue" aria-pressed={selected.view === 'integration'} disabled={!summary} onClick={() => { navigate({ batch: batchId, view: 'integration' }); window.dispatchEvent(new Event('bridgeflow:master-opened')) }}><span aria-hidden="true">▥</span>{t('integrationMaster')}<span aria-hidden="true">›</span></button>
-          <button data-tone="pink" aria-pressed={selected.view === 'brief'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'brief' })}><span aria-hidden="true">◎</span>{t('monthlyBrief')}<span aria-hidden="true">›</span></button>
-          <button data-tone="green" aria-pressed={selected.view === 'master'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'master' })}><span aria-hidden="true">▦</span>{t('master')}<span aria-hidden="true">›</span></button>
-          <button data-tour-id="state-open" data-tone="pink" aria-pressed={showState && !viewing} onClick={() => { closePreview(); setHiddenStudio(false); setPanel('studio') }}><span aria-hidden="true">◷</span>{t('state')}<span aria-hidden="true">›</span></button>
         </div>
         {!summary && <p className="bf-hint">{t('studioStartHelp')}</p>}
         {(error || notebook.error) && <p role="alert" className="bf-error">{error || notebook.error}{notebook.error && <button onClick={notebook.retry}>{t('refresh')}</button>}</p>}
@@ -168,10 +187,21 @@ function Shell({ ctx }: { ctx: Context }) {
           {artifactTotal > 50 && <div className="bf-actions"><button disabled={!artifactOffset} onClick={() => setArtifactOffset(Math.max(0, artifactOffset - 50))}>{t('previous')}</button><button disabled={artifactOffset + artifacts.length >= artifactTotal} onClick={() => setArtifactOffset(artifactOffset + 50)}>{t('next')}</button></div>}
         </section>
         {viewing && <section className="bf-inline-preview" aria-label={t('preview')}><header><h3>{t('preview')}</h3><button onClick={() => { setExpanded(true); viewer.current?.showModal() }}>{t('expandPreview')}</button><button onClick={closePreview}>{t('close')}</button></header>{previewContent}</section>}
-        {!viewing && showState && <section className="bf-studio-state" aria-label={t('state')}><header><h3>{t('state')}</h3><button onClick={()=>navigate(batchId?{batch:batchId}:{})}>{t('close')}</button></header><p className="bf-hint">{t('studioStateHelp')}</p>{summary && <CloseChecklist period={summary.period} batchId={batchId} onImport={() => importer.current?.showModal()}/>}{summary && <OpenItemInbox period={summary.period} batchId={batchId}/>}{!!summary?.superseded_by?.length && <div className="bf-callout" data-tone="warn"><h3>{t('superseded')}</h3><p>{t('supersededHint')}</p><div className="bf-actions" style={{ marginBottom: 0 }}><button onClick={() => navigate({ batch: summary.superseded_by!.at(-1)!, view: 'state' })}>{t('openNewest')}</button></div></div>}<WorkflowProgress kind={notebook.kind} batchId={batchId} summary={summary} audit={audit} savedReportStatus={artifacts[0]?.status}/></section>}
+        {!viewing && summary && <section className="bf-studio-facts" aria-label={t('batchFacts')}>
+          <h3>{t('batchFacts')}</h3>
+          <p className="bf-hint">{t('batchFactsHint')}</p>
+          <dl className="bf-facts">
+            <dt>{t('masterCompleteRows')}</dt><dd>{summary.master_rows}</dd>
+            <dt>{t('openItems')}</dt><dd>{openItems}</dd>
+            <dt>{t('mappings')}</dt><dd>{summary.unresolved}</dd>
+            <dt>{t('declarationSource')}</dt><dd><code className="bf-mono">{summary.dictionary}</code></dd>
+          </dl>
+          {!!summary.superseded_by?.length && <div className="bf-callout" data-tone="warn"><h3>{t('superseded')}</h3><p>{t('supersededHint')}</p>
+            <div className="bf-actions" style={{ marginBottom: 0 }}><button onClick={() => navigate({ batch: summary.superseded_by!.at(-1)!, view: 'tasks' })}>{t('openNewest')}</button></div></div>}
+        </section>}
       </div>
     </aside>
-    <dialog data-tour-surface="import" className="bf-panel bf-source-import" aria-label={t('addSources')} ref={importer}><header className="bf-panel-head"><h2>{t('addSources')}</h2><button onClick={() => importer.current?.close()}>{t('close')}</button></header><div className="bf-panel-body"><ImportForm onSaved={batch => { importer.current?.close(); navigate({ batch: batch.batch_id, view: 'state' }); setRevision(n => n + 1) }}/>{summary && <ResupplyForm batch={summary} onDerived={id => { navigate({ batch: id, view: 'state' }); setRevision(n => n + 1) }}/>}<details className="bf-feishu"><summary>{t('feishuPick')}</summary><FeishuImport onSaved={batch => { importer.current?.close(); navigate({ batch: batch.batch_id, view: 'state' }); setRevision(n => n + 1) }}/></details><details className="bf-feishu"><summary>{t('feishuUploadFileWiki')}</summary><WikiFileUpload /></details></div><TourLayer surface="import"/></dialog>
+    <dialog data-tour-surface="import" className="bf-panel bf-source-import" aria-label={t('addSources')} ref={importer}><header className="bf-panel-head"><h2>{t('addSources')}</h2><button onClick={() => importer.current?.close()}>{t('close')}</button></header><div className="bf-panel-body"><ImportForm onSaved={batch => { importer.current?.close(); navigate({ batch: batch.batch_id, view: 'data' }); setRevision(n => n + 1) }}/><details className="bf-feishu"><summary>{t('feishuPick')}</summary><FeishuImport onSaved={batch => { importer.current?.close(); navigate({ batch: batch.batch_id, view: 'data' }); setRevision(n => n + 1) }}/></details><details className="bf-feishu"><summary>{t('feishuUploadFileWiki')}</summary><WikiFileUpload /></details></div><TourLayer surface="import"/></dialog>
     <dialog className="bf-panel bf-feishu-upload-dialog" aria-label={t('feishuUpload')} ref={feishuUploader}><header className="bf-panel-head"><h2>{t('feishuUpload')}</h2><button onClick={() => feishuUploader.current?.close()}>{t('close')}</button></header><div className="bf-panel-body">{batchId && <FeishuUpload batchId={batchId} reportId={selected.report ?? artifacts[0]?.report_id ?? null} onDone={name => { feishuUploader.current?.close(); setFeishuNotice(`${t('feishuUploaded')} · ${name}`) }}/>}</div></dialog>
     <dialog data-tour-surface="viewer" className="bf-panel bf-expanded-preview" aria-label={t('preview')} ref={viewer} onClose={() => setExpanded(false)}><header className="bf-panel-head"><h2>{t('preview')}</h2><button onClick={() => viewer.current?.close()}>{t('close')}</button></header><div className="bf-panel-body">{viewing && expanded && previewContent}</div><TourLayer surface="viewer"/></dialog>
   </>

@@ -1,9 +1,10 @@
 export type Track = 'core' | 'review' | 'quotation'
-export type Step = { id: string; target: string; event?: string; pane?: 'sources' | 'studio'; view?: 'integration' | 'source' | 'quotation' }
+export type Step = { id: string; target: string; event?: string; pane?: 'sources' | 'studio'
+  view?: 'integration' | 'source' | 'quotation' | 'data' | 'tasks' }
 export const tours: Record<Track, Step[]> = {
   core: [
     { id: 'sample', target: 'sample', event: 'sample', pane: 'sources' },
-    { id: 'master', target: 'master-open', event: 'master', pane: 'studio' },
+    { id: 'master', target: 'master-open', event: 'master', pane: 'studio', view: 'data' },
     { id: 'result', target: 'master-status', pane: 'studio', view: 'integration' },
     { id: 'issues', target: 'master-issues', event: 'issues', pane: 'studio', view: 'integration' },
     { id: 'questionResult', target: 'master-questions', pane: 'studio', view: 'integration' },
@@ -16,7 +17,7 @@ export const tours: Record<Track, Step[]> = {
     { id: 'saved', target: 'notebook-save', event: 'saved' },
   ],
   review: [
-    { id: 'reviewIntro', target: 'review-start', pane: 'studio' },
+    { id: 'reviewIntro', target: 'review-start', pane: 'studio', view: 'tasks' },
     { id: 'reviewState', target: 'state-open', pane: 'studio' },
     { id: 'reviewHistory', target: 'artifacts', pane: 'studio' },
   ],

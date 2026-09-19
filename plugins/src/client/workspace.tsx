@@ -61,7 +61,6 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
       <h3>{t('stepFiles')}</h3>
       <p className="bf-hint">{t('stepFilesHint')} {t('uploadHelp')}</p>
       <div className="bf-files">{departments.map(name => <FileRow key={name} name={name} />)}</div>
-      <TemplateDownload period={period} />
       <p className="bf-hint">{t('selfCheckHelp')}</p>
       <button type="button" disabled={busy} onClick={() => void selfCheck()}>{t('selfCheck')}</button>
       {reports.map(report => <div key={report.department} className="bf-callout" data-tone={report.accepts ? 'ok' : 'warn'} role="status">
@@ -86,9 +85,8 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
  * The carry-over is a draft, not a measurement: each prefilled cell carries the period it came
  * from and asks to be checked, and the instructions sheet repeats it in words.
  */
-export function TemplateDownload({ period }: { period: string }) {
+export function TemplateDownload({ period, department }: { period: string; department: string }) {
   const { t } = useUI()
-  const [department, setDepartment] = useState<string>(departments[0])
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [note, setNote] = useState('')
   async function download() {
     setError(''); setNote(''); setBusy(true)
@@ -105,10 +103,8 @@ export function TemplateDownload({ period }: { period: string }) {
     } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
   }
   return <div className="bf-template-download">
-    <p className="bf-hint">{t('templateDownloadHelp')}</p>
-    <label>{t('department')} <select value={department} onChange={e => setDepartment(e.target.value)}>
-      {departments.map(name => <option key={name} value={name}>{t(name)}</option>)}</select></label>
-    <button type="button" disabled={busy || !period} onClick={() => void download()}>{t(busy ? 'busy' : 'templateDownload')}</button>
+    <button type="button" disabled={busy || !period} title={t('templateDownloadHelp')}
+      onClick={() => void download()}>{t(busy ? 'busy' : 'templateDownload')}</button>
     {note && <p className="bf-hint" role="status">{note}</p>}
     {error && <p role="alert" className="bf-error">{error}</p>}
   </div>
@@ -174,14 +170,18 @@ export function DataWorkspace() {
   function close() {
     dialog.current?.close()
     const value = route()
-    if (value.batch && value.view !== 'state') navigate({ batch: value.batch, view: 'state' })
+    if (value.batch && value.view !== 'data') navigate({ batch: value.batch, view: 'data' })
   }
   useEffect(() => {
     let abort: AbortController | undefined
     const readRoute = () => {
       const value = route()
       abort?.abort(); setBusy(false)
-      if (['discovery', 'quotation', 'handoff', 'integration', 'brief', 'source', 'artifact'].includes(value.view ?? '')) { dialog.current?.close(); return }
+      // This panel owns the row-level tables (cleaning, mappings, columns, quarantine). The
+      // destinations own everything else, so any of their routes closes it rather than
+      // opening a second window onto the same batch.
+      if (['discovery', 'quotation', 'handoff', 'integration', 'brief', 'source', 'artifact',
+           'tasks', 'data', 'records'].includes(value.view ?? '')) { dialog.current?.close(); return }
       if (!value.batch || value.view === 'state' || !/^[a-f0-9]{32}$/.test(value.batch)) return
       pendingBatch.current?.abort(); abort = new AbortController(); pendingBatch.current = abort; const signal = abort.signal
       dialog.current?.showModal(); setBatchId(value.batch); setReportId(value.report ?? '')
@@ -286,7 +286,6 @@ export function DataWorkspace() {
           </div>
         </div>}
         {batch.derived_from && <p className="bf-hint">{t('derivedFrom')}: <code className="bf-mono">{batch.derived_from}</code></p>}
-        <ResupplyForm batch={batch} onDerived={id => selectBatch(id)} />
         <div className="bf-stats">{batch.departments.map(d => <div className="bf-stat" key={d.department}>
           <b>{d.rows}</b><span>{t(d.department)} · {d.corrections} {t('corrections')} / {d.quarantined} {t('quarantine')}</span>
         </div>)}</div>
@@ -336,7 +335,8 @@ export function DataWorkspace() {
  * Deliberately not a second import form: the period and the other departments come from the
  * batch being corrected, so the only things to say are which department, which file and why.
  */
-export function ResupplyForm({ batch, onDerived }: { batch: Summary; onDerived: (batchId: string) => void }) {
+export function ResupplyForm({ batch, department, onDerived }:
+  { batch: Summary; department: string; onDerived: (batchId: string) => void }) {
   const { t } = useUI()
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [result, setResult] = useState<Resupply | null>(null)
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -348,7 +348,7 @@ export function ResupplyForm({ batch, onDerived }: { batch: Summary; onDerived: 
     body.set('file', file); body.set('sheet', String(form.get('sheet') ?? '')); body.set('header_row', String(form.get('header_row') ?? ''))
     setBusy(true)
     try {
-      const derived = await api<Resupply>(`/batches/${batch.batch_id}/departments/${String(form.get('department'))}`, { method: 'POST', body })
+      const derived = await api<Resupply>(`/batches/${batch.batch_id}/departments/${department}`, { method: 'POST', body })
       setResult(derived)
       onDerived(derived.batch.batch_id)
     } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
@@ -357,9 +357,6 @@ export function ResupplyForm({ batch, onDerived }: { batch: Summary; onDerived: 
     <summary>{t('resupply')}</summary>
     <p className="bf-hint">{t('resupplyHelp')}</p>
     <form onSubmit={submit}>
-      <label>{t('resupplyDepartment')} <select name="department" defaultValue={batch.departments[0]?.department}>
-        {batch.departments.map(d => <option key={d.department} value={d.department}>{t(d.department)}</option>)}
-      </select></label>
       <label>{t('resupplyReason')} <input name="reason" required maxLength={300} /></label>
       <label>{t('file')} <input type="file" name="file" accept=".csv,.xlsx" required /></label>
       <details className="bf-hint"><summary>{t('sheetLayout')}</summary>
