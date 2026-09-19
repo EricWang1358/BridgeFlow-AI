@@ -276,3 +276,15 @@ def test_workflow_departments_union_across_roles(configured):
     configured[0]["spc_production"] = {"ou_bob": "member"}
     configured[0]["spc_master"] = {"ou_bob": "member"}
     assert workflow_departments_for("ou_bob") == {"生产部", "物资部"}
+
+
+def test_the_repository_access_control_file_ships_valid():
+    """The tracked file is what deploy.sh puts on the instance (docs/22 §5b).
+
+    No monkeypatch: this reads the default path deliberately, so an invalid
+    policy edit fails review instead of turning the deployed data plane into
+    503s. Nothing here talks to Feishu — structure() is pure validation.
+    """
+    assert access_resolver.access_path().is_file()
+    declared = access_resolver.structure()
+    assert set(declared["spaces"]["departments"]) == access_resolver.KNOWN_DEPARTMENTS
