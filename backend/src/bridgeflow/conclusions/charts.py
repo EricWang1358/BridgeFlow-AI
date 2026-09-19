@@ -49,6 +49,9 @@ class Point(BaseModel):
     #: For a waterfall: whether the part adds to or subtracts from the total.
     part: str = ""
     breach: bool = False
+    #: The evidence grade of this point's own number (E13-UC06), where it has one.
+    grade: str = ""
+
 
 
 class Chart(BaseModel):
@@ -60,6 +63,10 @@ class Chart(BaseModel):
     subject: str = ""
     unit: str = ""
     points: list[Point] = Field(default_factory=list)
+    #: The grade of what this chart draws, when it is the same for every point (a declared
+    #: metric is only as strong as the conventions it rests on).
+    grade: str = ""
+
     threshold: float | None = None
     threshold_label: str = ""
     reason: str = ""
@@ -81,15 +88,27 @@ def _threshold(dictionary: dict | None, check_id: str) -> tuple[float | None, st
     return None, ""
 
 
-def trend(spec: ChartSpec, dictionary: dict | None, series: list[dict]) -> Chart:
+def metric_grade(dictionary: dict | None, metric: str, confirmed: set[str] | None = None) -> str:
+    """A declared metric is a formula (G2) unless it rests on a convention nobody confirmed (G3)."""
+    conventions = ((dictionary or {}).get("business_review") or {}).get("brief", {}).get("conventions", {}).get(metric, [])
+    unconfirmed = [key for key in conventions if key not in (confirmed or set())]
+    return "G3" if unconfirmed else "G2"
+
+
+def trend(spec: ChartSpec, dictionary: dict | None, series: list[dict],
+          confirmed: set[str] | None = None) -> Chart:
     """`series` is one entry per period, newest last: {period, batch_id, value, unit}."""
     unit = next((str(item.get("unit", "")) for item in series if item.get("value") is not None), "")
     points = [Point(label=str(item["period"]), period=str(item["period"]), batch_id=str(item.get("batch_id", "")),
                     value=None if item.get("value") is None else float(item["value"])) for item in series]
     measured = [p for p in points if p.value is not None]
     threshold, when = _threshold(dictionary, spec.threshold_from_check or spec.metric)
+    grade = metric_grade(dictionary, spec.metric, confirmed)
     chart = Chart(id=spec.id, kind="trend", subject=spec.metric, unit=unit, points=points,
-                  threshold=threshold, threshold_label=when)
+                  threshold=threshold, threshold_label=when, grade=grade)
+    for point in points:
+        if point.value is not None:
+            point.grade = grade
     if len(measured) < 2:
         chart.status = "needs_more_periods"
         chart.reason = "A trend needs at least two periods with a batch; a single point is not a line"
@@ -122,7 +141,7 @@ def variance(spec: ChartSpec, comparison: Any, *, batch_id: str = "", period: st
 
 
 def entity_bars(spec: ChartSpec, master: Any, breaches: list[Any] | None = None,
-                axis: list[int] | None = None) -> Chart:
+                axis: list[int] | None = None, grades: list[dict] | None = None) -> Chart:
     """This period's value per entity, largest first. Only declared fields; no ranking invented.
 
     `axis` is the entity part of the master key (E13-UC02 D6): a breach is reported against the
@@ -135,12 +154,13 @@ def entity_bars(spec: ChartSpec, master: Any, breaches: list[Any] | None = None,
         return chart
     breached = {tuple(b.key) for b in (breaches or []) if getattr(b, "field", "") == spec.field}
     rows = []
-    for row in master.rows:
+    for index, row in enumerate(master.rows):
         value = row.values.get(spec.field)
         if isinstance(value, int | float):
             entity = tuple(row.key[i] for i in axis if i < len(row.key)) if axis else tuple(row.key)
+            cell = ((grades or [])[index] if grades and index < len(grades) else {}).get(spec.field) or {}
             rows.append(Point(label=" · ".join(row.key[:2]), value=float(value), key=list(row.key),
-                              breach=entity in breached))
+                              breach=entity in breached, grade=str(cell.get("grade") or "")))
     rows.sort(key=lambda p: abs(p.value or 0), reverse=True)
     chart.points = rows[:spec.top]
     if not rows:

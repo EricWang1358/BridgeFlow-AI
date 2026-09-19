@@ -21,7 +21,7 @@ import { PanelResizers, useNativeSidebar } from './shell-layout.tsx'
 import { shellStyle } from './shell-style.ts'
 
 type Source = { id: string; filename: string; sheet: string; preview_available: boolean; total?: number; sha256?: string }
-type Artifact = { report_id: string; period: string; status: string; created_at: number }
+type Artifact = { report_id: string; period: string; status: string; created_at: number; kind?: string }
 type Preview = { filename: string; sheet: string; sha256: string; columns: string[]; rows: unknown[][]; row_numbers?: number[]; total: number; offset: number }
 const emptyWindow: SessionEventWindow = { entries: [], hasMore: false, revision: 0, change: { kind: 'replace', entries: [] } }
 const viewportSubscribe = (fn: () => void) => { window.addEventListener('resize', fn); return () => window.removeEventListener('resize', fn) }
@@ -161,7 +161,9 @@ function Shell({ ctx }: { ctx: Context }) {
         <section data-tour-id="artifacts" className="bf-artifacts" aria-label={t('artifacts')}><header><h3>{t('artifacts')} <span className="bf-badge">{artifactTotal + (summary?.master_rows ? 1 : 0)}</span></h3>{artifacts.length > 0 && <button aria-label={t('feishuUpload')} title={t('feishuUpload')} onClick={() => { setFeishuNotice(''); feishuUploader.current?.showModal() }}>⇪</button>}<button aria-label={t('refreshArtifacts')} onClick={() => setRevision(n => n + 1)}>↻</button></header>
           {feishuNotice && <p className="bf-hint" role="status">{feishuNotice}</p>}
           {!!summary?.master_rows && <button className="bf-artifact" data-kind="master" onClick={() => navigate({ batch: batchId, view: 'master' })}><span aria-hidden="true">▦</span><span><strong>{summary.period} · {t('master')}</strong><small>{summary.master_rows} {t('rows')}</small><Chip status={summary.status}/></span><span aria-hidden="true">↗</span></button>}
-          {artifacts.map(item => <button className="bf-artifact" data-kind="review" key={item.report_id} aria-pressed={selected.report === item.report_id} onClick={() => navigate({ batch: batchId, view: 'artifact', report: item.report_id })}><span aria-hidden="true">▤</span><span><strong>{item.period} · {t('review')}</strong><small>{formatDateTime(item.created_at * 1000, language)}</small><Chip status={item.status}/></span><span aria-hidden="true">↗</span></button>)}
+          {artifacts.map(item => item.kind === 'brief'
+            ? <button className="bf-artifact" data-kind="brief" key={`brief-${item.report_id}`} aria-pressed={selected.view === 'brief' && selected.report === item.report_id} onClick={() => navigate({ batch: batchId, view: 'brief', report: item.report_id })}><span aria-hidden="true">◎</span><span><strong>{item.period} · {t('monthlyBrief')}</strong><small>{formatDateTime(item.created_at * 1000, language)}</small><Chip status={item.status}/></span><span aria-hidden="true">↗</span></button>
+            : <button className="bf-artifact" data-kind="review" key={item.report_id} aria-pressed={selected.report === item.report_id} onClick={() => navigate({ batch: batchId, view: 'artifact', report: item.report_id })}><span aria-hidden="true">▤</span><span><strong>{item.period} · {t('review')}</strong><small>{formatDateTime(item.created_at * 1000, language)}</small><Chip status={item.status}/></span><span aria-hidden="true">↗</span></button>)}
           {!artifacts.length && !summary?.master_rows && <p className="bf-hint">{t('emptyArtifacts')}</p>}
           {artifactTotal > 50 && <div className="bf-actions"><button disabled={!artifactOffset} onClick={() => setArtifactOffset(Math.max(0, artifactOffset - 50))}>{t('previous')}</button><button disabled={artifactOffset + artifacts.length >= artifactTotal} onClick={() => setArtifactOffset(artifactOffset + 50)}>{t('next')}</button></div>}
         </section>

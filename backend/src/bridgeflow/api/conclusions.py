@@ -111,15 +111,21 @@ async def metric_charts(batch_id: str, user: Annotated[UserIdentity | None, Depe
                 master_for=lambda other: _master_or_none(other, user), visible=_visibility(user))
         except HTTPException:
             comparison = None
+    confirmed = conventions.confirmed(batch.integration_snapshot or {})
+    cell_grades = []
+    if master is not None and any(spec.kind == "entity_bars" for spec in specs):
+        from bridgeflow.conclusions.grades import grade_master
+        cell_grades, _summary = grade_master([row.provenance for row in master.rows], frozenset(confirmed))
     built = []
     for spec in specs:
         if spec.kind == "trend":
-            built.append(charts.trend(spec, dictionary, _metric_series(spec, batch, user)))
+            built.append(charts.trend(spec, dictionary, _metric_series(spec, batch, user), confirmed))
         elif spec.kind == "variance":
             built.append(charts.variance(spec, comparison, batch_id=batch_id, period=batch.period))
         else:
             built.append(charts.entity_bars(spec, master, comparison.breaches if comparison else [],
-                                            comparison_module.entity_axis(batch.integration_snapshot)))
+                                            comparison_module.entity_axis(batch.integration_snapshot),
+                                            cell_grades))
     return {"batch_id": batch_id, "period": batch.period,
             "charts": [chart.model_dump(mode="json") for chart in built]}
 

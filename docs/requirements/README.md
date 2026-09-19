@@ -54,8 +54,8 @@ As of 2026-09-17, this directory contains **14 epics and 85 UCs**: 3 epics / 21 
 | Status | UC 数 / Count |
 | --- | ---: |
 | IMPLEMENTED | 38 |
-| IMPLEMENTED_OFFLINE | 12 |
-| PARTIAL | 21 |
+| IMPLEMENTED_OFFLINE | 14 |
+| PARTIAL | 19 |
 | DESIGNED | 6 |
 | BLOCKED_EXTERNAL | 3 |
 | DEFERRED | 5 |

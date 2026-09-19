@@ -1,5 +1,8 @@
 """The open-item inbox (E14-UC05): one list of what is still waiting, and on whom."""
+import json
+
 import pytest
+from conftest import receipt
 from fastapi.testclient import TestClient
 from test_conclusions import finalize
 from test_resupply import LABELS, XLSX, original
@@ -111,3 +114,30 @@ def test_the_captain_sees_counts_by_kind_and_department(client):
     result = client.post("/tools/monthly-inbox", json={"period": "2024-07"}).json()
     assert result["by_kind"] and result["by_department"]
     assert "decides nothing" in result["next_step"]
+
+
+def test_a_broken_provenance_chain_reaches_the_inbox(client):
+    """E13-UC06 AC-3: a cell nobody can trace becomes somebody's item (round 11)."""
+    batch = client.post("/batches/demo").json()["batch_id"]
+    items = {i["subject"]: i for i in inbox(client)["items"] if i["kind"] == "missing_provenance"}
+    master = client.get(f"/integration/batches/{batch}").json()
+    broken = {field for row in master["grades"] for field, result in row.items() if result["grade"] is None}
+    # The demo case's disagreement leaves those cells empty and untraceable; every such field
+    # is somebody's item, once per field rather than once per cell.
+    assert set(items) == broken and broken
+    for field, item in items.items():
+        cells = sum(1 for row in master["grades"] if row[field]["grade"] is None)
+        assert item["detail"].startswith(f"{cells} cell(s)") and item["next_view"] == "integration"
+
+
+def test_a_confirmed_convention_is_not_reported_as_a_gap(client):
+    batch = client.post("/batches/demo").json()["batch_id"]
+    before = len([i for i in inbox(client)["items"] if i["kind"] == "missing_provenance"])
+    # Confirming changes a grade from G3 to G2; it never turns a missing chain into a present one.
+    payload = {"batch_id": batch, "convention": "增值税税率", "action": "confirm",
+               "source": "财务部确认函", "confirmed_by": "captain"}
+    raw = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode()
+    assert client.post("/tools/convention-decide", content=raw,
+                       headers={"content-type": "application/json",
+                                "x-bridgeflow-approval": receipt(raw)}).status_code == 200
+    assert len([i for i in inbox(client)["items"] if i["kind"] == "missing_provenance"]) == before

@@ -65,6 +65,10 @@ class AttentionItem(BaseModel):
     explanation: str
     grade: dict[str, Any]
     advice_grade: dict[str, Any]
+    #: Where this figure came from: department, file, row and column, capped, with the true
+    #: total beside it. References, never values — the browser opens the source to see those.
+    sources: list[dict[str, Any]] = Field(default_factory=list)
+    source_count: int = 0
 
 
 class ConclusionBrief(BaseModel):
@@ -165,7 +169,13 @@ class BriefBuilder:
                 unit=check["unit"], threshold=check["threshold"], attention_when=check["attention_when"],
                 owner=check["role"], decision_owner=check["decision_owner"], action=check["action"],
                 explanation=check["explanation"], grade=self._metric_grade(check),
-                advice_grade=self._count(self._grader.grade(advice(check, conventions, self.confirmed_conventions)).as_dict())))
+                advice_grade=self._count(self._grader.grade(advice(check, conventions, self.confirmed_conventions)).as_dict()),
+                # Capped, with the real total beside it: a figure over 200k rows cites its
+                # sources by reference and count, never by shipping every cell back.
+                sources=[{k: v for k, v in source.items() if k in
+                          ("department", "filename", "sheet", "row", "source_row", "column", "original_column")}
+                         for source in check.get("sources", [])[:5]],
+                source_count=int(check.get("source_count", 0))))
         return items
 
     def build(self) -> ConclusionBrief:

@@ -15,7 +15,9 @@ type Change = { metric?: string; field?: string; unit?: string; current: number 
 type Totals = { field: string; current: number; base: number; absolute: number; relative: number | null; new_entities: number; discontinued: number; continuing: number }
 type Comparison = { base_kind: string; base_period: string; base_batch_id: string; status: string; reason: string; changed_fields: string[]; metrics: Change[]; totals: Totals[]; breaches: Change[] }
 type Metric = { metric: string; check_id: string; title: string; value: number; unit: string; status: string; formula: string; source_count: number; owner: string; grade: Grade; change: Change | null }
-type Attention = { check_id: string; title: string; metric: string; value: number; unit: string; threshold: number; attention_when: string; owner: string; decision_owner: string; action: string; explanation: string; grade: Grade; advice_grade: Grade }
+type Attention = { check_id: string; title: string; metric: string; value: number; unit: string; threshold: number; attention_when: string; owner: string; decision_owner: string; action: string; explanation: string; grade: Grade; advice_grade: Grade
+  sources: { department: string; filename?: string; sheet?: string; row?: number; source_row?: number; column?: string; original_column?: string }[]
+  source_count: number }
 type Brief = {
   period: string; bound: Record<string, string>; report_status: string; stale: boolean; latest_report_id: string; missing_departments: string[]
   headline: { attention: number; ok: number; open_items: number; missing_departments: number }
@@ -113,6 +115,14 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
       <p className="bf-hint">{t(a.attention_when === 'above' ? 'briefAbove' : 'briefBelow')} {number(a.threshold, a.unit)} · {t('briefOwner')} {a.decision_owner}</p>
       <p>{t('briefAction')}：{a.action} <GradeMark grade={a.advice_grade} /></p>
       <p className="bf-hint">{a.explanation}</p>
+      {a.sources.length > 0 && <details className="bf-brief-sources"><summary>{t('briefSources')}（{a.source_count}）</summary>
+        <ul>{a.sources.map((source, i) => <li key={i}>
+          <button onClick={() => navigate({ batch: batchId, view: 'source', source: source.department })}>
+            {t(source.department)}</button>
+          <span className="bf-mono"> {source.filename}{source.sheet ? ` · ${source.sheet}` : ''} · {t('sourceRow')} {source.source_row ?? source.row} · {source.original_column ?? source.column}</span>
+        </li>)}</ul>
+        {a.source_count > a.sources.length && <p className="bf-hint">{t('briefSourcesMore')} {a.source_count}</p>}
+      </details>}
     </li>)}</ol>
 
     <h4>{t('periodComparison')}</h4>

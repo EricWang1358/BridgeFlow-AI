@@ -760,7 +760,12 @@ async def list_artifacts(batch_id: str, user: Annotated[UserIdentity | None, Dep
     artifacts = []
     for path in paths[offset:offset + limit]:
         report = json.loads(path.read_text(encoding="utf-8"))
-        artifacts.append({key: report[key] for key in
-                          ("report_id", "batch_id", "period", "status", "parent_session_id")}
-                         | {"created_at": path.stat().st_mtime})
+        entry = {key: report[key] for key in
+                 ("report_id", "batch_id", "period", "status", "parent_session_id")} | {
+                     "created_at": path.stat().st_mtime, "kind": "review"}
+        artifacts.append(entry)
+        # The brief is a derived product of this report, not a second copy of it: it is listed
+        # so management can open it, and it always shows whatever the report currently says
+        # (E13-UC01). Its portable form is the Word export (E13-UC04).
+        artifacts.append(entry | {"kind": "brief"})
     return {"batch_id": batch_id, "total": len(paths), "offset": offset, "artifacts": artifacts}

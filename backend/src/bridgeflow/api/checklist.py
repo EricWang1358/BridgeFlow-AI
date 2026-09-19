@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from bridgeflow import integration as integration_module
 from bridgeflow.api.batches import _integration_spec, _visible, load_batch
 from bridgeflow.conclusions import comparison as comparison_module
-from bridgeflow.conclusions import periods
+from bridgeflow.conclusions import conventions, periods
 from bridgeflow.identity import UserIdentity, require_user
 from bridgeflow.monthly import checklist as checklist_module
 from bridgeflow.monthly import inbox as inbox_module
@@ -103,6 +103,8 @@ def _inbox_context(period: str, user: UserIdentity | None) -> inbox_module.Conte
     ctx, _dictionary, _declaration = _context(period, user)
     return inbox_module.Context(batch_id=ctx.batch_id, period=period, batch=ctx.batch, master=ctx.master,
                                 has_report=ctx.report is not None,
+                                confirmed=sorted(conventions.confirmed(
+                                    ctx.batch.integration_snapshot or {}) if ctx.batch is not None else []),
                                 earlier_reported=_reported_earlier(period, ctx.batch_id, user))
 
 

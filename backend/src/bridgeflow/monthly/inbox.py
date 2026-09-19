@@ -55,6 +55,8 @@ class Context(BaseModel):
     batch: Any = None
     master: Any = None
     has_report: bool = False
+    #: Conventions the business side has confirmed, so a confirmed one is not reported as a gap.
+    confirmed: list[str] = Field(default_factory=list)
     #: Earlier batches of this period that carry a saved review. When the batch in force has
     #: none of its own, that review was left behind by a correction and the month is waiting
     #: for a new one.
@@ -120,7 +122,33 @@ def _stale_report(ctx: Context) -> list[OpenItem]:
                      next_view="state")]
 
 
+def _missing_provenance(ctx: Context) -> list[OpenItem]:
+    """Master cells whose evidence chain is broken (E13-UC06 AC-3).
+
+    One item per field rather than per cell: at 200k rows "this column has no traceable
+    source" is the thing somebody acts on, and the count says how widespread it is.
+    """
+    if ctx.master is None:
+        return []
+    from bridgeflow.conclusions.grades import grade_master
+
+    graded, _summary = grade_master([row.provenance for row in ctx.master.rows], frozenset(ctx.confirmed))
+    fields: dict[str, int] = {}
+    reasons: dict[str, str] = {}
+    for row in graded:
+        for field_name, result in row.items():
+            if result.get("grade") is None:
+                fields[field_name] = fields.get(field_name, 0) + 1
+                reasons.setdefault(field_name, "; ".join(result.get("missing", [])[:2]))
+    departments = sorted({t.department for t in ctx.batch.clean_tables}) if ctx.batch is not None else []
+    return [OpenItem(id=f"provenance:{name}", kind="missing_provenance", source="grades",
+                     batch_id=ctx.batch_id, period=ctx.period, departments=departments, subject=name,
+                     detail=f"{count} cell(s): {reasons.get(name, '')}", next_view="integration")
+            for name, count in sorted(fields.items())]
+
+
 SOURCES: dict[str, OpenItemSource] = {
+    "grades": _missing_provenance,
     "integration": _master_issues,
     "quarantine": _quarantined_rows,
     "column_matches": _column_questions,

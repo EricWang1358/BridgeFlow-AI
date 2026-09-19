@@ -74,6 +74,10 @@ try {
   const grades = await page.locator('.bf-brief-attention .bf-check .bf-grade').allInnerTexts()
   assert.deepEqual(grades.slice().sort(), ['G2', 'G2', 'G3'])
   assert.equal(await page.locator('.bf-brief-attention .bf-grade[data-grade="G4"]').count(), 3)
+  // E13-UC01 (round 11): an attention item cites the cells behind its figure
+  const sources = page.locator('.bf-brief-attention .bf-brief-sources').first()
+  await sources.locator('summary').click()
+  await sources.locator('li button').first().waitFor()
   await shot('brief')
 
   // E13-UC02: import the base period through the host API, then the brief compares against it

@@ -137,3 +137,26 @@ def test_no_business_name_is_written_into_the_conclusions_code():
         code = ast.unparse(tree)
         for name in names:
             assert name not in code, (path.name, name)
+
+
+def test_an_attention_item_cites_where_its_figure_came_from(client, batch):
+    """E13-UC01: a reader can go from the item to the cells behind it, by reference (round 11)."""
+    finalize(client, batch)
+    brief = client.get(f"/conclusions/batches/{batch}").json()
+    item = brief["attention"][0]
+    assert item["source_count"] > 0 and 0 < len(item["sources"]) <= 5
+    first = item["sources"][0]
+    assert first["department"] in {"production", "procurement", "finance", "marketing"}
+    assert first.get("filename") and (first.get("row") is not None or first.get("source_row") is not None)
+    # References only: no cell value travels with the citation.
+    assert "value" not in first
+
+
+def test_the_brief_is_listed_as_a_derived_artifact_of_its_report(client, batch):
+    """E13-UC01: management opens it from the artifacts list; it is not a second copy (round 11)."""
+    report = finalize(client, batch)
+    artifacts = client.get(f"/batches/{batch}/artifacts").json()["artifacts"]
+    kinds = {a["kind"] for a in artifacts if a["report_id"] == report["report_id"]}
+    assert kinds == {"review", "brief"}
+    brief = next(a for a in artifacts if a["kind"] == "brief")
+    assert brief["report_id"] == report["report_id"] and brief["period"] == "2024-07"

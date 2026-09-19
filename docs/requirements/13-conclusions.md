@@ -21,16 +21,16 @@ This epic adds no computation of its own. Every number still comes from the E06 
 
 | UC | 中文 / English | Status | 优先级 / Priority |
 | --- | --- | --- | --- |
-| E13-UC01 | 一页月度结论 / One-page monthly brief | PARTIAL | Must |
+| E13-UC01 | 一页月度结论 / One-page monthly brief | IMPLEMENTED_OFFLINE | Must |
 | E13-UC02 | 跨期对比与差异解释 / Period comparison and variance explanation | IMPLEMENTED_OFFLINE | Must |
 | E13-UC03 | 指标可视化与下钻 / Metric charts with drill-down | IMPLEMENTED_OFFLINE | Should |
 | E13-UC04 | 月度报告文档导出 / Export the monthly report document | IMPLEMENTED_OFFLINE | Should |
 | E13-UC05 | 口径假设确认与替换 / Confirm or replace declared conventions | IMPLEMENTED_OFFLINE | Must |
-| E13-UC06 | 结论依据等级标注 / Label conclusions with evidence grades | PARTIAL | Should |
+| E13-UC06 | 结论依据等级标注 / Label conclusions with evidence grades | IMPLEMENTED_OFFLINE | Should |
 
 ## E13-UC01 — 一页月度结论 / One-page monthly brief
 
-**Status: PARTIAL**
+**Status: IMPLEMENTED_OFFLINE**
 
 看板 / Issue: [#190](https://github.com/EricWang1358/BridgeFlow-AI/issues/190)
 
@@ -52,7 +52,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
   - AC-4 Given 本月结论页 When 统计其生成过程 Then 模型调用次数为 0。
 - 后置：结论页作为派生产物保存，绑定批次、报告与声明版本；报告更新后旧结论页标为过期，不被覆盖。
 - 依赖：E07-UC06、E06-UC02、E13-UC02（上期对比）、E13-UC06（依据等级）。
-- 当前证据与缺口（2026-09-17 第一轮）：[conclusions/brief.py](../../backend/src/bridgeflow/conclusions/brief.py) 的 `BriefBuilder` 与 `GET /conclusions/batches/{id}`，工作室「本月结论」视图（[brief.tsx](../../plugins/src/client/brief.tsx)）；关键指标、严重度与口径依赖由字典 `business_review.brief` 声明，缺声明拒绝。[行为测试](../../backend/tests/test_conclusions.py) 覆盖 AC-1–4 与过期标记；[浏览器旅程](../../plugins/tests/round1-journey.mjs)。剩余：保存为笔记本产物、关注项直接跳到单个指标出处。（较上期变化已由 E13-UC02 在第二轮补上。）
+- 当前证据与缺口（2026-09-17 第一轮）：[conclusions/brief.py](../../backend/src/bridgeflow/conclusions/brief.py) 的 `BriefBuilder` 与 `GET /conclusions/batches/{id}`，工作室「本月结论」视图（[brief.tsx](../../plugins/src/client/brief.tsx)）；关键指标、严重度与口径依赖由字典 `business_review.brief` 声明，缺声明拒绝。[行为测试](../../backend/tests/test_conclusions.py) 覆盖 AC-1–4 与过期标记；[浏览器旅程](../../plugins/tests/round1-journey.mjs)。第十一轮（2026-09-19）补齐剩余两项：关注项展开即列出该数字引用的来源单元格（部门 · 文件 · 行 · 列，封顶 5 条并给出真实总数，只给引用不给数值），点击进入该部门来源预览；结论页作为**派生产物**出现在产物列表（与研判报告同一版本绑定），点开就是当前结论页，导出的 Word 是它的便携副本——不另存第二份真相（见下方判定 D26）。
 
 ### English requirements and acceptance
 
@@ -63,7 +63,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 - Exceptions: a partial report names missing departments and excludes their metrics from ranking and from “OK”; no saved report refuses with “complete the review first”.
 - Acceptance: AC-1 three attention items are listed, ordered and linked; AC-2 a partial report is labelled and finance metrics are excluded; AC-3 no report refuses without a blank page; AC-4 zero model calls.
 - Postcondition: the brief is a derived artifact bound to batch, report and declaration versions; a newer report marks it stale without overwriting.
-- Evidence and gap (round 1, 2026-09-17): `BriefBuilder`, `GET /conclusions/batches/{id}` and the Studio “This month” view; key metrics, severity and convention dependencies are declared under `business_review.brief` and refused when absent. Tests cover AC-1–4 and staleness; a browser journey passes. Remaining: saving as a notebook artifact and drilling from an attention item to its metric sources. (Change versus prior period landed with UC02 in round 2.)
+- Evidence and gap (round 1, 2026-09-17): `BriefBuilder`, `GET /conclusions/batches/{id}` and the Studio “This month” view; key metrics, severity and convention dependencies are declared under `business_review.brief` and refused when absent. Tests cover AC-1–4 and staleness; a browser journey passes. Round 11 (2026-09-19) closed both gaps: an attention item lists the source cells its figure cites (department, file, row, column — capped at five with the true total, references only) and opens that department's source preview; the brief is listed as a derived artifact bound to its report, and the Word export is its portable copy — no second copy is stored (D26).
 
 ## E13-UC02 — 跨期对比与差异解释 / Period comparison and variance explanation
 
@@ -211,7 +211,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 
 ## E13-UC06 — 结论依据等级标注 / Label conclusions with evidence grades
 
-**Status: PARTIAL**
+**Status: IMPLEMENTED_OFFLINE**
 
 看板 / Issue: [#195](https://github.com/EricWang1358/BridgeFlow-AI/issues/195)
 
@@ -231,7 +231,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
   - AC-3 Given 一个数字缺少出处 When 生成结论页 Then 该数字标「出处缺失」，并出现在 E14-UC05 收件箱。
 - 后置：等级是派生属性，随口径确认或数据更新重新计算，不单独保存。
 - 依赖：E06-UC04、E07-UC04、E13-UC05。
-- 当前证据与缺口（2026-09-17 第一轮）：[conclusions/grades.py](../../backend/src/bridgeflow/conclusions/grades.py) 以组合模式表示出处树并取最弱等级；结论页的关键指标、关注项与建议动作，以及总表视图的每个单元格都带等级与依赖链，页首显示分布；部门写法不一致而留空的单元格标「出处缺失」。AC-1、AC-2 已由测试覆盖。第三至八轮之后的剩余：口径确认后升级已做（E13-UC05），报告导出的附录已逐条打印依据等级（E13-UC04）；仍缺图表数据点上的等级标注（E13-UC03 画的是数值），以及把「出处缺失」的单元格送进待办收件箱（E14-UC05 目前接了四类来源，不含这一类）。
+- 当前证据与缺口（2026-09-17 第一轮）：[conclusions/grades.py](../../backend/src/bridgeflow/conclusions/grades.py) 以组合模式表示出处树并取最弱等级；结论页的关键指标、关注项与建议动作，以及总表视图的每个单元格都带等级与依赖链，页首显示分布；部门写法不一致而留空的单元格标「出处缺失」。AC-1、AC-2 已由测试覆盖。第十一轮补齐：图表的每个数据点带依据等级（按实体条形取该单元格的等级，趋势取该声明指标的等级——依赖未确认口径时为 G3），表格视图同列；「出处缺失」的字段已作为第五类来源进入待办收件箱（按字段一条，注明涉及多少单元格与断链原因）。AC-1–3 全部覆盖。
 
 ### English requirements and acceptance
 
@@ -242,7 +242,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 - Exceptions: a broken chain shows “provenance missing” instead of a grade and raises an open item.
 - Acceptance: AC-1 margin depending on the unconfirmed VAT rate is G3; AC-2 a subagent action is G4 with its cited metrics; AC-3 a missing provenance is labelled and reaches the E14-UC05 inbox.
 - Postcondition: grades are derived and recomputed, never stored separately.
-- Evidence and gap (round 1, 2026-09-17): a composite provenance tree graded by its weakest node; grades and chains on brief metrics, attention items, advice and every master cell, with a distribution summary; withheld cells show “provenance missing”. AC-1 and AC-2 are tested. Remaining after rounds 3–8: confirmation now upgrades a convention-bound figure to G2 (E13-UC05) and the exported report prints each figure's grade in its appendix (E13-UC04); still missing are grades on chart points (E13-UC03 draws values, not grades) and routing a cell whose provenance is broken into the open-item inbox (E14-UC05 wires four sources, not this one).
+- Evidence and gap (round 1, 2026-09-17): a composite provenance tree graded by its weakest node; grades and chains on brief metrics, attention items, advice and every master cell, with a distribution summary; withheld cells show “provenance missing”. AC-1 and AC-2 are tested. Round 11 closed the rest: every chart point carries a grade (an entity bar takes its cell's grade, a trend takes the declared metric's, which is G3 while it rests on an unconfirmed convention) and the table beside the chart shows it; a field whose provenance is broken is now the inbox's fifth source, one item per field with how many cells and why the chain breaks. AC-1–3 are covered.
 
 ## 本轮设计判定与依据 / Design decisions and their evidence
 
@@ -262,6 +262,8 @@ Where the requirement left a choice open, it was decided during implementation. 
 | D21 | 直接按 Office Open XML 写出 .docx，不引入文档库 | 为一个功能加一个依赖，与「不要扩大范围」相冲突；报告只用到标题、段落与表格三种结构，写出来比引进来小，而且这里不解析任何文档 | `conclusions/report.py`；测试逐一检查包内各部件 |
 | D22 | 本轮只出 Word，不出 PDF | PDF 需要排版/渲染依赖（字体、CJK 支持），体量远超本功能；Word 文档由使用者自行打印为 PDF，且 E06-UC06 的季度/年度 PDF 本就延期 | 需求正文已注明分工；本条为本轮范围说明 |
 | D23 | 导出是**只读**动作，不写「已导出」产物记录 | 写一条导出记录，就产生了第二份关于「发布了什么」的事实，而文档封面已经写明它绑定的批次、报告与声明版本；真正的产物列表是研判报告本身 | `GET /conclusions/batches/{id}/report` 无副作用；封面表格列出全部绑定版本 |
+| D26 | 结论页作为**派生产物**列在产物列表里，不另存一份结论快照 | 「保存为产物」如果真的存一份，页面和存档就会对同一个月给出两种说法；结论页本来就是报告的派生物，导出的 Word 才是便携副本，且封面写明它绑定的版本 | `/batches/{id}/artifacts` 为每份报告同时给出 `review` 与 `brief` 两个条目；测试断言二者同版本 |
+| D27 | 关注项的出处**封顶 5 条并给出真实总数**，只给引用不给数值 | 一个指标常由上百个单元格求和；把它们全列出来既不可读，也正是「原始行绝不进上下文」要挡的东西 | `AttentionItem.sources/source_count`；测试断言引用里没有数值字段 |
 | D19 | 下钻落在**该期总表行**，不是指标公式的每个输入单元格 | 一个指标的输入常有上百个单元格（求和），逐个列出既不可读也会把原始行推回上下文；总表行是既能定位又已带出处的最小单位 | `charts.Point.batch_id/key`；界面跳转到该批次总表 |
 | D20 | 缺失期间**断线**，不插值、不补零 | 一条穿过没人报过的月份的线，是系统自己做出的断言；补零还会把「没报」显示成「掉到零」 | `charts.trend` 分段绘制；测试 `test_a_month_without_a_batch_is_a_gap_and_never_interpolated` |
 | D8 | 「替换」只记录业务方的决定、来源与该改的声明内容，**不由系统改写公式、判定阈值或汇总口径**；只有常数替换能给出试算 | 需求主流程写的是「系统生成新声明版本草案」。但 CLAUDE.md 定下「字典由人预设、改 YAML 不改 Python」：让系统按一句自由文本重写 `derived` 树，等于让模型发明声明，且声明文件将不再是唯一事实来源。记录决定 + 指明该改哪一行，既留痕又把改动留在人手里 | `conventions.decide` 的 `replacement_requested` 状态与 `_declaration_change`；测试 `test_replacing_a_formula_asks_for_a_declaration_change...` |

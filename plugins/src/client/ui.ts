@@ -104,6 +104,8 @@ const labels = {
   monthly_checklist: ['月度对账进度', 'Monthly close checklist'], monthly_inbox: ['待确认事项', 'Open items'],
   openItems: ['待确认事项', 'Open items'],
   metricCharts: ['指标图', 'Metric charts'],
+  briefSources: ['这个数字的出处', 'Where this figure came from'],
+  briefSourcesMore: ['共引用来源单元格', 'Source cells cited in total:'],
   exportReport: ['导出月度报告（Word）', 'Export the monthly report (Word)'],
   templateDownload: ['下载本月模板', 'Download this month\u2019s template'],
   templateDownloadHelp: ['按批准的模板版本生成工作簿；声明为沿用的列会预填上期数值，单元格带「预填自某月，请核对」批注，填写说明页写明字段含义与本次是否预填。',
