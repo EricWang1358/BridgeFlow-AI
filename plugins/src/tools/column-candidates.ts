@@ -109,7 +109,7 @@ export function columnCandidates(config: BackendConfig) {
       presentationMeta: (_args, value) => ({ questions: (value.questions ?? []).length }),
     },
     async execute(args, exec) {
-      return callBackend<CandidateList>(config, '/tools/column-candidates', { batch_id: args.batch_id }, exec.signal)
+      return callBackend<CandidateList>(config, '/tools/column-candidates', { batch_id: args.batch_id }, exec)
     },
   }), { kind: 'read' })
 }

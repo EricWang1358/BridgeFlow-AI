@@ -38,7 +38,7 @@ export function conventionList(config: BackendConfig): ProductTool {
       return [{ type: 'text', text: `${items.length} convention(s), ${open} unconfirmed. ` + items.map(c => `${c.id} (${c.kind}, ${c.state}${c.version ? ` v${c.version}` : ''})`).join(' | ') }]
     } },
     async execute(args, exec) {
-      return callBackend<Record<string, Json>>(config, '/tools/convention-list', { batch_id: args.batch_id }, exec.signal)
+      return callBackend<Record<string, Json>>(config, '/tools/convention-list', { batch_id: args.batch_id }, exec)
     },
   }), { kind: 'read' })
 }
@@ -58,7 +58,7 @@ export function conventionPreview(config: BackendConfig): ProductTool {
     } },
     async execute(args, exec) {
       return callBackend<Record<string, Json>>(config, '/tools/convention-preview',
-        { batch_id: args.batch_id, convention: args.convention, requested_value: args.requested_value }, exec.signal)
+        { batch_id: args.batch_id, convention: args.convention, requested_value: args.requested_value }, exec)
     },
   }), { kind: 'read' })
 }
@@ -79,7 +79,7 @@ export function conventionDecide(config: BackendConfig, receipts: ApprovalReceip
     output: { ...anyObject, render: (_args, value) => [{ type: 'text', text: String((value as { next_step?: string }).next_step ?? 'Recorded.') }] },
     async execute(args, exec) {
       return callBackend<Record<string, Json>>(config, '/tools/convention-decide', decideBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId),
-        exec.signal, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+        exec, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   }), {
     kind: 'approval',

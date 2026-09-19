@@ -36,7 +36,7 @@ export function riskDispositions(config: BackendConfig): ProductTool {
         .map(d => `${d.check_id}: ${d.state}${d.available.length ? ` → ${d.available.join('/')}` : ''}`).join(' | ') }]
     } },
     async execute(args, exec) {
-      return callBackend<Record<string, Json>>(config, '/tools/risk-dispositions', { batch_id: args.batch_id }, exec.signal)
+      return callBackend<Record<string, Json>>(config, '/tools/risk-dispositions', { batch_id: args.batch_id }, exec)
     },
   }), { kind: 'read' })
 }
@@ -56,7 +56,7 @@ export function riskDispositionRecord(config: BackendConfig, receipts: ApprovalR
     output: { ...anyObject, render: (_args, value) => [{ type: 'text', text: String((value as { next_step?: string }).next_step ?? 'Recorded.') }] },
     async execute(args, exec) {
       return callBackend<Record<string, Json>>(config, '/tools/risk-disposition-record', recordBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId),
-        exec.signal, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+        exec, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   }), {
     kind: 'approval',

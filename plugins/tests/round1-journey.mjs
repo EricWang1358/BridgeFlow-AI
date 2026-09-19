@@ -43,8 +43,13 @@ try {
   page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/bridgeflow/batches/demo')) imports++; if (request.method() === 'POST' && request.url().includes('/bridgeflow/notebook?')) saves++; if (request.postData()?.includes('session.prompt')) prompts.push(request.url()) })
   const target = id => page.locator(`[data-tour-id="${id}"]:visible`)
   const shot = name => page.screenshot({ path: `${evidence}/${name}.png` })
-  const host = (path, body) => fetch(`http://127.0.0.1:${backendPort}${path}`, { method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.BRIDGEFLOW_SERVICE_TOKEN}` }, body: JSON.stringify(body) }).then(async r => { assert.equal(r.status, 200, await r.clone().text()); return r.json() })
+  let step = 0
+  const host = (path, body, trace = {}) => fetch(`http://127.0.0.1:${backendPort}${path}`, { method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.BRIDGEFLOW_SERVICE_TOKEN}`,
+      'x-bridgeflow-root': trace.run ?? 'journey-run', 'x-bridgeflow-call': `journey-${++step}`,
+      'x-bridgeflow-agent': trace.agent ?? 'captain', 'x-bridgeflow-tool': path.split('/').pop().replaceAll('-', '_'),
+      ...(body?.batch_id ? { 'x-bridgeflow-batch': body.batch_id } : {}) },
+    body: JSON.stringify(body) }).then(async r => { assert.equal(r.status, 200, await r.clone().text()); return r.json() })
   const studio = name => page.locator('.bf-studio-tools button', { hasText: name }).first()
   await page.goto(match[1])
   await page.locator('[data-tour-mode="welcome"] [data-tour-card]').waitFor()
@@ -66,6 +71,10 @@ try {
   const runs = reviewContext.roles.map(p => ({ role: p.role, session_id: `child-${p.role}`, status: 'completed', judgement: { checks: p.checks.map(c => ({
     check_id: c.check_id, metric: c.metric, value: c.value, unit: c.unit, status: c.expected_status,
     action: c.actions[c.expected_status][0], explanation: '应按本部门权限核实并提交责任人复核。' })) } }))
+  // Each role's own reads belong to the same run, on its own lane.
+  for (const packet of reviewContext.roles) {
+    await host('/tools/batch-summary', { batch_id: batch }, { agent: `child-${packet.role}` })
+  }
   const report = await host('/tools/review-finalize', { batch_id: batch, parent_session_id: 'journey', runs })
   assert.equal(report.status, 'validated')
 
@@ -179,9 +188,19 @@ try {
   assert.equal(await waiting.first().locator('button').count(), 1, 'an item offers one action: open where it is settled')
   await shot('open-items')
 
-  // Observability: the decision journal shows what the system decided, refusals included, and
-  // the trace id on the page is the one the response header carried.
+  // Observability: one agent run, drawn as lanes — the captain's steps and each department
+  // subagent's calls under the same root.
   await studio('Records').click()
+  const run = page.locator('.bf-run-list > li').first()
+  await run.waitFor()
+  await run.locator('.bf-run-head').click()
+  const lanes = await run.locator('.bf-run-lane-name').allInnerTexts()
+  assert.ok(lanes.length >= 2, `the run has a lane per agent: ${lanes}`)
+  assert.ok(await run.locator('.bf-run-mark').count() >= 3, 'each tool call is a mark on its lane')
+  await shot('agent-run')
+
+  // The decision journal shows what the system decided, refusals included, and the trace id on
+  // the page is the one the response header carried.
   await page.locator('.bf-journal-list li').first().waitFor()
   const refused = page.locator('.bf-actions button', { hasText: 'Refused' }).first()
   await refused.click()

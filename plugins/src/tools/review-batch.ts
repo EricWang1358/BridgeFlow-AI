@@ -110,12 +110,12 @@ export function mountReview(ctx: Context, backend: BackendConfig, policy: Review
       if (policy.activeParents.has(parent.id)) throw new Error('Review already active; finish it before starting another')
       policy.activeParents.add(parent.id)
       try {
-        const context = await callBackend<ReviewContext>(backend, '/tools/review-context', args, exec.signal)
+        const context = await callBackend<ReviewContext>(backend, '/tools/review-context', args, exec)
         if (context.roles.length !== 4 || !ROLES.every(role => context.roles.some(p => p.role === role))) throw new Error('Department contract must match business.ROLES')
         const controller = new AbortController()
         const id = randomUUID()
         await callBackend(backend, '/tools/review-open', { review_id: id, batch_id: args.batch_id, parent_session_id: parent.id,
-          deadline_seconds: REVIEW_DEADLINE_MS / 1000 }, exec.signal)
+          deadline_seconds: REVIEW_DEADLINE_MS / 1000 }, exec)
         const state: ReviewState = { id, parent, context, tickets: new Map(ROLES.map(role => [role, randomUUID()])),
           reserved: new Set(), children: new Map(), controller, deadline: Date.now() + REVIEW_DEADLINE_MS,
           parentFrom: [...parent.session.snapshotEvents()].length, agents: new Map(),

@@ -85,7 +85,7 @@ export function confirmMapping(config: BackendConfig, receipts: ApprovalReceipts
         config,
         '/tools/confirm-mapping',
         mappingBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId),
-        exec.signal,
+        exec,
         receipts.take(JSON.stringify([exec.agent?.id, exec.callId])),
       )
     },

@@ -38,7 +38,7 @@ export function feishuImport(config: BackendConfig, receipts: ApprovalReceipts):
     } },
     async execute(args, exec) {
       return callBackend<Record<string, Json>>(config, '/tools/feishu-import', feishuImportBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId),
-        exec.signal, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+        exec, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   }), { kind: 'approval', reason: 'Download these Feishu files into a new BridgeFlow batch.',
     denialEffect: 'Nothing was downloaded or imported. Do NOT mention a batch id', body: feishuImportBody })
@@ -59,7 +59,7 @@ export function feishuUploadReport(config: BackendConfig, receipts: ApprovalRece
     } },
     async execute(args, exec) {
       return callBackend<Record<string, Json>>(config, '/tools/feishu-upload-report', feishuUploadBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId),
-        exec.signal, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+        exec, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   }), { kind: 'approval', reason: 'Send this saved report to the named Feishu folder.',
     denialEffect: 'Nothing was uploaded. Do NOT say the report is in Feishu', body: feishuUploadBody })

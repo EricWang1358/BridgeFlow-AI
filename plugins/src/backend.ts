@@ -29,19 +29,67 @@ export class BackendRefusal extends Error {
 }
 
 /**
+ * What the host knows about the call being made, for the decision journal.
+ *
+ * `rootCallId` is the model-requested call that owns the whole execution tree, which is
+ * exactly the grouping a person means by "one run": the captain's step and every
+ * department subagent's call underneath it carry the same root. Passing `exec` instead of
+ * `exec.signal` is what turns the backend's journal from a list of requests into the
+ * agent's own trace, and it costs one word at each call site.
+ */
+export type CallContext = {
+  readonly signal: AbortSignal
+  readonly callId?: unknown
+  readonly rootCallId?: unknown
+  readonly name?: string
+  readonly agent?: { readonly id?: unknown } | undefined
+}
+
+function traceHeaders(from: AbortSignal | CallContext): Record<string, string> {
+  if (from instanceof AbortSignal || !('callId' in from || 'agent' in from)) return {}
+  const context = from as CallContext
+  const header = (value: unknown) => (value === undefined || value === null ? '' : String(value))
+  return Object.fromEntries(Object.entries({
+    'x-bridgeflow-call': header(context.callId),
+    'x-bridgeflow-root': header(context.rootCallId ?? context.callId),
+    'x-bridgeflow-agent': header(context.agent?.id),
+    'x-bridgeflow-tool': header(context.name),
+  }).filter(([, value]) => value !== ''))
+}
+
+/**
+ * What this call is about, declared by the caller rather than parsed out of its body.
+ *
+ * A tool's subject lives in its body (`batch_id`, `period`), and the journal's seam
+ * deliberately never reads bodies — so the caller states it here. Only these two keys, and
+ * only when they are plain strings: nothing else can ride along.
+ */
+function subjectHeaders(body: unknown): Record<string, string> {
+  if (typeof body !== 'object' || body === null) return {}
+  const record = body as Record<string, unknown>
+  const pick = (key: string) => (typeof record[key] === 'string' && record[key] ? String(record[key]) : '')
+  return Object.fromEntries(Object.entries({
+    'x-bridgeflow-batch': pick('batch_id'),
+    'x-bridgeflow-period': pick('period'),
+  }).filter(([, value]) => value !== ''))
+}
+
+/**
  * Call one tool endpoint on the Python side.
  *
- * `signal` is the tool's `exec.signal`: when the caller cancels, the HTTP request
- * is aborted rather than left running. The deadline is layered on top so a backend
- * that accepts the connection and then stalls still fails.
+ * The fourth argument is the tool's `exec` (or just its signal): when the caller cancels,
+ * the HTTP request is aborted rather than left running, and the deadline is layered on top
+ * so a backend that accepts the connection and then stalls still fails. Handing over the
+ * whole `exec` also lets the call be journalled as part of its run.
  */
 export async function callBackend<T>(
   config: BackendConfig,
   path: string,
   body: unknown,
-  signal: AbortSignal,
+  execution: AbortSignal | CallContext,
   approvalReceipt?: string,
 ): Promise<T> {
+  const signal = execution instanceof AbortSignal ? execution : execution.signal
   const deadline = AbortSignal.timeout(config.timeoutMs)
   const combined = AbortSignal.any([signal, deadline])
 
@@ -53,6 +101,8 @@ export async function callBackend<T>(
         'content-type': 'application/json',
         authorization: `Bearer ${process.env.BRIDGEFLOW_SERVICE_TOKEN ?? ''}`,
         ...(approvalReceipt ? { 'x-bridgeflow-approval': approvalReceipt } : {}),
+        ...traceHeaders(execution),
+        ...subjectHeaders(body),
       },
       body: JSON.stringify(body),
       signal: combined,

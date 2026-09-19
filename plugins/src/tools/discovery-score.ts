@@ -27,7 +27,7 @@ export function discoveryScoreSave(config: BackendConfig, receipts: ApprovalRece
     output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }] },
     async execute(args, exec) {
       return callBackend<Record<string, JsonValue>>(config, '/tools/discovery-score-save',
-        scoreBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec.signal,
+        scoreBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec,
         receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   }), { kind: 'approval', reason: 'Save these exact ratings, rationales and source references under the displayed policy fingerprint. This is not project approval.',

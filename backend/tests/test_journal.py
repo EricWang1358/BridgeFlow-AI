@@ -112,3 +112,45 @@ def test_the_journal_keeps_itself_bounded(monkeypatch, tmp_path):
         (folder / f"2026-09-{day + 1:02d}.jsonl").write_text("{}\n", encoding="utf-8")
     assert journal.prune(keep_days=14) == 6
     assert len(list(folder.glob("*.jsonl"))) == 14
+
+
+def call(client, path, body, *, run, agent, tool, call_id="c1"):
+    """A tool call as the plugin makes it: the run id is the model-requested call's id."""
+    subject = {"x-bridgeflow-batch": str(body["batch_id"])} if "batch_id" in body else {}
+    return client.post(path, json=body, headers={
+        "x-bridgeflow-root": run, "x-bridgeflow-call": call_id,
+        "x-bridgeflow-agent": agent, "x-bridgeflow-tool": tool} | subject)
+
+
+def test_a_run_is_one_model_requested_call_and_everything_under_it(client):
+    batch = client.post("/batches/demo").json()["batch_id"]
+    call(client, "/tools/batch-summary", {"batch_id": batch}, run="r-1", agent="captain", tool="batch_summary")
+    call(client, "/tools/integration-summary", {"batch_id": batch}, run="r-1", agent="captain",
+         tool="integration_summary", call_id="c2")
+    call(client, "/tools/monthly-inbox", {"period": "2024-07"}, run="r-1", agent="child-finance",
+         tool="monthly_inbox", call_id="c3")
+    call(client, "/tools/risk-dispositions", {"batch_id": batch}, run="r-2", agent="captain",
+         tool="risk_dispositions", call_id="c4")
+
+    runs = {r["run"]: r for r in client.get("/journal/runs").json()["runs"]}
+    assert set(runs) == {"r-1", "r-2"}
+    first = runs["r-1"]
+    assert first["steps"] == 3 and first["agents"] == ["captain", "child-finance"]
+    assert first["batch_id"] == batch and first["ms"] > 0
+    assert [step["tool"] for step in first["timeline"]] == ["batch_summary", "integration_summary", "monthly_inbox"]
+    assert first["refused"] == 0
+
+
+def test_a_refusal_inside_a_run_is_shown_on_its_step(client):
+    batch = client.post("/batches/demo").json()["batch_id"]
+    call(client, "/tools/risk-dispositions", {"batch_id": batch}, run="r-3", agent="captain", tool="risk_dispositions")
+    runs = {r["run"]: r for r in client.get("/journal/runs").json()["runs"]}
+    step = runs["r-3"]["timeline"][0]
+    assert runs["r-3"]["refused"] == 1 and step["outcome"] == "refused"
+    assert "review" in step["reason"].lower() and step["trace"]
+
+
+def test_browser_reads_are_not_runs(client):
+    batch = client.post("/batches/demo").json()["batch_id"]
+    client.get(f"/integration/batches/{batch}")
+    assert client.get("/journal/runs").json()["runs"] == []

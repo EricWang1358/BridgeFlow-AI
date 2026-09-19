@@ -48,7 +48,7 @@ export function discoveryPropose(config: BackendConfig, receipts: ApprovalReceip
     },
     async execute(args, exec) {
       return callBackend<Record<string, string | number>>(config, '/tools/discovery-propose',
-        proposalBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec.signal,
+        proposalBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec,
         receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   }), {
@@ -77,7 +77,7 @@ export function discoveryMaterials(config: BackendConfig): ProductTool {
       render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }],
     },
     async execute(args, exec) {
-      return callBackend<Record<string, JsonValue>>(config, '/tools/discovery-materials', args, exec.signal)
+      return callBackend<Record<string, JsonValue>>(config, '/tools/discovery-materials', args, exec)
     },
   }), { kind: 'read' })
 }
@@ -108,7 +108,7 @@ export function discoveryRegister(config: BackendConfig, receipts: ApprovalRecei
     },
     async execute(args, exec) {
       return callBackend<Record<string, JsonValue>>(config, '/tools/discovery-register',
-        registrationBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec.signal,
+        registrationBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec,
         receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   }), { kind: 'approval', reason: 'Register this exact uploaded file and its stated provenance. This does not approve its business rules.',
