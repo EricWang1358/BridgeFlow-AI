@@ -3,6 +3,8 @@
 Offline: the Feishu seam (access_resolver.fetch_space_members / client_factory)
 is faked; the structure file is a real YAML written per test, re-read per call.
 """
+import time
+
 import httpx
 import pytest
 import yaml
@@ -107,8 +109,11 @@ def test_member_lists_are_cached_for_the_ttl(configured):
 def test_a_stale_entry_is_refetched_after_the_ttl(configured, monkeypatch):
     _, calls, _ = configured
     access_resolver.resolve("ou_bob")
-    cached = {sid: (0.0, members) for sid, (_, members) in access_resolver._members_cache.items()}
-    monkeypatch.setattr(access_resolver, "_members_cache", cached)  # timestamps far in the past
+    # monotonic() has no epoch: its zero is boot, and a fresh CI runner can be
+    # minutes old — "far in the past" only means something relative to now.
+    stale = time.monotonic() - access_resolver.MEMBERSHIP_TTL_SECONDS - 1
+    cached = {sid: (stale, members) for sid, (_, members) in access_resolver._members_cache.items()}
+    monkeypatch.setattr(access_resolver, "_members_cache", cached)
     access_resolver.resolve("ou_bob")
     assert len(calls) == 10
 

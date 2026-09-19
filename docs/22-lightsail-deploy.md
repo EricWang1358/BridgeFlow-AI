@@ -158,6 +158,17 @@ chmod 600 env.sh
 source env.sh && [ -n "$DEEPSEEK_API_KEY" ] && [ -d "$DSH_HOME" ] && echo ok
 ```
 
+### 5b 配置经流水线同步（可选）
+
+实例侧的两个 gitignored 配置可以改由流水线分发，不再 SSH 手改：文件内容存为
+`production` 环境的 GitHub secrets（`ACCESS_CONTROL_YAML`、`FIELD_DICTIONARY_YAML`），
+部署时 base64 经 SSH 管道送到实例，由 `deploy/config-put.sh` 先用产品自己的
+加载器校验（`access_resolver.structure()` / 导入侧 `_load_dictionary`），再原子替换。
+**非法配置让部署失败，而不是到达运行时**；内容没变就不写；被替换的旧文件保留为
+`*.bak` 一代。某个 secret 留空则跳过该文件，实例上已有文件继续生效。env.sh 里的
+真凭证（`DEEPSEEK_API_KEY`、`FEISHU_APP_SECRET`、`PORTAL_*`）**不走这条通道**，
+维持「凭证只住实例」的既有决策（deploy.yml 文件头）。
+
 ---
 
 ## 6 客户端 bundle 与首次冒烟
