@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import io
+import json
+import time
 from typing import Annotated
 
 import pandas as pd
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from bridgeflow import __version__, store
+from bridgeflow import __version__, journal, store
 from bridgeflow.api.approvals import router as approvals_router
 from bridgeflow.api.batches import router as batches_router
 from bridgeflow.api.checklist import router as checklist_router
@@ -19,6 +21,7 @@ from bridgeflow.api.dispositions import router as dispositions_router
 from bridgeflow.api.documents import router as documents_router
 from bridgeflow.api.feishu_tools import router as feishu_tools_router
 from bridgeflow.api.integration import router as integration_router
+from bridgeflow.api.observability import router as observability_router
 from bridgeflow.api.quarantine_tools import router as quarantine_tools_router
 from bridgeflow.api.reviews import router as reviews_router
 from bridgeflow.api.tools import router as tools_router
@@ -31,6 +34,74 @@ from bridgeflow.schemas import Department, PipelineResult, QuoteRecommendation, 
 from bridgeflow.security import require_host
 
 app = FastAPI(title="BridgeFlow AI", version=__version__)
+REASON_CAP = 8192
+
+
+async def _reason_of(response):
+    """The refusal's own words, and a response that can still be sent."""
+    chunks, size = [], 0
+    async for chunk in response.body_iterator:
+        chunks.append(chunk)
+        size += len(chunk)
+        if size > REASON_CAP:
+            break
+    body = b"".join(chunks)
+    reason = ""
+    try:
+        payload = json.loads(body)
+        detail = payload.get("detail") if isinstance(payload, dict) else None
+        reason = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False) if detail else ""
+    except (ValueError, UnicodeDecodeError):
+        reason = ""
+    rebuilt = Response(content=body, status_code=response.status_code,
+                       headers=dict(response.headers), media_type=response.media_type)
+    return rebuilt, reason
+
+
+@app.middleware("http")
+async def decision_journal(request: Request, call_next):
+    """Record every decision once, here, instead of logging from forty call sites.
+
+    Every refusal in this codebase raises an HTTPException whose detail is the sentence a
+    person should read. Catching it at the seam records that sentence verbatim — a paraphrase
+    written at a call site is the thing that goes stale. Facts a handler wants on its own
+    entry go on `request.state.journal`; the journal keeps only the declared keys, so this
+    cannot become a way around the no-rows rule.
+    """
+    started = time.perf_counter()
+    # Reading the journal is not a decision about the business, and a trace that fills up
+    # with someone watching it is a trace nobody can read.
+    watched = not request.url.path.startswith(("/journal", "/eval/report"))
+    trace = request.headers.get("x-bridgeflow-trace") or journal.new_trace()
+    request.state.journal, request.state.trace = {}, trace
+    status, reason, response = 500, "", None
+    try:
+        response = await call_next(request)
+        status = response.status_code
+        if status >= 400:
+            # A refusal reaches here as an ordinary response, because FastAPI has already
+            # turned the exception into one. Reading it back is how the journal keeps the
+            # caller's own sentence instead of a paraphrase; only error bodies are read,
+            # and only up to a cap, so nothing large is ever buffered.
+            response, reason = await _reason_of(response)
+    except HTTPException as exc:  # raised outside the router, e.g. in a dependency
+        status, reason = exc.status_code, str(exc.detail)
+        raise
+    finally:
+        facts = journal.subject_of(request.url.path) | dict(getattr(request.state, "journal", {}) or {})
+        for key in ("batch_id", "period", "report_id"):
+            if key not in facts and key in request.query_params:
+                facts[key] = request.query_params[key]
+        if watched:
+            journal.record(journal.entry(
+                trace=trace, surface=journal.shape(request.url.path), method=request.method,
+                status=status, started=started, reason=reason, facts=facts,
+                actor=journal.actor_of(request.headers.get("x-bridgeflow-user"),
+                                       host=bool(request.headers.get("authorization")))))
+    # The trace id travels back, so the person reading the studio and the person reading the
+    # journal are looking at the same line.
+    response.headers["x-bridgeflow-trace"] = trace
+    return response
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
@@ -61,6 +132,7 @@ app.include_router(conclusions_router, dependencies=[Depends(require_host)])
 app.include_router(conventions_router, dependencies=[Depends(require_host)])
 app.include_router(checklist_router, dependencies=[Depends(require_host)])
 app.include_router(dispositions_router, dependencies=[Depends(require_host)])
+app.include_router(observability_router, dependencies=[Depends(require_host)])
 
 orchestrator = Orchestrator()
 

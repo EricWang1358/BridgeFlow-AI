@@ -50,8 +50,11 @@ try {
   await page.locator('[data-tour-mode="welcome"] [data-tour-card]').waitFor()
   await page.locator('[data-tour-card]:visible').getByRole('button', { name: 'Maybe later', exact: true }).click()
 
-  // E13-UC01 AC-3: no saved review yet
-  await target('sample').click()
+  // E13-UC01 AC-3: no saved review yet. The sample button is disabled until the notebook
+  // session has loaded, and clicking a disabled button silently does nothing — wait for it.
+  const sample = page.locator('[data-tour-id="sample"]:visible:not([disabled])')
+  await sample.waitFor({ timeout: 60000 })
+  await sample.click()
   await page.locator('.bf-resource-list button').first().waitFor()
   const batch = new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('batch')
   assert.match(batch, /^[a-f0-9]{32}$/)
@@ -175,6 +178,17 @@ try {
   await waiting.first().waitFor()
   assert.equal(await waiting.first().locator('button').count(), 1, 'an item offers one action: open where it is settled')
   await shot('open-items')
+
+  // Observability: the decision journal shows what the system decided, refusals included, and
+  // the trace id on the page is the one the response header carried.
+  await studio('Records').click()
+  await page.locator('.bf-journal-list li').first().waitFor()
+  const refused = page.locator('.bf-actions button', { hasText: 'Refused' }).first()
+  await refused.click()
+  await page.locator('.bf-journal-list li[data-outcome=refused]').first().waitFor()
+  const reason = await page.locator('.bf-journal-list li[data-outcome=refused] .bf-journal-reason').first().innerText()
+  assert.ok(reason.length > 8, `a refusal is recorded in its own words: ${reason}`)
+  await shot('decision-journal')
 
   assert.deepEqual(errors, [])
   console.log(JSON.stringify({ status: 'passed', batch, attention: items, evidence }))
