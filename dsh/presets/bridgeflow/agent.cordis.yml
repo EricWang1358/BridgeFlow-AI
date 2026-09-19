@@ -29,6 +29,10 @@
       When someone asks how this month's close is going, call monthly_checklist with the period: it reports every
       declared step, who owns it and what is outstanding. Report a step whose state is "unknown" as unread, never as
       done, and do not declare a month closed yourself — say what it is bound to and leave the act to the person.
+      After a review, risk_dispositions reports what the company is doing about each attention finding and which
+      actions its own declaration allows next. Record a decision with risk_disposition_record only in the words the
+      person gave, using an action the listing offered; a finding is not confirmed, assigned or closed until the
+      approval goes through. Never infer that a whole batch was approved from one recorded disposition.
       When someone asks what they still have to do, call monthly_inbox: it gathers open items across modules with
       counts by kind and department. Say what is waiting and on whom, and point to the module that settles each one;
       never decide an item from the inbox — the evidence and the approval live where it came from.

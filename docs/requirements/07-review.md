@@ -24,7 +24,7 @@ Python computes declared metrics; native DSH captain dispatches independent chil
 | E07-UC04 | 验证数值、证据与责任边界 / Validate findings, evidence and responsibility | IMPLEMENTED |
 | E07-UC05 | 部分结果、超时与重启恢复 / Preserve partial reviews and recover interrupted runs | IMPLEMENTED |
 | E07-UC06 | 保存报告、用量与轨迹 / Retain reports, usage and review traces | IMPLEMENTED |
-| E07-UC07 | 风险处置审批生命周期 / Approve and track risk dispositions | DESIGNED |
+| E07-UC07 | 风险处置审批生命周期 / Approve and track risk dispositions | IMPLEMENTED_OFFLINE |
 
 ## E07-UC01 — 列出可用指标并确定性计算 / Discover and compute declared metrics
 
@@ -226,7 +226,7 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ## E07-UC07 — 风险处置审批生命周期 / Approve and track risk dispositions
 
-**Status: DESIGNED**
+**Status: IMPLEMENTED_OFFLINE**
 
 来源 / Sources: [#19](https://github.com/EricWang1358/BridgeFlow-AI/issues/19).
 
@@ -250,7 +250,13 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 
 ### 实现与验证 / Implementation and verification
 
-[代码或范围记录 / Code or scope record](../../backend/src/bridgeflow/schemas/__init__.py)；[行为测试 / Behavioral tests](../../backend/tests/test_traceability.py)。
+第十轮（2026-09-19，#19）离线实现：[monthly/dispositions.py](../../backend/src/bridgeflow/monthly/dispositions.py) 的状态机**由字典声明**（`risk_disposition`：状态、初始态、终态、允许的流转、由哪个角色执行、哪些动作必须写理由）。代码只保证与公司流程无关的部分：只能走声明允许的流转、要求理由的动作没有理由就拒、每次流转记录审批人与时间、日志追加不覆盖。接口 [api/dispositions.py](../../backend/src/bridgeflow/api/dispositions.py)：`GET /reviews/{batch}/dispositions`（只读投影，按报告里的关注项列出）、`POST /tools/risk-dispositions`、`POST /tools/risk-disposition-record`（需原生审批回执，`risk_disposition` 操作授权给部门主管与总表管理者）。插件工具 `risk_dispositions / risk_disposition_record`，结论页的关注项显示当前状态。
+
+**本轮设计判定与依据**：业务方尚未确认责任与关闭规则（#19 第二项），因此**不写死任何一套状态**：字典没声明就明确拒绝并说明由谁来声明（与 E14-UC01 D17 同一原则），示例流程只写在模拟公司字典里，业务方确认后改声明即可，不改代码。处置**不改动报告与任何数字**：它记录的是公司打算怎么办，不是重新研判。一次处置只作用于一条关注项，绝不由一次工具调用推断整批已批准（#19 第三项）。
+
+[行为测试 / Behavioral tests](../../backend/tests/test_dispositions.py)（6 条：初始态、只走声明允许的流转、无审批拒绝、要求理由、版本冲突与追加日志、报告未列出的 check 404、无声明时拒绝、队长只见状态与可选动作）。
+
+Round 10 (2026-09-19, #19), offline: the state machine is declared in the dictionary — states, initial and closed states, allowed transitions, the role that may take each and which need a reason. The code enforces only what does not vary: a transition must be one the declaration allows from the current state, an action declared as needing a reason is refused without one, every move records the approver and time, and the log is append-only. Reads are a projection over the report's own attention items; writes need a DSH approval receipt and the `risk_disposition` grant (department admins and the master-table owner). Because the business side has not settled ownership and closure rules, nothing is hard-coded: with no declaration the endpoint refuses and names who declares it. A disposition changes no figure and no report, and one recorded disposition never implies batch-wide approval.
 
 验收应同时检查主流程和上列拒绝路径、引用及版本；不能仅凭 issue 关闭或 HTTP 200 标记完成。IMPLEMENTED 表示已找到现行实现和相关验证资产，不代表本轮重新跑过每条用户旅程，也不表示真实企业签核。
 

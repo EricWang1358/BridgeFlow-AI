@@ -33,7 +33,7 @@ roles:
   production_admin:
     departments: [production]
     workflow_departments: [生产部]
-    operations: [batch_import, review_note, quarantine_decide, quarantine_apply,
+    operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
                  workflow_record, workflow_approve_submit, workflow_handoff]
   procurement_member:
     departments: [procurement]
@@ -42,7 +42,7 @@ roles:
   procurement_admin:
     departments: [procurement]
     workflow_departments: [物资部]
-    operations: [batch_import, review_note, quarantine_decide, quarantine_apply,
+    operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
                  workflow_record, workflow_approve_submit, workflow_handoff]
   finance_member:
     departments: [finance]
@@ -51,7 +51,7 @@ roles:
   finance_admin:
     departments: [finance]
     workflow_departments: [财务部]
-    operations: [batch_import, review_note, quarantine_decide, quarantine_apply,
+    operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
                  workflow_record, workflow_approve_submit, workflow_handoff]
   marketing_member:
     departments: [marketing]
@@ -60,7 +60,7 @@ roles:
   marketing_admin:
     departments: [marketing]
     workflow_departments: [市场部]
-    operations: [batch_import, review_note, quarantine_decide, quarantine_apply,
+    operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
                  workflow_record, workflow_approve_submit, workflow_handoff]
   # 总经办成员：四部门上传 + 读取。
   master_office_member:
@@ -73,7 +73,7 @@ roles:
     workflow_departments: [生产部, 物资部, 财务部, 市场部]
     # convention_decide 只给总表管理者：口径是跨部门的总表声明，不属于任何单一部门。
     operations: [batch_import, review_note, confirm_mapping, confirm_column_match,
-                 convention_decide, quarantine_decide, quarantine_apply, workflow_record, workflow_approve_submit,
+                 convention_decide, risk_disposition, quarantine_decide, quarantine_apply, workflow_record, workflow_approve_submit,
                  workflow_handoff, feishu_import, feishu_upload_report, discovery_propose,
                  discovery_upload, discovery_register, discovery_graph_save, discovery_score_save,
                  discovery_meeting_save]

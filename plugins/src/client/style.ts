@@ -417,6 +417,8 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-grade[data-grade=missing] { color: var(--bf-danger); background: var(--bf-danger-bg) }
 /* Period-on-period change (E13-UC02): direction is never colour alone; the sign carries it. */
 .bf-change { margin-left: 8px; font-size: 11px; font-weight: 600; white-space: nowrap }
+.bf-disposition { font-size: .85em; border: 1px solid currentColor; border-radius: .6em; padding: 0 .4em; margin-left: .4em; }
+.bf-disposition[data-closed=true] { opacity: .65; text-decoration: line-through; }
 .bf-chart-card { margin: 12px 0; }
 .bf-chart { width: 100%; max-width: 560px; height: auto; }
 .bf-chart-line { fill: none; stroke: currentColor; stroke-width: 2; }

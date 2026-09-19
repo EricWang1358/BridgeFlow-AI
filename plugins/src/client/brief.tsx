@@ -49,6 +49,9 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
   const { t } = useUI()
   const [brief, setBrief] = useState<Brief | null>(null), [error, setError] = useState(''), [needsReview, setNeedsReview] = useState(false), [revision, setRevision] = useState(0)
   const [exporting, setExporting] = useState(false), [exportError, setExportError] = useState('')
+  // What the company says it is doing about each finding (E07-UC07). Read-only here: a
+  // disposition is a person's decision and is recorded through the captain's approval.
+  const [dispositions, setDispositions] = useState<Record<string, { state: string; closed: boolean }>>({})
   useEffect(() => {
     const controller = new AbortController()
     setBrief(null); setError(''); setNeedsReview(false)
@@ -57,6 +60,15 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
       const detail = e instanceof Error ? e.message : String(e)
       if (/Complete the review/.test(detail)) setNeedsReview(true); else setError(describeError(e, t))
     })
+    return () => controller.abort()
+  }, [batchId, revision])
+  useEffect(() => {
+    const controller = new AbortController()
+    setDispositions({})
+    void api<{ dispositions?: { check_id: string; state: string; closed: boolean }[] }>(
+      `/reviews/${batchId}/dispositions`, { signal: controller.signal })
+      .then(result => setDispositions(Object.fromEntries((result.dispositions ?? []).map(d => [d.check_id, d]))))
+      .catch(() => { /* no declared process, or no saved review yet: the brief stands without it */ })
     return () => controller.abort()
   }, [batchId, revision])
   async function exportReport() {
@@ -96,7 +108,8 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
     <h4>{t('briefAttentionItems')}</h4>
     {!brief.attention.length && <p className="bf-hint">{t('briefNoAttention')}</p>}
     <ol className="bf-brief-attention">{brief.attention.map(a => <li key={a.check_id}>
-      <div className="bf-check"><span className="bf-check-title">{a.title}</span><b>{number(a.value, a.unit)}</b><GradeMark grade={a.grade} /></div>
+      <div className="bf-check"><span className="bf-check-title">{a.title}</span><b>{number(a.value, a.unit)}</b><GradeMark grade={a.grade} />
+        {dispositions[a.check_id] && <span className="bf-disposition" data-closed={dispositions[a.check_id]!.closed}>{dispositions[a.check_id]!.state}</span>}</div>
       <p className="bf-hint">{t(a.attention_when === 'above' ? 'briefAbove' : 'briefBelow')} {number(a.threshold, a.unit)} · {t('briefOwner')} {a.decision_owner}</p>
       <p>{t('briefAction')}：{a.action} <GradeMark grade={a.advice_grade} /></p>
       <p className="bf-hint">{a.explanation}</p>
