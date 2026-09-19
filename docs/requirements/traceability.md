@@ -154,7 +154,7 @@ These UCs come from the three-perspective review rather than individual issues; 
 | UC | 视角 / Perspective | 关联 issue / Related issues | 状态 / Status |
 | --- | --- | --- | --- |
 | [E13-UC01](13-conclusions.md) 一页月度结论 / One-page brief | 结论直观性 / Clarity | [#127](https://github.com/EricWang1358/BridgeFlow-AI/issues/127)、[#190](https://github.com/EricWang1358/BridgeFlow-AI/issues/190) | PARTIAL |
-| [E13-UC02](13-conclusions.md) 跨期对比 / Period comparison | 完整性 / Completeness | — | DESIGNED |
+| [E13-UC02](13-conclusions.md) 跨期对比 / Period comparison | 完整性 / Completeness | [#191](https://github.com/EricWang1358/BridgeFlow-AI/issues/191) | IMPLEMENTED_OFFLINE |
 | [E13-UC03](13-conclusions.md) 指标可视化 / Metric charts | 结论直观性 / Clarity | — | DESIGNED |
 | [E13-UC04](13-conclusions.md) 月度报告文档 / Monthly report | 完整性、专业性 / Completeness, professionalism | [#22](https://github.com/EricWang1358/BridgeFlow-AI/issues/22)（季度年度 PDF 仍归 E06-UC06） | PARTIAL |
 | [E13-UC05](13-conclusions.md) 口径假设确认 / Convention confirmation | 完整性 / Completeness | [#23](https://github.com/EricWang1358/BridgeFlow-AI/issues/23) | PARTIAL |

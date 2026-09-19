@@ -35,6 +35,7 @@ from pydantic import BaseModel, Field
 
 from bridgeflow.agents.sanitizer import _SLASHED_DATE, _is_ambiguous_date, _read_declared
 from bridgeflow.agents.semantic_resolver import FieldDictionary
+from bridgeflow.conclusions import periods
 from bridgeflow.schemas import CleanTable, Correction, SourceRef
 from bridgeflow.store import _root, _write
 
@@ -238,6 +239,7 @@ async def apply(batch_id: str, batch, *, batch_path, load_batch, assemble, summa
     if (sources / batch_id).is_dir():
         shutil.copytree(sources / batch_id, sources / new_id)
     _write(batch_path(new_id), derived.model_dump(mode="json"))
+    periods.record(new_id, derived)
     book.applied_to = new_id
     _write(_ledger_path(batch_id), book.model_dump())
     return {"batch": summary(new_id, derived).model_dump(), "replayed": False}

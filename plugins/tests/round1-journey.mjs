@@ -76,6 +76,24 @@ try {
   assert.equal(await page.locator('.bf-brief-attention .bf-grade[data-grade="G4"]').count(), 3)
   await shot('brief')
 
+  // E13-UC02: import the base period through the host API, then the brief compares against it
+  const june = `${root}/data/mock_business/monthly/2024-06-调优B`
+  const form = new FormData()
+  form.set('period', '2024-06')
+  for (const [department, label] of Object.entries({ production: '生产部', procurement: '物资部', finance: '财务部', marketing: '市场部' })) {
+    form.append('departments', department)
+    form.append('files', new Blob([await readFile(`${june}/${label}.xlsx`)]), `${label}.xlsx`)
+  }
+  const imported = await fetch(`http://127.0.0.1:${backendPort}/batches`, { method: 'POST', headers: { authorization: `Bearer ${env.BRIDGEFLOW_SERVICE_TOKEN}` }, body: form })
+  assert.equal(imported.status, 200, await imported.text())
+  await page.reload()
+  await page.locator('.bf-brief').waitFor()
+  await page.getByText('2024-06', { exact: false }).first().waitFor()
+  const changes = await page.locator('.bf-brief-metrics .bf-change').count()
+  assert.ok(changes >= 1, 'key metrics show a change against the base period')
+  await page.locator('.bf-callout[data-tone="warn"]').filter({ hasText: 'PRJ2023098' }).first().waitFor()
+  await shot('brief-comparison')
+
   // E13-UC06 in the master view: a selected cell shows its grade
   await target('master-open').click(); await target('master-status').waitFor()
   await target('master-evidence-open').click()

@@ -10,16 +10,32 @@ import { Chip } from './workspace.tsx'
  * here re-ranks, re-computes or re-words a figure.
  */
 type Grade = { grade: string | null; chain: string[]; missing: string[] }
-type Metric = { metric: string; check_id: string; title: string; value: number; unit: string; status: string; formula: string; source_count: number; owner: string; grade: Grade }
+type Change = { metric?: string; field?: string; unit?: string; current: number | null; base: number | null; absolute: number | null; relative: number | null; basis?: string; state: string; key?: string[]; breach?: string }
+type Totals = { field: string; current: number; base: number; absolute: number; relative: number | null; new_entities: number; discontinued: number; continuing: number }
+type Comparison = { base_kind: string; base_period: string; base_batch_id: string; status: string; reason: string; changed_fields: string[]; metrics: Change[]; totals: Totals[]; breaches: Change[] }
+type Metric = { metric: string; check_id: string; title: string; value: number; unit: string; status: string; formula: string; source_count: number; owner: string; grade: Grade; change: Change | null }
 type Attention = { check_id: string; title: string; metric: string; value: number; unit: string; threshold: number; attention_when: string; owner: string; decision_owner: string; action: string; explanation: string; grade: Grade; advice_grade: Grade }
 type Brief = {
   period: string; bound: Record<string, string>; report_status: string; stale: boolean; latest_report_id: string; missing_departments: string[]
   headline: { attention: number; ok: number; open_items: number; missing_departments: number }
   key_metrics: Metric[]; attention: Attention[]; open_items: Record<string, number>; completeness: Record<string, number>
-  grade_summary: Record<string, number>; manager_decision: string; limitations: string[]
+  grade_summary: Record<string, number>; manager_decision: string; limitations: string[]; comparison: Comparison | null
 }
 
 const number = (value: number, unit: string) => `${value.toLocaleString(undefined, { maximumFractionDigits: unit === '%' ? 2 : 2 })}${unit === '%' ? '%' : ` ${unit}`}`
+
+function ChangeMark({ change, unit }: { change: Change | null; unit: string }) {
+  const { t } = useUI()
+  if (!change) return null
+  if (change.state === 'not_computable') return <small className="bf-change" data-state="none">{t('comparisonNotComputable')}</small>
+  if (change.state !== 'compared' || change.absolute === null) return <small className="bf-change" data-state="none">{t('comparisonMissingBase')}</small>
+  const sign = change.absolute > 0 ? '+' : ''
+  // A metric that is already a ratio changes by points; a ratio of two ratios misleads (D7).
+  const amount = change.basis === 'percentage_points'
+    ? `${sign}${change.absolute.toFixed(2)} ${t('percentagePoints')}`
+    : `${sign}${number(change.absolute, unit)}${change.relative === null ? '' : `（${sign}${(change.relative * 100).toFixed(1)}%）`}`
+  return <small className="bf-change" data-state={change.absolute === 0 ? 'flat' : change.absolute > 0 ? 'up' : 'down'}>{amount}</small>
+}
 
 export function GradeMark({ grade }: { grade: Grade }) {
   const { t } = useUI()
@@ -57,7 +73,7 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
     <h4>{t('briefKeyMetrics')}</h4>
     <dl className="bf-brief-metrics">{brief.key_metrics.map(m => <div key={m.metric}>
       <dt>{m.title}</dt>
-      <dd><b>{number(m.value, m.unit)}</b> <Chip status={m.status} /> <GradeMark grade={m.grade} /><small>{m.formula} · {t(m.owner)}</small></dd>
+      <dd><b>{number(m.value, m.unit)}</b> <Chip status={m.status} /> <GradeMark grade={m.grade} /> <ChangeMark change={m.change} unit={m.unit} /><small>{m.formula} · {t(m.owner)}</small></dd>
     </div>)}</dl>
 
     <h4>{t('briefAttentionItems')}</h4>
@@ -68,6 +84,27 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
       <p>{t('briefAction')}：{a.action} <GradeMark grade={a.advice_grade} /></p>
       <p className="bf-hint">{a.explanation}</p>
     </li>)}</ol>
+
+    <h4>{t('periodComparison')}</h4>
+    {!brief.comparison || brief.comparison.status !== 'compared'
+      ? <p className="bf-hint" role="status">{t(brief.comparison?.status === 'no_base' ? 'comparisonNoBase'
+        : brief.comparison?.status === 'declaration_changed' ? 'comparisonChanged'
+        : brief.comparison?.status === 'unavailable' ? 'comparisonUnavailable' : 'comparisonUnusable')}
+        {brief.comparison?.base_period ? ` · ${t('comparisonBase')} ${brief.comparison.base_period}` : ''}
+        {brief.comparison?.reason ? ` · ${brief.comparison.reason}` : ''}</p>
+      : <>
+        <p className="bf-hint">{t('comparisonBase')} {brief.comparison.base_period}</p>
+        {brief.comparison.breaches.length > 0 && <div className="bf-callout" data-tone="warn">
+          <h3>{t('comparisonBreaches')} · {brief.comparison.breaches.length}</h3>
+          <ul>{brief.comparison.breaches.map((b, i) => <li key={i}>{b.key?.join(' · ')} · {b.field} · {number(b.current ?? 0, '')} ← {number(b.base ?? 0, '')} <ChangeMark change={b} unit="" /></li>)}</ul>
+        </div>}
+        <details><summary>{t('comparisonTotals')} · {brief.comparison.totals.length}</summary>
+          <div className="bf-scroll"><table><thead><tr><th>{t('comparisonField')}</th><th>{brief.period}</th><th>{brief.comparison.base_period}</th><th>Δ</th><th>{t('comparisonTotals')}</th></tr></thead>
+            <tbody>{brief.comparison.totals.map(row => <tr key={row.field}><td>{row.field}</td><td data-numeric="true">{number(row.current, '')}</td><td data-numeric="true">{number(row.base, '')}</td>
+              <td data-numeric="true">{number(row.absolute, '')}{row.relative === null ? '' : `（${(row.relative * 100).toFixed(1)}%）`}</td>
+              <td data-numeric="true">{number(row.new_entities, '')} / {number(row.discontinued, '')} / {number(row.continuing, '')}</td></tr>)}</tbody></table></div>
+        </details>
+      </>}
 
     <h4>{t('briefOpenItems')}</h4>
     <ul className="bf-brief-open">

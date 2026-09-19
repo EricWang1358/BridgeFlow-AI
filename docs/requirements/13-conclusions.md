@@ -22,7 +22,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 | UC | 中文 / English | Status | 优先级 / Priority |
 | --- | --- | --- | --- |
 | E13-UC01 | 一页月度结论 / One-page monthly brief | PARTIAL | Must |
-| E13-UC02 | 跨期对比与差异解释 / Period comparison and variance explanation | DESIGNED | Must |
+| E13-UC02 | 跨期对比与差异解释 / Period comparison and variance explanation | IMPLEMENTED_OFFLINE | Must |
 | E13-UC03 | 指标可视化与下钻 / Metric charts with drill-down | DESIGNED | Should |
 | E13-UC04 | 月度报告文档导出 / Export the monthly report document | PARTIAL | Should |
 | E13-UC05 | 口径假设确认与替换 / Confirm or replace declared conventions | PARTIAL | Must |
@@ -52,7 +52,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
   - AC-4 Given 本月结论页 When 统计其生成过程 Then 模型调用次数为 0。
 - 后置：结论页作为派生产物保存，绑定批次、报告与声明版本；报告更新后旧结论页标为过期，不被覆盖。
 - 依赖：E07-UC06、E06-UC02、E13-UC02（上期对比）、E13-UC06（依据等级）。
-- 当前证据与缺口（2026-09-17 第一轮）：[conclusions/brief.py](../../backend/src/bridgeflow/conclusions/brief.py) 的 `BriefBuilder` 与 `GET /conclusions/batches/{id}`，工作室「本月结论」视图（[brief.tsx](../../plugins/src/client/brief.tsx)）；关键指标、严重度与口径依赖由字典 `business_review.brief` 声明，缺声明拒绝。[行为测试](../../backend/tests/test_conclusions.py) 覆盖 AC-1–4 与过期标记；[浏览器旅程](../../plugins/tests/round1-journey.mjs)。剩余：较上期变化（依赖 E13-UC02）、保存为笔记本产物、关注项直接跳到单个指标出处。
+- 当前证据与缺口（2026-09-17 第一轮）：[conclusions/brief.py](../../backend/src/bridgeflow/conclusions/brief.py) 的 `BriefBuilder` 与 `GET /conclusions/batches/{id}`，工作室「本月结论」视图（[brief.tsx](../../plugins/src/client/brief.tsx)）；关键指标、严重度与口径依赖由字典 `business_review.brief` 声明，缺声明拒绝。[行为测试](../../backend/tests/test_conclusions.py) 覆盖 AC-1–4 与过期标记；[浏览器旅程](../../plugins/tests/round1-journey.mjs)。剩余：保存为笔记本产物、关注项直接跳到单个指标出处。（较上期变化已由 E13-UC02 在第二轮补上。）
 
 ### English requirements and acceptance
 
@@ -63,11 +63,13 @@ This epic adds no computation of its own. Every number still comes from the E06 
 - Exceptions: a partial report names missing departments and excludes their metrics from ranking and from “OK”; no saved report refuses with “complete the review first”.
 - Acceptance: AC-1 three attention items are listed, ordered and linked; AC-2 a partial report is labelled and finance metrics are excluded; AC-3 no report refuses without a blank page; AC-4 zero model calls.
 - Postcondition: the brief is a derived artifact bound to batch, report and declaration versions; a newer report marks it stale without overwriting.
-- Evidence and gap (round 1, 2026-09-17): `BriefBuilder`, `GET /conclusions/batches/{id}` and the Studio “This month” view; key metrics, severity and convention dependencies are declared under `business_review.brief` and refused when absent. Tests cover AC-1–4 and staleness; a browser journey passes. Remaining: change versus prior period (needs UC02), saving as a notebook artifact, drilling from an attention item to its metric sources.
+- Evidence and gap (round 1, 2026-09-17): `BriefBuilder`, `GET /conclusions/batches/{id}` and the Studio “This month” view; key metrics, severity and convention dependencies are declared under `business_review.brief` and refused when absent. Tests cover AC-1–4 and staleness; a browser journey passes. Remaining: saving as a notebook artifact and drilling from an attention item to its metric sources. (Change versus prior period landed with UC02 in round 2.)
 
 ## E13-UC02 — 跨期对比与差异解释 / Period comparison and variance explanation
 
-**Status: DESIGNED**
+**Status: IMPLEMENTED_OFFLINE**
+
+看板 / Issue: [#191](https://github.com/EricWang1358/BridgeFlow-AI/issues/191)
 
 ### 中文需求与验收
 
@@ -87,7 +89,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
   - AC-4 Given 两期字典版本不同且未声明映射 When 请求对比 Then 拒绝并列出不一致的字段名。
 - 后置：对比结果是派生视图，不改动任一批次。
 - 依赖：E04-UC01（冻结批次）、E06-UC02、E05-UC01；计划值依赖业务方提供计划来源。
-- 当前证据与缺口：批次按期间冻结并可读取，但没有任何跨期对齐或差异计算；计划值没有来源。
+- 当前证据与缺口（2026-09-19 第二轮）：[conclusions/comparison.py](../../backend/src/bridgeflow/conclusions/comparison.py)（基准策略、实体对齐、差异分解、四类拒绝）与 [periods.py](../../backend/src/bridgeflow/conclusions/periods.py)（按期间检索批次的索引）；`GET /conclusions/batches/{id}/comparison`；可比字段与阈值在 `integration.yaml` 的 `comparison` 中声明；结论页每个关键指标显示较上期变化，越阈项单列。[行为测试](../../backend/tests/test_comparison.py) 覆盖 AC-1–4 与分解恒等式，[浏览器旅程](../../plugins/tests/round1-journey.mjs) 覆盖界面。缺口：去年同期只测了期间推算、未用真实两期数据跑过；计划对比按 D5 拒绝，等业务方给计划来源；总表级完整对比视图（非结论页摘要）未做。
 
 ### English requirements and acceptance
 
@@ -98,7 +100,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 - Exceptions: a missing base shows “no base period”, never 0; different dictionary versions without a declared mapping are refused with the mismatched fields; a zero base shows “not computable”.
 - Acceptance: AC-1 June vs July per-project changes sum to the company change; AC-2 with a declared −20% threshold, a ~40% decline enters attention with both sources; AC-3 a single batch shows “no base period”; AC-4 unmapped version mismatch is refused.
 - Postcondition: comparison is a derived view and modifies no batch.
-- Evidence and gap: batches are frozen per period; no alignment or variance computation exists; plan data has no source.
+- Evidence and gap (round 2, 2026-09-19): `comparison.py` (base strategies, entity alignment, decomposition, four refusal kinds) and `periods.py` (per-period batch index); `GET /conclusions/batches/{id}/comparison`; comparable fields and thresholds declared under `comparison` in `integration.yaml`; the brief shows each key metric's change and lists threshold breaches. Tests cover AC-1–4 and the decomposition identity; a browser journey covers the UI. Gaps: the last-year base is only tested through period arithmetic, not two real periods; plan comparison refuses by D5 until a plan source exists; a full master-level comparison view (beyond the brief summary) is not built.
 
 ## E13-UC03 — 指标可视化与下钻 / Metric charts with drill-down
 
@@ -239,6 +241,22 @@ This epic adds no computation of its own. Every number still comes from the E06 
 - Acceptance: AC-1 margin depending on the unconfirmed VAT rate is G3; AC-2 a subagent action is G4 with its cited metrics; AC-3 a missing provenance is labelled and reaches the E14-UC05 inbox.
 - Postcondition: grades are derived and recomputed, never stored separately.
 - Evidence and gap (round 1, 2026-09-17): a composite provenance tree graded by its weakest node; grades and chains on brief metrics, attention items, advice and every master cell, with a distribution summary; withheld cells show “provenance missing”. AC-1 and AC-2 are tested. Remaining: AC-3 inbox routing (E14-UC05), upgrade after confirmation (E13-UC05), grades in charts and exports (E13-UC03/04).
+
+## 本轮设计判定与依据 / Design decisions and their evidence
+
+需求没有写死的地方由开发侧评估决定，判定与依据记在这里，业务方可以直接推翻（改声明即可，不改代码）。
+
+Where the requirement left a choice open, it was decided during implementation. Each decision and its evidence is recorded here; the business side can overturn any of them by changing a declaration, not code.
+
+| # | 判定 / Decision | 依据 / Evidence | 落在哪 / Where |
+| --- | --- | --- | --- |
+| D1 | 基期取该期间**最新导入且调用者可见**的批次，更早的仍可按批次号访问 | 批次不可变，同一月份的多个批次互为更正（隔离处置派生、E14-UC04 单部门补传）；人说「上月」指的是最新那份 | `periods.latest_for` |
+| D2 | 两期是否可比，看**字段声明**是否相同，而不是版本字符串 | 版本字符串会因注释、口径等与字段无关的改动而变；据此拒绝会挡住本来成立的对比。字段声明不同才会把两个不同的东西相减 | `comparison.declaration_differences`，测试 `test_a_changed_field_declaration_refuses_the_comparison` |
+| D3 | 只有声明为 `additive` 的字段跨项目求和；合计再分解为新增、消失、持续三部分，三者之和恒等于总变化 | 单价与比率跨项目相加得到的数没有业务含义；分解让「总量降了」能追到是丢了项目还是存量项目下滑 | `integration.yaml` 的 `comparison.additive`；性质测试校验恒等式 |
+| D4 | 拒绝分四类：无基期、基期不可用、声明已变、该基准不可用；单个数字基期为 0 时标「无法计算」 | 四种情况对读者的含义完全不同：等数据、修数据、改声明、换基准。混为一谈会让人做错下一步 | `Comparison.status`；测试 `test_without_a_base_batch...`、`test_a_zero_base_is_not_computable...` |
+| D5 | 计划对比在业务方给出计划来源前一律拒绝 | 计划值没有声明来源，编一个基准等于编一个结论 | `DeclaredPlan.unavailable`，测试覆盖 |
+| D6 | 实体键 = 总表主键去掉期间字段（按 `period_from` 识别，不写死字段名） | 主键含报表年月，保留它会让两期没有一行能对上，每行都显示为「新增」——实现时实测到这一点 | `comparison.entity_axis` |
+| D7 | 指标本身是比率时（单位 %），变化按**百分点**给出，不给相对百分比 | 净利率 0.09% → −0.5% 的相对变化是 −679%，读者无法使用；界面初版就出现了这一幕 | `comparison.POINT_UNITS`；测试断言 `basis == "percentage_points"` |
 
 ## Epic 数据与实现设计 / Epic data and implementation design
 

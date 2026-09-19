@@ -24,6 +24,7 @@ from bridgeflow.agents import DataSanitizerAgent, SanitizerInput
 from bridgeflow.agents.semantic_resolver import FieldDictionary, SemanticResolverAgent
 from bridgeflow.agents.sop_flow import MissingRollup, SOPFlowEngine, SOPInput, UnjoinableTables
 from bridgeflow.column_matches import AppliedMatch
+from bridgeflow.conclusions import periods
 from bridgeflow.config import REPO_ROOT, settings
 from bridgeflow.identity import UserIdentity, require_user
 from bridgeflow.metrics import dictionary_path
@@ -507,6 +508,8 @@ async def _import_batch(period: str, departments: list[Department], files: list[
     for source in sources:
         _write(batch_path(batch_id).parent / "sources" / batch_id / f"{source['id']}.json", source)
     _write(batch_path(batch_id), result.model_dump(mode="json"))
+    # Index the period so "last month" can be found without parsing every batch (E13-UC02).
+    periods.record(batch_id, result)
     return summary(batch_id, result)
 
 

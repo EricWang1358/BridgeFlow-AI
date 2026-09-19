@@ -26,6 +26,7 @@ from typing import Any
 from fastapi import HTTPException
 from pydantic import BaseModel, Field, ValidationError
 
+from bridgeflow.conclusions.comparison import Comparison
 from bridgeflow.conclusions.grades import EvidenceGrader, advice, grade_master, review_check
 
 
@@ -46,6 +47,8 @@ class MetricLine(BaseModel):
     source_count: int
     owner: str
     grade: dict[str, Any]
+    #: Change against the base period (E13-UC02); state says why there is none.
+    change: dict[str, Any] | None = None
 
 
 class AttentionItem(BaseModel):
@@ -79,6 +82,7 @@ class ConclusionBrief(BaseModel):
     grade_summary: dict[str, int]
     manager_decision: str
     limitations: list[str]
+    comparison: Comparison | None = None
 
 
 def declaration(dictionary: dict | None) -> BriefDeclaration:
@@ -105,6 +109,7 @@ class BriefBuilder:
     dictionary: dict[str, Any]
     batch_counts: dict[str, int]
     master: Any = None  # integration.MasterResult | None
+    comparison: Comparison | None = None
     _declared: BriefDeclaration | None = None
     _validated: dict[str, dict] = field(default_factory=dict)
     _missing: list[str] = field(default_factory=list)
@@ -138,9 +143,11 @@ class BriefBuilder:
             check = next((c for c in self._validated.values() if c["metric"] == metric), None)
             if check is None:
                 continue  # its department did not validate, or the metric has no check
+            change = next((c for c in (self.comparison.metrics if self.comparison else []) if c.metric == metric), None)
             lines.append(MetricLine(metric=metric, check_id=check["check_id"], title=check["title"], value=check["value"],
                                     unit=check["unit"], status=check["expected_status"], formula=check["formula"],
-                                    source_count=check["source_count"], owner=check["role"], grade=self._metric_grade(check)))
+                                    source_count=check["source_count"], owner=check["role"], grade=self._metric_grade(check),
+                                    change=change.model_dump() if change else None))
         return lines
 
     def attention(self) -> list[AttentionItem]:
@@ -193,4 +200,5 @@ class BriefBuilder:
             grade_summary=self._grades,
             manager_decision=str(self.report.get("manager_decision", "")),
             limitations=list(self.report.get("limitations", [])),
+            comparison=self.comparison,
         )
