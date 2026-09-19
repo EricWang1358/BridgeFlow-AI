@@ -166,6 +166,13 @@ business_review:
   - {id: collection_gap, owner: marketing, metric: collection_gap, attention_when: above, threshold: 0, title: 收款计划缺口, actions: {attention: [补充收款计划并明确责任人], ok: [收款计划覆盖已结算金额]}}
   # 一页月度结论（E13-UC01）：关键指标与顺序、需关注事项的严重度（从高到低）、指标依赖的口径（E13-UC06）。
   # 口径键与 data/company_templates/integration.yaml 的 assumptions 同名；未确认的口径使依赖它的结论为 G3。
+  # 图表类型由声明选择，不由模型临时决定（E13-UC03）。阈值线取自同一声明里的判定阈值，
+  # 因此图上的线和结论里的判断永远是同一个数。
+  charts:
+  - {id: sign_rate_trend, kind: trend, metric: sign_rate, periods: 6, threshold_from_check: sign_rate}
+  - {id: net_margin_trend, kind: trend, metric: net_margin, periods: 6, threshold_from_check: net_margin}
+  - {id: output_variance, kind: variance, field: 生产_实际量}
+  - {id: project_output_bars, kind: entity_bars, field: 生产_实际量, top: 8}
   brief:
     key_metrics: [net_margin, material_cost_ratio, settlement_collection_rate, receivable_months, sign_rate]
     severity: [net_margin, collection_gap, material_cost, receivable_months, advance, collection_rate, unit_margin, volume_gap, sign_rate, leftover]

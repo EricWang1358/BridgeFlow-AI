@@ -94,6 +94,15 @@ try {
   await page.locator('.bf-callout[data-tone="warn"]').filter({ hasText: 'PRJ2023098' }).first().waitFor()
   await shot('brief-comparison')
 
+  // E13-UC03: the declared trend draws two periods, and the table beside it says the same
+  const trend = page.locator('.bf-chart-card').filter({ hasText: 'Sign-off rate trend' })
+  await trend.locator('svg.bf-chart').waitFor()
+  await trend.getByRole('button', { name: 'Show the table' }).click()
+  const cells = await trend.locator('.bf-chart-table tbody tr td:nth-child(2)').allInnerTexts()
+  assert.ok(cells.filter(c => c !== '—').length >= 2, `the table lists the same measured points: ${cells}`)
+  assert.ok(cells.includes('—'), 'a month without a batch stays a gap in the table too')
+  await shot('metric-charts')
+
   // E13-UC06 in the master view: a selected cell shows its grade
   await target('master-open').click(); await target('master-status').waitFor()
   await target('master-evidence-open').click()

@@ -417,6 +417,21 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-grade[data-grade=missing] { color: var(--bf-danger); background: var(--bf-danger-bg) }
 /* Period-on-period change (E13-UC02): direction is never colour alone; the sign carries it. */
 .bf-change { margin-left: 8px; font-size: 11px; font-weight: 600; white-space: nowrap }
+.bf-chart-card { margin: 12px 0; }
+.bf-chart { width: 100%; max-width: 560px; height: auto; }
+.bf-chart-line { fill: none; stroke: currentColor; stroke-width: 2; }
+.bf-chart-threshold { stroke: currentColor; stroke-dasharray: 4 4; opacity: .6; }
+.bf-chart-label { font-size: 10px; fill: currentColor; opacity: .75; }
+.bf-chart-point { fill: currentColor; cursor: pointer; }
+.bf-chart-point[data-breach=true] { stroke: currentColor; stroke-width: 3; fill: var(--bf-surface, #fff); }
+.bf-chart-bars { display: grid; gap: 4px; max-width: 560px; }
+.bf-chart-bar { display: grid; grid-template-columns: 10rem 1fr 7rem; gap: 8px; align-items: center; text-align: left; background: none; border: 0; padding: 2px 0; cursor: pointer; }
+.bf-chart-bar-track { background: color-mix(in srgb, currentColor 12%, transparent); height: 12px; border-radius: 6px; }
+.bf-chart-bar-track > span { display: block; height: 100%; border-radius: 6px; background: currentColor; }
+.bf-chart-bar-track > span[data-negative=true] { background: repeating-linear-gradient(45deg, currentColor 0 4px, transparent 4px 8px); }
+.bf-chart-bar[data-breach=true] .bf-chart-bar-label { font-weight: 700; }
+.bf-chart-bar-value { text-align: right; font-variant-numeric: tabular-nums; }
+.bf-chart-table { margin-top: 6px; }
 .bf-inbox ul { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
 .bf-inbox li { border-left: 3px solid var(--bf-warn, #8a6100); padding: 4px 0 4px 10px; }
 .bf-inbox label { display: block; margin: 6px 0; }

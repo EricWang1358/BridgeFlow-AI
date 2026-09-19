@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { MetricCharts } from './charts.tsx'
 import { api, describeError, navigate, useUI } from './ui.ts'
 import { Chip } from './workspace.tsx'
 
@@ -114,5 +115,6 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
     </ul>
     <p className="bf-hint">{t('briefCompleteness')}：{brief.completeness.complete_rows} / {brief.completeness.master_rows} {t('masterCompleteRows')} · {t('integrationAssumptions')} {brief.completeness.assumptions}</p>
     <details><summary>{t('briefDecisionAndLimits')}</summary><p>{brief.manager_decision}</p><ul>{brief.limitations.map((l, i) => <li key={i}>{l}</li>)}</ul></details>
+    <MetricCharts batchId={batchId} />
   </section>
 }
