@@ -9,9 +9,9 @@ import { api, describeError, navigate, useUI } from './ui.ts'
  * breaks rather than passing through a month nobody reported. Status never rests on colour
  * alone — a breached point carries a mark and the table says so in words.
  */
-type Point = { label: string; value: number | null; batch_id: string; period: string; key: string[]; part: string; breach: boolean }
+type Point = { label: string; value: number | null; batch_id: string; period: string; key: string[]; part: string; breach: boolean; grade: string }
 type Chart = { id: string; kind: string; status: string; subject: string; unit: string; points: Point[]
-  threshold: number | null; threshold_label: string; reason: string }
+  threshold: number | null; threshold_label: string; reason: string; grade: string }
 
 const WIDTH = 520, HEIGHT = 160, PAD = 28
 
@@ -96,7 +96,8 @@ export function MetricCharts({ batchId }: { batchId: string }) {
     <h3>{t('metricCharts')}</h3>
     {charts.charts.map(chart => <article key={chart.id} className="bf-chart-card">
       <h4>{t(`chart_${chart.id}`) === `chart_${chart.id}` ? chart.subject : t(`chart_${chart.id}`)}
-        {chart.unit && <span className="bf-hint"> · {chart.unit}</span>}</h4>
+        {chart.unit && <span className="bf-hint"> · {chart.unit}</span>}
+        {chart.grade && <span className="bf-grade" data-grade={chart.grade}>{chart.grade}</span>}</h4>
       {chart.status === 'ready'
         ? chart.kind === 'trend' ? <Trend chart={chart} onPoint={open} /> : <Bars chart={chart} onPoint={open} />
         : <p className="bf-hint">{chart.status === 'needs_more_periods' ? t('chartNeedsPeriods') : t('chartUnavailable')}{chart.reason ? ` — ${chart.reason}` : ''}</p>}
@@ -106,7 +107,8 @@ export function MetricCharts({ batchId }: { batchId: string }) {
         <th scope="col">{t('chartPoint')}</th><th scope="col">{t('value')}</th><th scope="col">{t('chartState')}</th></tr></thead>
         <tbody>{chart.points.map(point => <tr key={point.label}>
           <td>{point.label}</td><td data-numeric="true">{format(point.value, chart.unit)}</td>
-          <td>{point.value === null ? t('chartGapCell') : point.breach ? t('chartBreach') : t('chartWithin')}</td>
+          <td>{point.value === null ? t('chartGapCell') : point.breach ? t('chartBreach') : t('chartWithin')}
+            {point.grade && <span className="bf-grade" data-grade={point.grade}>{point.grade}</span>}</td>
         </tr>)}</tbody></table>}
     </article>)}
   </section>

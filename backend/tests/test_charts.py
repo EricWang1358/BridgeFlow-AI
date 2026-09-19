@@ -98,3 +98,33 @@ def test_a_dictionary_without_chart_declarations_shows_tables_instead(client, mo
     _write(batch_path(batch), snapshot.model_dump(mode="json"))
     result = client.get(f"/conclusions/batches/{batch}/charts").json()
     assert result["charts"] == [] and "table" in result["refusal"]
+
+
+def test_chart_points_carry_the_evidence_grade_of_what_they_draw(client):
+    """E13-UC06 in charts: a drawn number says how strong it is (round 11)."""
+    import_month(client, JUNE, "2024-06")
+    batch = client.post("/batches/demo").json()["batch_id"]
+    charts = charts_of(client, batch)
+    trend = charts["sign_rate_trend"]
+    assert trend["grade"] == "G2"
+    assert {p["grade"] for p in trend["points"] if p["value"] is not None} == {"G2"}
+    assert all(p["grade"] == "" for p in trend["points"] if p["value"] is None)
+    bars = charts["project_output_bars"]
+    master = client.get(f"/integration/batches/{batch}").json()
+    index = {tuple(row["key"]): row for row in master["rows"]}
+    for point in bars["points"]:
+        row = index[tuple(point["key"])]
+        expected = master["grades"][master["rows"].index(row)]["生产_实际量"]["grade"]
+        assert point["grade"] == expected
+
+
+def test_a_metric_resting_on_an_unconfirmed_convention_is_drawn_as_g3(client):
+    import_month(client, JUNE, "2024-06")
+    batch = client.post("/batches/demo").json()["batch_id"]
+    from bridgeflow.api.batches import batch_path, load_batch
+    from bridgeflow.store import _write
+    snapshot = load_batch(batch)
+    snapshot.dictionary_snapshot["business_review"]["brief"]["conventions"]["sign_rate"] = ["增值税税率"]
+    _write(batch_path(batch), snapshot.model_dump(mode="json"))
+    trend = charts_of(client, batch)["sign_rate_trend"]
+    assert trend["grade"] == "G3"
