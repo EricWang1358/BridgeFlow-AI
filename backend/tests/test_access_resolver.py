@@ -296,3 +296,38 @@ def test_workflow_departments_union_across_roles(configured):
     configured[0]["spc_production"] = {"ou_bob": "member"}
     configured[0]["spc_master"] = {"ou_bob": "member"}
     assert workflow_departments_for("ou_bob") == {"生产部", "物资部"}
+
+
+def test_an_unreachable_feishu_is_tagged_withheld_rather_than_denied(configured, monkeypatch):
+    """503 alone cannot carry this: the browser must say "cannot be confirmed", not
+    "denied", and half the service answers 503 for unrelated reasons (docs/design P10)."""
+    monkeypatch.setattr(settings, "feishu_app_id", "cli_test")
+    monkeypatch.setattr(settings, "feishu_app_secret", "secret")
+
+    def down(space_id):
+        raise FeishuError("Feishu could not be reached: timeout")
+
+    monkeypatch.setattr(access_resolver, "fetch_space_members", down)
+    with pytest.raises(HTTPException) as failure:
+        access_resolver.resolve("ou_bob")
+    assert failure.value.status_code == 503
+    assert failure.value.headers == {access_resolver.REASON_HEADER: access_resolver.REASON_UNAVAILABLE}
+
+
+def test_a_deploy_problem_is_tagged_unconfigured_so_nobody_is_told_to_retry(configured, monkeypatch, tmp_path):
+    """Missing credentials and a missing mapping file both need an operator, not a retry."""
+    monkeypatch.setattr(settings, "feishu_app_id", "")
+    monkeypatch.setattr(settings, "feishu_app_secret", "")
+
+    def unconfigured(space_id):
+        raise FeishuError("Feishu is not configured: export FEISHU_APP_ID and FEISHU_APP_SECRET")
+
+    monkeypatch.setattr(access_resolver, "fetch_space_members", unconfigured)
+    with pytest.raises(HTTPException) as failure:
+        access_resolver.resolve("ou_bob")
+    assert failure.value.headers == {access_resolver.REASON_HEADER: access_resolver.REASON_UNCONFIGURED}
+
+    monkeypatch.setattr(settings, "access_control_path", str(tmp_path / "missing.yaml"))
+    with pytest.raises(HTTPException) as missing:
+        access_resolver.resolve("ou_bob")
+    assert missing.value.headers == {access_resolver.REASON_HEADER: access_resolver.REASON_UNCONFIGURED}

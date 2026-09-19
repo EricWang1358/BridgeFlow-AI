@@ -183,7 +183,13 @@ body[data-ds-dark-theme] .bf-save-state[data-dirty=true] { color: #dfbd76 }
   .bf-shell-top nav { gap: 4px; width:100%; overflow-x:auto; white-space:nowrap; padding-bottom:4px; }
   .bf-shell-top button { padding: 5px 7px; font-size: 11px }
 }
-.bf-route-notice { position: fixed; z-index: 2147483000; top: 64px; left: 50%; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px)); display: flex; gap: 12px; align-items: center; box-shadow: 0 8px 24px rgb(0 0 0 / 30%) }
+/* Heading, one sentence, then the way out — stacked, because the way out is a real
+   action now and an action squeezed beside the text reads as an afterthought. */
+/* height/padding/overflow are reset on purpose: the notice carries .bf-state only to
+   pick up the token scope, and .bf-state's own full-height, 160px-footed page padding
+   wins on specificity — which blew this toast up into a near-full-height box. */
+.bf-route-notice { position: fixed; z-index: 2147483000; top: 64px; left: 50%; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px)); height: auto; overflow: visible; padding: 12px 14px; display: grid; gap: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / 30%) }
+.bf-route-notice .bf-actions { margin: 0; justify-content: flex-end }
 /* Feishu user-identity browser (docs/30) */
 .bf-feishu { margin-top: 14px; border-top: 1px solid #ffffff1a; padding-top: 10px }
 .bf-feishu > summary { cursor: pointer; font-weight: 600 }

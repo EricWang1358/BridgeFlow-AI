@@ -125,6 +125,9 @@ def test_a_token_without_a_session_is_refused(portal):
 def test_anonymous_visitors_get_the_login_page(portal):
     response = portal.get("/")
     assert response.status_code == 200 and "飞书登录" in response.text
+    # The official Feishu mark, in the brand's own colours (docs/design/01-portal P01).
+    # A generic glyph in its place is a different product's button.
+    assert "#00D6B9" in response.text and "#3370FF" in response.text
 
 
 def test_a_signed_in_user_skips_feishu_on_login(portal):
@@ -290,6 +293,15 @@ def test_missing_credentials_say_not_configured(tmp_path):
     with TestClient(create_app(cfg)) as client:
         response = client.get("/login", params={"app": "bridgeflow"})
         assert response.status_code == 503 and "not configured" in response.text
+
+        # The home page draws no button that cannot be pressed: it names the
+        # deployment problem and tells the operator WHICH variable is missing —
+        # names and set/unset only, never a value.
+        home = client.get("/")
+        assert home.status_code == 200
+        assert "飞书登录未配置" in home.text and "飞书登录</span>" not in home.text
+        assert "PORTAL_FEISHU_APP_ID" in home.text and "未设置" in home.text
+        assert "s" * 32 not in home.text
 
 
 def test_missing_signing_key_fails_closed(tmp_path):

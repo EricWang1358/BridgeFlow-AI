@@ -1,11 +1,12 @@
 import { Discovery } from './discovery.tsx'
+import { Failure } from './failure.tsx'
 import { TourDriver, TourHelpButton, TourLayer } from './tour/tour.tsx'
 import { tourEvent } from './tour/state.ts'
 import { notebookKinds, notebookPurposes, isNotebookKind } from '../notebook-capabilities.ts'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
-import { api, formatDateTime, navigate, portalLoginUrl, route, startReview, takeRouteError, useUI, type Summary, describeError } from './ui.ts'
+import { api, formatDateTime, navigate, portalLoginUrl, route, startReview, takeRouteError, useUI, type Summary } from './ui.ts'
 import { ImportForm, Chip } from './workspace.tsx'
 import { FeishuImport, FeishuUpload, WikiFileUpload } from './feishu-picker.tsx'
 import { Quotation } from './quotation.tsx'
@@ -37,7 +38,7 @@ function Shell({ ctx }: { ctx: Context }) {
   const batchId = selected.batch || String(audit.review?.batch_id ?? '')
   const [summary, setSummary] = useState<Summary | null>(null), [sources, setSources] = useState<Source[]>([])
   const [artifacts, setArtifacts] = useState<Artifact[]>([]), [artifactTotal, setArtifactTotal] = useState(0), [artifactOffset, setArtifactOffset] = useState(0)
-  const [error, setError] = useState(''), [revision, setRevision] = useState(0), [busy, setBusy] = useState(false)
+  const [error, setError] = useState<unknown>(''), [revision, setRevision] = useState(0), [busy, setBusy] = useState(false)
   const [preview, setPreview] = useState<Preview | null>(null), [report, setReport] = useState<Review | null>(null), [offset, setOffset] = useState(0)
   const [panel, setPanel] = useState(''), [copied, setCopied] = useState(false)
   const navigation = useNativeSidebar(ctx), notebook = useNotebook(ctx, selected, batchId)
@@ -74,7 +75,7 @@ function Shell({ ctx }: { ctx: Context }) {
       api<{ sources: Source[] }>(`/batches/${batchId}/sources`, { signal }),
       api<{ artifacts: Artifact[]; total: number }>(`/batches/${batchId}/artifacts?offset=${artifactOffset}`, { signal }),
     ]).then(([batch, files, outputs]) => { setSummary(batch); setSources(files.sources); setArtifacts(outputs.artifacts); setArtifactTotal(outputs.total) })
-      .catch(e => { if (!signal.aborted) setError(describeError(e, t)) })
+      .catch(e => { if (!signal.aborted) setError(e) })
     return () => controller.abort()
   }, [batchId, revision, audit.review?.status, audit.review?.report_id, artifactOffset])
   useEffect(() => {
@@ -85,7 +86,7 @@ function Shell({ ctx }: { ctx: Context }) {
       ? api<Preview>(`/batches/${batchId}/sources/${encodeURIComponent(selected.source)}?offset=${offset}`, { signal }).then(value => { setPreview(value); tourEvent('source', batchId, undefined, selected.source) })
       : selected.view === 'artifact' && selected.report
         ? api<Review>(`/batches/${batchId}/review?report_id=${encodeURIComponent(selected.report)}`, { signal }).then(setReport) : undefined
-    void task?.catch(e => { if (!signal.aborted) setError(describeError(e, t)) })
+    void task?.catch(e => { if (!signal.aborted) setError(e) })
     return () => controller.abort()
   }, [batchId, selected.source, selected.report, selected.view, offset, revision])
   const viewing = ['discovery', 'quotation', 'handoff', 'integration', 'brief', 'source', 'artifact'].includes(selected.view ?? '')
@@ -133,7 +134,7 @@ function Shell({ ctx }: { ctx: Context }) {
       <header><h2>{t('sources')}</h2><button className="bf-mobile-close" onClick={() => setPanel('')}>{t('close')}</button></header>
       <div className="bf-shell-scroll"><label className="bf-notebook-purpose">{t('notebookKind')}<select disabled={notebook.busy || !notebook.loaded} value={notebook.kind} onChange={e=>{if(isNotebookKind(e.target.value))notebook.setKind(e.target.value)}}>{notebookKinds.map(kind=><option key={kind} value={kind}>{t(notebookPurposes[kind].label)}</option>)}</select></label><p className="bf-hint">{t('notebookPurposeHelp')}</p><button className="bf-add-source" onClick={() => importer.current?.showModal()}>＋ {t('addSources')}</button>
         <p className="bf-hint">{t('sourceUploadHelp')}</p>{summary?.demo_case && <p className="bf-sample-notice">{t('sampleNotebookTitle')} · {t('sampleNotebookHelp')}</p>}
-        {summary && <div className="bf-source-batch"><span>{summary.period}</span><Chip status={summary.status}/><button title={batchId} onClick={() => void navigator.clipboard.writeText(batchId).then(() => setCopied(true)).catch(e => setError(describeError(e, t)))}>{t(copied ? 'copied' : 'copyId')}</button><code>{batchId}</code></div>}
+        {summary && <div className="bf-source-batch"><span>{summary.period}</span><Chip status={summary.status}/><button title={batchId} onClick={() => void navigator.clipboard.writeText(batchId).then(() => setCopied(true)).catch(e => setError(e))}>{t(copied ? 'copied' : 'copyId')}</button><code>{batchId}</code></div>}
         <ul className="bf-resource-list">{sources.map(source => <li key={source.id}><button aria-pressed={selected.source === source.id && selected.view === 'source'} onClick={() => openSource(source)} disabled={!source.preview_available}>
           <span className="bf-file-icon" aria-hidden="true">▤</span><span><strong>{source.filename}</strong><small>{t(source.id)} · {source.preview_available ? `${source.total} ${t('rows')}` : t('originalUnavailable')}</small></span><span aria-hidden="true">↗</span>
         </button></li>)}</ul>
@@ -146,7 +147,7 @@ function Shell({ ctx }: { ctx: Context }) {
       <header><h2>{t('studio')}</h2><button className="bf-mobile-close" onClick={() => setPanel('')}>{t('close')}</button></header>
       <div className="bf-shell-scroll">
         <div className="bf-studio-tools" aria-label={t('tools')}>
-          <button data-tour-id="review-start" data-tone="blue" disabled={!summary || busy} onClick={async () => { if (!summary) return; setBusy(true); setError(''); try { await startReview(batchId, summary.period) } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) } }}><span aria-hidden="true">◈</span>{t('startReview')}<span aria-hidden="true">›</span></button>
+          <button data-tour-id="review-start" data-tone="blue" disabled={!summary || busy} onClick={async () => { if (!summary) return; setBusy(true); setError(''); try { await startReview(batchId, summary.period) } catch (e) { setError(e) } finally { setBusy(false) } }}><span aria-hidden="true">◈</span>{t('startReview')}<span aria-hidden="true">›</span></button>
           <button data-tour-id="quotation-open" data-tone="gold" aria-pressed={selected.view === 'quotation'} onClick={() => { navigate({ ...(batchId ? { batch: batchId } : {}), view: 'quotation' }); window.dispatchEvent(new Event('bridgeflow:quotation-opened')) }}><span aria-hidden="true">▧</span>{t('quotationWorkspace')}<span aria-hidden="true">›</span></button>
           <button data-tone="teal" aria-pressed={selected.view === 'discovery'} onClick={() => navigate({ view: 'discovery' })}><span aria-hidden="true">▤</span>{t('discoveryWorkspace')}<span aria-hidden="true">›</span></button>
           <button data-tone="teal" aria-pressed={selected.view === 'handoff'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'handoff' })}><span aria-hidden="true">⇄</span>{t('handoffWorkspace')}<span aria-hidden="true">›</span></button>
@@ -156,7 +157,7 @@ function Shell({ ctx }: { ctx: Context }) {
           <button data-tour-id="state-open" data-tone="pink" aria-pressed={showState && !viewing} onClick={() => { closePreview(); setHiddenStudio(false); setPanel('studio') }}><span aria-hidden="true">◷</span>{t('state')}<span aria-hidden="true">›</span></button>
         </div>
         {!summary && <p className="bf-hint">{t('studioStartHelp')}</p>}
-        {(error || notebook.error) && <p role="alert" className="bf-error">{error || notebook.error}{notebook.error && <button onClick={notebook.retry}>{t('refresh')}</button>}</p>}
+        <Failure value={error || notebook.error}>{!!notebook.error && <button onClick={notebook.retry}>{t('refresh')}</button>}</Failure>
         <section data-tour-id="artifacts" className="bf-artifacts" aria-label={t('artifacts')}><header><h3>{t('artifacts')} <span className="bf-badge">{artifactTotal + (summary?.master_rows ? 1 : 0)}</span></h3>{artifacts.length > 0 && <button aria-label={t('feishuUpload')} title={t('feishuUpload')} onClick={() => { setFeishuNotice(''); feishuUploader.current?.showModal() }}>⇪</button>}<button aria-label={t('refreshArtifacts')} onClick={() => setRevision(n => n + 1)}>↻</button></header>
           {feishuNotice && <p className="bf-hint" role="status">{feishuNotice}</p>}
           {!!summary?.master_rows && <button className="bf-artifact" data-kind="master" onClick={() => navigate({ batch: batchId, view: 'master' })}><span aria-hidden="true">▦</span><span><strong>{summary.period} · {t('master')}</strong><small>{summary.master_rows} {t('rows')}</small><Chip status={summary.status}/></span><span aria-hidden="true">↗</span></button>}
@@ -177,6 +178,11 @@ function Shell({ ctx }: { ctx: Context }) {
 /**
  * A session link that cannot be opened fails visibly (#40), wherever the page is. It is
  * its own overlay so no pane, tab or dialog state can hide or clear it.
+ *
+ * Shaped like every other failure in the product (docs/design 12-states E03, 01-portal
+ * P07): what happened as a heading, one plain sentence under it, then the way out as a
+ * real action. An expired session is warn, not danger — the token is short-lived by
+ * design, so expiry is routine rather than an incident, and signing in again fixes it.
  */
 function RouteNotice() {
   const { t } = useUI()
@@ -188,8 +194,13 @@ function RouteNotice() {
     return () => window.removeEventListener('bridgeflow:route-error', show)
   }, [])
   if (!key) return null
-  return <div className="bf-state bf-route-notice bf-callout" data-tone="danger" role="alert">
-    <p>{t(key)}{key === 'loginRequired' && portalLoginUrl() && <> <a className="bf-login-link" href={portalLoginUrl()}>{t('loginWithFeishu')}</a></>}</p><button onClick={() => setKey('')}>{t('close')}</button>
+  const expired = key === 'loginRequired', loginUrl = expired ? portalLoginUrl() : ''
+  return <div className="bf-state bf-route-notice bf-callout" data-tone={expired ? 'warn' : 'danger'} role="alert">
+    <div><h3>{t(expired ? 'loginExpiredTitle' : 'routeUnavailableTitle')}</h3><p>{t(key)}</p></div>
+    <div className="bf-actions">
+      {loginUrl && <a className="bf-linkbtn bf-primary" href={loginUrl}>{t('loginWithFeishu')}</a>}
+      <button className="bf-quiet" onClick={() => setKey('')}>{t('close')}</button>
+    </div>
   </div>
 }
 

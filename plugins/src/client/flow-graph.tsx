@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from 'react'
+import { Failure } from './failure.tsx'
 import { useUI } from './ui.ts'
 
 export type Ref = { material_id: string; version: number; locator: { kind: 'header' | 'rows' | 'lines'; sheet?: string | null; start?: number | null; end?: number | null } }
@@ -49,7 +50,7 @@ export function FlowDiagram({ graph }: { graph: FlowGraph }) {
 
 export function FlowEditor({ initial }: { initial: FlowGraph }) {
   const { language } = useUI(), zh = language === 'zh'
-  const [graph, setGraph] = useState(initial), [request, setRequest] = useState(''), [error, setError] = useState('')
+  const [graph, setGraph] = useState(initial), [request, setRequest] = useState(''), [error, setError] = useState<unknown>('')
   const change = (patch: Partial<FlowGraph>) => { setGraph(g => ({ ...g, ...patch })); setRequest(''); setError('') }
   const node = (index: number, patch: Partial<Node>) => change({ nodes: graph.nodes.map((n, i) => i === index ? { ...n, ...patch } : n) })
   const edge = (index: number, patch: Partial<Edge>) => change({ edges: graph.edges.map((n, i) => i === index ? { ...n, ...patch } : n) })
@@ -91,6 +92,6 @@ export function FlowEditor({ initial }: { initial: FlowGraph }) {
       <button type="button" disabled={!graph.nodes.length || graph.edges.length >= 100} onClick={() => change({ edges: [...graph.edges, { id: '', source: '', target: '', kind: 'information', status: 'missing', rationale: '', rework: false, references: [] }] })}>{zh ? '添加关系' : 'Add edge'}</button>
       <button type="submit">{zh ? '准备流程图审批请求' : 'Prepare flow approval'}</button>
     </form>
-    {error && <p role="alert">{error}</p>}{request && <><p>{zh ? '尚未保存。复制到原生对话并核对审批。' : 'Not saved. Copy into native chat and review the approval.'}</p><textarea readOnly rows={10} aria-label={zh ? '流程图审批请求' : 'Flow approval request'} value={request} /><button onClick={() => { void navigator.clipboard.writeText(request).catch(() => setError(zh ? '复制失败，请手动选择。' : 'Copy failed; select manually.')) }}>{zh ? '复制流程图请求' : 'Copy flow request'}</button></>}
+    <Failure value={error}/>{request && <><p>{zh ? '尚未保存。复制到原生对话并核对审批。' : 'Not saved. Copy into native chat and review the approval.'}</p><textarea readOnly rows={10} aria-label={zh ? '流程图审批请求' : 'Flow approval request'} value={request} /><button onClick={() => { void navigator.clipboard.writeText(request).catch(() => setError(zh ? '复制失败，请手动选择。' : 'Copy failed; select manually.')) }}>{zh ? '复制流程图请求' : 'Copy flow request'}</button></>}
   </section>
 }

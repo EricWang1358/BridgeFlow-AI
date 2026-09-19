@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Failure } from './failure.tsx'
 import { Sources, type Ref } from './flow-graph.tsx'
 import { useUI } from './ui.ts'
 
@@ -26,7 +27,7 @@ function Statements({ title, items, onChange }: { title: string; items: Statemen
 }
 export function MeetingEditor({ initial }: { initial: Meeting }) {
   const { language } = useUI(), zh = language === 'zh'
-  const [draft, setDraft] = useState(initial), [request, setRequest] = useState(''), [error, setError] = useState(''), [copied, setCopied] = useState(false)
+  const [draft, setDraft] = useState(initial), [request, setRequest] = useState(''), [error, setError] = useState<unknown>(''), [copied, setCopied] = useState(false)
   function update(change: Partial<Meeting>) { setDraft(value => ({ ...value, ...change })); setRequest(''); setCopied(false); setError('') }
   const cleanLines = (items: string[]) => items.map(s => s.trim()).filter(Boolean)
   function prepare(e: FormEvent) {
@@ -50,7 +51,7 @@ export function MeetingEditor({ initial }: { initial: Meeting }) {
   }
   return <section aria-label={zh ? '会议记录编辑' : 'Meeting record editor'}><h3>{zh ? '会议准备与纪要' : 'Meeting preparation and minutes'}</h3>
     <p>{zh ? '估算和建议标为假设。参会姓名是记录信息，不等于投票或立项批准。未批准编辑仅保留在当前页面。' : 'Label estimates and proposals as assumptions. Reported attendance is not a vote or project approval. Unsaved edits live only on this page.'}</p>
-    {error && <p role="alert">{error}</p>}<form onSubmit={prepare} onChange={() => { setRequest(''); setCopied(false) }}>
+    <Failure value={error}/><form onSubmit={prepare} onChange={() => { setRequest(''); setCopied(false) }}>
       <label>{zh ? '会议标识' : 'Meeting ID'}<input required readOnly={!!initial.seq} pattern="[a-zA-Z0-9]([a-zA-Z0-9_]|-){0,79}" value={draft.id} onChange={e => update({ id: e.target.value })} /></label>
       <label>{zh ? '会议标题' : 'Meeting title'}<input required maxLength={200} value={draft.title} onChange={e => update({ title: e.target.value })} /></label>
       <fieldset><legend>{zh ? '候选版本' : 'Candidate versions'}</legend>{draft.candidates.map((c, i) => <div key={i}>

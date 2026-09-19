@@ -1,6 +1,7 @@
 import { tourEvent } from './tour/state.ts'
+import { Failure } from './failure.tsx'
 import { useEffect, useState } from 'react'
-import { api, navigate, route, useUI, describeError } from './ui.ts'
+import { api, navigate, route, useUI } from './ui.ts'
 import { Notebook } from './notebook.tsx'
 
 type Contract = {
@@ -13,10 +14,10 @@ type Contract = {
 type Catalogue = { status: string; contract: Contract | null; source?: { filename: string; document_sha256: string; paragraph: string } }
 export function Quotation() {
   const { t } = useUI()
-  const [catalogue, setCatalogue] = useState<Catalogue | null>(null), [error, setError] = useState(''), [revision, setRevision] = useState(0)
+  const [catalogue, setCatalogue] = useState<Catalogue | null>(null), [error, setError] = useState<unknown>(''), [revision, setRevision] = useState(0)
   useEffect(() => {
     const controller = new AbortController(); setCatalogue(null); setError('')
-    void api<Catalogue>('/quotation/contract', { signal: controller.signal }).then(value => { setCatalogue(value); tourEvent('quotation', route().batch ?? '') }).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
+    void api<Catalogue>('/quotation/contract', { signal: controller.signal }).then(value => { setCatalogue(value); tourEvent('quotation', route().batch ?? '') }).catch(e => { if (!controller.signal.aborted) setError(e) })
     return () => controller.abort()
   }, [revision])
   useEffect(() => {
@@ -39,7 +40,7 @@ export function Quotation() {
       <p className="bf-hint">{t('quotationApprovalHelp')}</p>
     </>}>
     <div className="bf-card-head"><h3>{t('declaredTemplate')}</h3><button data-tour-recovery={error ? '' : undefined} onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button></div>
-    {error && <p role="alert" className="bf-error">{error}</p>}
+    <Failure value={error}/>
     {!catalogue && !error && <p role="status" className="bf-loading">{t('loading')}</p>}
     {catalogue && !contract && <div className="bf-notebook-empty"><h3>{t('quotationUnconfigured')}</h3><p>{t('quotationConfigureHelp')}</p></div>}
     {contract && <>

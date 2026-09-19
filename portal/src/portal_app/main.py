@@ -109,8 +109,23 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
             return next(iter(registry))
         return "bridgeflow" if "bridgeflow" in registry else None
 
-    def error(status: int, title: str, detail: str) -> HTMLResponse:
-        return HTMLResponse(pages.error_page(title, detail), status_code=status)
+    def error(status: int, title: str, detail: str, *,
+              tone: str = "bad", again: bool = False) -> HTMLResponse:
+        """``again`` offers login as the primary action — only for failures a fresh
+        login actually fixes; a missing deploy variable is not one of them."""
+        return HTMLResponse(pages.error_page(title, detail, tone=tone, again=again),
+                            status_code=status)
+
+    def config_checks() -> dict[str, bool]:
+        """What an operator needs when sign-in is unconfigured: names and set/unset.
+
+        Never the values — these are the same bootstrap variables that may only
+        come from the launching shell (see Settings).
+        """
+        return {"PORTAL_FEISHU_APP_ID": bool(cfg.feishu_app_id),
+                "PORTAL_FEISHU_APP_SECRET": bool(cfg.feishu_app_secret),
+                "PORTAL_KEY_PATH": bool(cfg.key_path),
+                "PORTAL_SESSION_SECRET": bool(cfg.session_secret)}
 
     @app.get("/health")
     async def health() -> dict:
@@ -119,7 +134,8 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
     # response_model=None: the union return annotation is not a Pydantic field type.
     @app.get("/", response_model=None)
     async def index(request: Request) -> HTMLResponse:
-        return HTMLResponse(pages.index(read_session(request), registry, bool(cfg.feishu_app_id)))
+        return HTMLResponse(pages.index(read_session(request), registry,
+                                        bool(cfg.feishu_app_id), config_checks()))
 
     @app.get("/login", response_model=None)
     async def login(request: Request, app: Annotated[str, Query()] = "") -> HTMLResponse | RedirectResponse:
@@ -132,7 +148,7 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
         try:
             client = feishu()
         except NotConfigured as exc:
-            return error(503, "登录未配置", str(exc))
+            return error(503, "登录未配置", str(exc), tone="warn")
         await client.close()  # the URL is pure string work; no call is made here
         state = seal({"app": name, "nonce": secrets.token_hex(8)}, cfg.session_secret, STATE_TTL_SECONDS)
         return RedirectResponse(client.authorize_url(state), status_code=302)
@@ -141,14 +157,15 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
     async def callback(code: str = "", state: str = "") -> HTMLResponse | RedirectResponse:
         proven = unseal(state, cfg.session_secret)
         if proven is None or proven.get("app") not in registry or not code:
-            return error(403, "登录状态无效或已过期", "登录链接只在发起后 10 分钟内有效，请重新发起登录。")
+            return error(403, "登录状态无效或已过期", "登录链接只在发起后 10 分钟内有效，请重新发起登录。",
+                         tone="warn", again=True)
         client = feishu()
         try:
             exchanged = await client.exchange_code(code)
         except NotConfigured as exc:
-            return error(503, "登录未配置", str(exc))
+            return error(503, "登录未配置", str(exc), tone="warn")
         except FeishuError as exc:
-            return error(502, "飞书拒绝了这次登录", str(exc))
+            return error(502, "飞书拒绝了这次登录", str(exc), again=True)
         finally:
             await client.close()
         user = exchanged["user"]
@@ -208,7 +225,7 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
             return error(404, "未知应用", f"应用 {app!r} 未在门户注册。")
         target = registry[name]["app_uri"]
         if not target:
-            return error(503, "应用入口未配置", f"应用 {name!r} 缺少 app_uri（docs/22 §9b）。")
+            return error(503, "应用入口未配置", f"应用 {name!r} 缺少 app_uri（docs/22 §9b）。", tone="warn")
         token = ""
         if cfg.dsh_token_file:
             try:

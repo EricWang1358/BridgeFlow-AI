@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, useUI, describeError } from './ui.ts'
+import { Failure } from './failure.tsx'
+import { api, useUI } from './ui.ts'
 import type { Limits } from './workspace.tsx'
 import type { PendingApproval } from '@deepseek-ai/dsh-client-ui-approval/client'
 
@@ -18,7 +19,7 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
   const [details, setDetails] = useState<Detail[] | null>(null)
   const [detailFailed, setDetailFailed] = useState(false), [attempt, setAttempt] = useState(0)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<unknown>('')
   const card = useRef<HTMLElement>(null)
   // A decision that appears must be reachable without a mouse: focus lands on the card,
   // then Tab reaches the reason, Reject and Allow in that order.
@@ -30,7 +31,7 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
     void fetch(`/bridgeflow/approval-notes?${query}`, { signal: abort.signal })
       .then(async response => { if (!response.ok) throw new Error(t('expired')); return response.json() })
       .then(value => setTicket(value.ticket))
-      .catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
+      .catch(e => { if (!abort.signal.aborted) setError(e) })
     setDetailFailed(false)
     void fetch(`/bridgeflow/approval-detail?${query}`, { signal: abort.signal })
       .then(async response => { if (!response.ok) throw new Error(String(response.status)); return response.json() })
@@ -66,7 +67,7 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
         if (!response.ok) throw new Error(t('noteFail'))
       }
       await pending.answer(outcome)
-    } catch (e) { setError(describeError(e, t)); setBusy(false) }
+    } catch (e) { setError(e); setBusy(false) }
   }
   // Each tool's decision is named for what it decides; the mapping wording is kept for mappings.
   const kind = pending.toolName === 'confirm_mapping' ? '' : `_${pending.toolName}`
@@ -82,8 +83,8 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
     <div className="bf-callout" data-tone="info">
       <p>{t('approvalIntro')}</p>
       {detailFailed
-        ? <div role="alert"><p className="bf-error">{t('approvalDetailFailed')}</p><p>{pending.reason}</p>
-            <button onClick={() => setAttempt(n => n + 1)}>{t('retry')}</button></div>
+        ? <Failure value={pending.reason} title={t('approvalDetailFailed')}>
+            <button onClick={() => setAttempt(n => n + 1)}>{t('retry')}</button></Failure>
         : details === null
         ? <p className="bf-hint">{t('loading')}</p>
         : details.length
@@ -100,7 +101,7 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
       <span className="bf-hint">{note.length}/240</span>
     </label>
     <p className="bf-hint">{t('noteHelp')}</p>
-    {error && <p role="alert" className="bf-error">{error}</p>}
+    <Failure value={error}/>
     {/* Reject sits first and is never the primary. A decision surface that makes
         approving the easy default trains people to approve without reading. */}
     <div className="bf-actions">

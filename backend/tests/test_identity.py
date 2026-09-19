@@ -18,6 +18,7 @@ from bridgeflow import access_resolver, business, identity
 from bridgeflow.api.batches import load_batch
 from bridgeflow.api.main import app
 from bridgeflow.config import REPO_ROOT, settings
+from bridgeflow.feishu import FeishuError
 
 CASES = REPO_ROOT / "data/business_demo"
 PRIVATE = Ed25519PrivateKey.generate()
@@ -297,3 +298,28 @@ def test_review_notes_require_identity_write_grant_and_scope(client):
     assert client.post("/tools/review-note", json=body, headers=auth(make_token())).status_code == 200
     assert notes(batch_id, report_id)[0].author == "ou_alice"
     assert (folder / f"{report_id}.json").read_text() == '{}'
+
+
+def test_a_withheld_access_check_says_so_over_http(client, monkeypatch):
+    """The reason reaches the browser as a header, because 503 alone cannot say it.
+
+    "Your access cannot be confirmed" and "you do not have access" send a user to
+    completely different next steps (docs/design 01-portal P10), and every other
+    "not configured" in the service answers 503 too.
+    """
+    batch_id = upload(client, auth(make_token()))
+    monkeypatch.setattr(settings, "feishu_app_id", "cli_test")
+    monkeypatch.setattr(settings, "feishu_app_secret", "secret")
+
+    def down(space_id):
+        raise FeishuError("Feishu could not be reached: timeout")
+
+    monkeypatch.setattr(access_resolver, "fetch_space_members", down)
+    access_resolver.reset_cache()
+    # Bob does not own this batch, so visibility has to be resolved — an owner
+    # short-circuits before Feishu is ever consulted.
+    response = client.get(f"/batches/{batch_id}", headers=auth(make_token(sub="ou_bob")))
+    assert response.status_code == 503
+    assert response.headers[access_resolver.REASON_HEADER] == access_resolver.REASON_UNAVAILABLE
+    # The service's own words are untouched: the body contract did not change.
+    assert "Feishu" in response.json()["detail"]

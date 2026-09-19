@@ -1,10 +1,11 @@
 import { DecisionEditor, DecisionPanel, type Decision } from './discovery-decisions.tsx'
+import { Failure } from './failure.tsx'
 import { MeetingEditor, MeetingView, meetingDraft, type Meeting } from './discovery-meetings.tsx'
 import { ScoreBoard, ScoreEditor, type Score } from './discovery-scoring.tsx'
 import { FlowDiagram, FlowEditor, type FlowGraph } from './flow-graph.tsx'
 import { OpportunityEditor, type Opportunity } from './opportunity-editor.tsx'
 import { useEffect, useState, type FormEvent } from 'react'
-import { api, describeError, useUI } from './ui.ts'
+import { api, useUI } from './ui.ts'
 
 type Item = { id: string; version: number; filename?: string; title?: string; parser_status?: string; status?: string }
 type Page = { items: Item[]; total: number; has_more: boolean }
@@ -16,7 +17,7 @@ export function Discovery() {
   const [projectInput, setProjectInput] = useState(''), [project, setProject] = useState('')
   const [kind, setKind] = useState<'material' | 'opportunity' | 'graph' | 'score' | 'meeting' | 'decision'>('material'), [offset, setOffset] = useState(0)
   const [page, setPage] = useState<Page | null>(null), [revision, setRevision] = useState(0)
-  const [error, setError] = useState(''), [busy, setBusy] = useState(false)
+  const [error, setError] = useState<unknown>(''), [busy, setBusy] = useState(false)
   const [staged, setStaged] = useState<Staged | null>(null), [copied, setCopied] = useState(false)
   const [scoringTarget, setScoringTarget] = useState<{ candidate: Opportunity; initial?: Score } | null>(null), [scoreKey, setScoreKey] = useState(0)
   const [decisionEdit, setDecisionEdit] = useState<{ meetingId: string; initial?: Decision } | null>(null), [decisionKey, setDecisionKey] = useState(0)
@@ -29,7 +30,7 @@ export function Discovery() {
     if (!project || kind === 'score') return
     const abort = new AbortController()
     void api<Page>(`/discovery/${project}/${kind}?offset=${offset}&limit=10`, { signal: abort.signal })
-      .then(setPage).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
+      .then(setPage).catch(e => { if (!abort.signal.aborted) setError(e) })
     return () => abort.abort()
   }, [project, kind, offset, revision])
   async function upload(event: FormEvent<HTMLFormElement>) {
@@ -44,7 +45,7 @@ export function Discovery() {
     body.append('file', file)
     setBusy(true)
     try { setStaged(await api<Staged>('/discovery/uploads', { method: 'POST', body })) }
-    catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
+    catch (e) { setError(e) } finally { setBusy(false) }
   }
   const request = staged ? `Please call discovery_register with these exact arguments, and wait for native approval:\n${JSON.stringify({ upload_id: staged.upload_id, digest: staged.digest, material: staged.material }, null, 2)}` : ''
   async function download(item: Item) {
@@ -53,7 +54,7 @@ export function Discovery() {
       const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(file.base64), c => c.charCodeAt(0))]))
       const link = document.createElement('a'); link.href = url; link.download = file.filename; link.click()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
-    } catch (e) { setError(describeError(e, t)) }
+    } catch (e) { setError(e) }
   }
   return <section className="bf-state bf-discovery" aria-label={tr('立项材料与候选', 'Discovery materials and opportunities')}>
     <h2>{tr('立项材料与候选', 'Discovery materials and opportunities')}</h2>
@@ -62,7 +63,7 @@ export function Discovery() {
       <label>{tr('项目标识', 'Project ID')}<input required pattern="[a-zA-Z0-9]([a-zA-Z0-9_]|-){0,79}" value={projectInput} onChange={e => setProjectInput(e.target.value)} /></label>
       <button type="submit" disabled={busy}>{tr('打开项目', 'Open project')}</button>
     </form>
-    {error && <p role="alert">{error}</p>}
+    <Failure value={error}/>
     {project && <>
       <h3>{project}</h3>
       <div><button onClick={() => { setKind('material'); setOffset(0) }}>{tr('材料', 'Materials')}</button><button onClick={() => { setKind('opportunity'); setOffset(0) }}>{tr('候选', 'Opportunities')}</button><button onClick={() => { setKind('graph'); setOffset(0) }}>{tr('流程图', 'Flow graphs')}</button><button onClick={() => { setKind('score'); setOffset(0) }}>{tr('评分四象限', 'Rating quadrants')}</button><button onClick={() => { setKind('meeting'); setOffset(0) }}>{tr('会议', 'Meetings')}</button><button onClick={() => { setKind('decision'); setOffset(0) }}>{tr('决策', 'Decisions')}</button>{kind !== 'score' && <button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button>}</div>
@@ -88,16 +89,16 @@ export function Discovery() {
       {kind === 'meeting' && meeting?.project_id === project && <MeetingEditor key={`${project}:${meetingKey}`} initial={meeting} />}
       {kind === 'opportunity' && <><button onClick={() => { setEditing(undefined); setEditorKey(n => n + 1) }}>{tr('开始新候选', 'Start new opportunity')}</button><OpportunityEditor key={`${project}:${editorKey}`} project={project} initial={editing} /></>}
       {kind === 'graph' && graphDraft?.project_id === project && <FlowEditor key={`${project}:${graphKey}`} initial={graphDraft} />}
-      {kind === 'score' && <><ScoreBoard key={project} project={project} onEdit={score => { void api<Opportunity>(`/discovery/${project}/opportunity/${score.opportunity_id}`).then(candidate => { setScoringTarget({ candidate, initial: score }); setScoreKey(n => n + 1) }).catch(e => setError(describeError(e, t))) }} />{scoringTarget?.candidate.project_id === project && <ScoreEditor key={`${project}:${scoreKey}`} project={project} opportunity={scoringTarget.candidate} initial={scoringTarget.initial} />}</>}
+      {kind === 'score' && <><ScoreBoard key={project} project={project} onEdit={score => { void api<Opportunity>(`/discovery/${project}/opportunity/${score.opportunity_id}`).then(candidate => { setScoringTarget({ candidate, initial: score }); setScoreKey(n => n + 1) }).catch(e => setError(e)) }} />{scoringTarget?.candidate.project_id === project && <ScoreEditor key={`${project}:${scoreKey}`} project={project} opportunity={scoringTarget.candidate} initial={scoringTarget.initial} />}</>}
       {page && <><p>{tr('总数', 'Total')}: {page.total}</p>{page.items.map(item => <article key={item.id}>
         <strong>{item.title ?? item.filename ?? item.id} · {item.id} · v{item.version}</strong><p>{item.parser_status ?? item.status}</p>
-        <button onClick={() => { void api<Record<string, unknown>>(`/discovery/${project}/${kind}/${item.id}?version=${item.version}`).then(setDetail).catch(e => setError(describeError(e, t))) }}>{tr('查看详情与依据', 'View details and evidence')}</button>
-        {kind === 'opportunity' && <button onClick={() => { void api<Opportunity>(`/discovery/${project}/opportunity/${item.id}`).then(value => { setEditing(value); setEditorKey(n => n + 1) }).catch(e => setError(describeError(e, t))) }}>{tr('修订此候选', 'Revise this opportunity')}</button>}
-        {kind === 'opportunity' && <button onClick={() => { void api<Opportunity>(`/discovery/${project}/opportunity/${item.id}`).then(value => { setGraphDraft({ id: '', project_id: project, opportunity_id: value.id, opportunity_version: value.seq, title: '', departments: value.departments, nodes: [], edges: [] }); setGraphKey(n => n + 1); setKind('graph'); setOffset(0) }).catch(e => setError(describeError(e, t))) }}>{tr('设计流程草图', 'Design flow draft')}</button>}
-        {kind === 'graph' && <button onClick={() => { void api<FlowGraph>(`/discovery/${project}/graph/${item.id}`).then(value => { setGraphDraft(value); setGraphKey(n => n + 1) }).catch(e => setError(describeError(e, t))) }}>{tr('修订流程图', 'Revise flow graph')}</button>}
-        {kind === 'opportunity' && <button onClick={() => { void api<Opportunity>(`/discovery/${project}/opportunity/${item.id}`).then(candidate => { setScoringTarget({ candidate }); setScoreKey(n => n + 1); setKind('score') }).catch(e => setError(describeError(e, t))) }}>{tr('为候选评分', 'Rate opportunity')}</button>}
-        {kind === 'opportunity' && <button onClick={() => { void api<Opportunity>(`/discovery/${project}/opportunity/${item.id}`).then(candidate => { setMeeting(meetingDraft(project, candidate)); setMeetingKey(n => n + 1); setKind('meeting'); setOffset(0) }).catch(e => setError(describeError(e, t))) }}>{tr('准备会议', 'Prepare meeting')}</button>}
-        {kind === 'meeting' && <button onClick={() => { void api<Meeting>(`/discovery/${project}/meeting/${item.id}`).then(value => { setMeeting(value); setMeetingKey(n => n + 1) }).catch(e => setError(describeError(e, t))) }}>{tr('修订会议记录', 'Revise meeting record')}</button>}
+        <button onClick={() => { void api<Record<string, unknown>>(`/discovery/${project}/${kind}/${item.id}?version=${item.version}`).then(setDetail).catch(e => setError(e)) }}>{tr('查看详情与依据', 'View details and evidence')}</button>
+        {kind === 'opportunity' && <button onClick={() => { void api<Opportunity>(`/discovery/${project}/opportunity/${item.id}`).then(value => { setEditing(value); setEditorKey(n => n + 1) }).catch(e => setError(e)) }}>{tr('修订此候选', 'Revise this opportunity')}</button>}
+        {kind === 'opportunity' && <button onClick={() => { void api<Opportunity>(`/discovery/${project}/opportunity/${item.id}`).then(value => { setGraphDraft({ id: '', project_id: project, opportunity_id: value.id, opportunity_version: value.seq, title: '', departments: value.departments, nodes: [], edges: [] }); setGraphKey(n => n + 1); setKind('graph'); setOffset(0) }).catch(e => setError(e)) }}>{tr('设计流程草图', 'Design flow draft')}</button>}
+        {kind === 'graph' && <button onClick={() => { void api<FlowGraph>(`/discovery/${project}/graph/${item.id}`).then(value => { setGraphDraft(value); setGraphKey(n => n + 1) }).catch(e => setError(e)) }}>{tr('修订流程图', 'Revise flow graph')}</button>}
+        {kind === 'opportunity' && <button onClick={() => { void api<Opportunity>(`/discovery/${project}/opportunity/${item.id}`).then(candidate => { setScoringTarget({ candidate }); setScoreKey(n => n + 1); setKind('score') }).catch(e => setError(e)) }}>{tr('为候选评分', 'Rate opportunity')}</button>}
+        {kind === 'opportunity' && <button onClick={() => { void api<Opportunity>(`/discovery/${project}/opportunity/${item.id}`).then(candidate => { setMeeting(meetingDraft(project, candidate)); setMeetingKey(n => n + 1); setKind('meeting'); setOffset(0) }).catch(e => setError(e)) }}>{tr('准备会议', 'Prepare meeting')}</button>}
+        {kind === 'meeting' && <button onClick={() => { void api<Meeting>(`/discovery/${project}/meeting/${item.id}`).then(value => { setMeeting(value); setMeetingKey(n => n + 1) }).catch(e => setError(e)) }}>{tr('修订会议记录', 'Revise meeting record')}</button>}
         {kind === 'meeting' && <button onClick={() => { setDecisionEdit({ meetingId: item.id }); setDecisionKey(n => n + 1); setKind('decision'); setOffset(0) }}>{tr('准备 MVP 决策', 'Prepare MVP decision')}</button>}
         {kind === 'material' && <button onClick={() => void download(item)}>{tr('下载此版本原件', 'Download this original version')}</button>}
       </article>)}<button disabled={!offset} onClick={() => setOffset(n => Math.max(0, n - 10))}>{tr('上一页', 'Previous')}</button><button disabled={!page.has_more} onClick={() => setOffset(n => n + 10)}>{tr('下一页', 'Next')}</button></>}

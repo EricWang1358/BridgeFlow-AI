@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
+import { Failure } from './failure.tsx'
 import { tourEvent } from './tour/state.ts'
-import { api, cellText, describeError, navigate, useUI } from './ui.ts'
+import { api, cellText, navigate, useUI } from './ui.ts'
 import { GradeMark } from './brief.tsx'
 import { Chip } from './workspace.tsx'
 
@@ -26,13 +27,13 @@ function origin(p: Record<string, unknown> | undefined): string {
 
 export function MasterTable({ batchId }: { batchId: string }) {
   const { t } = useUI()
-  const [master, setMaster] = useState<Master | null>(null), [error, setError] = useState(''), [revision, setRevision] = useState(0)
+  const [master, setMaster] = useState<Master | null>(null), [error, setError] = useState<unknown>(''), [revision, setRevision] = useState(0)
   const [selection, setSelection] = useState<{ row: Row; column: string } | null>(null)
   useEffect(() => {
     const controller = new AbortController()
     setMaster(null); setError(''); setSelection(null)
     void api<Master>(`/integration/batches/${batchId}`, { signal: controller.signal }).then(value => { setMaster(value); if (value.rows.length) tourEvent('master', batchId) })
-      .catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
+      .catch(e => { if (!controller.signal.aborted) setError(e) })
     return () => controller.abort()
   }, [batchId, revision])
   useEffect(() => {
@@ -50,9 +51,9 @@ export function MasterTable({ batchId }: { batchId: string }) {
       link.click()
       tourEvent('download', batchId)
       URL.revokeObjectURL(link.href)
-    } catch (e) { setError(describeError(e, t)) }
+    } catch (e) { setError(e) }
   }
-  if (error) return <div><p role="alert" className="bf-error">{error}</p><button data-tour-recovery="" onClick={() => { setError(''); setRevision(n => n + 1) }}>{t('refresh')}</button></div>
+  if (error) return <Failure value={error}><button data-tour-recovery="" onClick={() => { setError(''); setRevision(n => n + 1) }}>{t('refresh')}</button></Failure>
   if (!master) return <p role="status" className="bf-loading">{t('loading')}</p>
   const traceColumn = master.columns.find(c => typeof master.rows[0]?.values[c] === 'number' && master.rows[0]?.provenance[c]?.department)
   const evidence = selection ? selection.row.provenance[selection.column] : null

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Failure } from './failure.tsx'
 import { BusinessReview, type Review } from './review.tsx'
-import { api, cellText, columnLabel, navigate, route, reviewRequest, startDiagnosis, startReview, useUI, type Summary, describeError } from './ui.ts'
+import { api, cellText, columnLabel, navigate, route, reviewRequest, startDiagnosis, startReview, useUI, type Summary } from './ui.ts'
 export const departments = ['production', 'procurement', 'finance', 'marketing'] as const
 export const sections = ['master', 'corrections', 'mappings', 'columns', 'quarantine', 'review'] as const
 export function Chip({ status }: { status: string }) { const { t } = useUI(); return <span className="bf-chip" data-status={status}>{t(status.replaceAll('-', '_'))}</span> }
@@ -10,9 +11,9 @@ type CheckReport = { department: string; filename: string; must_fix: Finding[]; 
 export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
   const { t } = useUI()
   const [limits, setLimits] = useState<Limits | null>(null)
-  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [reports, setReports] = useState<CheckReport[]>([])
+  const [busy, setBusy] = useState(false), [error, setError] = useState<unknown>(''), [reports, setReports] = useState<CheckReport[]>([])
   const formRef = useRef<HTMLFormElement>(null)
-  useEffect(() => { const controller = new AbortController(); void api<Limits>('/config', { signal: controller.signal }).then(setLimits).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) }); return () => controller.abort() }, [])
+  useEffect(() => { const controller = new AbortController(); void api<Limits>('/config', { signal: controller.signal }).then(setLimits).catch(e => { if (!controller.signal.aborted) setError(e) }); return () => controller.abort() }, [])
   async function selfCheck() {
     if (!formRef.current) return
     const form = new FormData(formRef.current)
@@ -31,7 +32,7 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
       }
       if (!found.length) setError(t('invalidUpload'))
       setReports(found)
-    } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
+    } catch (e) { setError(e) } finally { setBusy(false) }
   }
   async function upload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError('')
@@ -49,7 +50,7 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
     if (!count || !limits || total > limits.maxUploadBytes) { setError(t('invalidUpload')); return }
     setBusy(true)
     try { onSaved(await api<Summary>('/batches', { method: 'POST', body })) }
-    catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
+    catch (e) { setError(e) } finally { setBusy(false) }
   }
   return <form ref={formRef} onSubmit={upload} className="bf-steps">
     <div className="bf-step">
@@ -71,7 +72,7 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
     <div className="bf-step">
       <h3>{t('stepGo')}</h3>
       <p className="bf-hint">{t('stepGoHint')} {limits ? `${t('limits')}: ${limits.maxUploadBytes / 1048576} MiB · ${t('transport')}: ${limits.maxRequestBytes / 1048576} MiB` : t('loading')}</p>
-      {error && <p role="alert" className="bf-error">{error}</p>}
+      <Failure value={error}/>
       <button className="bf-primary" disabled={busy || !limits} type="submit">{t(busy ? 'busy' : 'import')}</button>
     </div>
   </form>
@@ -128,7 +129,7 @@ export function DataWorkspace() {
   const [section, setSection] = useState('master'), [offset, setOffset] = useState(0)
   const [view, setView] = useState<View | null>(null), [review, setReview] = useState<Review | null>(null)
   const [reportId, setReportId] = useState(''), [revision, setRevision] = useState(0)
-  const [error, setError] = useState(''), [busy, setBusy] = useState(false), [notice, setNotice] = useState('')
+  const [error, setError] = useState<unknown>(''), [busy, setBusy] = useState(false), [notice, setNotice] = useState('')
   const currentBatch = useRef(batch); currentBatch.current = batch
   const pendingBatch = useRef<AbortController | null>(null)
   function selectBatch(id: string, selectedSection = 'master', selectedReport = '') {
@@ -152,7 +153,7 @@ export function DataWorkspace() {
       setError('')
       if (currentBatch.current?.batch_id === value.batch) return
       setNotice(''); setBatch(null); setView(null); setReview(null); setBusy(true)
-      void api<Summary>(`/batches/${value.batch}`, { signal }).then(result => { if (!signal.aborted) setBatch(result) }).catch(e => { if (!signal.aborted) setError(describeError(e, t)) }).finally(() => { if (!signal.aborted) setBusy(false) })
+      void api<Summary>(`/batches/${value.batch}`, { signal }).then(result => { if (!signal.aborted) setBatch(result) }).catch(e => { if (!signal.aborted) setError(e) }).finally(() => { if (!signal.aborted) setBusy(false) })
     }
     const open = () => { if (!dialog.current?.open) dialog.current?.showModal() }
     window.addEventListener('bridgeflow:open-data', open)
@@ -164,11 +165,11 @@ export function DataWorkspace() {
     const abort = new AbortController(); setView(null); setReview(null); setError('')
     if (section === 'review') {
       void api<Review>(`/batches/${batch.batch_id}/review${reportId ? `?report_id=${encodeURIComponent(reportId)}` : ''}`, { signal: abort.signal }).then(setReview)
-        .catch(e => { if (!abort.signal.aborted) setError(String(e).includes('no saved review') ? t('noReport') : describeError(e, t)) })
-    } else void api<View>(`/batches/${batch.batch_id}/view?section=${section}&offset=${offset}`, { signal: abort.signal }).then(setView).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
+        .catch(e => { if (!abort.signal.aborted) setError(String(e).includes('no saved review') ? t('noReport') : e) })
+    } else void api<View>(`/batches/${batch.batch_id}/view?section=${section}&offset=${offset}`, { signal: abort.signal }).then(setView).catch(e => { if (!abort.signal.aborted) setError(e) })
     return () => abort.abort()
   }, [batch, section, offset, reportId, revision])
-  async function copy(text: string, message: string) { try { await navigator.clipboard.writeText(text); setNotice(message) } catch (e) { setError(describeError(e, t)) } }
+  async function copy(text: string, message: string) { try { await navigator.clipboard.writeText(text); setNotice(message) } catch (e) { setError(e) } }
   const columns = Array.from(new Set(view?.rows.flatMap(row => Object.keys(row)) ?? []))
   const counts: Record<string, number | string> = batch ? { master: batch.master_rows, mappings: batch.unresolved,
     corrections: batch.departments.reduce((n, d) => n + d.corrections, 0), columns: batch.column_questions ?? 0, quarantine: batch.departments.reduce((n, d) => n + d.quarantined, 0), review: review ? `${review.roles.filter(r => r.status === 'validated').length}/4` : '—' } : {}
@@ -189,7 +190,7 @@ export function DataWorkspace() {
       <details open={!batch}><summary>{t('newBatch')}</summary><ImportForm onSaved={result => { pendingBatch.current?.abort(); setReportId(''); setView(null); setReview(null); currentBatch.current = result; setBatch(result); setBatchId(result.batch_id); setOffset(0); setSection('master'); setNotice(t('saved')); selectBatch(result.batch_id) }} /></details>
       <details><summary>{t('existing')}</summary><label>{t('batchId')} <input value={batchId} onChange={e => setBatchId(e.target.value)} /></label>
         <button disabled={busy || !/^[a-f0-9]{32}$/.test(batchId)} onClick={() => selectBatch(batchId)}>{t('open')}</button></details>
-      <p role="status">{notice}</p>{error && <p role="alert" className="bf-error">{error}</p>}
+      <p role="status">{notice}</p><Failure value={error}/>
       {batch && <section>
         <div className="bf-band">
           <span className="bf-period">{batch.period}</span> <Chip status={batch.status} />
@@ -210,7 +211,7 @@ export function DataWorkspace() {
               <button className="bf-primary" disabled={busy} onClick={async () => {
                 setError(''); setBusy(true)
                 try { await startDiagnosis(batch.batch_id, batch.period); close() }
-                catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
+                catch (e) { setError(e) } finally { setBusy(false) }
               }}>{t(busy ? 'busy' : 'askCaptain')}</button>
             </div>
           </>}
@@ -253,7 +254,7 @@ export function DataWorkspace() {
           <button className="bf-primary" disabled={busy} onClick={async () => {
             setError(''); setBusy(true)
             try { await startReview(batch.batch_id, batch.period); close() }
-            catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
+            catch (e) { setError(e) } finally { setBusy(false) }
           }}>{t(busy ? 'busy' : 'startReview')}</button>
           <button onClick={() => void copy(reviewRequest(batch.batch_id, batch.period), t('copiedRequest'))}>{t('copy')}</button>
           <button onClick={() => setRevision(r => r + 1)}>{t('refresh')}</button>

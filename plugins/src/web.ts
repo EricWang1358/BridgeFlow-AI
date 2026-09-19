@@ -220,7 +220,15 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
             ...(upload || feishuUser ? { body: Buffer.concat(chunks) } : {}),
             signal: AbortSignal.any([abort.signal, AbortSignal.timeout(120_000)]),
           })
-          res.writeHead(response.status, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+          // Response headers are not forwarded wholesale — one allow-listed name only.
+          // A 503 carries why it happened here (access_unavailable vs access_unconfigured)
+          // so the browser can say "your access cannot be confirmed" instead of "denied";
+          // the status code alone cannot tell those apart from any other 503.
+          const reason = response.headers.get('x-bridgeflow-reason')
+          res.writeHead(response.status, {
+            'content-type': 'application/json', 'cache-control': 'no-store',
+            ...(reason && /^[a-z_]{1,40}$/.test(reason) ? { 'x-bridgeflow-reason': reason } : {}),
+          })
           res.end(await response.text())
         } catch {
           if (!res.headersSent) res.writeHead(502)

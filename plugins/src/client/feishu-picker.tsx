@@ -7,7 +7,8 @@
  * and header row, or which data table — answered from metadata calls, never cell reads.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { api, describeError, feishuUserToken, useUI, type Summary } from './ui.ts'
+import { api, feishuUserToken, useUI, type Summary } from './ui.ts'
+import { Failure } from './failure.tsx'
 import { departments } from './workspace.tsx'
 
 type DriveItem = { token: string; name: string; type: string; size: number; modified_time: string }
@@ -56,7 +57,7 @@ function Browser({ row, currentFolder, extra }: {
   const { t } = useUI()
   const [trail, setTrail] = useState<DriveItem[]>([])
   const [page, setPage] = useState<DrivePage | null>(null)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<unknown>('')
   const folder = trail.length ? trail[trail.length - 1]!.token : ''
   // Navigation changes folder while a list call is in flight; a late answer must
   // not overwrite the new location's page (or load-more merge into it).
@@ -67,7 +68,7 @@ function Browser({ row, currentFolder, extra }: {
     const at = folder
     listFolder(at, pageToken)
       .then(p => { if (folderRef.current === at) setPage(prev => pageToken && prev ? { ...p, files: [...prev.files, ...p.files] } : p) })
-      .catch(e => { if (folderRef.current !== at) return; setPage(null); setError(describeError(e, t)) })
+      .catch(e => { if (folderRef.current !== at) return; setPage(null); setError(e) })
   }
   useEffect(() => { load() }, [folder])
   useEffect(() => { currentFolder?.(folder) }, [folder])
@@ -78,7 +79,7 @@ function Browser({ row, currentFolder, extra }: {
       <button aria-current={!trail.length ? 'true' : undefined} onClick={() => jump(0)}>{t('feishuRoot')}</button>
       {trail.map((item, i) => <button key={item.token} aria-current={i === trail.length - 1 ? 'true' : undefined} onClick={() => jump(i + 1)}>{item.name}</button>)}
     </nav>
-    {error && <p role="alert" className="bf-error">{error}</p>}
+    <Failure value={error}/>
     {!error && !page && <p role="status">{t('loading')}</p>}
     {page && <>
       {!page.files.length && <p className="bf-hint">{t('feishuEmpty')}</p>}
@@ -105,7 +106,7 @@ function WikiBrowser({ row, currentLocation, currentSpace, extra }: {
   const [trail, setTrail] = useState<WikiNode[]>([])
   const [spaces, setSpaces] = useState<SpacePage | null>(null)
   const [page, setPage] = useState<WikiNodePage | null>(null)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<unknown>('')
   const parent = trail.length ? trail[trail.length - 1]!.token : ''
   // Same late-answer guard as Browser: a response is only live while the
   // space/parent (or space-less state) that asked for it is still current.
@@ -122,7 +123,7 @@ function WikiBrowser({ row, currentLocation, currentSpace, extra }: {
     setError('')
     listSpaces(pageToken)
       .then(p => { if (!locationRef.current.space) setSpaces(prev => pageToken && prev ? { ...p, spaces: [...prev.spaces, ...p.spaces] } : p) })
-      .catch(e => { if (locationRef.current.space) return; setSpaces(null); setError(describeError(e, t)) })
+      .catch(e => { if (locationRef.current.space) return; setSpaces(null); setError(e) })
       .finally(() => { if (pageToken) spacesBusy.current = false })
   }
   const loadNodes = (pageToken = '') => {
@@ -131,7 +132,7 @@ function WikiBrowser({ row, currentLocation, currentSpace, extra }: {
     const at = locationRef.current
     listNodes(at.space, at.parent, pageToken)
       .then(p => { const now = locationRef.current; if (now.space === at.space && now.parent === at.parent) setPage(prev => pageToken && prev ? { ...p, nodes: [...prev.nodes, ...p.nodes] } : p) })
-      .catch(e => { const now = locationRef.current; if (now.space !== at.space || now.parent !== at.parent) return; setPage(null); setError(describeError(e, t)) })
+      .catch(e => { const now = locationRef.current; if (now.space !== at.space || now.parent !== at.parent) return; setPage(null); setError(e) })
   }
   useEffect(() => { if (!space) loadSpaces() }, [space])
   useEffect(() => { if (space) loadNodes() }, [space, parent])
@@ -144,7 +145,7 @@ function WikiBrowser({ row, currentLocation, currentSpace, extra }: {
       {space && <button aria-current={!trail.length ? 'true' : undefined} onClick={() => setTrail([])}>{space.name}</button>}
       {trail.map((node, i) => <button key={node.token} aria-current={i === trail.length - 1 ? 'true' : undefined} onClick={() => setTrail(trail.slice(0, i + 1))}>{node.title}</button>)}
     </nav>
-    {error && <p role="alert" className="bf-error">{error}</p>}
+    <Failure value={error}/>
     {!error && !space && !spaces && <p role="status">{t('loading')}</p>}
     {!error && !space && spaces && <>
       {!spaces.spaces.length && <p className="bf-hint">{t('feishuSpacesEmpty')}</p>}
@@ -176,7 +177,7 @@ export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void })
   // dimensions only, fetched on pick and cached for the panel's lifetime.
   const [metas, setMetas] = useState<Record<string, { sheets?: SheetMeta[]; tables?: BitableTable[] }>>({})
   const [period, setPeriod] = useState('')
-  const [busy, setBusy] = useState(false), [error, setError] = useState('')
+  const [busy, setBusy] = useState(false), [error, setError] = useState<unknown>('')
   const chosen = departments.filter(d => assign[d])
   const importable = (item: DriveItem) =>
     item.type === 'sheet' || item.type === 'bitable' ||
@@ -205,7 +206,7 @@ export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void })
       const path = item.kind === 'sheet' ? '/tools/feishu-sheet-meta' : '/tools/feishu-bitable-meta'
       postUser<{ sheets?: SheetMeta[]; tables?: BitableTable[] }>(path, { token: item.token })
         .then(res => setMetas(prev => ({ ...prev, [item.token]: res })))
-        .catch(e => setError(describeError(e, t)))
+        .catch(e => setError(e))
     }
   }
   const patch = (dept: string, part: Partial<Picked>) =>
@@ -252,7 +253,7 @@ export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void })
         }),
       })
       onSaved(result.batch)
-    } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
+    } catch (e) { setError(e) } finally { setBusy(false) }
   }
   return <section className="bf-feishu-import" aria-label={t('feishuPick')}>
     <div className="bf-feishu-mode">
@@ -294,7 +295,7 @@ export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void })
         {busy ? t('busy') : `${t('feishuImportGo')} (${chosen.length})`}
       </button>
     </div>
-    {error && <p role="alert" className="bf-error">{error}</p>}
+    <Failure value={error}/>
   </section>
 }
 
@@ -304,7 +305,7 @@ export function FeishuUpload({ batchId, reportId, onDone }: { batchId: string; r
   const [target, setTarget] = useState<'drive' | 'wiki'>('drive')
   const [folder, setFolder] = useState('')
   const [wikiLoc, setWikiLoc] = useState({ space: '', parent: '' })
-  const [busy, setBusy] = useState(false), [error, setError] = useState('')
+  const [busy, setBusy] = useState(false), [error, setError] = useState<unknown>('')
   async function run() {
     setBusy(true); setError('')
     try {
@@ -318,7 +319,7 @@ export function FeishuUpload({ batchId, reportId, onDone }: { batchId: string; r
         body: JSON.stringify(body),
       })
       onDone(result.filename)
-    } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
+    } catch (e) { setError(e) } finally { setBusy(false) }
   }
   if (!reportId) return <p className="bf-hint">{t('feishuNoReport')}</p>
   const wikiNodeRow = (node: WikiNode, enter: (node: WikiNode) => void) =>
@@ -340,7 +341,7 @@ export function FeishuUpload({ batchId, reportId, onDone }: { batchId: string; r
     <button className="bf-primary" disabled={busy || (target === 'drive' ? !folder : !wikiLoc.space)} onClick={() => void run()}>
       {busy ? t('busy') : t(target === 'drive' ? 'feishuUploadHere' : 'feishuUploadWikiHere')}
     </button>
-    {error && <p role="alert" className="bf-error">{error}</p>}
+    <Failure value={error}/>
   </section>
 }
 
@@ -349,7 +350,7 @@ export function WikiFileUpload() {
   const { t } = useUI()
   const [loc, setLoc] = useState({ space: '', parent: '' })
   const fileRef = useRef<HTMLInputElement>(null)
-  const [busy, setBusy] = useState(false), [error, setError] = useState('')
+  const [busy, setBusy] = useState(false), [error, setError] = useState<unknown>('')
   const [done, setDone] = useState('')
   async function run() {
     const file = fileRef.current?.files?.[0]
@@ -366,7 +367,7 @@ export function WikiFileUpload() {
       })
       setDone(result.name)
       if (fileRef.current) fileRef.current.value = ''
-    } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
+    } catch (e) { setError(e) } finally { setBusy(false) }
   }
   return <section className="bf-feishu-upload" aria-label={t('feishuUploadFileWiki')}>
     <WikiBrowser currentLocation={(space, parent) => setLoc({ space, parent })} extra={(page, loadMore) => MORE(page, loadMore, t)} row={(node, enter) =>
@@ -381,6 +382,6 @@ export function WikiFileUpload() {
       </button>
     </div>
     {done && <p className="bf-hint" role="status">{t('feishuWikiUploaded')} · {done}</p>}
-    {error && <p role="alert" className="bf-error">{error}</p>}
+    <Failure value={error}/>
   </section>
 }

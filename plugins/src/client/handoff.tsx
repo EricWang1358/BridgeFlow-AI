@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { api, useUI, describeError } from './ui.ts'
+import { Failure } from './failure.tsx'
+import { api, useUI } from './ui.ts'
 import { Notebook } from './notebook.tsx'
 import { Chip } from './workspace.tsx'
 
@@ -37,7 +38,7 @@ export function Handoff() {
   const { t } = useUI()
   const [rows, setRows] = useState<Row[] | null>(null), [catalogue, setCatalogue] = useState<Catalogue | null>(null)
   const [findings, setFindings] = useState<Finding[]>([]), [draft, setDraft] = useState<Draft | null>(null)
-  const [selected, setSelected] = useState(''), [error, setError] = useState(''), [revision, setRevision] = useState(0)
+  const [selected, setSelected] = useState(''), [error, setError] = useState<unknown>(''), [revision, setRevision] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController(), signal = controller.signal
@@ -46,7 +47,7 @@ export function Handoff() {
       api<{ rows: Row[] }>('/workflow/board', { signal }), api<Catalogue>('/workflow/catalogue', { signal }),
       api<Finding[]>('/workflow/adoption', { signal }),
     ]).then(([board, declared, signals]) => { setRows(board.rows); setCatalogue(declared); setFindings(signals) })
-      .catch(e => { if (!signal.aborted) setError(describeError(e, t)) })
+      .catch(e => { if (!signal.aborted) setError(e) })
     return () => controller.abort()
   }, [revision])
 
@@ -54,7 +55,7 @@ export function Handoff() {
     if (!selected) { setDraft(null); return }
     const controller = new AbortController()
     void api<Draft>(`/workflow/artifacts/${selected}`, { signal: controller.signal }).then(setDraft)
-      .catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
+      .catch(e => { if (!controller.signal.aborted) setError(e) })
     return () => controller.abort()
   }, [selected, revision])
 
@@ -79,7 +80,7 @@ export function Handoff() {
       <p className="bf-hint">{t('handoffWriteHelp')}</p>
     </>}>
     <div className="bf-card-head"><h3>{t('handoffBoard')}</h3><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button></div>
-    {error && <p role="alert" className="bf-error">{error}</p>}
+    <Failure value={error}/>
     {!rows && !error && <p role="status" className="bf-loading">{t('loading')}</p>}
     {rows && !rows.length && <div className="bf-notebook-empty"><h3>{t('handoffEmpty')}</h3><p>{t('handoffEmptyHelp')}</p></div>}
     {rows && rows.map((row, i) => <article className="bf-source-item" key={row.kind === 'partial' ? `p${i}` : row.id}>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { api, describeError, useUI } from './ui.ts'
+import { Failure } from './failure.tsx'
+import { api, useUI } from './ui.ts'
 import { Sources, type Ref } from './flow-graph.tsx'
 import type { Meeting } from './discovery-meetings.tsx'
 
@@ -16,9 +17,9 @@ export type Decision = { id: string; project_id: string; seq: number; proposal_v
 const splitLines = (v: string) => v.split('\n').map(s => s.trim()).filter(Boolean)
 function usePolicy(project: string, revision = 0) {
   const { t } = useUI()
-  const [policy, setPolicy] = useState<Policy | null>(null), [error, setError] = useState('')
+  const [policy, setPolicy] = useState<Policy | null>(null), [error, setError] = useState<unknown>('')
   useEffect(() => { const abort = new AbortController(); setPolicy(null); setError('')
-    void api<Policy>(`/discovery/${project}/decision-policy`, { signal: abort.signal }).then(setPolicy).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
+    void api<Policy>(`/discovery/${project}/decision-policy`, { signal: abort.signal }).then(setPolicy).catch(e => { if (!abort.signal.aborted) setError(e) })
     return () => abort.abort()
   }, [project, revision])
   return { policy, error }
@@ -47,18 +48,18 @@ function instruction(tool: string, body: unknown) {
 export function DecisionEditor({ project, meetingId, initial }: { project: string; meetingId: string; initial?: Decision | undefined }) {
   const { language, t } = useUI(), zh = language === 'zh'
   const [revision, setRevision] = useState(0), { policy, error: policyError } = usePolicy(project, revision)
-  const [meeting, setMeeting] = useState<Meeting | null>(null), [error, setError] = useState(''), [request, setRequest] = useState('')
+  const [meeting, setMeeting] = useState<Meeting | null>(null), [error, setError] = useState<unknown>(''), [request, setRequest] = useState('')
   const [id, setId] = useState(initial?.id ?? ''), [selected, setSelected] = useState(initial?.selected_candidates ?? [])
   const [scope, setScope] = useState(initial?.scope.join('\n') ?? ''), [exclusions, setExclusions] = useState(initial?.exclusions.join('\n') ?? '')
   const [rationale, setRationale] = useState(''), [conditions, setConditions] = useState<Condition[]>(initial?.conditions ?? [])
   useEffect(() => { const abort = new AbortController(); setMeeting(null); setRequest(''); setError('')
-    void api<Meeting>(`/discovery/${project}/meeting/${meetingId}`, { signal: abort.signal }).then(setMeeting).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
+    void api<Meeting>(`/discovery/${project}/meeting/${meetingId}`, { signal: abort.signal }).then(setMeeting).catch(e => { if (!abort.signal.aborted) setError(e) })
     return () => abort.abort()
   }, [project, meetingId, revision])
   const canPropose = policy?.viewer.actions.includes('discovery_decision_propose')
   return <section aria-label={zh ? '决策提案编辑' : 'Decision proposal editor'}><h3>{zh ? '决策提案' : 'Decision proposal'}</h3>
     <button onClick={() => { setRequest(''); setRevision(n => n + 1) }}>{zh ? '重读纪要与规则' : 'Reload minutes and rules'}</button>
-    {(error || policyError) && <p role="alert">{error || policyError}</p>}{policy && <PolicyView policy={policy} />}
+    <Failure value={error || policyError}/>{policy && <PolicyView policy={policy} />}
     {meeting && policy && <><p>{meeting.title} · v{meeting.seq}</p>{initial && <p role="alert">{zh ? '修订将清空已有选票和条件确认，旧批准不再有效。' : 'Revision clears votes and confirmations and supersedes the old approval.'}</p>}
       {meeting.phase !== 'minutes' ? <p role="alert">{zh ? '请先保存会后纪要，再准备决策。' : 'Save meeting minutes before proposing a decision.'}</p> : <form onChange={() => setRequest('')} onSubmit={e => {
         e.preventDefault()
@@ -87,10 +88,10 @@ export function DecisionPanel({ initial, onRevise }: { initial: Decision; onRevi
   const { language, t } = useUI(), zh = language === 'zh'
   const [decision, setDecision] = useState(initial), [revision, setRevision] = useState(0)
   const { policy, error: policyError } = usePolicy(initial.project_id, revision)
-  const [error, setError] = useState(''), [request, setRequest] = useState(''), [reason, setReason] = useState('')
+  const [error, setError] = useState<unknown>(''), [request, setRequest] = useState(''), [reason, setReason] = useState('')
   const [choice, setChoice] = useState(''), [condition, setCondition] = useState(''), [refs, setRefs] = useState<Ref[]>([])
   useEffect(() => { if (!revision) return; const abort = new AbortController(); setRequest(''); setError('')
-    void api<Decision>(`/discovery/${initial.project_id}/decision/${initial.id}`, { signal: abort.signal }).then(setDecision).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
+    void api<Decision>(`/discovery/${initial.project_id}/decision/${initial.id}`, { signal: abort.signal }).then(setDecision).catch(e => { if (!abort.signal.aborted) setError(e) })
     return () => abort.abort()
   }, [revision, initial.project_id, initial.id])
   const current = !!policy && decision.policy_fingerprint === policy.fingerprint && decision.status !== 'needs_review'
@@ -101,7 +102,7 @@ export function DecisionPanel({ initial, onRevise }: { initial: Decision; onRevi
   }
   return <section aria-label={zh ? '决策详情与操作' : 'Decision details and actions'}><h3>{decision.id} · v{decision.seq}</h3>
     <button onClick={() => setRevision(n => n + 1)}>{zh ? '刷新决策与身份' : 'Refresh decision and identity'}</button>
-    {(error || policyError) && <p role="alert">{error || policyError}</p>}{policy && <PolicyView policy={policy} />}
+    <Failure value={error || policyError}/>{policy && <PolicyView policy={policy} />}
     <p role="status">{statusText[decision.status]?.[zh ? 0 : 1] ?? decision.status}</p>
     {!!decision.stale_reasons.length && <p role="alert">{zh ? '过期原因' : 'Stale reasons'}: {decision.stale_reasons.join(', ')}</p>}
     <p>{zh ? '提案版本 / 纪要版本' : 'Proposal / minutes version'}: {decision.proposal_version} / {decision.meeting_id} v{decision.meeting_version}</p>

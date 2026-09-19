@@ -123,6 +123,16 @@ export const style = `
 .bf-quiet:hover:not(:disabled) { color: var(--bf-text) !important }
 .bf-danger-btn { border-color: var(--bf-danger) !important; color: var(--bf-danger) !important }
 
+/* An anchor that has to read as an action. Signing in again is a navigation to the
+   portal, not a callback, so it must stay a link — but a link is the wrong weight for
+   the one way out of a blocked state. */
+a.bf-linkbtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: inherit; text-decoration: none;
+  border: 1px solid var(--bf-line-strong); border-radius: 8px;
+  padding: 7px 13px; background: var(--bf-surface); color: inherit;
+}
+
 .bf-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 14px 0 }
 
 /* ---- forms ------------------------------------------------------------- */
@@ -183,7 +193,14 @@ export const style = `
 .bf-callout[data-tone=danger] { border-left-color: var(--bf-danger); background: var(--bf-danger-bg); color: var(--bf-danger) }
 .bf-callout[data-tone=ok] { border-left-color: var(--bf-ok); background: var(--bf-ok-bg); color: var(--bf-ok) }
 .bf-callout[data-tone=info] { border-left-color: var(--bf-accent); background: var(--bf-accent-soft) }
-.bf-error { color: var(--bf-danger) }
+
+/* A refusal or a failed request is a state with a next step, not a red sentence in the
+   margin (docs/design 12-states E03, 01-portal P08/P10): heading, what it means for the
+   reader, then the service's own words. The last line is quieter but never smaller —
+   it names the field or the rule, and it is the only thing that locates the problem. */
+.bf-failure p + p { margin-top: 6px }
+.bf-failure .bf-failure-detail { opacity: .85; overflow-wrap: anywhere }
+.bf-failure .bf-actions { margin: 10px 0 0 }
 
 /* ---- status band ------------------------------------------------------- */
 

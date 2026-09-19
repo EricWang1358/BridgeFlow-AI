@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Failure } from './failure.tsx'
 import { useUI } from './ui.ts'
 
 type Locator = { kind: 'header' | 'rows' | 'lines'; sheet?: string | null; start?: number | null; end?: number | null }
@@ -13,7 +14,7 @@ export function OpportunityEditor({ project, initial }: { project: string; initi
   const { language } = useUI()
   const tr = (zh: string, en: string) => language === 'zh' ? zh : en
   const [claims, setClaims] = useState<Claim[]>(initial?.claims ?? [emptyClaim()])
-  const [request, setRequest] = useState(''), [error, setError] = useState(''), [copied, setCopied] = useState(false)
+  const [request, setRequest] = useState(''), [error, setError] = useState<unknown>(''), [copied, setCopied] = useState(false)
   function update(index: number, value: Partial<Claim>) { setClaims(items => items.map((item, i) => i === index ? { ...item, ...value } : item)) }
   function reference(index: number, refIndex: number, value: Partial<Reference>) {
     update(index, { references: claims[index]!.references.map((ref, i) => i === refIndex ? { ...ref, ...value } : ref) })
@@ -69,7 +70,7 @@ export function OpportunityEditor({ project, initial }: { project: string; initi
       <label>{tr('待确认问题（每行一条）', 'Open questions (one per line)')}<textarea name="questions" rows={3} defaultValue={initial?.open_questions.join('\n') ?? ''} /></label>
       <button type="submit">{tr('准备候选审批请求', 'Prepare proposal approval')}</button>
     </form>
-    {error && <p role="alert">{error}</p>}
+    <Failure value={error}/>
     {request && <><p>{tr('尚未保存。粘贴到原生对话，核对后决定是否批准保存。', 'Not saved. Paste into native chat and review before approving the save.')}</p><textarea aria-label={tr('候选审批请求', 'Proposal approval request')} readOnly rows={10} value={request} /><button onClick={() => { void navigator.clipboard.writeText(request).then(() => setCopied(true)).catch(() => setError(tr('复制失败，请手动选择文本。', 'Copy failed; select the text manually.'))) }}>{tr('复制候选审批请求', 'Copy proposal approval request')}</button>{copied && <p role="status">{tr('已复制，等待您粘贴。', 'Copied; waiting for you to paste.')}</p>}</>}
   </section>
 }

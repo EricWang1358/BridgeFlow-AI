@@ -1,10 +1,11 @@
 import { notebookPurpose, type WorkflowId } from '../notebook-capabilities.ts'
+import { Failure } from './failure.tsx'
 import type { ComponentType } from 'react'
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventSource, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import { api, formatTime, labelText, navigate, route, useUI, type Summary, describeError } from './ui.ts'
+import { api, formatTime, labelText, navigate, route, useUI, type Summary } from './ui.ts'
 import { QuotationProgress } from './quotation-progress.tsx'
 import { Notebook } from './notebook.tsx'
 import { BusinessReview, type Review } from './review.tsx'
@@ -19,7 +20,7 @@ function MonthlyState({ source, loadOlder, openView }: ConvViewProps & Injected)
   const eventBatch = String(audit.review?.batch_id ?? '')
   const [chosen, setChosen] = useState(() => route().view === 'state' ? route().batch ?? '' : '')
   const [input, setInput] = useState(chosen), [batch, setBatch] = useState<Summary | null>(null)
-  const [report, setReport] = useState<Review | null>(null), [error, setError] = useState('')
+  const [report, setReport] = useState<Review | null>(null), [error, setError] = useState<unknown>('')
   const [node, setNode] = useState(''), [revision, setRevision] = useState(0), [limits, setLimits] = useState<Limits | null>(null)
   const batchId = chosen || eventBatch
   const selected = selectReview(audit, batchId)
@@ -32,13 +33,13 @@ function MonthlyState({ source, loadOlder, openView }: ConvViewProps & Injected)
     readRoute(); window.addEventListener('hashchange', readRoute)
     return () => window.removeEventListener('hashchange', readRoute)
   }, [source])
-  useEffect(() => { const abort = new AbortController(); void api<Limits>('/config', { signal: abort.signal }).then(setLimits).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) }); return () => abort.abort() }, [])
+  useEffect(() => { const abort = new AbortController(); void api<Limits>('/config', { signal: abort.signal }).then(setLimits).catch(e => { if (!abort.signal.aborted) setError(e) }); return () => abort.abort() }, [])
   useEffect(() => {
     setBatch(null); setReport(null); setError('')
     if (!/^[a-f0-9]{32}$/.test(batchId)) return
     const abort = new AbortController()
-    void api<Summary>(`/batches/${batchId}`, { signal: abort.signal }).then(setBatch).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
-    if (!waiting) void api<Review>(`/batches/${batchId}/review${reportId ? `?report_id=${reportId}` : ''}`, { signal: abort.signal }).then(setReport).catch(e => { if (!abort.signal.aborted && !String(e).includes('no saved review')) setError(describeError(e, t)) })
+    void api<Summary>(`/batches/${batchId}`, { signal: abort.signal }).then(setBatch).catch(e => { if (!abort.signal.aborted) setError(e) })
+    if (!waiting) void api<Review>(`/batches/${batchId}/review${reportId ? `?report_id=${reportId}` : ''}`, { signal: abort.signal }).then(setReport).catch(e => { if (!abort.signal.aborted && !String(e).includes('no saved review')) setError(e) })
     return () => abort.abort()
   }, [batchId, reportId, waiting, runId, revision])
   const approvalCounts = Object.fromEntries(['running', 'allowed-once', 'rejected', 'cancelled'].map(key => [key, audit.approvals.filter(a => a.outcome === key).length]))
@@ -60,7 +61,7 @@ function MonthlyState({ source, loadOlder, openView }: ConvViewProps & Injected)
       <button type="button" onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button>
       <button type="button" onClick={() => navigate({ view: 'state' })}>{t('followSession')}</button>
     </form>
-    {error && <p role="alert" className="bf-error">{error}</p>}
+    <Failure value={error}/>
     <p className="bf-band">{batch
       ? <><span className="bf-period">{batch.period}</span> <Chip status={batch.status} /> <span className="bf-hint">{batch.master_rows} {t('rows')} · <code className="bf-mono">{batch.batch_id}</code></span></>
       : <span className="bf-hint">{t('unknown')}</span>}</p>
@@ -73,7 +74,7 @@ function MonthlyState({ source, loadOlder, openView }: ConvViewProps & Injected)
     <div className="bf-state-map">{groups.map(group => <section key={group.title}><h3>{group.title}</h3>{group.items.map(id => <button key={id} data-current={current(id)} aria-pressed={node === id} onClick={() => setNode(id)}><Chip status={id} /> {count(id) !== undefined && <span className="bf-badge">{count(id)}</span>}</button>)}</section>)}</div>
     <p className="bf-hint">{t('approval')} · {t('timeout')}: {limits ? limits.decisionTimeoutMs / 1000 : '—'} {t('seconds')}</p>
     <p className="bf-hint">{t('mappingHelp')} {t('quarantineHelp')}</p>
-    <details><summary>{t('batchAudit')} · {selected.calls.length} Spawn · {t('dispatchCount')}</summary><p>{t('loadedWindow')}</p><ul>{selected.calls.map((e, i) => <li key={i}>{String(e.data.callId)} · {formatTime(e.time, language)}</li>)}</ul>{snapshot.hasMore && <button onClick={() => void loadOlder().catch(e => setError(describeError(e, t)))}>{t('loadOlder')}</button>}</details>
+    <details><summary>{t('batchAudit')} · {selected.calls.length} Spawn · {t('dispatchCount')}</summary><p>{t('loadedWindow')}</p><ul>{selected.calls.map((e, i) => <li key={i}>{String(e.data.callId)} · {formatTime(e.time, language)}</li>)}</ul>{snapshot.hasMore && <button onClick={() => void loadOlder().catch(e => setError(e))}>{t('loadOlder')}</button>}</details>
     </>}>
     {isApproval ? <section aria-label={t('approval')}><h3>{t('approval')}</h3>{audit.approvals.filter(a => a.outcome === node).map(a => <article className="bf-card" key={a.id}><Chip status={a.outcome} /><p>{a.id}</p><p>{a.note}</p><small>{a.call}</small></article>)}{!approvalCounts[node] && <p>{t('unknown')}</p>}</section>
       : report && !['needs_configuration', 'needs_review', 'ready', 'empty'].includes(node) ? <BusinessReview report={{ ...report, roles: ['attention', 'ok'].includes(node) ? report.roles.map(r => ({ ...r, checks: r.checks.filter(c => c.expected_status === node) })) : report.roles }} /> : <p>{batch?.refusal || (waiting ? t('waitingReview') : report ? t('batchHint') : batch ? t('noReport') : t('batchHint'))}</p>}

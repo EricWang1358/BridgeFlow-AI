@@ -1,4 +1,5 @@
 import { TourLayer } from './tour/tour.tsx'
+import { Failure } from './failure.tsx'
 import { tourEvent } from './tour/state.ts'
 import { defaultNotebookKind } from '../notebook-capabilities.ts'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
@@ -6,7 +7,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type { Notebook } from '../notebooks.ts'
-import { api, createNotebookSession, formatDateTime, navigate, route, useUI, type Route, type Summary, describeError } from './ui.ts'
+import { api, createNotebookSession, formatDateTime, navigate, route, useUI, type Route, type Summary } from './ui.ts'
 
 function bookmark(title: string, selected: Route, batch: string, kind: NonNullable<Notebook['kind']>): Notebook {
   return { title, kind, ...(batch ? { batch } : {}), view: selected.view ?? 'state',
@@ -23,7 +24,7 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
   const [kind, setKind] = useState<NonNullable<Notebook['kind']>>(defaultNotebookKind)
   const [title, setTitle] = useState(''), [saved, setSaved] = useState<Notebook | null>(null)
   const [loadedId,setLoadedId]=useState<SessionId | undefined>(undefined)
-  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [loaded, setLoaded] = useState(false)
+  const [busy, setBusy] = useState(false), [error, setError] = useState<unknown>(''), [loaded, setLoaded] = useState(false)
   const confirm = useRef<HTMLDialogElement>(null), history = useRef<HTMLDialogElement>(null)
   const action = useRef<(() => Promise<void>) | null>(null)
   const last = useRef(id), drafts = useRef(new Map<string, Notebook>())
@@ -54,7 +55,7 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
           const {title: _title, ...destination} = draft ?? {title:''}
           navigate(Object.keys(destination).length ? destination : {view:'state'})
         }
-      }).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
+      }).catch(e => { if (!controller.signal.aborted) setError(e) })
     return () => controller.abort()
   }, [id, revision])
   useEffect(() => {
@@ -74,7 +75,7 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
   }
   async function perform(next: () => Promise<void>) {
     setBusy(true); setError('')
-    try { await next() } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
+    try { await next() } catch (e) { setError(e) } finally { setBusy(false) }
   }
   function leave(next: () => Promise<void>) {
     if (dirty) { action.current = next; confirm.current?.showModal() }
@@ -88,7 +89,7 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
       confirm.current?.close()
       const next = action.current; action.current = null
       if (next) await next()
-    } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
+    } catch (e) { setError(e) } finally { setBusy(false) }
   }
   const create = () => leave(async () => { const fresh = await createNotebookSession(sessions); sessions.open(fresh); navigate({view:'state'}) })
   const exit = () => leave(async () => { sessions.clear(); navigate({view:'state'}); history.current?.showModal(); await sessions.refresh() })
@@ -105,7 +106,7 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
     <dialog data-tour-surface="confirm" ref={confirm} className="bf-panel bf-notebook-dialog" aria-label={t('leaveNotebook')} onCancel={() => {action.current=null}}>
       <h2>{t('leaveNotebook')}</h2><p>{t('saveNotebookHelp')}</p>
       <label>{t('notebookName')}<input value={title} maxLength={120} onChange={e=>setTitle(e.target.value)}/></label>
-      {error && <p role="alert">{error}</p>}
+      <Failure value={error}/>
       <div className="bf-actions"><button disabled={busy || !title.trim()} onClick={()=>void decide(true)}>{t('saveAndContinue')}</button><button disabled={busy} onClick={()=>void decide(false)}>{t('discardAndContinue')}</button><button disabled={busy} onClick={()=>{action.current=null;confirm.current?.close()}}>{t('cancelLeave')}</button></div>
       <TourLayer surface="confirm"/>
     </dialog>
@@ -113,7 +114,7 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
       <header><h2>{t('notebooks')}</h2><button onClick={()=>history.current?.close()}>{t('close')}</button></header>
       <p>{t('notebookHistoryHelp')}</p>
       <button disabled={busy} onClick={()=>{history.current?.close();sample()}}>{t('sampleNotebook')}</button>
-      {error && <p role="alert">{error}</p>}
+      <Failure value={error}/>
       <ul className="bf-notebook-list">{list.ids.map(key=>list.byId[key]).filter(row=>row && !row.parentId && row.origin !== 'subagent' && (row.title || !row.blank)).map(row => row && <li key={row.id}><button aria-current={row.id===id ? 'page' : undefined} onClick={()=>{history.current?.close();if(row.id!==id)leave(async()=>{sessions.open(row.id as SessionId)})}}><strong>{row.title || row.displayTitle}</strong><small>{formatDateTime(row.updatedAt, language)}</small></button></li>)}</ul>
       <TourLayer surface="history"/>
     </dialog>

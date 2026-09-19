@@ -31,6 +31,19 @@ from bridgeflow.schemas import Department
 
 KNOWN_DEPARTMENTS = set(get_args(Department))
 MEMBERSHIP_TTL_SECONDS = 300
+#: Why a 503 happened, in one machine-readable word beside the human sentence.
+#: 503 alone cannot carry this: half the service answers 503 for "not configured",
+#: and "we cannot currently determine your access" must never be shown for one of
+#: those. The browser needs the distinction to say the right thing — withholding
+#: access is not the same as denying it (docs/design 01-portal P10). The detail
+#: string stays exactly as it was; this rides in a header so no response body
+#: contract changes.
+REASON_HEADER = "x-bridgeflow-reason"
+#: Feishu is unreachable: access is withheld, which does NOT mean it is denied.
+REASON_UNAVAILABLE = "access_unavailable"
+#: The mapping file is missing or invalid: nobody can be resolved until an
+#: operator fixes the deployment. A user retrying cannot help.
+REASON_UNCONFIGURED = "access_unconfigured"
 _MAX_ATTEMPTS = 3
 #: Member types that stand for groups rather than people. They are ignored, not
 #: expanded (expansion needs contact scopes): access is granted by adding the
@@ -91,9 +104,11 @@ def structure() -> dict:
                 raise ValueError(f"role {name!r} grants confirm_mapping without all departments")
     except FileNotFoundError as exc:
         raise HTTPException(503, "Access control is not configured: "
-                                 f"declare spaces and roles in {settings.access_control_path}") from exc
+                                 f"declare spaces and roles in {settings.access_control_path}",
+                            headers={REASON_HEADER: REASON_UNCONFIGURED}) from exc
     except (OSError, yaml.YAMLError, TypeError, ValueError, AttributeError) as exc:
-        raise HTTPException(503, f"Access control configuration is invalid: {exc}") from exc
+        raise HTTPException(503, f"Access control configuration is invalid: {exc}",
+                            headers={REASON_HEADER: REASON_UNCONFIGURED}) from exc
     return {"spaces": spaces, "roles": roles}
 
 
@@ -218,7 +233,14 @@ def _members_of(space_id: str) -> dict[str, str]:
     try:
         members = fetch_space_members(space_id)
     except FeishuError as exc:
-        raise HTTPException(503, f"Access control could not reach Feishu: {exc}") from exc
+        # Both land here, and they are not the same problem: with no credentials
+        # exported nothing will ever resolve until an operator fixes the deploy,
+        # so telling that user "retry" would be a lie. Decided on the setting, not
+        # by matching the message prose.
+        configured = bool(settings.feishu_app_id and settings.feishu_app_secret)
+        raise HTTPException(503, f"Access control could not reach Feishu: {exc}",
+                            headers={REASON_HEADER: REASON_UNAVAILABLE if configured
+                                     else REASON_UNCONFIGURED}) from exc
     _members_cache[space_id] = (time.monotonic(), members)
     return members
 

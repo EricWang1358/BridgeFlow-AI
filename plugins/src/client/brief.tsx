@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { api, describeError, navigate, useUI } from './ui.ts'
+import { Failure } from './failure.tsx'
+import { api, navigate, useUI } from './ui.ts'
 import { Chip } from './workspace.tsx'
 
 /**
@@ -30,19 +31,19 @@ export function GradeMark({ grade }: { grade: Grade }) {
 
 export function MonthlyBrief({ batchId }: { batchId: string }) {
   const { t } = useUI()
-  const [brief, setBrief] = useState<Brief | null>(null), [error, setError] = useState(''), [needsReview, setNeedsReview] = useState(false), [revision, setRevision] = useState(0)
+  const [brief, setBrief] = useState<Brief | null>(null), [error, setError] = useState<unknown>(''), [needsReview, setNeedsReview] = useState(false), [revision, setRevision] = useState(0)
   useEffect(() => {
     const controller = new AbortController()
     setBrief(null); setError(''); setNeedsReview(false)
     void api<Brief>(`/conclusions/batches/${batchId}`, { signal: controller.signal }).then(setBrief).catch(e => {
       if (controller.signal.aborted) return
       const detail = e instanceof Error ? e.message : String(e)
-      if (/Complete the review/.test(detail)) setNeedsReview(true); else setError(describeError(e, t))
+      if (/Complete the review/.test(detail)) setNeedsReview(true); else setError(e)
     })
     return () => controller.abort()
   }, [batchId, revision])
   if (needsReview) return <div className="bf-empty"><strong>{t('briefNeedsReview')}</strong>{t('briefNeedsReviewHelp')}</div>
-  if (error) return <div><p role="alert" className="bf-error">{error}</p><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button></div>
+  if (error) return <Failure value={error}><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button></Failure>
   if (!brief) return <p role="status" className="bf-loading">{t('loading')}</p>
   const grades = ['G1', 'G2', 'G3', 'G4'].map(g => `${g} ${brief.grade_summary[g] ?? 0}`).join(' · ')
   return <section className="bf-brief" aria-label={t('monthlyBrief')}>

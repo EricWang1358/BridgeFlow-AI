@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { api, describeError, useUI } from './ui.ts'
+import { Failure } from './failure.tsx'
+import { api, useUI } from './ui.ts'
 import { Sources, type Ref } from './flow-graph.tsx'
 
 type Axis = { title: string; unit: string; minimum: string; maximum: string; split: string; split_is_high: boolean; low_meaning: string; high_meaning: string }
@@ -24,12 +25,12 @@ function PolicyView({ policy }: { policy: Policy }) {
 
 export function ScoreEditor({ project, opportunity, initial }: { project: string; opportunity: { id: string; seq: number }; initial?: Score | undefined }) {
   const { language, t } = useUI(), zh = language === 'zh'
-  const [policy, setPolicy] = useState<Policy | null>(null), [error, setError] = useState(''), [request, setRequest] = useState('')
+  const [policy, setPolicy] = useState<Policy | null>(null), [error, setError] = useState<unknown>(''), [request, setRequest] = useState('')
   const [ratings, setRatings] = useState({ effort: initial?.effort ?? empty(), value: initial?.value ?? empty() })
   const [revision, setRevision] = useState(0), [copied, setCopied] = useState(false)
   useEffect(() => {
     const abort = new AbortController(); setPolicy(null); setRequest(''); setError('')
-    void api<Policy>(`/discovery/${project}/scoring-policy`, { signal: abort.signal }).then(setPolicy).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
+    void api<Policy>(`/discovery/${project}/scoring-policy`, { signal: abort.signal }).then(setPolicy).catch(e => { if (!abort.signal.aborted) setError(e) })
     return () => abort.abort()
   }, [project, revision])
   function update(key: 'effort' | 'value', change: Partial<Rating>) { setRatings(r => ({ ...r, [key]: { ...r[key], ...change } })); setRequest(''); setCopied(false) }
@@ -45,7 +46,7 @@ export function ScoreEditor({ project, opportunity, initial }: { project: string
   }
   return <section aria-label={zh ? '候选评分编辑' : 'Opportunity rating editor'}><h3>{zh ? '候选评分' : 'Rate opportunity'} · {opportunity.id} · v{opportunity.seq}</h3>
     <p>{zh ? '按声明量表填写，不确定可留空。缺分数、理由或依据的轴不会落点；评分不批准立项。' : 'Use the declared policy; leave unknowns blank. Missing scores, rationale or evidence withhold the point. Rating does not approve a project.'}</p>
-    {error && <p role="alert">{error}</p>}<button onClick={() => setRevision(n => n + 1)}>{zh ? '重新读取量表' : 'Reload policy'}</button>
+    <Failure value={error}/><button onClick={() => setRevision(n => n + 1)}>{zh ? '重新读取量表' : 'Reload policy'}</button>
     {policy && <><PolicyView policy={policy} />{initial && initial.policy_fingerprint !== policy.fingerprint && <p role="alert">{zh ? '量表已变更，请重新核对两轴评分。' : 'Policy changed; review both ratings again.'}</p>}
       <form onSubmit={prepare} onChange={() => { setRequest(''); setCopied(false) }}><label>{zh ? '评分标识' : 'Rating ID'}<input name="id" required readOnly={!!initial} defaultValue={initial?.id ?? ''} pattern="[a-zA-Z0-9]([a-zA-Z0-9_]|-){0,79}" /></label>
         {(['effort', 'value'] as const).map(key => <fieldset key={key} aria-label={zh ? (key === 'effort' ? '投入评分' : '价值评分') : `${key} rating`}><legend>{policy[key].title}</legend>
@@ -63,20 +64,20 @@ export function ScoreEditor({ project, opportunity, initial }: { project: string
 export function ScoreBoard({ project, onEdit }: { project: string; onEdit: (score: Score) => void }) {
   const { language, t } = useUI(), zh = language === 'zh'
   const [page, setPage] = useState<{ items: Score[]; total: number; has_more: boolean } | null>(null), [policy, setPolicy] = useState<Policy | null>(null)
-  const [offset, setOffset] = useState(0), [revision, setRevision] = useState(0), [error, setError] = useState(''), [selected, setSelected] = useState<Score | null>(null)
+  const [offset, setOffset] = useState(0), [revision, setRevision] = useState(0), [error, setError] = useState<unknown>(''), [selected, setSelected] = useState<Score | null>(null)
   useEffect(() => {
     const abort = new AbortController(); setPage(null); setPolicy(null); setSelected(null); setError('')
-    void Promise.all([api<Policy>(`/discovery/${project}/scoring-policy`, { signal: abort.signal }), api<{ items: Score[]; total: number; has_more: boolean }>(`/discovery/${project}/score?offset=${offset}&limit=50`, { signal: abort.signal })]).then(([p, list]) => { setPolicy(p); setPage(list) }).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
+    void Promise.all([api<Policy>(`/discovery/${project}/scoring-policy`, { signal: abort.signal }), api<{ items: Score[]; total: number; has_more: boolean }>(`/discovery/${project}/score?offset=${offset}&limit=50`, { signal: abort.signal })]).then(([p, list]) => { setPolicy(p); setPage(list) }).catch(e => { if (!abort.signal.aborted) setError(e) })
     return () => abort.abort()
   }, [project, offset, revision])
   async function select(score: Score) {
     try { setSelected(await api<Score>(`/discovery/${project}/score/${score.id}?version=${score.version}`)) }
-    catch (e) { setError(describeError(e, t)) }
+    catch (e) { setError(e) }
   }
   const split = (axis: Axis) => (Number(axis.split) - Number(axis.minimum)) / (Number(axis.maximum) - Number(axis.minimum))
   return <section aria-label={zh ? '评分四象限' : 'Rating quadrants'}><h3>{zh ? '评分四象限' : 'Rating quadrants'}</h3><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button>
     <p>{zh ? '只显示当前页、当前量表下依据完整的点；位置不是立项决定。重合点可从列表分别打开。' : 'Only complete current-policy ratings on this page are plotted. Position is not approval. Open overlapping points from the list.'}</p>
-    {error && <p role="alert">{error}</p>}{policy && page && <><PolicyView policy={policy} />
+    <Failure value={error}/>{policy && page && <><PolicyView policy={policy} />
       <svg role="img" aria-label={zh ? '投入与价值四象限' : 'Effort and value quadrants'} viewBox="0 0 400 340" style={{ width: '100%' }}>
         <rect x="45" y="25" width="320" height="270" fill="none" stroke="currentColor" />
         <path d={`M ${45 + split(policy.effort) * 320} 25 V 295 M 45 ${295 - split(policy.value) * 270} H 365`} stroke="#94a3b8" strokeDasharray="5 4" />

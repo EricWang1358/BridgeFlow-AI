@@ -86,7 +86,22 @@ const labels = {
   view_department: ['部门', 'Department'], view_column: ['上传列', 'Uploaded column'], view_original: ['原始表头', 'Header as written'], view_candidate: ['已声明候选列', 'Declared candidate'], view_role: ['声明角色', 'Declared role'], view_type_fits: ['类型相符', 'Type fits'], view_shared_values: ['值重合', 'Shared values'], view_decision: ['决定', 'Decision'], view_index: ['序号', 'Index'],
   columns: ['列匹配', 'Column matches'], columnsHelp: ['字典不认识的上传列，以及它们只能对应的本部门已声明列和依据（类型、与其他部门同类列的值重合）。请在对话中让队长提议，你在审批里逐列决定；决定只对之后的新导入生效，本批次保持不变。原始数据可在来源预览中查看。', 'Uploaded columns the dictionary does not know, the declared columns of that department they could be, and the evidence (type, shared values with the same kind elsewhere). Ask the captain in chat to propose; you decide each in the approval. Decisions apply to later imports only; this batch stays unchanged. Original data is in the source preview.'],
   requestFailed: ['操作未完成', 'Not completed'], networkFailed: ['连接不上服务，请检查服务是否在运行后重试。', 'Could not reach the service. Check that it is running, then retry.'],
+  networkFailedTitle: ['连接中断', 'The connection dropped'],
+  // Withheld, not denied (docs/design 01-portal P10). Saying "你没有权限" here would send
+  // someone to ask for access they may already have; the truth is that nothing can be
+  // decided right now, and the service's own line follows this one verbatim.
+  accessUnavailableTitle: ['暂时无法确认你的访问范围', 'Your access cannot be confirmed right now'],
+  accessUnavailableBody: ['成员关系来自飞书，现在取不到。为安全起见本次不放行；这不表示你没有权限。',
+    'Membership comes from Feishu and is currently unreachable. Access is withheld for safety; this does not mean you lack permission.'],
+  accessUnconfiguredTitle: ['访问范围尚未配置', 'Access control is not configured'],
+  accessUnconfiguredBody: ['请联系平台管理员声明知识库与角色映射。重试不会有帮助。',
+    'Ask the platform operator to declare the wiki spaces and role mapping. Retrying will not help.'],
+  failureRetry: ['重试', 'Retry'],
   loginRequired: ['这份数据需要先登录。请通过飞书登录后再试。', 'This data needs a signed-in user. Log in with Feishu, then retry.'],
+  // The heading over the sentence above. It names the state, not the failure: the app
+  // token is short-lived on purpose, so expiry is routine (docs/design 01-portal P07).
+  loginExpiredTitle: ['登录状态已失效', 'Your session is no longer valid'],
+  routeUnavailableTitle: ['链接打不开', 'This link could not be opened'],
   loginWithFeishu: ['飞书登录', 'Log in with Feishu'],
   approval_feishu_import: ['飞书文件导入审批', 'Feishu import approval'], approvalTitle_feishu_import: ['从飞书下载这些文件并导入为新批次', 'Download these Feishu files into a new batch'],
   approval_feishu_upload_report: ['上传到飞书审批', 'Feishu upload approval'], approvalTitle_feishu_upload_report: ['把这份研判报告上传到飞书文件夹', 'Upload this review report to the Feishu folder'],
@@ -294,14 +309,45 @@ export function formatNumber(value: number, language: string, options?: Intl.Num
   return value.toLocaleString(language === 'zh' ? 'zh-CN' : 'en', options)
 }
 /**
- * A failure as a person reads it (#110): what went wrong in their language, then the
- * service's own words verbatim, because those name the field or rule and must not be
- * paraphrased away. A lost connection gets an actionable sentence instead of a stack.
+ * What a failed request carried besides its message. `reason` is the service's own
+ * one-word account of a 503 (x-bridgeflow-reason); it exists because the status code
+ * cannot distinguish "we could not reach Feishu, so access is withheld" from the many
+ * other things that answer 503 here.
  */
-export function describeError(error: unknown, t: (key: string) => string): string {
-  const detail = error instanceof Error ? error.message : String(error)
-  if (/failed to fetch|networkerror|load failed/i.test(detail)) return t('networkFailed')
-  return `${t('requestFailed')}：${detail.replace(/^Error:\s*/, '')}`
+export type RequestFailure = Error & { status?: number; reason?: string }
+/** The reason is read, never inferred: an untagged 503 stays a generic failure. */
+export function failureReason(error: unknown): string {
+  return error instanceof Error ? String((error as RequestFailure).reason ?? '') : ''
+}
+
+/**
+ * A failure as a person reads it (#110), in the three parts it actually has
+ * (docs/design 12-states E03): what happened as a heading, one plain sentence saying
+ * what it means for them, and the service's own words verbatim. The last part is never
+ * paraphrased — it names the field or the rule and is the only thing that locates the
+ * problem — and it is never the whole message either, which is what a bare
+ * `操作未完成：<stack>` used to be.
+ *
+ * A withheld access check is worded as withheld, never as denied (01-portal P10):
+ * "we cannot currently determine your access" and "you do not have access" lead a user
+ * to completely different next steps, and only the first one is true here.
+ *
+ * A plain string is somebody's own sentence (a validation message, a service's `detail`
+ * passed along): it is the body as written, with no heading invented over it.
+ */
+export type Failed = { title: string; body: string; detail: string }
+export function describeFailure(value: unknown, t: (key: string) => string): Failed {
+  if (typeof value === 'string') return { title: '', body: value, detail: '' }
+  const detail = (value instanceof Error ? value.message : String(value)).replace(/^Error:\s*/, '')
+  if (/failed to fetch|networkerror|load failed/i.test(detail)) {
+    return { title: t('networkFailedTitle'), body: t('networkFailed'), detail: '' }
+  }
+  const reason = failureReason(value)
+  if (reason === 'access_unavailable' || reason === 'access_unconfigured') {
+    const key = reason === 'access_unavailable' ? 'accessUnavailable' : 'accessUnconfigured'
+    return { title: t(`${key}Title`), body: t(`${key}Body`), detail }
+  }
+  return { title: t('requestFailed'), body: '', detail }
 }
 
 /**
@@ -372,7 +418,12 @@ async function request<T>(path: string, init: RequestInit | undefined, mayRetry:
     const text = await response.text()
     let detail = text
     try { detail = JSON.parse(text).detail ?? text } catch { /* Plain transport error. */ }
-    throw new Error(String(detail))
+    // The service's own words stay the message; status and reason ride beside it so a
+    // caller can tell a withheld access check from every other 503 (docs/design P10).
+    const failure: RequestFailure = Object.assign(new Error(String(detail)), { status: response.status })
+    const reason = response.headers.get('x-bridgeflow-reason')
+    if (reason) failure.reason = reason
+    throw failure
   }
   return response.json() as Promise<T>
 }
