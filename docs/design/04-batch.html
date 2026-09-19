@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · 批次数据 — BridgeFlow AI</title>
+<link rel="stylesheet" href="assets/cds.css">
+</head>
+<body data-page="batch">
+<div id="chrome"></div>
+
+<div class="wrap">
+  <header class="pagehead">
+    <p class="kicker">04 · Batch data</p>
+    <h1><span class="i18n" data-zh="批次数据" data-en="Batch data"></span></h1>
+    <p class="lead i18n"
+       data-zh="一个模态面板、六个页签。数据要地方：列拿它需要的宽度，容器横向滚动；把十七列挤进一屏，读起来像坏掉了。每个展示给人的数字都要能回到原件单元格或公式输入。"
+       data-en="One modal, six tabs. Data gets room: columns take the width they need and the container scrolls, because squeezing seventeen columns into one screen reads as damage. Every figure shown to a person traces back to an original cell or to formula inputs."></p>
+    <nav class="toc">
+      <a href="#list"><span class="i18n" data-zh="批次列表" data-en="Batch list"></span></a>
+      <a href="#master"><span class="i18n" data-zh="主表" data-en="Master table"></span></a>
+      <a href="#prov"><span class="i18n" data-zh="单元格出处" data-en="Cell provenance"></span></a>
+      <a href="#corrections"><span class="i18n" data-zh="清洗记录" data-en="Corrections"></span></a>
+      <a href="#quarantine"><span class="i18n" data-zh="隔离行" data-en="Quarantine"></span></a>
+      <a href="#integration"><span class="i18n" data-zh="跨部门总表" data-en="Cross-department master"></span></a>
+      <a href="#refusal"><span class="i18n" data-zh="拒绝状态" data-en="Refusals"></span></a>
+      <a href="#export"><span class="i18n" data-zh="导出" data-en="Export"></span></a>
+    </nav>
+  </header>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="list">
+    <header><h3 class="i18n" data-zh="批次列表" data-en="Batch list"></h3><span class="id">B01</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="按期间倒序，每行给出状态、行数与未决数。派生批次缩进在它的来源下面，并写明派生原因——不然一个月里会出现五个 2024-07，没人知道哪个是最后一版。"
+       data-en="Newest period first, each row showing status, row count and what is still open. A derived batch is indented under its source with the reason it was derived — otherwise a month ends up with five batches called 2024-07 and nobody knows which is current."></p>
+    <div class="frame">
+      <div class="pane scroll-x">
+        <table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="期间" data-en="Period"></th>
+            <th class="i18n" data-zh="批次" data-en="Batch"></th>
+            <th class="i18n" data-zh="状态" data-en="Status"></th>
+            <th class="i18n" data-zh="主表行" data-en="Master rows"></th>
+            <th class="i18n" data-zh="待确认" data-en="Open"></th>
+            <th class="i18n" data-zh="研判" data-en="Review"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td>2024-07</td><td class="mono">b73c…4a10</td><td><span class="chip ok i18n" data-zh="可研判" data-en="Ready"></span></td><td class="n">1,484</td><td class="n">10</td><td class="e i18n" data-zh="尚无报告" data-en="No report"></td></tr>
+            <tr><td class="e" style="padding-left:28px">↳ <span class="i18n" data-zh="派生自下一行" data-en="derived from the row below"></span></td><td colspan="5" class="hint i18n" data-zh="替换生产部文件：7 月 3 日两车漏记，已补" data-en="Production file replaced: two loads on 3 July were missing and have been added"></td></tr>
+            <tr><td>2024-07</td><td class="mono">a41f…9c2e</td><td><span class="chip warn i18n" data-zh="需要人工复核" data-en="Review required"></span></td><td class="n">1,482</td><td class="n">11</td><td><span class="chip warn i18n" data-zh="部分完成" data-en="Partial"></span></td></tr>
+            <tr><td>2024-05</td><td class="mono">7d21…ff08</td><td><span class="chip ok i18n" data-zh="可研判" data-en="Ready"></span></td><td class="n">1,390</td><td class="n">0</td><td><span class="chip ok i18n" data-zh="已校验" data-en="Validated"></span></td></tr>
+            <tr><td>2024-04</td><td class="mono">1c90…2b77</td><td><span class="chip bad i18n" data-zh="需要配置字段字典" data-en="Configuration required"></span></td><td class="e">—</td><td class="n">—</td><td class="e">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="master">
+    <header><h3 class="i18n" data-zh="主表" data-en="Master table"></h3><span class="id">B02</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="表头常驻且不换行，数字右对齐且等宽。页签上的数字是各视图的待处理量，让人不用点进去才发现里面是空的。"
+       data-en="The header sticks and never wraps; figures are right-aligned and tabular. The count on each tab is how much is waiting there, so nobody clicks in to discover it is empty."></p>
+    <div class="frame">
+      <div class="pane">
+        <div class="pad divide"><div class="between">
+          <div>
+            <h3 class="i18n" data-zh="批次数据与业务研判" data-en="Batch data &amp; business review"></h3>
+            <p class="muted"><span class="i18n" data-zh="批次" data-en="Batch"></span> <code>a41f…9c2e</code> <span class="btn quiet sm i18n" data-zh="复制批次编号" data-en="Copy batch ID"></span></p>
+          </div>
+          <span class="btn quiet i18n" data-zh="关闭" data-en="Close"></span>
+        </div></div>
+        <div class="pad">
+          <div class="row" style="margin-bottom:10px"><span class="period">2024-07</span><span class="chip warn i18n" data-zh="需要人工复核" data-en="Review required"></span><span class="hint">1,482 <span class="i18n" data-zh="行" data-en="rows"></span></span></div>
+          <div class="tabs" role="tablist">
+            <button role="tab" aria-selected="true"><span class="i18n" data-zh="主表" data-en="Master table"></span><span class="badge">1,482</span></button>
+            <button role="tab" aria-selected="false"><span class="i18n" data-zh="清洗记录" data-en="Corrections"></span><span class="badge">37</span></button>
+            <button role="tab" aria-selected="false"><span class="i18n" data-zh="待确认映射" data-en="Pending mappings"></span><span class="badge">4</span></button>
+            <button role="tab" aria-selected="false"><span class="i18n" data-zh="隔离行" data-en="Quarantined rows"></span><span class="badge">6</span></button>
+            <button role="tab" aria-selected="false"><span class="i18n" data-zh="跨部门总表" data-en="Cross-department"></span><span class="badge">1</span></button>
+            <button role="tab" aria-selected="false"><span class="i18n" data-zh="四部门报告" data-en="Department report"></span><span class="badge">3/4</span></button>
+          </div>
+          <div class="scroll scroll-x">
+            <table class="t">
+              <thead><tr>
+                <th class="i18n" data-zh="项目" data-en="Project"></th>
+                <th><span class="i18n" data-zh="出厂量" data-en="Shipped"></span><small class="i18n" data-zh="生产 · 方" data-en="production · m³"></small></th>
+                <th><span class="i18n" data-zh="实际量" data-en="Received"></span><small class="i18n" data-zh="生产 · 方" data-en="production · m³"></small></th>
+                <th><span class="i18n" data-zh="签收率" data-en="Sign-off"></span><small class="i18n" data-zh="公式" data-en="formula"></small></th>
+                <th><span class="i18n" data-zh="原料成本" data-en="Material cost"></span><small class="i18n" data-zh="采购 · 元" data-en="procurement · 元"></small></th>
+                <th><span class="i18n" data-zh="回款" data-en="Collected"></span><small class="i18n" data-zh="财务 · 元" data-en="finance · 元"></small></th>
+                <th><span class="i18n" data-zh="合同额" data-en="Contract"></span><small class="i18n" data-zh="市场 · 元" data-en="marketing · 元"></small></th>
+              </tr></thead>
+              <tbody>
+                <tr><td class="i18n" data-zh="第二实验学校扩建" data-en="No.2 school extension"></td><td class="n">1,240.0<span class="grade g1">G1</span></td><td class="n">1,058.0<span class="grade g1">G1</span></td><td class="n">85.32%<span class="grade g2">G2</span></td><td class="n">318,420.00<span class="grade g1">G1</span></td><td class="n">402,000.00<span class="grade g1">G1</span></td><td class="n">602,640.00<span class="grade g1">G1</span></td></tr>
+                <tr><td class="i18n" data-zh="滨江路桥改造" data-en="Riverside bridge"></td><td class="n">2,180.0<span class="grade g1">G1</span></td><td class="n">2,104.0<span class="grade g1">G1</span></td><td class="n">96.51%<span class="grade g2">G2</span></td><td class="n">556,900.00<span class="grade g1">G1</span></td><td class="n">640,000.00<span class="grade g1">G1</span></td><td class="n">1,022,544.00<span class="grade g1">G1</span></td></tr>
+                <tr><td class="i18n" data-zh="城东物流园 B 区" data-en="East logistics park B"></td><td class="n">2,180.0<span class="grade g1">G1</span></td><td class="n">2,058.0<span class="grade g1">G1</span></td><td class="n">94.40%<span class="grade g2">G2</span></td><td class="n">541,300.00<span class="grade g1">G1</span></td><td class="e"><span class="i18n" data-zh="待确认" data-en="Open question"></span><span class="grade gx" data-i18n-skip>?</span><span class="cellnote i18n" data-zh="财务与市场对该项目名写法不一致" data-en="Finance and marketing spell this project differently"></span></td><td class="n">1,000,000.00<span class="grade g1">G1</span></td></tr>
+                <tr class="sum"><td class="i18n" data-zh="合计（不含待确认行）" data-en="Total (excludes open rows)"></td><td class="n">5,600.0<span class="grade g1">G1</span></td><td class="n">5,220.0<span class="grade g1">G1</span></td><td class="n">93.21%<span class="grade g2">G2</span></td><td class="n">1,416,620.00<span class="grade g1">G1</span></td><td class="n">1,042,000.00<span class="grade g3">G3</span></td><td class="n">2,625,184.00<span class="grade g1">G1</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hint i18n" style="margin-top:10px" data-zh="合计的回款依赖未确认的增值税口径，所以取 G3。口径确认后自动升为 G2，不需要重导。" data-en="The collected total depends on an unconfirmed VAT convention and so takes G3. Confirming the convention lifts it to G2 without a re-import."></p>
+          <div class="row" style="margin-top:12px"><span class="btn quiet sm i18n" data-zh="上一页" data-en="Previous"></span><span class="hint"><span class="i18n" data-zh="第" data-en="Page"></span> 1 / 15 · <span class="i18n" data-zh="共" data-en="Total"></span> 1,482 <span class="i18n" data-zh="行" data-en="rows"></span></span><span class="btn quiet sm i18n" data-zh="下一页" data-en="Next"></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="prov">
+    <header><h3 class="i18n" data-zh="单元格出处" data-en="Cell provenance"></h3><span class="id">B03</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="E06-UC04：有人质疑总表里的某个数字。点开就能看到它的部门、文件、工作表、原表行、原列名，以及路上经过的每一条规则。这是「可追溯」的全部意思：不是把每个单元格寄回来，而是每个数字都能被追回去。"
+       data-en="E06-UC04: somebody questions a number in the master. Opening it shows the department, file, sheet, original row, original column name and every rule it passed through on the way. That is all traceability means — not shipping every cell back, but being able to walk any figure home."></p>
+    <div class="frame">
+      <div class="pane pad" style="position:relative">
+        <table class="t" style="max-width:560px">
+          <tbody><tr><td class="i18n" data-zh="第二实验学校扩建" data-en="No.2 school extension"></td><td class="n" style="background:var(--bg-accent);border-radius:4px">1,058.0<span class="grade g1">G1</span></td></tr></tbody>
+        </table>
+        <div class="pop" style="margin-top:12px">
+          <div class="between"><strong style="font-weight:500;font-size:13.5px" class="i18n" data-zh="实际量 1,058.0 方" data-en="Received 1,058.0 m³"></strong><span class="grade g1" style="margin:0">G1</span></div>
+          <dl class="kv" style="margin-top:10px;font-size:12.5px">
+            <dt class="i18n" data-zh="部门" data-en="Department"></dt><dd><span class="i18n" data-zh="生产" data-en="Production"></span></dd>
+            <dt class="i18n" data-zh="文件" data-en="File"></dt><dd class="mono">2024-07-production.xlsx</dd>
+            <dt class="i18n" data-zh="工作表" data-en="Sheet"></dt><dd class="mono">7月产量</dd>
+            <dt class="i18n" data-zh="原表行" data-en="Original row"></dt><dd class="mono">118</dd>
+            <dt class="i18n" data-zh="原列名" data-en="Original column"></dt><dd class="mono">实际量（方）</dd>
+          </dl>
+          <p class="eyebrow i18n" style="margin-top:10px" data-zh="经过的规则" data-en="Rules applied"></p>
+          <p class="tree">numeric.trim · <span class="del">"1,058.00 "</span> → <span class="ins">1058.0</span><br>rollup.sum · <span class="i18n" data-zh="同项目 4 行合并" data-en="4 rows for one project combined"></span></p>
+          <div class="row" style="margin-top:10px"><span class="btn quiet sm i18n" data-zh="打开原件" data-en="Open the original"></span><span class="btn quiet sm i18n" data-zh="查看清洗记录" data-en="See the corrections"></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="corrections">
+    <header><h3 class="i18n" data-zh="清洗记录" data-en="Corrections"></h3><span class="id">B04</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="E04-UC05：每一处改动能回到原件的哪一格。原值用删除线、清洗后用通过色，因为这一列读者要一眼看出「系统动了什么」。日期歧义按部门声明解读，没有声明就不猜——那一行进隔离。"
+       data-en="E04-UC05: every change traces back to its cell. The original is struck through and the cleaned value tinted, because the one thing a reader needs from this column is what the system touched. Ambiguous dates are read by department declaration; with no declaration the row is quarantined rather than guessed."></p>
+    <div class="frame">
+      <div class="pane scroll-x">
+        <table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="部门" data-en="Department"></th>
+            <th class="i18n" data-zh="原表行" data-en="Row"></th>
+            <th class="i18n" data-zh="列" data-en="Column"></th>
+            <th class="i18n" data-zh="原值" data-en="Original"></th>
+            <th class="i18n" data-zh="清洗后" data-en="Cleaned"></th>
+            <th class="i18n" data-zh="依据规则" data-en="Rule"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td><span class="chip info i18n" data-zh="生产" data-en="Production"></span></td><td class="n">118</td><td class="mono">C</td><td class="mono del">1,058.00␣</td><td class="mono ins">1058.0</td><td class="hint mono">numeric.trim</td></tr>
+            <tr><td><span class="chip info i18n" data-zh="采购" data-en="Procurement"></span></td><td class="n">42</td><td class="mono">F</td><td class="mono del">２０２４/７/８</td><td class="mono ins">2024-07-08</td><td class="hint mono">date.fullwidth</td></tr>
+            <tr><td><span class="chip info i18n" data-zh="财务" data-en="Finance"></span></td><td class="n">7</td><td class="mono">B</td><td class="mono del">滨江路桥改造␣</td><td class="mono ins">滨江路桥改造</td><td class="hint mono">text.trim</td></tr>
+            <tr><td><span class="chip info i18n" data-zh="财务" data-en="Finance"></span></td><td class="n">11–14</td><td class="mono">D</td><td class="hint i18n" data-zh="同一项目 4 行" data-en="4 rows, one project"></td><td class="mono ins">402,000.00</td><td class="hint mono">rollup.sum</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="quarantine">
+    <header><h3 class="i18n" data-zh="隔离行与处置" data-en="Quarantine and its decisions"></h3><span class="id">B05</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="隔离行不进计算，也不会自动放行。放行必须通过重新校验，可附上你确认的更正值；丢弃需写明理由。处置应用后生成新批次，本批次及其报告保持不变——历史不被改写，这是能回头核对的前提。"
+       data-en="Quarantined rows are excluded and never released automatically. Release must pass revalidation, optionally with corrected cells you confirm; discard needs a reason. Applying either creates a new batch and leaves this one and its reports untouched, because history that gets rewritten cannot be checked later."></p>
+    <div class="frame">
+      <div class="pane">
+        <div class="pad divide"><div class="row"><span class="chip warn i18n" data-zh="需要人工复核" data-en="Review required"></span><span class="hint">6 <span class="i18n" data-zh="行被扣下" data-en="rows held back"></span></span></div></div>
+        <div class="scroll-x"><table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="部门" data-en="Department"></th>
+            <th class="i18n" data-zh="原表行" data-en="Row"></th>
+            <th class="i18n" data-zh="扣下的原因" data-en="Why it was held"></th>
+            <th class="i18n" data-zh="更正值" data-en="Corrected value"></th>
+            <th class="i18n" data-zh="处置" data-en="Decision"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td><span class="chip info i18n" data-zh="生产" data-en="Production"></span></td><td class="n">203</td><td class="i18n" data-zh="日期写法有歧义（03/11/2025），本部门未声明" data-en="Ambiguous date (03/11/2025); no department declaration"></td><td><span class="input ph" style="min-height:28px;padding:2px 8px;font-size:12px">2025-03-11</span></td><td><span class="btn sm i18n" data-zh="放行" data-en="Release"></span> <span class="btn quiet sm i18n" data-zh="丢弃" data-en="Discard"></span></td></tr>
+            <tr><td><span class="chip info i18n" data-zh="采购" data-en="Procurement"></span></td><td class="n">88</td><td class="i18n" data-zh="单价为负" data-en="Negative unit price"></td><td class="e i18n" data-zh="未填" data-en="None"></td><td><span class="chip i18n" data-zh="待处置" data-en="Undecided"></span></td></tr>
+            <tr><td><span class="chip info i18n" data-zh="财务" data-en="Finance"></span></td><td class="n">31</td><td class="i18n" data-zh="项目名在四部门中均无对应" data-en="Project name matches no department"></td><td class="e i18n" data-zh="未填" data-en="None"></td><td><span class="chip bad i18n" data-zh="拟丢弃" data-en="To discard"></span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="pad stack" style="border-top:.5px solid var(--border)">
+          <label class="field"><span class="lab i18n" data-zh="丢弃理由（必填）" data-en="Reason for discarding (required)"></span><span class="input">该项目 6 月已结项，本月不应出现</span></label>
+          <div class="row"><span class="btn primary i18n" data-zh="应用处置，生成新批次" data-en="Apply and create a new batch"></span><span class="hint i18n" data-zh="需要一次审批。也可以修正源表后重新导入。" data-en="This needs one approval. You can also correct the source and import again."></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="integration">
+    <header><h3 class="i18n" data-zh="跨部门总表与口径核对" data-en="The cross-department master and its checks"></h3><span class="id">B06</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="E06-UC03：总表生成后核对部门填写值与字典公式、跨部门数字是否一致。不一致不自动改数，进「待确认」，并写清两边分别是多少、差在哪。"
+       data-en="E06-UC03: once built, the master checks department values against dictionary formulas and across departments. A disagreement never rewrites a figure — it becomes an open question that states both sides and the gap between them."></p>
+    <div class="frame">
+      <div class="pane">
+        <div class="pad divide"><div class="between"><h4 class="i18n" data-zh="口径核对" data-en="Reconciliation checks"></h4><span class="chip warn i18n" data-zh="1 项待确认" data-en="1 open question"></span></div></div>
+        <div class="scroll-x"><table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="检查" data-en="Check"></th>
+            <th class="i18n" data-zh="部门填写" data-en="Department value"></th>
+            <th class="i18n" data-zh="公式算出" data-en="Formula result"></th>
+            <th class="i18n" data-zh="差" data-en="Gap"></th>
+            <th class="i18n" data-zh="状态" data-en="Status"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="生产实际量 = 财务确认方量" data-en="Production received = finance confirmed volume"></td><td class="n">5,220.0</td><td class="n">5,220.0</td><td class="n">0.0</td><td><span class="chip ok i18n" data-zh="正常" data-en="OK"></span></td></tr>
+            <tr><td class="i18n" data-zh="合同额 = 单价 × 方量" data-en="Contract = unit price × volume"></td><td class="n">2,625,184.00</td><td class="n">2,625,184.00</td><td class="n">0.00</td><td><span class="chip ok i18n" data-zh="正常" data-en="OK"></span></td></tr>
+            <tr><td class="i18n" data-zh="城东物流园 B 区 · 回款" data-en="East logistics park B · collected"></td><td class="n">—</td><td class="n">—</td><td class="e i18n" data-zh="无法计算" data-en="Not computable"></td><td><span class="chip warn i18n" data-zh="待确认" data-en="Open question"></span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="pad stack" style="border-top:.5px solid var(--border)">
+          <div class="callout warn">
+            <h4 class="i18n" data-zh="待确认：项目名写法不一致" data-en="Open question: the project is spelled differently"></h4>
+            <p><span class="i18n" data-zh="财务写" data-en="Finance writes"></span> <code>城东物流园B区</code>，<span class="i18n" data-zh="市场写" data-en="marketing writes"></span> <code>城东物流园 B 区</code>。<span class="i18n" data-zh="字典未声明这两个写法是同一实体，所以这一格留空，不替你选一个。" data-en="The dictionary does not declare these as one entity, so the cell stays empty rather than the system picking one."></span></p>
+          </div>
+          <div class="row"><span class="btn primary i18n" data-zh="登记为同一实体的别名" data-en="Register as aliases of one entity"></span><span class="btn quiet i18n" data-zh="留作待确认" data-en="Leave it open"></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="refusal">
+    <header><h3 class="i18n" data-zh="拒绝状态与下一步" data-en="Refusals and the next step"></h3><span class="id">B07</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="一个状态只有挨着它隐含的动作才有用。字典缺席时明确报「未配置」，不退回猜测：曾经有一版在猜不到主键时直接拿第一列去 join 四张表，静默出错。跑不动比静默出错好。"
+       data-en="A status is only useful next to the step it implies. A missing dictionary reports “not configured” rather than falling back to a guess: an earlier version joined all four tables on whatever the first column happened to be, and was quietly wrong. Refusing to run beats being quietly wrong."></p>
+    <div class="frame stack">
+      <div class="pane pad stack">
+        <div class="row"><span class="period">2024-04</span><span class="chip bad i18n" data-zh="需要配置字段字典" data-en="Configuration required"></span></div>
+        <div class="callout bad">
+          <h4 class="i18n" data-zh="下一步" data-en="Next step"></h4>
+          <p class="i18n" data-zh="字段字典没有声明可用于连接的列，所以主表没有建，研判也起不来。核对下面这份字典是不是你以为的那份，补齐后重新导入一次——旧批次不会被改。" data-en="The dictionary declares no joinable column, so no master was built and the review cannot start. Check the dictionary below is the one you think it is, complete it, and import again — the old batch is left alone."></p>
+        </div>
+        <details>
+          <summary class="hint i18n" data-zh="本批次冻结的字典" data-en="Dictionary frozen into this batch"></summary>
+          <p class="tree" style="margin-top:8px">
+            field-dictionary.yaml @ v7<br>
+            ├─ <span class="i18n" data-zh="生产" data-en="production"></span> → <span style="color:var(--text-danger)" class="i18n" data-zh="未声明任何可连接列" data-en="declares none"></span><br>
+            ├─ <span class="i18n" data-zh="采购" data-en="procurement"></span> → <span style="color:var(--text-danger)" class="i18n" data-zh="未声明任何可连接列" data-en="declares none"></span><br>
+            ├─ <span class="i18n" data-zh="财务" data-en="finance"></span> → project_code<br>
+            └─ <span class="i18n" data-zh="市场" data-en="marketing"></span> → project_code
+          </p>
+        </details>
+        <div class="row"><span class="btn primary i18n" data-zh="让 captain 看这批数据" data-en="Ask the captain to look"></span><span class="btn quiet i18n" data-zh="打开字段字典" data-en="Open the dictionary"></span></div>
+        <p class="hint i18n" data-zh="它会找出字典不认识的上传列，只在本部门字典已声明的列里提出匹配和依据；每个匹配都要你在审批里决定。没有候选时需要字典负责人决定。" data-en="It finds uploaded columns the dictionary does not know and proposes matches only to columns already declared for that department, with evidence. You decide each one in the approval. No candidate means the dictionary owner decides."></p>
+      </div>
+      <div class="pane pad stack">
+        <div class="row"><span class="period">2024-03</span><span class="chip warn i18n" data-zh="没有可用数据" data-en="No usable data"></span></div>
+        <div class="callout warn"><h4 class="i18n" data-zh="下一步" data-en="Next step"></h4><p class="i18n" data-zh="这一批没有可用数据。修正源文件后重新导入。" data-en="This batch has no usable data. Correct the source files and import again."></p></div>
+        <details><summary class="hint i18n" data-zh="为什么主表是空的" data-en="Why the master table is empty"></summary>
+          <p class="hint i18n" style="margin-top:6px" data-zh="四份文件共 0 行通过必填列检查：全部缺少字典声明的连接键。" data-en="Zero rows across four files passed the required-column check: all of them lack the join key the dictionary declares."></p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="export">
+    <header><h3 class="i18n" data-zh="导出" data-en="Export"></h3><span class="id">B08</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="E06-UC05：总表要交给不使用本系统的人。导出的工作簿带「待确认」与「口径假设」两张工作表——如果只导出数字，收到的人就会以为那些数字全都是确定的。"
+       data-en="E06-UC05: the master has to go to people who do not use this system. The workbook carries an open-questions sheet and a conventions sheet alongside the data, because a figures-only export tells the recipient that every figure is settled."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:560px">
+        <h4 class="i18n" data-zh="导出跨部门总表" data-en="Export the cross-department master"></h4>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="工作表" data-en="Sheet"></th><th class="i18n" data-zh="内容" data-en="Contents"></th></tr></thead>
+          <tbody>
+            <tr><td class="mono i18n" data-zh="总表" data-en="Master"></td><td class="i18n" data-zh="1,482 行，含依据等级列" data-en="1,482 rows with an evidence-grade column"></td></tr>
+            <tr><td class="mono i18n" data-zh="待确认" data-en="Open questions"></td><td class="i18n" data-zh="1 项，含两边写法与出处" data-en="1 item, with both spellings and their sources"></td></tr>
+            <tr><td class="mono i18n" data-zh="口径假设" data-en="Conventions"></td><td class="i18n" data-zh="4 条，含确认状态" data-en="4 conventions with their confirmation state"></td></tr>
+            <tr><td class="mono i18n" data-zh="来源清单" data-en="Sources"></td><td class="i18n" data-zh="4 个文件，含指纹与工作表名" data-en="4 files with fingerprints and sheet names"></td></tr>
+          </tbody>
+        </table></div>
+        <div class="row"><span class="btn primary i18n" data-zh="下载 XLSX" data-en="Download XLSX"></span><span class="hint i18n" data-zh="文件名含期间与批次：跨部门总表-2024-07-a41f9c2e.xlsx" data-en="The filename carries the period and batch: master-2024-07-a41f9c2e.xlsx"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="pager"></div>
+</div>
+
+<script src="assets/design.js"></script>
+</body>
+</html>

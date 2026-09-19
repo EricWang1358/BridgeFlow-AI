@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0 · 基础记号 — BridgeFlow AI</title>
+<link rel="stylesheet" href="assets/cds.css">
+</head>
+<body data-page="foundations">
+<div id="chrome"></div>
+
+<div class="wrap">
+  <header class="pagehead">
+    <p class="kicker">00 · Foundations</p>
+    <h1><span class="i18n" data-zh="基础记号" data-en="Foundations"></span></h1>
+    <p class="lead i18n"
+       data-zh="后面十二页只用这一套记号和这一组原件。凡是这里没有的，后面也不该出现。"
+       data-en="The twelve pages that follow use only these tokens and these primitives. Anything absent here should not appear there."></p>
+    <nav class="toc">
+      <a href="#colour"><span class="i18n" data-zh="颜色" data-en="Colour"></span></a>
+      <a href="#type"><span class="i18n" data-zh="字号与数字" data-en="Type and numerals"></span></a>
+      <a href="#space"><span class="i18n" data-zh="间距与圆角" data-en="Spacing and radius"></span></a>
+      <a href="#buttons"><span class="i18n" data-zh="按钮" data-en="Buttons"></span></a>
+      <a href="#forms"><span class="i18n" data-zh="表单" data-en="Forms"></span></a>
+      <a href="#status"><span class="i18n" data-zh="状态词" data-en="Status vocabulary"></span></a>
+      <a href="#grades"><span class="i18n" data-zh="依据等级" data-en="Evidence grades"></span></a>
+      <a href="#callouts"><span class="i18n" data-zh="提示块" data-en="Callouts"></span></a>
+      <a href="#tables"><span class="i18n" data-zh="表格" data-en="Tables"></span></a>
+      <a href="#numbers"><span class="i18n" data-zh="数字格式" data-en="Number formats"></span></a>
+      <a href="#charts"><span class="i18n" data-zh="图表规则" data-en="Chart rules"></span></a>
+      <a href="#words"><span class="i18n" data-zh="文案规则" data-en="Writing rules"></span></a>
+    </nav>
+  </header>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="colour">
+    <header><h3 class="i18n" data-zh="颜色" data-en="Colour"></h3><span class="id">F01</span></header>
+    <p class="cap i18n"
+       data-zh="四层：表面、文字、边框、角色。组件只读用途层，深色只换记号值。语义色永远不单独承担状态。"
+       data-en="Four layers: surface, text, border, role. Components read the purpose layer only, and dark mode swaps values. Semantic colour never carries state on its own."></p>
+    <div class="frame stack-lg">
+      <div>
+        <p class="eyebrow i18n" data-zh="表面与文字" data-en="Surfaces and text"></p>
+        <div class="grid4" style="margin-top:8px">
+          <div class="card pad-sm"><div class="bar" style="height:24px;border-radius:4px;background:var(--surface-0);border:.5px solid var(--border)"></div><p class="mono" style="margin-top:6px">--surface-0</p><p class="hint i18n" data-zh="页面底" data-en="Page canvas"></p></div>
+          <div class="card pad-sm"><div class="bar" style="height:24px;border-radius:4px;background:var(--surface-1);border:.5px solid var(--border)"></div><p class="mono" style="margin-top:6px">--surface-1</p><p class="hint i18n" data-zh="行内卡片、表头" data-en="In-flow card, table head"></p></div>
+          <div class="card pad-sm"><div class="bar" style="height:24px;border-radius:4px;background:var(--surface-2);border:.5px solid var(--border)"></div><p class="mono" style="margin-top:6px">--surface-2</p><p class="hint i18n" data-zh="面板、抽屉" data-en="Panel, drawer"></p></div>
+          <div class="card pad-sm"><div class="bar" style="height:24px;border-radius:4px;background:var(--surface-3);border:.5px solid var(--border)"></div><p class="mono" style="margin-top:6px">--surface-3</p><p class="hint i18n" data-zh="浮层" data-en="Popover"></p></div>
+          <div class="card pad-sm"><div class="bar" style="height:24px;border-radius:4px;background:var(--text-primary)"></div><p class="mono" style="margin-top:6px">--text-primary</p><p class="hint i18n" data-zh="正文" data-en="Body"></p></div>
+          <div class="card pad-sm"><div class="bar" style="height:24px;border-radius:4px;background:var(--text-secondary)"></div><p class="mono" style="margin-top:6px">--text-secondary</p><p class="hint i18n" data-zh="辅助文字" data-en="Supporting"></p></div>
+          <div class="card pad-sm"><div class="bar" style="height:24px;border-radius:4px;background:var(--text-muted)"></div><p class="mono" style="margin-top:6px">--text-muted</p><p class="hint i18n" data-zh="占位、脚注" data-en="Placeholder, caption"></p></div>
+          <div class="card pad-sm"><div class="bar" style="height:24px;border-radius:4px;background:var(--border-stronger)"></div><p class="mono" style="margin-top:6px">--border-*</p><p class="hint i18n" data-zh="0.5 px 发丝线" data-en="0.5 px hairline"></p></div>
+        </div>
+      </div>
+
+      <div>
+        <p class="eyebrow i18n" data-zh="角色" data-en="Roles"></p>
+        <div class="grid4" style="margin-top:8px">
+          <div class="card pad-sm"><div class="bar" style="height:24px;border-radius:4px;background:var(--fill-accent)"></div><p class="mono" style="margin-top:6px">accent</p><p class="hint i18n" data-zh="用户发起的主操作，一屏一个" data-en="The user's primary action, one per surface"></p></div>
+          <div class="card pad-sm"><div class="bar" style="height:24px;border-radius:4px;background:var(--fill-brand)"></div><p class="mono" style="margin-top:6px">brand</p><p class="hint i18n" data-zh="队长发起的动作，如发送" data-en="Captain-initiated actions such as send"></p></div>
+          <div class="card pad-sm"><div class="bar" style="height:24px;border-radius:4px;background:var(--bg-success);border:.5px solid var(--border-success)"></div><p class="mono" style="margin-top:6px">success</p><p class="hint i18n" data-zh="声明检查通过" data-en="Declared check passed"></p></div>
+          <div class="card pad-sm"><div class="bar" style="height:24px;border-radius:4px;background:var(--bg-warning);border:.5px solid var(--border-warning)"></div><p class="mono" style="margin-top:6px">warning</p><p class="hint i18n" data-zh="触及阈值或待人判断" data-en="Threshold reached or awaiting a person"></p></div>
+          <div class="card pad-sm"><div class="bar" style="height:24px;border-radius:4px;background:var(--bg-danger);border:.5px solid var(--border-danger)"></div><p class="mono" style="margin-top:6px">danger</p><p class="hint i18n" data-zh="拒绝、冲突、失败" data-en="Refusal, conflict, failure"></p></div>
+          <div class="card pad-sm"><div class="bar" style="height:24px;border-radius:4px;background:var(--bg-accent);border:.5px solid var(--border-accent)"></div><p class="mono" style="margin-top:6px">accent tint</p><p class="hint i18n" data-zh="信息、步骤标记" data-en="Information, step marks"></p></div>
+        </div>
+        <p class="hint i18n" style="margin-top:10px" data-zh="bg-{role} 配 text-{role}（浅底深字），fill-{role} 配 on-{role}（实底反白）。记号名本身就说明了配对方式。" data-en="Pair bg-{role} with text-{role} on tinted surfaces, and fill-{role} with on-{role} on solid controls. The token name encodes the pairing."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="type">
+    <header><h3 class="i18n" data-zh="字号与数字" data-en="Type and numerals"></h3><span class="id">F02</span></header>
+    <p class="cap i18n"
+       data-zh="只有两个字重：400 与 500。所有数字用等宽数位，这样上下两行的金额能对齐——对账表里这不是偏好，是能不能扫读的问题。"
+       data-en="Two weights only: 400 and 500. All figures use tabular numerals so amounts line up between rows — in a reconciliation table this is not taste, it decides whether the column can be scanned."></p>
+    <div class="frame">
+      <div class="pane pad stack">
+        <div class="between"><h1 class="i18n" data-zh="标题 22 / 500" data-en="Heading 22 / 500"></h1><span class="hint mono">h1</span></div>
+        <div class="between"><h2 class="i18n" data-zh="小节 18 / 500" data-en="Section 18 / 500"></h2><span class="hint mono">h2</span></div>
+        <div class="between"><h3 class="i18n" data-zh="子节 16 / 500" data-en="Subsection 16 / 500"></h3><span class="hint mono">h3</span></div>
+        <div class="between"><p class="i18n" data-zh="正文 15 / 400，行高 1.7" data-en="Body 15 / 400, line height 1.7"></p><span class="hint mono">p</span></div>
+        <div class="between"><p class="muted i18n" data-zh="辅助 13 / 400" data-en="Supporting 13 / 400"></p><span class="hint mono">.muted</span></div>
+        <div class="between"><p class="hint i18n" data-zh="脚注 12 / 400" data-en="Caption 12 / 400"></p><span class="hint mono">.hint</span></div>
+        <hr class="rule" style="margin:8px 0">
+        <div class="scroll">
+          <table class="t">
+            <thead><tr><th class="i18n" data-zh="项目" data-en="Project"></th><th class="i18n" data-zh="等宽数位" data-en="Tabular"></th><th class="i18n" data-zh="比例数位（错误）" data-en="Proportional (wrong)"></th></tr></thead>
+            <tbody>
+              <tr><td class="i18n" data-zh="第二实验学校扩建" data-en="No.2 school extension"></td><td class="n">318,420.00</td><td class="n" style="font-variant-numeric:proportional-nums">318,420.00</td></tr>
+              <tr><td class="i18n" data-zh="滨江路桥改造" data-en="Riverside bridge"></td><td class="n">1,111,111.11</td><td class="n" style="font-variant-numeric:proportional-nums">1,111,111.11</td></tr>
+              <tr><td class="i18n" data-zh="城东物流园 B 区" data-en="East logistics park B"></td><td class="n">99,000.00</td><td class="n" style="font-variant-numeric:proportional-nums">99,000.00</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="hint i18n" data-zh="衬线体只用于「声音」场合（引述、正式报告正文），界面其余部分一律无衬线。" data-en="The serif face is reserved for voice — quotations and formal report prose. Everything else in the interface is sans."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="space">
+    <header><h3 class="i18n" data-zh="间距、圆角与层高" data-en="Spacing, radius and elevation"></h3><span class="id">F03</span></header>
+    <p class="cap i18n"
+       data-zh="控件 8 px 圆角，卡片 12 px。单边边框不给圆角——左侧三像素强调线配上圆角，四角会露出缺口。同屏最多两层浮层，第三层就该是对话框。"
+       data-en="8 px on controls, 12 px on cards. Single-sided borders get no radius: a 3 px left accent under rounded corners leaves gaps at the ends. At most two floating layers at once; a third means a dialog."></p>
+    <div class="frame grid3">
+      <div class="card"><p class="hint mono">--radius 8px</p><div style="margin-top:8px;height:34px;border-radius:var(--radius);background:var(--surface-1)"></div></div>
+      <div class="card"><p class="hint mono">card 12px</p><div style="margin-top:8px;height:34px;border-radius:12px;background:var(--surface-1)"></div></div>
+      <div class="card"><p class="hint mono">border-left 3px, radius 0</p><div style="margin-top:8px;height:34px;border-left:3px solid var(--border-warning);background:var(--bg-warning)"></div></div>
+      <div class="card"><p class="hint mono">--gap-sm 8 / md 12 / lg 18</p><div class="row" style="margin-top:8px"><span style="width:8px;height:20px;background:var(--fill-accent)"></span><span style="width:12px;height:20px;background:var(--fill-accent)"></span><span style="width:18px;height:20px;background:var(--fill-accent)"></span></div></div>
+      <div class="card"><p class="hint mono">--shadow-card</p><div style="margin-top:8px;height:34px;border-radius:8px;background:var(--surface-2);box-shadow:var(--shadow-card)"></div></div>
+      <div class="card"><p class="hint mono">--shadow-popover</p><div style="margin-top:8px;height:34px;border-radius:8px;background:var(--surface-3);box-shadow:var(--shadow-popover)"></div></div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="buttons">
+    <header><h3 class="i18n" data-zh="按钮" data-en="Buttons"></h3><span class="id">F04</span></header>
+    <p class="cap i18n"
+       data-zh="次要是默认。一屏只允许一个 accent 主操作，clay 只给队长自己发起的动作。避免禁用按钮：保持可点、点了给出原因，比一个没有提示的灰按钮强。"
+       data-en="Secondary is the default. One accent primary per surface, and clay only for what the captain itself initiates. Avoid disabled buttons — keeping them live and answering on use beats a grey control that explains nothing."></p>
+    <div class="frame">
+      <div class="pane pad stack-lg">
+        <div class="row">
+          <span class="btn primary i18n" data-zh="导入并检查" data-en="Import &amp; check"></span>
+          <span class="btn i18n" data-zh="先自检" data-en="Check first"></span>
+          <span class="btn quiet i18n" data-zh="关闭" data-en="Close"></span>
+          <span class="btn danger i18n" data-zh="拒绝" data-en="Reject"></span>
+          <span class="btn brand i18n" data-zh="发送给队长" data-en="Send to captain"></span>
+        </div>
+        <div class="row">
+          <span class="btn sm i18n" data-zh="小号" data-en="Small"></span>
+          <span class="btn focus i18n" data-zh="键盘焦点" data-en="Keyboard focus"></span>
+          <span class="btn" aria-disabled="true"><span class="i18n" data-zh="禁用（尽量不用）" data-en="Disabled (avoid)"></span></span>
+        </div>
+        <div class="callout">
+          <h4 class="i18n" data-zh="为什么要区分 accent 与 clay" data-en="Why accent and clay are separated"></h4>
+          <p class="i18n" data-zh="现在的界面把两者都画成蓝色，所以「你要做的事」和「队长要做的事」看起来一样。分开之后，读者一眼知道按下去是谁在动。" data-en="Today both are painted blue, so what you are about to do and what the captain is about to do look identical. Separating them tells the reader at a glance who acts."></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="forms">
+    <header><h3 class="i18n" data-zh="表单" data-en="Forms"></h3><span class="id">F05</span></header>
+    <p class="cap i18n"
+       data-zh="占位符写一个合法的例子，不重复标签。文件位替掉浏览器自带的「未选择文件」——那是整个产品里最格格不入的一句英文。"
+       data-en="A placeholder shows a real example of valid input and never repeats the label. The file slot replaces the browser's own “No file chosen”, the single most out-of-place string in the product."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <label class="field"><span class="lab i18n" data-zh="业务月份" data-en="Business month"></span><span class="input">2024-07</span></label>
+        <label class="field"><span class="lab i18n" data-zh="批次编号" data-en="Batch ID"></span><span class="input ph mono">a41f7cb2…</span></label>
+        <label class="field"><span class="lab i18n" data-zh="拒绝理由（可选，最多 240 字符）" data-en="Rejection reason (optional, up to 240 characters)"></span><span class="input area ph"></span></label>
+        <label class="field"><span class="lab i18n" data-zh="表头行号" data-en="Header row"></span><span class="input err">0</span><span class="err i18n" data-zh="表头行号从 1 开始。" data-en="Header rows start at 1."></span></label>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="选择" data-en="Choice"></p>
+        <div class="opt"><span class="box on"></span><span class="i18n" data-zh="接受这条映射，并在下个月复用" data-en="Accept this mapping and reuse it next month"></span></div>
+        <div class="opt"><span class="box"></span><span class="i18n" data-zh="只在本批次接受" data-en="Accept for this batch only"></span></div>
+        <div class="opt"><span class="box round on"></span><span class="i18n" data-zh="较上月" data-en="Versus last month"></span></div>
+        <div class="opt"><span class="box round"></span><span class="i18n" data-zh="较去年同期" data-en="Versus the same month last year"></span></div>
+        <p class="eyebrow i18n" style="margin-top:8px" data-zh="文件位" data-en="File slots"></p>
+        <div class="files">
+          <div class="file" data-filled="true"><span class="i18n" data-zh="生产" data-en="Production"></span><span class="fn">2024-07-production.xlsx</span></div>
+          <div class="file"><span class="i18n" data-zh="市场" data-en="Marketing"></span><span class="fn i18n" data-zh="尚未选择" data-en="None selected"></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="status">
+    <header><h3 class="i18n" data-zh="状态词" data-en="Status vocabulary"></h3><span class="id">F06</span></header>
+    <p class="cap i18n"
+       data-zh="约三十个系统状态值折到五个标签上。右边那一列是禁止的说法，不是风格建议：把「需关注」写成「违规」，等于系统替业务下了一个它没有依据下的判断。"
+       data-en="About thirty system values collapse onto five labels. The right-hand column is prohibited wording, not style advice: rendering “attention” as “violation” has the system make a business judgement it has no basis to make."></p>
+    <div class="frame">
+      <div class="pane">
+        <div class="scroll-x"><table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="标签" data-en="Label"></th>
+            <th class="i18n" data-zh="系统状态值" data-en="System values"></th>
+            <th class="i18n" data-zh="含义" data-en="Meaning"></th>
+            <th class="i18n" data-zh="不得表述为" data-en="Never shown as"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td><span class="chip ok i18n" data-zh="正常" data-en="OK"></span></td><td class="mono">ok · validated · ready · approved · completed · confirmed</td><td class="i18n" data-zh="声明检查通过" data-en="Declared check passed"></td><td class="e i18n" data-zh="无风险" data-en="No risk"></td></tr>
+            <tr><td><span class="chip warn i18n" data-zh="需关注" data-en="Attention"></span></td><td class="mono">attention · needs_review</td><td class="i18n" data-zh="触及声明阈值或需要人工复核" data-en="Declared threshold reached or review needed"></td><td class="e i18n" data-zh="违规、坏账" data-en="Violation, bad debt"></td></tr>
+            <tr><td><span class="chip warn i18n" data-zh="部分完成" data-en="Partial"></span></td><td class="mono">partial · unvalidated</td><td class="i18n" data-zh="有部门或检查未完成" data-en="A department or check is incomplete"></td><td class="e i18n" data-zh="已完成" data-en="Complete"></td></tr>
+            <tr><td><span class="chip warn i18n" data-zh="待确认" data-en="Open question"></span></td><td class="mono">issues · quarantined · proposed · draft · waiting</td><td class="i18n" data-zh="需要人判断的差异或缺项" data-en="A difference or gap requiring a person"></td><td class="e i18n" data-zh="系统替人选定的值" data-en="A value chosen by the system"></td></tr>
+            <tr><td><span class="chip bad i18n" data-zh="已拒绝" data-en="Refused"></span></td><td class="mono">rejected · needs_configuration · conflict · submit_failed</td><td class="i18n" data-zh="输入不足或违反声明，不出结果" data-en="Insufficient or invalid input, no result"></td><td class="e i18n" data-zh="0 或空白" data-en="Zero or blank"></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="grades">
+    <header><h3 class="i18n" data-zh="依据等级" data-en="Evidence grades"></h3><span class="id">F07</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E13-UC06。每个数字取其依赖中最弱的一级：用了 G3 的数字，结论至少是 G3。等级是派生属性，随口径确认或数据更新重新计算，不单独保存。"
+       data-en="E13-UC06. Each figure takes the weakest grade among its inputs: a conclusion resting on a G3 number is at best G3. Grades are derived and recomputed when a convention is confirmed or the data changes; they are never stored on their own."></p>
+    <div class="frame grid2">
+      <div class="pane pad">
+        <table class="t">
+          <thead><tr><th class="i18n" data-zh="等级" data-en="Grade"></th><th class="i18n" data-zh="依据" data-en="Basis"></th><th class="i18n" data-zh="示例" data-en="Example"></th></tr></thead>
+          <tbody>
+            <tr><td><span class="grade g1" style="margin:0">G1</span></td><td class="i18n" data-zh="原件" data-en="Source"></td><td class="i18n" data-zh="生产部实际量 5,600.0 方" data-en="Production's received volume, 5,600.0 m³"></td></tr>
+            <tr><td><span class="grade g2" style="margin:0">G2</span></td><td class="i18n" data-zh="公式" data-en="Formula"></td><td class="i18n" data-zh="签收率 = 实际量 ÷ 出厂量" data-en="Sign-off = received ÷ shipped"></td></tr>
+            <tr><td><span class="grade g3" style="margin:0">G3</span></td><td class="i18n" data-zh="口径假设" data-en="Convention"></td><td class="i18n" data-zh="按 13% 增值税折算的毛利" data-en="Margin converted at a 13% VAT rate"></td></tr>
+            <tr><td><span class="grade g4" style="margin:0">G4</span></td><td class="i18n" data-zh="模型判断" data-en="Model judgement"></td><td class="i18n" data-zh="「建议复核低签收车次」" data-en="“Review the low sign-off trips”"></td></tr>
+            <tr><td><span class="grade gx" style="margin:0" data-i18n-skip>—</span></td><td class="i18n" data-zh="出处缺失" data-en="Provenance missing"></td><td class="i18n" data-zh="出处链断裂，不给等级，并进入待确认事项" data-en="A broken chain gets no grade and raises an open item"></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="悬停或点开显示依赖链" data-en="The dependency chain on demand"></p>
+        <div class="pop">
+          <p style="font-size:13.5px"><b class="i18n" data-zh="单方毛利（不含税）" data-en="Margin per m³ (ex-tax)"></b> <span class="grade g3">G3</span></p>
+          <p class="tree" style="margin-top:8px">
+            G3 ← <span class="i18n" data-zh="口径" data-en="convention"></span> vat_rate = 13%<br>
+            &nbsp;&nbsp;├─ G2 ← <span class="i18n" data-zh="公式" data-en="formula"></span> (revenue − cost) ÷ volume<br>
+            &nbsp;&nbsp;│&nbsp;&nbsp;├─ G1 ← <span class="i18n" data-zh="财务" data-en="finance"></span>.<span class="i18n" data-zh="回款" data-en="collected"></span> · row 7<br>
+            &nbsp;&nbsp;│&nbsp;&nbsp;├─ G1 ← <span class="i18n" data-zh="采购" data-en="procurement"></span>.<span class="i18n" data-zh="原料成本" data-en="material cost"></span> · row 42<br>
+            &nbsp;&nbsp;│&nbsp;&nbsp;└─ G1 ← <span class="i18n" data-zh="生产" data-en="production"></span>.<span class="i18n" data-zh="实际量" data-en="received"></span> · row 118
+          </p>
+          <p class="hint i18n" style="margin-top:8px" data-zh="口径确认后，这条结论自动升为 G2。" data-en="Confirming the convention lifts this conclusion to G2."></p>
+        </div>
+        <p class="hint i18n" data-zh="页首汇总分布，例如「G1 12 · G2 9 · G3 4 · G4 3」，读者先知道这一页有多少东西需要复核。" data-en="The distribution sits at the top of a page — G1 12 · G2 9 · G3 4 · G4 3 — so a reader knows up front how much of it needs checking."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="callouts">
+    <header><h3 class="i18n" data-zh="提示块" data-en="Callouts"></h3><span class="id">F08</span></header>
+    <p class="cap i18n"
+       data-zh="一个状态加上对它该做什么。只有状态没有动作的提示块，等于让读者拿着一个标签发愣。"
+       data-en="A state and what to do about it. A callout with a state and no action leaves the reader holding a label."></p>
+    <div class="frame grid2">
+      <div class="callout info"><h4 class="i18n" data-zh="下一步" data-en="Next step"></h4><p class="i18n" data-zh="数据可用了。复制研判请求，粘贴到会话里发起四部门研判。" data-en="The data is usable. Copy the review request and paste it into the conversation."></p></div>
+      <div class="callout warn"><h4 class="i18n" data-zh="部分完成" data-en="Partial"></h4><p class="i18n" data-zh="财务部研判未通过，其指标不参与排序，也不显示为正常。" data-en="The finance review did not validate; its metrics are neither ranked nor shown as OK."></p></div>
+      <div class="callout bad"><h4 class="i18n" data-zh="需要配置字段字典" data-en="Configuration required"></h4><p class="i18n" data-zh="字典没有声明可用于连接的列，主表没有建。补齐后重新导入——旧批次不会被改。" data-en="The dictionary declares no joinable column, so no master was built. Complete it and import again; the old batch is left alone."></p></div>
+      <div class="callout ok"><h4 class="i18n" data-zh="批次已保存" data-en="Batch saved"></h4><p class="i18n" data-zh="清洗和聚合由规则执行，未调用模型。" data-en="Rules cleaned and aggregated the data; no model call."></p></div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="tables">
+    <header><h3 class="i18n" data-zh="表格" data-en="Tables"></h3><span class="id">F09</span></header>
+    <p class="cap i18n"
+       data-zh="表头常驻、不换行；数字右对齐；空单元格写出原因而不是留白。列宽由内容决定，容器横向滚动。"
+       data-en="The header sticks and never wraps, figures align right, and an empty cell states its reason instead of sitting blank. Columns size to content and the container scrolls."></p>
+    <div class="frame">
+      <div class="pane scroll-x">
+        <table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="项目" data-en="Project"></th>
+            <th><span class="i18n" data-zh="出厂量" data-en="Shipped"></span><small class="i18n" data-zh="生产 · 方" data-en="production · m³"></small></th>
+            <th><span class="i18n" data-zh="实际量" data-en="Received"></span><small class="i18n" data-zh="生产 · 方" data-en="production · m³"></small></th>
+            <th><span class="i18n" data-zh="签收率" data-en="Sign-off"></span><small class="i18n" data-zh="公式" data-en="formula"></small></th>
+            <th class="i18n" data-zh="状态" data-en="Status"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="第二实验学校扩建" data-en="No.2 school extension"></td><td class="n">1,240.0<span class="grade g1">G1</span></td><td class="n">1,058.0<span class="grade g1">G1</span></td><td class="n">85.32%<span class="grade g2">G2</span></td><td><span class="chip warn i18n" data-zh="需关注" data-en="Attention"></span></td></tr>
+            <tr><td class="i18n" data-zh="滨江路桥改造" data-en="Riverside bridge"></td><td class="n">2,180.0<span class="grade g1">G1</span></td><td class="n">2,104.0<span class="grade g1">G1</span></td><td class="n">96.51%<span class="grade g2">G2</span></td><td><span class="chip ok i18n" data-zh="正常" data-en="OK"></span></td></tr>
+            <tr><td class="i18n" data-zh="城东物流园 B 区" data-en="East logistics park B"></td><td class="n">2,180.0<span class="grade g1">G1</span></td><td class="e"><span class="i18n" data-zh="待确认" data-en="Open question"></span><span class="cellnote i18n" data-zh="生产与财务两处写法不一致" data-en="Production and finance disagree"></span></td><td class="e i18n" data-zh="无法计算" data-en="Not computable"></td><td><span class="chip warn i18n" data-zh="待确认" data-en="Open question"></span></td></tr>
+            <tr class="sum"><td class="i18n" data-zh="合计（不含待确认行）" data-en="Total (excludes open rows)"></td><td class="n">3,420.0</td><td class="n">3,162.0</td><td class="n">92.46%<span class="grade g2">G2</span></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="numbers">
+    <header><h3 class="i18n" data-zh="数字格式" data-en="Number formats"></h3><span class="id">F10</span></header>
+    <p class="cap i18n"
+       data-zh="00-foundations 第 5.1 节。目的是同一个数字在界面、导出文件和模型叙述里读起来一样。"
+       data-en="Section 5.1 of the requirements foundations. The point is that the same number reads identically in the UI, in an export and in the model's own narration."></p>
+    <div class="frame">
+      <div class="pane">
+        <div class="scroll-x"><table class="t">
+          <thead><tr><th class="i18n" data-zh="类型" data-en="Kind"></th><th class="i18n" data-zh="规则" data-en="Rule"></th><th class="i18n" data-zh="示例" data-en="Example"></th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="金额" data-en="Amount"></td><td class="i18n" data-zh="千分位，2 位小数，注明含税或不含税；摘要可改用万元，同样 2 位" data-en="Thousands separators, 2 decimals, tax basis named; summaries may use 10k-yuan units with the same 2 decimals"></td><td class="n">5,240,640.00 元（含税）· 524.06 万元</td></tr>
+            <tr><td class="i18n" data-zh="方量与数量" data-en="Quantity"></td><td class="i18n" data-zh="按业务精度（商砼方量 1 位），单位必写" data-en="Business precision (1 decimal for concrete volume); the unit is always shown"></td><td class="n">5,600.0 <span class="i18n" data-zh="方" data-en="m³"></span></td></tr>
+            <tr><td class="i18n" data-zh="比率" data-en="Ratio"></td><td class="i18n" data-zh="百分比 1–2 位，同一张表统一位数" data-en="1–2 decimals, consistent within one table"></td><td class="n">85.26%</td></tr>
+            <tr><td class="i18n" data-zh="分母为 0" data-en="Zero denominator"></td><td class="i18n" data-zh="显示「无法计算」，不显示 0%" data-en="Show “not computable”, never 0%"></td><td class="e i18n" data-zh="无法计算" data-en="Not computable"></td></tr>
+            <tr><td class="i18n" data-zh="变化" data-en="Change"></td><td class="i18n" data-zh="同时给绝对变化与相对变化，并标明比较基期" data-en="Absolute and relative change together, with the base period named"></td><td class="n">+320.0 <span class="i18n" data-zh="方（+6.1%，较 2024-06）" data-en="m³ (+6.1%, vs 2024-06)"></span></td></tr>
+            <tr><td class="i18n" data-zh="缺少基期" data-en="Missing base"></td><td class="i18n" data-zh="显示「无基期」，不以 0 或 −100% 代替" data-en="Show “no base period”; never substitute 0 or −100%"></td><td class="e i18n" data-zh="无基期" data-en="No base period"></td></tr>
+            <tr><td class="i18n" data-zh="期间" data-en="Period"></td><td class="i18n" data-zh="YYYY-MM；跨期对比写清两个期间" data-en="YYYY-MM; name both periods in a comparison"></td><td>2024-07 <span class="i18n" data-zh="对" data-en="vs"></span> 2024-06</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="charts">
+    <header><h3 class="i18n" data-zh="图表规则" data-en="Chart rules"></h3><span class="id">F11</span><span class="st designed">DESIGNED</span></header>
+    <p class="cap i18n"
+       data-zh="00-foundations 第 5.5 节。图表类型由声明选择，不由模型临时决定；每张图都配一份同值的表格视图，供读屏与复制。"
+       data-en="Section 5.5. Chart types are declared, never chosen ad hoc by a model, and every chart ships an equivalent table for screen readers and copying."></p>
+    <div class="frame grid2">
+      <div class="card"><h4 class="i18n" data-zh="标题写成结论句" data-en="The title states the conclusion"></h4><p class="muted i18n" data-zh="不是「签收率趋势」，而是「签收率连续三个月低于 95% 阈值」。" data-en="Not “sign-off trend” but “sign-off has sat below the 95% threshold for three months”."></p></div>
+      <div class="card"><h4 class="i18n" data-zh="缺失期间显示为断点" data-en="Missing periods stay gaps"></h4><p class="muted i18n" data-zh="不插值，也不以 0 代替。少于两期不画趋势线，改为说明。" data-en="Never interpolated, never zeroed. Fewer than two periods shows an explanation instead of a line."></p></div>
+      <div class="card"><h4 class="i18n" data-zh="阈值线与数据同版本" data-en="Threshold and data share a version"></h4><p class="muted i18n" data-zh="阈值来自同一份声明，否则图上两条线说的是两个月的规则。" data-en="Both come from one declaration, or the two lines on the chart describe two different months' rules."></p></div>
+      <div class="card"><h4 class="i18n" data-zh="点击数据点可下钻" data-en="Points drill down"></h4><p class="muted i18n" data-zh="下钻到该指标的来源单元格或公式输入；图表不保存独立数值副本。" data-en="Down to the metric's source cells or formula inputs. A chart keeps no separate copy of the values."></p></div>
+      <div class="card"><h4 class="i18n" data-zh="趋势用折线，构成用堆叠条，差异用瀑布" data-en="Lines for trends, stacked bars for composition, waterfall for variance"></h4><p class="muted i18n" data-zh="超过 5 类不用饼图。" data-en="No pie chart beyond five categories."></p></div>
+      <div class="card"><h4 class="i18n" data-zh="状态不只靠颜色" data-en="Status is not colour-only"></h4><p class="muted i18n" data-zh="表格视图给出与图相同的数值与状态词。" data-en="The table view repeats the same values and the same status words."></p></div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="words">
+    <header><h3 class="i18n" data-zh="文案规则" data-en="Writing rules"></h3><span class="id">F12</span></header>
+    <p class="cap i18n"
+       data-zh="先结论、后依据：一句话结论 → 关键数字 → 依据与出处 → 建议动作与负责人。区分事实、推断与假设；不作没有声明支持的因果断言。"
+       data-en="Lead with the conclusion, then the figures, then the evidence, then the action and its owner. Separate fact, inference and assumption, and make no causal claim a declaration does not support."></p>
+    <div class="frame">
+      <div class="pane">
+        <div class="scroll-x"><table class="t">
+          <thead><tr><th style="width:44%" class="i18n" data-zh="这样写" data-en="Write this"></th><th class="i18n" data-zh="不要这样写" data-en="Not this"></th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="批次已保存。清洗和聚合由规则执行，未调用模型。" data-en="Batch saved. Rules cleaned and aggregated the data; no model call."></td><td class="e i18n" data-zh="导入成功！您的文件已成功上传。" data-en="Successfully imported! Your file was uploaded successfully."></td></tr>
+            <tr><td class="i18n" data-zh="请选择业务月份。" data-en="Choose the business month."></td><td class="e i18n" data-zh="请您先选择业务月份，谢谢！" data-en="Please select the business month first."></td></tr>
+            <tr><td class="i18n" data-zh="网络连接中断，未提交任何决定。" data-en="The connection dropped and no decision was submitted."></td><td class="e i18n" data-zh="错误：我无法连接到服务器。" data-en="Error: I was unable to connect to the server."></td></tr>
+            <tr><td class="i18n" data-zh="签收率 85.26%，低于声明阈值 95%。" data-en="Sign-off is 85.26%, below the declared 95% threshold."></td><td class="e i18n" data-zh="签收率偏低，可能存在管理问题。" data-en="Sign-off is low, which may indicate a management problem."></td></tr>
+            <tr><td class="i18n" data-zh="回款周期变长，可能与新客户账期有关，待核实。" data-en="Collection days rose; possibly related to new customer terms, to be verified."></td><td class="e i18n" data-zh="回款周期变长是因为新客户账期。" data-en="Collection days rose because of new customer terms."></td></tr>
+            <tr><td class="i18n" data-zh="保存的来源会显示在这里。添加本月部门文件，开始核对与分析。" data-en="Saved sources will appear here. Add this month's department files to start your review."></td><td class="e i18n" data-zh="暂无数据。" data-en="Nothing here yet."></td></tr>
+          </tbody>
+        </table></div>
+        <div class="pad">
+          <p class="hint i18n" data-zh="另有一条硬规则：各部门 unsupported_topics 里的词，即使在否定句中也不出现。写「本次研判不涉及坏账」同样违反它。" data-en="One further hard rule: terms in a role's unsupported topics never appear, not even negated. Writing “this review does not cover bad debt” breaks it just the same."></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="pager"></div>
+</div>
+
+<script src="assets/design.js"></script>
+</body>
+</html>

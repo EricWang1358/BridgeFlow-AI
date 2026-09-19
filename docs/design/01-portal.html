@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1 · 登录门户 — BridgeFlow AI</title>
+<link rel="stylesheet" href="assets/cds.css">
+</head>
+<body data-page="portal">
+<div id="chrome"></div>
+
+<div class="wrap">
+  <header class="pagehead">
+    <p class="kicker">01 · Login portal</p>
+    <h1><span class="i18n" data-zh="登录门户与身份" data-en="Login portal and identity"></span></h1>
+    <p class="lead i18n"
+       data-zh="门户是边缘服务：飞书证明你是谁，门户签一枚短期 JWT，应用用 JWKS 验签。门户看不到应用数据，应用也看不到飞书凭据——两个方向都解耦。这几页必须在下游全挂的时候也能渲染，所以没有框架、没有静态资源。"
+       data-en="The portal is an edge service: Feishu proves who you are, the portal signs a short-lived JWT, and the app verifies it against the published JWKS. The portal never sees app data and apps never see Feishu credentials — decoupled in both directions. These pages must render when everything downstream is down, so they carry no framework and no static assets."></p>
+    <nav class="toc">
+      <a href="#signin"><span class="i18n" data-zh="登录" data-en="Sign in"></span></a>
+      <a href="#signedin"><span class="i18n" data-zh="已登录" data-en="Signed in"></span></a>
+      <a href="#entering"><span class="i18n" data-zh="正在进入" data-en="Entering"></span></a>
+      <a href="#required"><span class="i18n" data-zh="需要登录" data-en="Login required"></span></a>
+      <a href="#errors"><span class="i18n" data-zh="门户错误" data-en="Portal errors"></span></a>
+      <a href="#expiry"><span class="i18n" data-zh="令牌过期" data-en="Token expiry"></span></a>
+      <a href="#scope"><span class="i18n" data-zh="可见范围" data-en="Visibility"></span></a>
+      <a href="#identity"><span class="i18n" data-zh="身份与角色" data-en="Identity and roles"></span></a>
+      <a href="#failclosed"><span class="i18n" data-zh="失败关闭" data-en="Fail closed"></span></a>
+    </nav>
+  </header>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="signin">
+    <header><h3 class="i18n" data-zh="选择登录方式" data-en="Choose a sign-in method"></h3><span class="id">P01</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="应用在这里不是选项——BridgeFlow 是固定的，访问者只选「怎么证明身份」。今天只有飞书，这份列表是扩展点。当前实现把整页涂成深蓝渐变加白卡片；换成 CDS 后，门户与应用是同一套记号，登录不再像另一个产品。"
+       data-en="The app is never a choice here — BridgeFlow is fixed and the visitor only picks how to prove identity. Today that is Feishu alone; the list is the extension point. The current implementation paints the page a dark blue gradient with a white card; on CDS the portal and the app share one token set, so signing in stops looking like a different product."></p>
+    <div class="frame">
+      <div class="portal">
+        <div class="card">
+          <p class="brand">BridgeFlow<span> AI</span></p>
+          <p class="sub i18n" data-zh="统一登录门户" data-en="Unified login portal"></p>
+          <p class="sec i18n" data-zh="选择登录方式" data-en="Choose a sign-in method"></p>
+          <span class="btn primary full" style="padding:11px 16px">
+            <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5 10.5 3v6.5H3V5.5Z" fill="currentColor" opacity=".95"/><path d="M12.5 3H21v6.5h-8.5V3Z" fill="currentColor" opacity=".7"/><path d="M3 11.5h7.5V21L3 18.5v-7Z" fill="currentColor" opacity=".7"/><path d="M12.5 11.5H21V21h-8.5v-9.5Z" fill="currentColor" opacity=".95"/></svg>
+            <span class="i18n" data-zh="飞书登录" data-en="Sign in with Feishu"></span>
+          </span>
+          <p class="hint i18n" style="margin-top:12px;text-align:center" data-zh="登录后，门户只把一枚短期令牌交给 BridgeFlow，不转交你的飞书凭据。" data-en="After signing in, the portal hands BridgeFlow a short-lived token only; your Feishu credentials are never passed on."></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="notconfigured">
+    <header><h3 class="i18n" data-zh="登录未配置" data-en="Sign-in not configured"></h3><span class="id">P02</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="没有配置飞书应用凭据时，不画一个按不动的按钮。说清是部署问题、该找谁，并给出运维能直接用的检查项。"
+       data-en="With no Feishu app credentials configured, do not draw a button that cannot be pressed. Say it is a deployment problem, name who to ask, and give the operator something they can act on."></p>
+    <div class="frame">
+      <div class="portal">
+        <div class="card">
+          <p class="brand">BridgeFlow<span> AI</span></p>
+          <p class="sub i18n" data-zh="统一登录门户" data-en="Unified login portal"></p>
+          <div class="callout warn" style="margin-top:20px">
+            <h4 class="i18n" data-zh="飞书登录未配置" data-en="Feishu sign-in is not configured"></h4>
+            <p class="i18n" data-zh="请联系平台管理员。" data-en="Contact the platform operator."></p>
+          </div>
+          <details style="margin-top:14px"><summary class="hint i18n" data-zh="管理员检查项" data-en="For the operator"></summary>
+            <p class="tree" style="margin-top:8px">FEISHU_APP_ID &nbsp;&nbsp;<span style="color:var(--text-danger)" class="i18n" data-zh="未设置" data-en="unset"></span><br>FEISHU_APP_SECRET <span style="color:var(--text-danger)" class="i18n" data-zh="未设置" data-en="unset"></span><br>PORTAL_KEY_PATH &nbsp;&nbsp;<span style="color:var(--text-success)">ok</span></p>
+            <p class="hint i18n" style="margin-top:6px" data-zh="引导变量只能由启动 shell export，不能写进项目携带的 .env。" data-en="Bootstrap variables come from the launching shell only; they never belong in a project-carried .env."></p>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="signedin">
+    <header><h3 class="i18n" data-zh="已登录：身份与应用入口" data-en="Signed in: identity and app entry"></h3><span class="id">P03</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="飞书给的姓名与头像是数据，不是标记：全部转义后再渲染。头像取不到时退回姓名首字，不留一个破图。"
+       data-en="The name and avatar from Feishu are data, never markup: both are escaped before rendering. A missing avatar falls back to the first letter of the name rather than a broken image."></p>
+    <div class="frame">
+      <div class="portal">
+        <div class="card">
+          <p class="brand">BridgeFlow<span> AI</span></p>
+          <p class="sub i18n" data-zh="统一登录门户" data-en="Unified login portal"></p>
+          <div class="row" style="margin-top:22px;gap:12px;flex-wrap:nowrap">
+            <span class="avatar">王</span>
+            <div style="min-width:0">
+              <p style="font-weight:500" class="i18n" data-zh="王工" data-en="Wang"></p>
+              <p class="hint">wang@example.com</p>
+            </div>
+          </div>
+          <p class="sec i18n" data-zh="应用" data-en="Applications"></p>
+          <span class="enter"><span class="i18n" data-zh="进入 BridgeFlow" data-en="Open BridgeFlow"></span></span>
+          <p style="margin-top:20px;text-align:center"><span class="btn quiet i18n" data-zh="退出登录" data-en="Sign out"></span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="entering">
+    <header><h3 class="i18n" data-zh="正在进入" data-en="Entering"></h3><span class="id">P04</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="这一页看起来多余，其实是必需的。dsh web 的原生会话 cookie 是 SameSite=Strict，而整条登录链从 open.feishu.cn 开始，属于跨站，浏览器在最后一跳会扣住那枚 cookie，应用于是回自己的 401。这一页把链条断开：浏览器停在门户上，跳进应用是本文档发起的一次新导航，同站，cookie 才跟得上。永远不要把 /enter 换回 Location 头。"
+       data-en="This page looks redundant and is not. The dsh web session cookie is SameSite=Strict, and the whole login chain starts at open.feishu.cn — cross-site — so the browser withholds that cookie on the last hop and the app answers its own 401. This page breaks the chain: the browser stops here on the portal, and the jump into the app is a new navigation started by this document, which is same-site, so the cookie rides along. Never answer /enter with a Location header again."></p>
+    <div class="frame">
+      <div class="portal">
+        <div class="card" style="text-align:center">
+          <p class="brand">BridgeFlow<span> AI</span></p>
+          <p class="muted i18n" style="margin-top:18px" data-zh="正在进入 BridgeFlow AI…" data-en="Opening BridgeFlow AI…"></p>
+          <div class="bar" style="margin:14px auto 0;max-width:180px"><span style="width:65%"></span></div>
+          <p style="margin-top:16px"><span class="btn quiet i18n" data-zh="立即进入" data-en="Open now"></span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="required">
+    <header><h3 class="i18n" data-zh="需要登录（forward_auth 401）" data-en="Login required (forward_auth 401)"></h3><span class="id">P05</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="反向代理在放行任何内容之前问门户「这个浏览器有已登录会话吗」。匿名访问者拿到的就是这一页。跳转目标来自门户自己的配置，绝不取自请求。"
+       data-en="The reverse proxy asks the portal whether this browser holds a signed-in session before serving anything. An anonymous visitor gets this page. The redirect target comes from the portal's own configuration and never from the request."></p>
+    <div class="frame">
+      <div class="portal">
+        <div class="card" style="text-align:center">
+          <p class="brand">BridgeFlow<span> AI</span></p>
+          <p class="muted i18n" style="margin-top:18px" data-zh="需要先登录，正在跳转到统一登录门户…" data-en="You need to sign in first. Redirecting to the login portal…"></p>
+          <p style="margin-top:16px"><span class="btn i18n" data-zh="立即跳转" data-en="Go now"></span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="errors">
+    <header><h3 class="i18n" data-zh="门户错误" data-en="Portal errors"></h3><span class="id">P06</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="三种真实失败：未知应用、登录状态过期、飞书拒绝。每一种给出它自己的下一步，而不是同一句「出错了」。飞书 20037 表示存的刷新令牌已死，只有这一类才该把人送回登录；限流与其余拒绝是上游故障，不该让人重登。"
+       data-en="Three real failures: unknown app, an expired login state, and a refusal from Feishu. Each gets its own next step rather than one shared “something went wrong”. Feishu code 20037 means the stored refresh token is dead and only that justifies sending someone back through login; rate limits and other refusals are upstream trouble and must not."></p>
+    <div class="frame grid2">
+      <div class="portal" style="min-height:0">
+        <div class="card">
+          <p class="brand">BridgeFlow<span> AI</span></p>
+          <div class="callout bad" style="margin-top:18px">
+            <h4 class="i18n" data-zh="未知应用" data-en="Unknown application"></h4>
+            <p class="mono" style="word-break:break-all">app="reporting"</p>
+            <p class="i18n" data-zh="该应用未在门户注册。" data-en="This application is not registered with the portal."></p>
+          </div>
+          <p style="margin-top:14px"><span class="btn quiet i18n" data-zh="返回首页重新登录" data-en="Back to sign in"></span></p>
+        </div>
+      </div>
+      <div class="portal" style="min-height:0">
+        <div class="card">
+          <p class="brand">BridgeFlow<span> AI</span></p>
+          <div class="callout warn" style="margin-top:18px">
+            <h4 class="i18n" data-zh="登录已过期" data-en="The login expired"></h4>
+            <p class="i18n" data-zh="这次登录用了超过 10 分钟，请重新开始。" data-en="This sign-in took longer than 10 minutes. Start again."></p>
+          </div>
+          <p style="margin-top:14px"><span class="btn primary full i18n" data-zh="重新登录" data-en="Sign in again"></span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="expiry">
+    <header><h3 class="i18n" data-zh="应用内令牌过期与恢复" data-en="In-app token expiry and recovery"></h3><span class="id">P07</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="令牌是短期的，所以过期是常态而不是事故。先静默用门户会话换一枚新的；换不到才提示，并且保留用户手里没提交的东西——重登之后回到原处，不是回到首页。"
+       data-en="Tokens are short-lived, so expiry is routine rather than an incident. The browser silently trades the portal session for a fresh one; only if that fails does a notice appear, and it keeps whatever the user had not submitted. Signing back in returns them to where they were, not to a home page."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="静默续期（多数情况）" data-en="Silent refresh (the common case)"></p>
+        <p class="tree">
+          GET /bridgeflow/config → portalUrl<br>
+          GET {portal}/token?app=bridgeflow <span class="i18n" data-zh="（带 cookie）" data-en="(with cookie)"></span><br>
+          → 200 · x-portal-token <span class="i18n" data-zh="已更新" data-en="refreshed"></span>
+        </p>
+        <p class="hint i18n" data-zh="界面上什么都不发生。这是正确的行为。" data-en="Nothing appears in the interface. That is the correct behaviour."></p>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="续期失败" data-en="Refresh failed"></p>
+        <div class="callout warn">
+          <h4 class="i18n" data-zh="登录状态已失效" data-en="Your session is no longer valid"></h4>
+          <p class="i18n" data-zh="你填的内容还在。重新登录后会回到这一页。" data-en="What you typed is still here. Signing in again returns you to this page."></p>
+        </div>
+        <div class="row"><span class="btn primary i18n" data-zh="重新登录" data-en="Sign in again"></span><span class="btn quiet i18n" data-zh="复制我填的内容" data-en="Copy what I typed"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="scope">
+    <header><h3 class="i18n" data-zh="可见范围与拒绝" data-en="Visibility scope and refusals"></h3><span class="id">P08</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E09-UC05。不可见的批次返回 404 而不是 403——403 会告诉对方「这个编号存在」，那本身就是泄露。界面上说清「看不到」和「不存在」对你是同一回事，并给出该找谁。"
+       data-en="E09-UC05. A batch you may not see returns 404, not 403: a 403 confirms the id exists, which is itself a disclosure. The interface says plainly that “not visible” and “does not exist” are the same thing from here, and names who to ask."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <div class="callout bad">
+          <h4 class="i18n" data-zh="找不到这个批次" data-en="No such batch"></h4>
+          <p class="mono" style="word-break:break-all">a41f7cb2…9c2e</p>
+          <p class="i18n" data-zh="它可能不存在，也可能不在你的可见范围内。需要访问请找该部门负责人。" data-en="It may not exist, or it may be outside your visible scope. Ask the owning department if you need access."></p>
+        </div>
+        <p class="hint i18n" data-zh="读取范围由端点实际授权，不从角色名称推定。" data-en="Scope is enforced at the endpoint; it is never inferred from a role label."></p>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="我能看到的" data-en="What I can see"></p>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="对象" data-en="Object"></th><th class="i18n" data-zh="范围" data-en="Scope"></th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="批次与总表" data-en="Batches and master"></td><td><span class="chip ok i18n" data-zh="生产、采购" data-en="Production, procurement"></span></td></tr>
+            <tr><td class="i18n" data-zh="XLSX 导出" data-en="XLSX export"></td><td><span class="chip ok i18n" data-zh="同上" data-en="As above"></span></td></tr>
+            <tr><td class="i18n" data-zh="流转看板与草稿" data-en="Board and drafts"></td><td><span class="chip ok i18n" data-zh="生产" data-en="Production"></span></td></tr>
+            <tr><td class="i18n" data-zh="工具路径" data-en="Tool paths"></td><td><span class="chip warn i18n" data-zh="仍为共享主机权限" data-en="Still shared host authority"></span></td></tr>
+          </tbody>
+        </table></div>
+        <p class="hint i18n" data-zh="最后一行是如实的缺口：浏览器侧已按身份过滤，工具侧尚未逐个操作授权。" data-en="The last row is an honest gap: browser reads are filtered by identity, but tool paths do not yet authorise per operation."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="identity">
+    <header><h3 class="i18n" data-zh="身份与解析出的角色" data-en="Identity and resolved roles"></h3><span class="id">P09</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="成员关系实时解析自飞书知识库，缓存五分钟；配置里只留「部门 ↔ 知识库」映射与「角色 → 操作」规则，不存人名。界面把解析时间写出来，因为一个五分钟前的成员关系，和一个此刻的成员关系，是两件事。"
+       data-en="Membership resolves live from Feishu wiki spaces with a five-minute cache; the configuration holds only the department-to-space mapping and the role-to-operation rules, never a list of names. The interface prints the resolution time, because a membership from five minutes ago and a membership right now are two different facts."></p>
+    <div class="frame">
+      <div class="pane pad stack">
+        <div class="row" style="gap:12px;flex-wrap:nowrap">
+          <span class="avatar sm">王</span>
+          <div style="flex:1;min-width:0">
+            <p style="font-weight:500;font-size:13.5px" class="i18n" data-zh="王工 · 生产部" data-en="Wang · Production"></p>
+            <p class="hint"><span class="i18n" data-zh="角色解析于" data-en="Roles resolved"></span> 14:02:11 · <span class="i18n" data-zh="缓存 5 分钟" data-en="cached 5 minutes"></span></p>
+          </div>
+          <span class="btn quiet sm i18n" data-zh="刷新" data-en="Refresh"></span>
+        </div>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="角色" data-en="Role"></th><th class="i18n" data-zh="来源" data-en="Source"></th><th class="i18n" data-zh="允许的操作" data-en="Permitted operations"></th></tr></thead>
+          <tbody>
+            <tr><td><span class="chip info i18n" data-zh="部门填报员" data-en="Department contributor"></span></td><td class="hint i18n" data-zh="飞书知识库「生产部」成员" data-en="Member of the “Production” wiki space"></td><td class="mono">batch_import</td></tr>
+            <tr><td><span class="chip info i18n" data-zh="部门负责人" data-en="Department owner"></span></td><td class="hint i18n" data-zh="飞书知识库「生产部」管理员" data-en="Admin of the “Production” wiki space"></td><td class="mono">review_note · workflow_handoff</td></tr>
+            <tr><td><span class="chip i18n" data-zh="审批人" data-en="Approver"></span></td><td class="hint i18n" data-zh="未授予" data-en="Not granted"></td><td class="e i18n" data-zh="无" data-en="None"></td></tr>
+          </tbody>
+        </table></div>
+        <p class="hint i18n" data-zh="审批消费时会把当时解析出的角色快照记进账本；飞书侧后来的变更不回溯改写它。" data-en="Consuming an approval records the role snapshot resolved at that moment; later changes on the Feishu side do not rewrite it."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="failclosed">
+    <header><h3 class="i18n" data-zh="失败关闭" data-en="Fail closed"></h3><span class="id">P10</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="飞书 API 不可达时，授权判定返回 503，不退回过期缓存，也不默认放行。这在界面上必须说成「暂时不能判断你有没有权限」，而不是「你没有权限」——两句话对用户的下一步完全不同。"
+       data-en="When the Feishu API is unreachable, authorization answers 503: no stale cache, no default allow. The interface must say “we cannot currently determine your access”, not “you do not have access” — the two lead a user to entirely different next steps."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:560px">
+        <div class="callout bad">
+          <h4 class="i18n" data-zh="暂时无法确认你的访问范围" data-en="Your access cannot be confirmed right now"></h4>
+          <p class="i18n" data-zh="成员关系来自飞书，现在取不到。为安全起见本次不放行；这不表示你没有权限。" data-en="Membership comes from Feishu and is currently unreachable. Access is withheld for safety; this does not mean you lack permission."></p>
+        </div>
+        <p class="hint mono">503 · feishu wiki members unavailable · no stale-cache fallback</p>
+        <div class="row"><span class="btn i18n" data-zh="重试" data-en="Retry"></span><span class="btn quiet i18n" data-zh="联系平台管理员" data-en="Contact the platform operator"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="pager"></div>
+</div>
+
+<script src="assets/design.js"></script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · 空态与失败 — BridgeFlow AI</title>
+<link rel="stylesheet" href="assets/cds.css">
+</head>
+<body data-page="states">
+<div id="chrome"></div>
+
+<div class="wrap">
+  <header class="pagehead">
+    <p class="kicker">12 · Empty and failure states</p>
+    <h1><span class="i18n" data-zh="空态与失败" data-en="Empty and failure states"></span></h1>
+    <p class="lead i18n"
+       data-zh="失败不能显示成空的成功。每条失败说清出了什么事、接下来做什么，并保留可恢复的输入。服务自己的措辞原样保留——它点名了字段或规则，不能被改写掉；面向人的那句话用人的语言另写一句。"
+       data-en="A failure must never render as an empty success. Each one says what happened and what to do next, and keeps recoverable input. The service's own words are kept verbatim because they name the field or the rule; the sentence for the person is written separately, in their language."></p>
+    <nav class="toc">
+      <a href="#empty"><span class="i18n" data-zh="空态" data-en="Empty"></span></a>
+      <a href="#loading"><span class="i18n" data-zh="加载" data-en="Loading"></span></a>
+      <a href="#network"><span class="i18n" data-zh="网络与服务" data-en="Network and service"></span></a>
+      <a href="#refusal"><span class="i18n" data-zh="拒绝" data-en="Refusals"></span></a>
+      <a href="#images"><span class="i18n" data-zh="图片" data-en="Images"></span></a>
+      <a href="#a11y"><span class="i18n" data-zh="可访问性" data-en="Accessibility"></span></a>
+    </nav>
+  </header>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="empty">
+    <header><h3 class="i18n" data-zh="空态" data-en="Empty states"></h3><span class="id">E01</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="空态是邀请，不是道歉：先说清这个位置是放什么的，再给一个动词。「暂无数据」四个字既没说这里该有什么，也没说该做什么。"
+       data-en="An empty state is an invitation, not an apology: name what the space is for, then offer a verb. “No data” says neither what belongs here nor what to do about it."></p>
+    <div class="frame grid2">
+      <div class="pane pad"><div class="empty">
+        <strong class="i18n" data-zh="保存的来源会显示在这里" data-en="Saved sources will appear here"></strong>
+        <span class="i18n" data-zh="添加本月部门文件，开始核对与分析。" data-en="Add this month’s department files to start your review."></span>
+        <p style="margin-top:12px"><span class="btn primary i18n" data-zh="添加来源" data-en="Add sources"></span></p>
+      </div></div>
+      <div class="pane pad"><div class="empty">
+        <strong class="i18n" data-zh="还没有研判报告" data-en="No review yet"></strong>
+        <span class="i18n" data-zh="本月结论由已保存的四部门研判生成；请先发起研判。" data-en="The brief is built from a saved four-department review; start the review first."></span>
+        <p style="margin-top:12px"><span class="btn primary i18n" data-zh="发起研判" data-en="Start the review"></span></p>
+      </div></div>
+      <div class="pane pad"><div class="empty">
+        <strong class="i18n" data-zh="此视图暂无记录" data-en="No records in this view"></strong>
+        <span class="i18n" data-zh="检查其他视图，或修正源文件后导入新批次。" data-en="Check another view, or correct the source and import a new batch."></span>
+      </div></div>
+      <div class="pane pad"><div class="empty">
+        <strong class="i18n" data-zh="当前没有待处理审批" data-en="No approval is pending"></strong>
+        <span class="i18n" data-zh="需要你确认时，会在对话中提示。" data-en="Chat will prompt you when a decision is needed."></span>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="loading">
+    <header><h3 class="i18n" data-zh="加载" data-en="Loading"></h3><span class="id">E02</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="加载中是一个状态，不是空白：它带 role=status，读屏会读到。长任务给进度与已完成的部分，因为一条不动的进度条和一个卡死的页面看起来一样。"
+       data-en="Loading is a state, not a blank: it carries role=status and a screen reader announces it. Long work shows progress and what has already finished, because a progress bar that does not move looks exactly like a frozen page."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <p class="muted i18n" data-zh="正在加载…" data-en="Loading…"></p>
+        <div class="skel" style="width:72%"></div>
+        <div class="skel" style="width:48%"></div>
+        <div class="skel" style="width:60%"></div>
+      </div>
+      <div class="pane pad stack">
+        <div class="between"><span class="muted i18n" data-zh="正在导入四部门文件" data-en="Importing four department files"></span><span class="hint">3 / 4</span></div>
+        <div class="bar"><span style="width:75%"></span></div>
+        <p class="hint i18n" data-zh="生产、采购、财务已完成，正在处理市场。" data-en="Production, procurement and finance are done; marketing is in progress."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="network">
+    <header><h3 class="i18n" data-zh="网络与服务失败" data-en="Network and service failures"></h3><span class="id">E03</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="两句话：第一句用人的语言说发生了什么和输入还在不在，第二句原样保留服务自己的措辞。第二句不能被改写，因为它点名了字段或规则，是唯一能让人定位问题的东西。"
+       data-en="Two sentences: the first says in plain language what happened and whether the input survived, the second repeats the service's own words verbatim. The second cannot be paraphrased, because it names the field or the rule and is the only thing that locates the problem."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <div class="callout bad">
+          <h4 class="i18n" data-zh="网络连接中断" data-en="The connection dropped"></h4>
+          <p class="i18n" data-zh="未提交任何决定。你填的理由仍在输入框里。" data-en="No decision was submitted. Your reason is still in the box."></p>
+        </div>
+        <div class="row"><span class="btn i18n" data-zh="重试" data-en="Retry"></span></div>
+      </div>
+      <div class="pane pad stack">
+        <div class="callout bad">
+          <h4 class="i18n" data-zh="请求失败" data-en="Request failed"></h4>
+          <p class="i18n" data-zh="导入未创建批次。修正后可以直接重试，文件不用重选。" data-en="No batch was created. You can retry directly; the files do not need choosing again."></p>
+        </div>
+        <p class="hint mono">no joinable column declared for department "production"</p>
+        <p class="hint i18n" data-zh="上面这行是服务自己的措辞，原样保留。" data-en="The line above is the service's own wording, kept verbatim."></p>
+      </div>
+      <div class="pane pad stack">
+        <div class="callout bad">
+          <h4 class="i18n" data-zh="暂时无法确认你的访问范围" data-en="Your access cannot be confirmed right now"></h4>
+          <p class="i18n" data-zh="成员关系来自飞书，现在取不到。为安全起见本次不放行；这不表示你没有权限。" data-en="Membership comes from Feishu and is currently unreachable. Access is withheld for safety; this does not mean you lack permission."></p>
+        </div>
+        <p class="hint mono">503 · no stale-cache fallback</p>
+      </div>
+      <div class="pane pad stack">
+        <div class="callout warn">
+          <h4 class="i18n" data-zh="文件超过上限" data-en="The file is over the limit"></h4>
+          <p class="i18n" data-zh="请选择至少一个 CSV/XLSX，文件总大小不得超过 25 MiB。当前 31.4 MiB。" data-en="Select at least one CSV or XLSX; the total must fit within 25 MiB. This is 31.4 MiB."></p>
+        </div>
+        <p class="hint i18n" data-zh="给出当前值与上限，而不是只说「太大了」。" data-en="It gives the actual size and the limit rather than only saying it is too big."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="refusal">
+    <header><h3 class="i18n" data-zh="拒绝，不是错误" data-en="Refusals, which are not errors"></h3><span class="id">E04</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="拒绝是系统按声明做出的正确行为，不是故障，所以它的措辞不该像报错。「已拒绝」永远不显示为 0 或空白——一个显示成 0 的拒绝，会被当成一个真的等于 0 的结果。"
+       data-en="A refusal is the system behaving correctly against its declarations, not malfunctioning, so it should not be worded like a crash. A refusal is never rendered as 0 or a blank, because a refusal shown as zero gets read as a result that genuinely equals zero."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="指标" data-en="Metric"></th><th class="i18n" data-zh="值" data-en="Value"></th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="签收率" data-en="Sign-off rate"></td><td class="n">85.26%</td></tr>
+            <tr><td class="i18n" data-zh="人均产值" data-en="Output per head"></td><td class="e i18n" data-zh="无法计算" data-en="Not computable"></td></tr>
+            <tr><td class="i18n" data-zh="单方毛利" data-en="Margin per m³"></td><td class="e i18n" data-zh="未配置" data-en="Not configured"></td></tr>
+          </tbody>
+        </table></div>
+        <p class="hint i18n" data-zh="「无法计算」是分母为 0，「未配置」是字典没有声明这个公式。两者原因不同，修法也不同。" data-en="“Not computable” means a zero denominator; “not configured” means the dictionary declares no such formula. Different causes, different fixes."></p>
+      </div>
+      <div class="pane pad stack">
+        <div class="callout bad">
+          <h4 class="i18n" data-zh="拒绝出数" data-en="The rules refused to produce a figure"></h4>
+          <p class="i18n" data-zh="人均产值需要「当月在岗人数」，字典未声明该字段，也没有部门提供。补齐字典后重新导入即可。" data-en="Output per head needs a headcount for the month. The dictionary declares no such field and no department supplies one. Complete the dictionary and import again."></p>
+        </div>
+        <p class="hint i18n" data-zh="跑不动比静默出错好。这与「无证据的结论被拒绝，而不是降级显示」是同一条原则。" data-en="Refusing to run beats being quietly wrong. This is the same principle as refusing an unevidenced conclusion rather than showing a weaker version of it."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="images">
+    <header><h3 class="i18n" data-zh="图片与不支持的输入" data-en="Images and unsupported input"></h3><span class="id">E05</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="输入框里放了一张图，遇到的是一个纯文本模型，而宿主自带的提示指向一个本部署故意移除的模型选择器。那段文案属于另一个包，所以在它旁边加一句可走的路：表格作为来源上传，这样每个数字都能回到某一格。"
+       data-en="An image in the composer meets a text-only model, and the host's own message points at a model selector this deployment removes on purpose. That copy belongs to another package, so a way forward is added beside it: upload tables as sources, where every number stays traceable to a cell."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:560px">
+        <div class="callout warn">
+          <h4 class="i18n" data-zh="图片无法处理" data-en="Images cannot be handled"></h4>
+          <p class="i18n" data-zh="表格请作为来源上传，这样每个数字都能回到某一格。" data-en="Upload tables as sources instead, so every number stays traceable to a cell."></p>
+        </div>
+        <div class="row"><span class="btn primary i18n" data-zh="添加来源" data-en="Add sources"></span></div>
+        <p class="hint i18n" data-zh="这段说明不等于 OCR 或多模态抽取已经实现——它只是把人引到能用的那条路上。" data-en="This guidance is not delivered OCR or multimodal extraction; it only points somebody at the path that works."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="a11y">
+    <header><h3 class="i18n" data-zh="窄屏、键盘与读屏" data-en="Narrow screens, keyboard and screen readers"></h3><span class="id">E06</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="NFR09：中英双语、深浅主题、760 px 窄屏、全键盘操作、尊重「减少动态效果」。颜色从不单独承担状态，所以每张图都配一份同值的表格视图，每个色块旁边都有状态词。"
+       data-en="NFR09: bilingual, both themes, 760 px layouts, full keyboard operation and reduced motion respected. Colour never carries state alone, so every chart ships an equivalent table and every tinted element names its state."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack" style="max-width:340px">
+        <div class="row"><span class="period">2024-07</span><span class="chip warn i18n" data-zh="部分完成" data-en="Partial"></span></div>
+        <div class="metric"><dt class="i18n" data-zh="签收率" data-en="Sign-off rate"></dt><dd><b>85.26%</b> <span class="chip warn i18n" data-zh="需关注" data-en="Attention"></span><span class="grade g2">G2</span></dd></div>
+        <span class="btn primary full focus i18n" data-zh="查看本月结论" data-en="Open this month"></span>
+        <p class="hint i18n" data-zh="窄屏下三栏叠成一栏，主操作占满宽度，焦点环始终可见。" data-en="The panes stack, the primary action fills the width, and the focus ring stays visible."></p>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="键盘" data-en="Keyboard"></p>
+        <dl class="kv">
+          <dt><span class="kbd">Tab</span></dt><dd class="i18n" data-zh="按阅读顺序移动" data-en="Moves in reading order"></dd>
+          <dt><span class="kbd">Esc</span></dt><dd class="i18n" data-zh="关闭抽屉与模态，焦点回到打开它的控件" data-en="Closes drawers and modals, returning focus to whatever opened them"></dd>
+          <dt><span class="kbd">←</span> <span class="kbd">→</span></dt><dd class="i18n" data-zh="分隔条每次 20 px" data-en="Resizes a separator by 20 px"></dd>
+        </dl>
+        <p class="eyebrow i18n" style="margin-top:8px" data-zh="读屏" data-en="Screen readers"></p>
+        <p class="hint i18n" data-zh="状态用 role=status 播报；错误用 role=alert；每张图有 title 与 desc，并配同值表格。色弱读者靠状态词而不是色相区分。" data-en="Status is announced with role=status and errors with role=alert; every chart has a title and a description plus an equivalent table. Colour-blind readers work from the status word, not the hue."></p>
+        <p class="hint i18n" data-zh="开启「减少动态效果」后，过渡与动画关闭，不是缩短。" data-en="With reduced motion on, transitions and animations are switched off rather than shortened."></p>
+      </div>
+    </div>
+  </section>
+
+  <div id="pager"></div>
+</div>
+
+<script src="assets/design.js"></script>
+</body>
+</html>

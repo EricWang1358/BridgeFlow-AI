@@ -15,7 +15,9 @@ type DrivePage = { files: DriveItem[]; has_more: boolean; next_page_token: strin
 
 // Wiki (docs/31): a node is browsed by its own token but its file body lives at
 // obj_token; importing submits obj_token, navigating submits the node token.
-type WikiSpace = { space_id: string; name: string; description: string }
+// `department` is the human-declared mapping from access-control.yaml, annotated by
+// the backend; absent for spaces that declare none (personal library, master office).
+type WikiSpace = { space_id: string; name: string; description: string; department?: string | null }
 type SpacePage = { spaces: WikiSpace[]; has_more: boolean; next_page_token: string }
 type WikiNode = { token: string; obj_token: string; obj_type: string; title: string; has_child: boolean }
 type WikiNodePage = { nodes: WikiNode[]; has_more: boolean; next_page_token: string }
@@ -24,7 +26,7 @@ type WikiNodePage = { nodes: WikiNode[]; has_more: boolean; next_page_token: str
 type SheetMeta = { sheet_id: string; title: string; rows: number; cols: number }
 type BitableTable = { table_id: string; name: string }
 type Picked = { token: string; name: string; kind: 'file' | 'sheet' | 'bitable'
-                sheet_id?: string; table_id?: string; header_row?: number }
+                sheet_id?: string; table_id?: string; header_row?: number; wiki_space_id?: string }
 
 async function postUser<T>(path: string, body: unknown): Promise<T> {
   const token = await feishuUserToken()
@@ -90,9 +92,12 @@ const MORE = (page: { has_more: boolean }, loadMore: () => void, t: (k: string) 
   page.has_more ? <button className="bf-hint" onClick={loadMore}>{t('feishuMore')}</button> : null
 
 /** Space list, then a lazily-loaded node tree inside the chosen space. */
-function WikiBrowser({ row, currentLocation, extra }: {
+function WikiBrowser({ row, currentLocation, currentSpace, extra }: {
   row: (node: WikiNode, enter: (node: WikiNode) => void) => ReactNode
   currentLocation?: (spaceId: string, parentToken: string) => void
+  /** Reports the space being browsed (null at the space list), so the picker can
+    * lock each file row's department to the space's declared mapping. */
+  currentSpace?: (space: WikiSpace | null) => void
   extra?: (page: WikiNodePage, loadMore: () => void) => ReactNode
 }) {
   const { t } = useUI()
@@ -131,6 +136,7 @@ function WikiBrowser({ row, currentLocation, extra }: {
   useEffect(() => { if (!space) loadSpaces() }, [space])
   useEffect(() => { if (space) loadNodes() }, [space, parent])
   useEffect(() => { currentLocation?.(space?.space_id ?? '', parent) }, [space, parent])
+  useEffect(() => { currentSpace?.(space) }, [space])
   const back = () => { setSpace(null); setTrail([]); setPage(null) }
   return <div className="bf-feishu-browser">
     <nav className="bf-feishu-crumbs" aria-label={t('feishuWiki')}>
@@ -142,8 +148,12 @@ function WikiBrowser({ row, currentLocation, extra }: {
     {!error && !space && !spaces && <p role="status">{t('loading')}</p>}
     {!error && !space && spaces && <>
       {!spaces.spaces.length && <p className="bf-hint">{t('feishuSpacesEmpty')}</p>}
+      {/* Entering a space clears the previous one's page/trail at once: otherwise the
+        * stale rows stay clickable until the new list lands, and with auto-department
+        * a click there would assign last space's files to this space's department. */}
       <ul className="bf-resource-list">{spaces.spaces.map(item =>
-        <li key={item.space_id}><button className="bf-feishu-folder" onClick={() => setSpace(item)}><span aria-hidden="true">▸</span> {item.name}</button></li>)}</ul>
+        <li key={item.space_id}><button className="bf-feishu-folder" onClick={() => { setSpace(item); setPage(null); setTrail([]) }}>
+          <span aria-hidden="true">▸</span> {item.name} {item.department && <small>{t(item.department)}</small>}</button></li>)}</ul>
       {spaces.has_more && <button className="bf-hint" onClick={() => loadSpaces(spaces.next_page_token)}>{t('feishuMore')}</button>}
     </>}
     {!error && space && !page && <p role="status">{t('loading')}</p>}
@@ -159,6 +169,8 @@ function WikiBrowser({ row, currentLocation, extra }: {
 export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void }) {
   const { t } = useUI()
   const [source, setSource] = useState<'drive' | 'wiki'>('drive')
+  // The space being browsed in wiki mode (null at the space list or in Drive mode).
+  const [wikiSpace, setWikiSpace] = useState<WikiSpace | null>(null)
   const [assign, setAssign] = useState<Partial<Record<string, Picked>>>({})
   // Second-level metadata per picked sheet/bitable token (docs/33): names and
   // dimensions only, fetched on pick and cached for the panel's lifetime.
@@ -173,7 +185,13 @@ export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void })
     node.obj_type === 'sheet' || node.obj_type === 'bitable' ||
     (node.obj_type === 'file' && /\.(csv|xlsx)$/i.test(node.title))
   const usedBy = (token: string) => chosen.find(d => assign[d]?.token === token)
-  const choose = (item: { token: string; name: string; kind: Picked['kind'] }, dept: string) => {
+  // The department the browsed space stands for (null when unmapped or in Drive mode).
+  // The includes() guard keeps a misbehaving backend from rendering a raw key.
+  const wikiDept = source === 'wiki' && wikiSpace?.department
+                   && (departments as readonly string[]).includes(wikiSpace.department)
+    ? wikiSpace.department
+    : null
+  const choose = (item: Picked, dept: string) => {
     setAssign(prev => {
       const next = { ...prev }
       for (const d of departments) if (next[d]?.token === item.token) delete next[d]
@@ -229,7 +247,8 @@ export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void })
           const p = assign[d]!
           return { department: d, file_token: p.token, kind: p.kind,
                    ...(p.kind === 'sheet' ? { sheet_id: p.sheet_id, header_row: p.header_row } : {}),
-                   ...(p.kind === 'bitable' ? { table_id: p.table_id } : {}) }
+                   ...(p.kind === 'bitable' ? { table_id: p.table_id } : {}),
+                   ...(p.wiki_space_id ? { wiki_space_id: p.wiki_space_id } : {}) }
         }),
       })
       onSaved(result.batch)
@@ -251,15 +270,20 @@ export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void })
       const kind: Picked['kind'] = item.type === 'sheet' ? 'sheet' : item.type === 'bitable' ? 'bitable' : 'file'
       return <span className="bf-feishu-item"><span aria-hidden="true">▤</span> {item.name} {deptSelect({ token: item.token, name: item.name, kind })}</span>
     }} />}
-    {source === 'wiki' && <WikiBrowser extra={(page, loadMore) => MORE(page, loadMore, t)} row={(node, enter) => {
+    {source === 'wiki' && <WikiBrowser currentSpace={setWikiSpace} extra={(page, loadMore) => MORE(page, loadMore, t)} row={(node, enter) => {
       const pickable = importableNode(node)
+      const item: Picked = { token: node.obj_token, name: node.title,
+                             kind: node.obj_type === 'sheet' ? 'sheet' : node.obj_type === 'bitable' ? 'bitable' : 'file',
+                             ...(wikiSpace ? { wiki_space_id: wikiSpace.space_id } : {}) }
       return <span className="bf-feishu-item" data-disabled={pickable || node.has_child ? undefined : 'true'}>
         {node.has_child
           ? <button className="bf-feishu-folder" onClick={() => enter(node)}><span aria-hidden="true">▸</span> {node.title}</button>
           : <><span aria-hidden="true">▤</span> {node.title}</>}
         {!pickable && !node.has_child && <small>{t('feishuUnsupported')}</small>}
-        {pickable && deptSelect({ token: node.obj_token, name: node.title,
-                                  kind: node.obj_type === 'sheet' ? 'sheet' : node.obj_type === 'bitable' ? 'bitable' : 'file' })}
+        {pickable && (wikiDept
+          ? <button className="bf-feishu-dept" aria-pressed={usedBy(item.token) === wikiDept} title={t('feishuDeptAuto')}
+                    onClick={() => choose(item, usedBy(item.token) === wikiDept ? '' : wikiDept)}>{t(wikiDept)}</button>
+          : deptSelect(item))}
       </span>
     }} />}
     {chosen.filter(d => assign[d]!.kind !== 'file').map(d =>

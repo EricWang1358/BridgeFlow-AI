@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BridgeFlow AI — 界面设计稿 / UI design reference</title>
+<link rel="stylesheet" href="assets/cds.css">
+</head>
+<body data-page="index">
+<div id="chrome"></div>
+
+<div class="wrap">
+  <header class="pagehead">
+    <p class="kicker">Claude Design System</p>
+    <h1><span class="i18n" data-zh="BridgeFlow AI 界面设计稿" data-en="BridgeFlow AI design reference"></span></h1>
+    <p class="lead i18n"
+       data-zh="从登录门户到每一个功能组件，按 Claude Design System 的记号体系重绘。这是设计稿，不是实现：不参与构建，不引入依赖，也不是第二个前端——产品仍然复用 dsh web 深度定制（Client 插件注册进插槽）。"
+       data-en="From the login portal to every functional component, redrawn on the Claude Design System token vocabulary. This is a design reference, not an implementation: it is not built, ships no dependency, and is not a second front end — the product still deeply customises dsh web through Client plugin slots."></p>
+  </header>
+
+  <section class="screen">
+    <div class="frame grid2">
+      <div class="card stack">
+        <h3 class="i18n" data-zh="怎么读" data-en="How to read it"></h3>
+        <p class="muted i18n" data-zh="每一屏都带一个编号、一段说明，以及底下实现的真实状态。说明写的是「为什么长这样」，不是「这里有个按钮」。" data-en="Every screen carries an id, a caption and the real status of the code beneath it. The caption says why it looks like this, not that there is a button here."></p>
+        <div class="row">
+          <span class="st impl">IMPLEMENTED</span>
+          <span class="st partial">PARTIAL</span>
+          <span class="st designed">DESIGNED</span>
+          <span class="st none">NO CODE</span>
+        </div>
+        <p class="hint i18n" data-zh="状态取自 docs/requirements 各 epic 的 UC 索引。标 NO CODE 的屏幕是本设计稿提出的，仓库里还没有对应实现。" data-en="Status comes from the UC index in each epic under docs/requirements. A screen marked NO CODE is proposed by this reference and has no counterpart in the repository yet."></p>
+      </div>
+      <div class="card stack">
+        <h3 class="i18n" data-zh="两个开关" data-en="Two switches"></h3>
+        <p class="muted i18n" data-zh="右上角的中英与深浅是真的：语言切换会换掉每一条文案，主题切换只换记号值。产品要求双语、深浅主题、760 px 窄屏与全键盘操作（NFR09），这两个开关就是用来当场验证它的。" data-en="The zh/en and light/dark switches at the top right are real: the language switch replaces every label, and the theme switch swaps token values only. The product requires bilingual copy, both themes, 760 px layouts and keyboard operation (NFR09); these switches exist so you can check that rather than take it on trust."></p>
+        <p class="hint i18n" data-zh="选择记在浏览器里，翻页不会丢。" data-en="Your choice is remembered in the browser and survives page changes."></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen">
+    <header><h2 class="i18n" data-zh="页面" data-en="Pages"></h2></header>
+    <div class="frame grid2">
+
+      <a class="card stack" href="00-foundations.html" style="text-decoration:none;color:inherit">
+        <div class="between"><h3 class="i18n" data-zh="0 · 基础记号" data-en="0 · Foundations"></h3><span class="badge">12</span></div>
+        <p class="muted i18n" data-zh="颜色、字号、间距、按钮、表单、状态词、依据等级、数字格式、表格、空态、文案规则。" data-en="Colour, type, spacing, buttons, forms, status vocabulary, evidence grades, number formats, tables, empty states, writing rules."></p>
+      </a>
+
+      <a class="card stack" href="01-portal.html" style="text-decoration:none;color:inherit">
+        <div class="between"><h3 class="i18n" data-zh="1 · 登录门户" data-en="1 · Login portal"></h3><span class="badge">9</span></div>
+        <p class="muted i18n" data-zh="飞书登录、应用入口、跳转页、forward_auth 401、门户错误、令牌过期、可见性拒绝、身份与角色。" data-en="Feishu sign-in, app entry, the interstitial, the forward_auth 401, portal errors, token expiry, visibility refusals, identity and resolved roles."></p>
+      </a>
+
+      <a class="card stack" href="02-shell.html" style="text-decoration:none;color:inherit">
+        <div class="between"><h3 class="i18n" data-zh="2 · 外壳" data-en="2 · Shell"></h3><span class="badge">8</span></div>
+        <p class="muted i18n" data-zh="三栏笔记本、空白会话、笔记本列表、保存取舍、操作导览、来源栏、工作室栏、窄屏。" data-en="The three-pane notebook, blank session, notebook list, save-or-discard, the tour, the Sources pane, the Studio pane, narrow screens."></p>
+      </a>
+
+      <a class="card stack" href="03-intake.html" style="text-decoration:none;color:inherit">
+        <div class="between"><h3 class="i18n" data-zh="3 · 数据进入" data-en="3 · Intake"></h3><span class="badge">7</span></div>
+        <p class="muted i18n" data-zh="导入面板、表格位置、提交前自检、飞书文件夹、单部门补传、模板下载与上月预填。" data-en="Import panel, sheet position, self-check, the Feishu folder, single-department replacement, template download with carry-over."></p>
+      </a>
+
+      <a class="card stack" href="04-batch.html" style="text-decoration:none;color:inherit">
+        <div class="between"><h3 class="i18n" data-zh="4 · 批次数据" data-en="4 · Batch data"></h3><span class="badge">8</span></div>
+        <p class="muted i18n" data-zh="主表、单元格出处、清洗记录、隔离行、跨部门总表、拒绝状态、导出、批次列表。" data-en="Master table, cell provenance, corrections, quarantine, the cross-department master, refusals, export, the batch list."></p>
+      </a>
+
+      <a class="card stack" href="05-dictionary.html" style="text-decoration:none;color:inherit">
+        <div class="between"><h3 class="i18n" data-zh="5 · 字典与口径" data-en="5 · Dictionary and conventions"></h3><span class="badge">8</span></div>
+        <p class="muted i18n" data-zh="字段字典、列特征画像、列匹配提议、实体关系与别名、映射记忆与失效、口径确认与替换、版本发布。" data-en="Field dictionary, column profiles, match proposals, entity relations and aliases, mapping memory and invalidation, convention confirmation, version publishing."></p>
+      </a>
+
+      <a class="card stack" href="06-review.html" style="text-decoration:none;color:inherit">
+        <div class="between"><h3 class="i18n" data-zh="6 · 研判" data-en="6 · Review"></h3><span class="badge">8</span></div>
+        <p class="muted i18n" data-zh="发起派活、四部门报告、单条检查与证据、部分完成与人工意见、校验拒绝、用量与轨迹、关注项指派、超时收尾。" data-en="Dispatch, the four-department report, one check with its evidence, partial results and human notes, validation refusals, usage and trace, attention-item assignment, deadline recovery."></p>
+      </a>
+
+      <a class="card stack" href="07-conclusions.html" style="text-decoration:none;color:inherit">
+        <div class="between"><h3 class="i18n" data-zh="7 · 结论" data-en="7 · Conclusions"></h3><span class="badge">6</span></div>
+        <p class="muted i18n" data-zh="本月结论、跨期对比与差异分解、指标图与下钻、依据链、月度报告导出、过期拒绝。" data-en="The monthly brief, period comparison and variance decomposition, charts with drill-down, the dependency chain, report export, staleness refusals."></p>
+      </a>
+
+      <a class="card stack" href="08-approvals.html" style="text-decoration:none;color:inherit">
+        <div class="between"><h3 class="i18n" data-zh="8 · 审批" data-en="8 · Approvals"></h3><span class="badge">7</span></div>
+        <p class="muted i18n" data-zh="决定卡与各工具变体、拒绝理由、员工许可、审批不可用、审计账本、护栏拒绝。" data-en="The decision card and its per-tool variants, rejection reasons, employee permits, unavailable approvals, the audit ledger, guard refusals."></p>
+      </a>
+
+      <a class="card stack" href="09-workflow.html" style="text-decoration:none;color:inherit">
+        <div class="between"><h3 class="i18n" data-zh="9 · 流转" data-en="9 · Workflow"></h3><span class="badge">9</span></div>
+        <p class="muted i18n" data-zh="模板目录、填报草稿与补问、复核提交、流转看板、下游处理、上游修订、岗位指引、月度进度、待办收件箱。" data-en="Template catalogue, drafts and clarifications, approve-and-submit, the handoff board, downstream actions, upstream revisions, role guidance, the monthly checklist, the open-item inbox."></p>
+      </a>
+
+      <a class="card stack" href="10-discovery.html" style="text-decoration:none;color:inherit">
+        <div class="between"><h3 class="i18n" data-zh="10 · 立项发现" data-en="10 · Discovery"></h3><span class="badge">6</span></div>
+        <p class="muted i18n" data-zh="材料清单、候选场景、流转图、四象限、会议纪要、决策与投票。" data-en="The materials inventory, candidate scenarios, the flow graph, the quadrant, meeting records, decisions and votes."></p>
+      </a>
+
+      <a class="card stack" href="11-quotation.html" style="text-decoration:none;color:inherit">
+        <div class="between"><h3 class="i18n" data-zh="11 · 报价" data-en="11 · Quotation"></h3><span class="badge">5</span></div>
+        <p class="muted i18n" data-zh="输入清单、内部草稿、方案比较、放行门、从合同原件抽取。" data-en="The input checklist, the internal draft, scenario comparison, the release gate, extraction from contract originals."></p>
+      </a>
+
+      <a class="card stack" href="12-states.html" style="text-decoration:none;color:inherit">
+        <div class="between"><h3 class="i18n" data-zh="12 · 空态与失败" data-en="12 · Empty and failure states"></h3><span class="badge">10</span></div>
+        <p class="muted i18n" data-zh="空态、加载、网络失败、服务拒绝、离线、图片不支持、窄屏、键盘、读屏、减少动态效果。" data-en="Empty, loading, network failure, service refusal, offline, unsupported images, narrow screens, keyboard, screen readers, reduced motion."></p>
+      </a>
+
+    </div>
+  </section>
+
+  <section class="screen">
+    <header><h2 class="i18n" data-zh="贯穿所有屏幕的六条" data-en="Six rules that hold across every screen"></h2></header>
+    <div class="frame">
+      <div class="card">
+        <ol class="steps">
+          <li class="step"><h4 class="i18n" data-zh="继承外壳，不与它打架" data-en="Inherit the shell, do not fight it"></h4><p class="muted i18n" data-zh="颜色先从宿主自己的记号解析，跟随用户的主题，而不是在第一套设计系统上再画一套。" data-en="Colour resolves from the host's own tokens first, following the user's theme instead of painting a second design system on top of the first."></p></li>
+          <li class="step"><h4 class="i18n" data-zh="一屏只有一个主操作" data-en="One primary action per surface"></h4><p class="muted i18n" data-zh="其余都安静。六个长得一样的按钮，等于没告诉用户下一步做什么。" data-en="Everything else is quiet. Six identical buttons tell the reader nothing about what to do next."></p></li>
+          <li class="step"><h4 class="i18n" data-zh="数据要地方" data-en="Data gets room"></h4><p class="muted i18n" data-zh="列拿它需要的宽度，容器横向滚动。表头一个字一行不是审美问题，是表格读不了。" data-en="Columns take the width they need and the container scrolls. A header wrapping one character per line is not a cosmetic problem; it is an unreadable table."></p></li>
+          <li class="step"><h4 class="i18n" data-zh="颜色从不单独承担状态" data-en="Colour never carries status alone"></h4><p class="muted i18n" data-zh="每个着色元素同时写出状态词，色弱与读屏都读得到。" data-en="Every tinted element also names its state in words, so colour-blind readers and screen readers get the same information."></p></li>
+          <li class="step"><h4 class="i18n" data-zh="每个数字带得回出处" data-en="Every figure traces back"></h4><p class="muted i18n" data-zh="依据等级取依赖中最弱的一级；出处链断了就标「出处缺失」，不给等级。" data-en="A grade takes the weakest dependency. A broken chain shows “provenance missing” instead of a grade."></p></li>
+          <li class="step"><h4 class="i18n" data-zh="失败不能显示成空的成功" data-en="A failure never renders as an empty success"></h4><p class="muted i18n" data-zh="说清出了什么事、接下来做什么，并保留可恢复的输入。跑不动比静默出错好。" data-en="Say what happened and what to do next, and keep recoverable input. Refusing to run beats being quietly wrong."></p></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <div id="pager"></div>
+</div>
+
+<script src="assets/design.js"></script>
+</body>
+</html>

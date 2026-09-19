@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 · 数据进入 — BridgeFlow AI</title>
+<link rel="stylesheet" href="assets/cds.css">
+</head>
+<body data-page="intake">
+<div id="chrome"></div>
+
+<div class="wrap">
+  <header class="pagehead">
+    <p class="kicker">03 · Intake</p>
+    <h1><span class="i18n" data-zh="数据进入" data-en="Getting data in"></span></h1>
+    <p class="lead i18n"
+       data-zh="这一整段不调用模型：导入、清洗、聚合全部由规则执行。上限是单批次 200,000 行、单次上传 25 MiB、XLSX 解压后 100 MiB，这些数字要写在按钮旁边，不藏在报错里。"
+       data-en="Nothing in this section calls a model: import, cleaning and aggregation are all rule work. The limits are 200,000 rows per batch, 25 MiB per upload and 100 MiB expanded — numbers that belong beside the button, not hidden inside an error."></p>
+    <nav class="toc">
+      <a href="#import"><span class="i18n" data-zh="导入面板" data-en="Import panel"></span></a>
+      <a href="#sheet"><span class="i18n" data-zh="表格位置" data-en="Sheet position"></span></a>
+      <a href="#selfcheck"><span class="i18n" data-zh="提交前自检" data-en="Self-check"></span></a>
+      <a href="#progress"><span class="i18n" data-zh="导入过程" data-en="While importing"></span></a>
+      <a href="#feishu"><span class="i18n" data-zh="飞书文件夹" data-en="Feishu folder"></span></a>
+      <a href="#replace"><span class="i18n" data-zh="单部门补传" data-en="Replace one department"></span></a>
+      <a href="#template"><span class="i18n" data-zh="模板与上月预填" data-en="Template and carry-over"></span></a>
+    </nav>
+  </header>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="import">
+    <header><h3 class="i18n" data-zh="导入面板" data-en="Import panel"></h3><span class="id">I01</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="导入是一串顺序动作，所以它长得像一串顺序动作。文件位替掉浏览器自带的「未选择文件」——那是整个产品里最格格不入的一句英文；选中后变实线加通过底色，文件名就地显示。"
+       data-en="Import is a sequence, so it looks like one. The file slots replace the browser's own “No file chosen”, the single most out-of-place string in the product: a chosen file turns its slot solid and shows the name in place."></p>
+    <div class="frame">
+      <div class="pane">
+        <div class="pad divide"><div class="between">
+          <div>
+            <h3 class="i18n" data-zh="把四部门数据放在一起" data-en="Bring four departments together"></h3>
+            <p class="muted i18n" data-zh="先导入本月四份表，规则会先跑一遍。" data-en="Import this month’s four sheets first; rules run before any model call."></p>
+          </div>
+          <span class="btn quiet i18n" data-zh="关闭" data-en="Close"></span>
+        </div></div>
+        <div class="pad">
+          <ol class="steps">
+            <li class="step">
+              <h4 class="i18n" data-zh="选择业务月份" data-en="Choose the business month"></h4>
+              <div style="max-width:200px"><div class="input">2024-07</div></div>
+            </li>
+            <li class="step">
+              <h4 class="i18n" data-zh="放入部门文件" data-en="Add the department files"></h4>
+              <p class="hint i18n" style="margin-bottom:8px" data-zh="至少一个；四个都放才能对齐跨部门关系。" data-en="At least one. All four are needed to align cross-department relations."></p>
+              <div class="files">
+                <div class="file" data-filled="true"><span class="i18n" data-zh="生产" data-en="Production"></span><span class="fn">2024-07-production.xlsx</span></div>
+                <div class="file" data-filled="true"><span class="i18n" data-zh="采购" data-en="Procurement"></span><span class="fn">2024-07-procurement.csv</span></div>
+                <div class="file" data-filled="true"><span class="i18n" data-zh="财务" data-en="Finance"></span><span class="fn">2024-07-finance.xlsx</span></div>
+                <div class="file"><span class="i18n" data-zh="市场" data-en="Marketing"></span><span class="fn i18n" data-zh="尚未选择" data-en="None selected"></span></div>
+              </div>
+            </li>
+            <li class="step">
+              <h4 class="i18n" data-zh="导入并检查" data-en="Import &amp; check"></h4>
+              <p class="hint i18n" style="margin-bottom:10px" data-zh="导入不调用模型，也不覆盖已有批次。每次导入保留独立批次。" data-en="Import makes no model call, never overwrites an existing batch, and each import keeps its own."></p>
+              <div class="row">
+                <span class="btn primary i18n" data-zh="导入并检查" data-en="Import &amp; check"></span>
+                <span class="btn i18n" data-zh="先自检" data-en="Check first"></span>
+                <span class="hint i18n" data-zh="单次上传 25 MiB · 单批次 200,000 行" data-en="25 MiB per upload · 200,000 rows per batch"></span>
+              </div>
+            </li>
+          </ol>
+          <details style="margin-top:16px"><summary class="hint i18n" data-zh="打开已有批次" data-en="Open an existing batch"></summary></details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="sheet">
+    <header><h3 class="i18n" data-zh="表格位置" data-en="Table position"></h3><span class="id">I02</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="E04-UC02：工作簿有多个工作表，或表头不在第 1 行。这一段默认收起——大多数人不需要它，但需要它的人如果找不到，就只能把文件改成系统喜欢的样子。"
+       data-en="E04-UC02: a workbook with several sheets, or a header below row 1. This block stays collapsed by default — most people never need it, and the ones who do are otherwise left editing their file into a shape the system likes."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:560px">
+        <div class="between"><h4 class="i18n" data-zh="生产 · 表格位置" data-en="Production · table position"></h4><span class="chip warn i18n" data-zh="检测到 3 个工作表" data-en="3 sheets detected"></span></div>
+        <div class="grid2">
+          <label class="field"><span class="lab i18n" data-zh="工作表名" data-en="Sheet name"></span><span class="input">7月产量</span></label>
+          <label class="field"><span class="lab i18n" data-zh="表头行号" data-en="Header row"></span><span class="input">3</span></label>
+        </div>
+        <div class="scroll"><table class="t">
+          <thead><tr><th style="width:52px" class="i18n" data-zh="行" data-en="Row"></th><th>A</th><th>B</th><th>C</th></tr></thead>
+          <tbody>
+            <tr><td class="e">1</td><td colspan="3" class="e i18n" data-zh="XX 商砼有限公司 · 2024 年 7 月生产日报汇总" data-en="Company header row"></td></tr>
+            <tr><td class="e">2</td><td colspan="3" class="e i18n" data-zh="（空行）" data-en="(blank)"></td></tr>
+            <tr style="background:var(--bg-accent)"><td>3</td><td class="i18n" data-zh="项目" data-en="Project"></td><td class="i18n" data-zh="出厂量" data-en="Shipped"></td><td class="i18n" data-zh="实际量" data-en="Received"></td></tr>
+            <tr><td class="e">4</td><td class="i18n" data-zh="第二实验学校扩建" data-en="No.2 school extension"></td><td class="n">1,240.0</td><td class="n">1,058.0</td></tr>
+          </tbody>
+        </table></div>
+        <p class="hint i18n" data-zh="第 3 行被认作表头，前两行不进入数据。改动只影响这一次导入。" data-en="Row 3 is read as the header and the two rows above it are excluded. The setting affects this import only."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="selfcheck">
+    <header><h3 class="i18n" data-zh="提交前自检" data-en="Self-check before submitting"></h3><span class="id">I03</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="E14-UC03：用与正式导入相同的规则检查所选文件，不创建批次。分三类，因为「必须修改」和「建议核对」对填报员是两件事。每条给出行号、列名与原因，不回显无关单元格内容。"
+       data-en="E14-UC03: the same rules as a real import, run against the chosen files without creating a batch. Three buckets, because “must fix” and “worth checking” are different jobs for the person holding the file. Each item names the row, the column and the reason, and echoes no unrelated cell contents."></p>
+    <div class="frame">
+      <div class="pane">
+        <div class="pad divide"><div class="between"><h4 class="i18n" data-zh="自检结果" data-en="Self-check result"></h4><span class="chip i18n" data-zh="未创建批次" data-en="No batch created"></span></div></div>
+        <div class="pad stack">
+          <div class="callout bad">
+            <h4><span class="i18n" data-zh="必须修改" data-en="Must fix"></span> · 2</h4>
+            <p class="i18n" data-zh="生产 · D 列「浇筑日期」第 203、418 行写成 03/11/2025，本部门未声明日期写法。" data-en="Production · column D “pour date”, rows 203 and 418, written 03/11/2025; this department declares no date convention."></p>
+            <p class="i18n" data-zh="采购 · 第 88 行单价为负。" data-en="Procurement · row 88 has a negative unit price."></p>
+          </div>
+          <div class="callout warn">
+            <h4><span class="i18n" data-zh="建议核对" data-en="Review"></span> · 5</h4>
+            <p class="i18n" data-zh="采购有 3 列字典不认识，导入后会进入待确认列匹配。" data-en="Three procurement columns are unknown to the dictionary and will land in pending column matches."></p>
+            <p class="i18n" data-zh="财务 · 同一项目出现 4 行，将按声明的汇总规则合并。" data-en="Finance · one project appears on 4 rows and will be combined by the declared rollup rule."></p>
+          </div>
+          <div class="callout ok">
+            <h4><span class="i18n" data-zh="可以提交" data-en="Ready to submit"></span> · 2</h4>
+            <p class="i18n" data-zh="财务与市场两份文件通过全部声明检查。" data-en="The finance and marketing files pass every declared check."></p>
+          </div>
+          <div class="row">
+            <span class="btn primary i18n" data-zh="修改后重新自检" data-en="Check again after fixing"></span>
+            <span class="btn i18n" data-zh="仍然导入" data-en="Import anyway"></span>
+            <span class="hint i18n" data-zh="「必须修改」项在导入时会被隔离，不会进入计算。" data-en="Must-fix items are quarantined at import and never reach the arithmetic."></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="progress">
+    <header><h3 class="i18n" data-zh="导入过程与结果" data-en="While importing, and after"></h3><span class="id">I04</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="进度按部门逐个显示，因为一份文件失败不该让人以为四份都失败了。完成后第一句话说清「规则做了什么、没做什么」：清洗和聚合由规则执行，未调用模型。"
+       data-en="Progress is shown per department, because one failed file should not read as four. The first sentence after it finishes says what the rules did and did not do: they cleaned and aggregated, and no model was called."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="进行中" data-en="In progress"></p>
+        <div class="stack">
+          <div class="between"><span class="muted i18n" data-zh="生产" data-en="Production"></span><span class="chip ok i18n" data-zh="586 行" data-en="586 rows"></span></div>
+          <div class="between"><span class="muted i18n" data-zh="采购" data-en="Procurement"></span><span class="chip ok i18n" data-zh="412 行" data-en="412 rows"></span></div>
+          <div class="between"><span class="muted i18n" data-zh="财务" data-en="Finance"></span><span class="chip i18n" data-zh="正在处理…" data-en="Processing…"></span></div>
+          <div class="bar"><span style="width:72%"></span></div>
+          <div class="between"><span class="muted i18n" data-zh="市场" data-en="Marketing"></span><span class="hint i18n" data-zh="排队中" data-en="Queued"></span></div>
+        </div>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="完成" data-en="Done"></p>
+        <div class="callout ok">
+          <h4 class="i18n" data-zh="批次已保存" data-en="Batch saved"></h4>
+          <p class="i18n" data-zh="清洗和聚合由规则执行，未调用模型。" data-en="Rules cleaned and aggregated the data; no model call."></p>
+        </div>
+        <div class="row"><span class="period">2024-07</span><span class="chip warn i18n" data-zh="需要人工复核" data-en="Review required"></span></div>
+        <div class="grid3">
+          <div class="metric"><dt class="i18n" data-zh="主表" data-en="Master"></dt><dd><b>1,482</b><small class="i18n" data-zh="行" data-en="rows"></small></dd></div>
+          <div class="metric"><dt class="i18n" data-zh="清洗记录" data-en="Corrections"></dt><dd><b>37</b></dd></div>
+          <div class="metric"><dt class="i18n" data-zh="隔离行" data-en="Quarantined"></dt><dd><b>6</b></dd></div>
+        </div>
+        <p class="muted"><span class="i18n" data-zh="批次" data-en="Batch"></span> <code>a41f…9c2e</code> <span class="btn quiet sm i18n" data-zh="复制" data-en="Copy"></span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="feishu">
+    <header><h3 class="i18n" data-zh="飞书文件夹批量取用" data-en="Import a Feishu folder"></h3><span class="id">I05</span><span class="st designed">DESIGNED</span></header>
+    <p class="cap i18n"
+       data-zh="E14-UC06：部门文件都放在一个飞书文件夹里，逐个选太慢。系统按声明规则识别部门，把「识别结果」与「未识别文件」分开摆，让人只确认有疑问的那几个。取用是写入类操作，一次原生审批覆盖整批。"
+       data-en="E14-UC06: department files sit in one Feishu folder and picking them one by one is slow. Departments are recognised by declared rules, with recognised and unrecognised files kept apart so a person only confirms the doubtful ones. Fetching writes, so one native approval covers the batch."></p>
+    <div class="frame">
+      <div class="pane pad stack">
+        <div class="between">
+          <h4 class="i18n" data-zh="从飞书取用" data-en="Import from Feishu"></h4>
+          <span class="chip ok i18n" data-zh="已连接" data-en="Connected"></span>
+        </div>
+        <div class="grid2">
+          <label class="field"><span class="lab i18n" data-zh="文件夹" data-en="Folder"></span><span class="input mono">/月度对账/2024-07</span></label>
+          <label class="field"><span class="lab i18n" data-zh="业务月份" data-en="Business month"></span><span class="input">2024-07</span></label>
+        </div>
+        <p class="eyebrow i18n" data-zh="识别结果" data-en="Recognised"></p>
+        <div class="scroll"><table class="t">
+          <thead><tr><th style="width:34px"></th><th class="i18n" data-zh="文件" data-en="File"></th><th class="i18n" data-zh="类型" data-en="Kind"></th><th class="i18n" data-zh="部门" data-en="Department"></th><th class="i18n" data-zh="依据" data-en="Matched by"></th></tr></thead>
+          <tbody>
+            <tr><td><span class="box on"></span></td><td class="mono">生产-2024-07.xlsx</td><td class="hint">sheet</td><td><span class="chip info i18n" data-zh="生产" data-en="Production"></span></td><td class="hint i18n" data-zh="文件名规则" data-en="Filename rule"></td></tr>
+            <tr><td><span class="box on"></span></td><td class="mono">采购-2024-07.xlsx</td><td class="hint">sheet</td><td><span class="chip info i18n" data-zh="采购" data-en="Procurement"></span></td><td class="hint i18n" data-zh="文件名规则" data-en="Filename rule"></td></tr>
+            <tr><td><span class="box on"></span></td><td class="mono">财务台账.bitable</td><td class="hint">bitable</td><td><span class="chip info i18n" data-zh="财务" data-en="Finance"></span></td><td class="hint i18n" data-zh="所在子文件夹" data-en="Parent folder"></td></tr>
+          </tbody>
+        </table></div>
+        <p class="eyebrow i18n" data-zh="未识别" data-en="Unrecognised"></p>
+        <div class="scroll"><table class="t">
+          <tbody>
+            <tr><td><span class="box"></span></td><td class="mono">会议纪要.docx</td><td class="hint i18n" data-zh="不是表格文件" data-en="Not a table file"></td><td><span class="chip i18n" data-zh="不导入" data-en="Not imported"></span></td></tr>
+            <tr><td><span class="box"></span></td><td class="mono">7月数据（最终版）.xlsx</td><td class="hint i18n" data-zh="文件名不含部门" data-en="Filename names no department"></td><td><span class="btn quiet sm i18n" data-zh="指定部门" data-en="Assign a department"></span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="row">
+          <span class="btn primary i18n" data-zh="取用 3 个文件" data-en="Fetch 3 files"></span>
+          <span class="hint i18n" data-zh="取用会请求一次审批；未批准不写入。取回后走自检与正式导入。" data-en="Fetching requests one approval and writes nothing without it. Fetched files then pass self-check and import."></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="replace">
+    <header><h3 class="i18n" data-zh="单部门补传，生成新版本" data-en="Replace one department as a new version"></h3><span class="id">I06</span><span class="st designed">DESIGNED</span></header>
+    <p class="cap i18n"
+       data-zh="E14-UC04：批次导入后只有一个部门的文件要更正，现在却要四个部门整批重导。派生新批次：其余三个沿用原批次的来源与清洗结果，只重导被替换的那个。已有研判报告仍绑定旧批次，标为「数据已更新，可重新研判」，不被悄悄改写。"
+       data-en="E14-UC04: after import only one department's file needs correcting, yet today all four must be re-imported. Instead the batch is derived: the other three reuse the original sources and corrections, and only the replaced department is read again. Any existing review stays bound to the old batch and is marked “data has changed, a new review is possible” rather than quietly rewritten."></p>
+    <div class="frame">
+      <div class="pane pad stack">
+        <div class="between"><h4 class="i18n" data-zh="替换生产部文件" data-en="Replace the production file"></h4><span class="hint i18n" data-zh="派生自 a41f…9c2e" data-en="Derived from a41f…9c2e"></span></div>
+        <label class="field"><span class="lab i18n" data-zh="替换原因（必填，进入审计）" data-en="Reason for replacement (required, recorded in the audit)"></span><span class="input">7 月 3 日两车漏记，已补</span></label>
+        <div class="files">
+          <div class="file" data-filled="true"><span class="i18n" data-zh="生产（替换）" data-en="Production (replaced)"></span><span class="fn">2024-07-production-v2.xlsx</span></div>
+          <div class="file" style="border-style:solid;opacity:.65"><span class="i18n" data-zh="采购（沿用）" data-en="Procurement (reused)"></span><span class="fn">2024-07-procurement.csv</span></div>
+          <div class="file" style="border-style:solid;opacity:.65"><span class="i18n" data-zh="财务（沿用）" data-en="Finance (reused)"></span><span class="fn">2024-07-finance.xlsx</span></div>
+          <div class="file" style="border-style:solid;opacity:.65"><span class="i18n" data-zh="市场（沿用）" data-en="Marketing (reused)"></span><span class="fn">2024-07-marketing.csv</span></div>
+        </div>
+        <p class="eyebrow i18n" data-zh="新旧差异" data-en="What changes"></p>
+        <div class="grid4">
+          <div class="metric"><dt class="i18n" data-zh="新增行" data-en="Added rows"></dt><dd><b class="ins">+2</b></dd></div>
+          <div class="metric"><dt class="i18n" data-zh="消失行" data-en="Removed rows"></dt><dd><b>0</b></dd></div>
+          <div class="metric"><dt class="i18n" data-zh="变化单元格" data-en="Changed cells"></dt><dd><b>7</b></dd></div>
+          <div class="metric"><dt class="i18n" data-zh="受影响待确认" data-en="Open items affected"></dt><dd><b>1</b></dd></div>
+        </div>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="项目" data-en="Project"></th><th class="i18n" data-zh="实际量（旧）" data-en="Received (old)"></th><th class="i18n" data-zh="实际量（新）" data-en="Received (new)"></th><th class="i18n" data-zh="签收率" data-en="Sign-off"></th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="第二实验学校扩建" data-en="No.2 school extension"></td><td class="n del">1,058.0</td><td class="n ins">1,082.0</td><td class="n">85.32% → <span class="ins">87.26%</span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="row"><span class="btn primary i18n" data-zh="生成新批次" data-en="Create the derived batch"></span><span class="hint i18n" data-zh="本批次及其报告保持不变。" data-en="This batch and its reports stay unchanged."></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="template">
+    <header><h3 class="i18n" data-zh="模板下载与上月预填" data-en="Template download with carry-over"></h3><span class="id">I07</span><span class="st designed">DESIGNED</span></header>
+    <p class="cap i18n"
+       data-zh="E14-UC02：员工每月从零填同一张模板，上月可沿用的值要重抄一遍。预填不是替人决定：每个预填单元格都标「预填自 2024-06，请核对」，必填字段单独标记，填写说明页列出字段含义、单位与示例。"
+       data-en="E14-UC02: staff refill the same template from scratch every month, recopying values that carried over. Pre-filling is not deciding for them: every pre-filled cell is marked “carried from 2024-06, please check”, required fields are flagged separately, and an instructions sheet lists each field's meaning, unit and an example."></p>
+    <div class="frame">
+      <div class="pane pad stack">
+        <div class="grid2">
+          <label class="field"><span class="lab i18n" data-zh="部门" data-en="Department"></span><span class="input"><span class="i18n" data-zh="生产" data-en="Production"></span></span></label>
+          <label class="field"><span class="lab i18n" data-zh="业务月份" data-en="Business month"></span><span class="input">2024-07</span></label>
+        </div>
+        <div class="row"><span class="chip info i18n" data-zh="模板版本 v2" data-en="Template v2"></span><span class="hint i18n" data-zh="当前批准版本，随字典版本冻结" data-en="The current approved version, frozen with the dictionary"></span></div>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="字段" data-en="Field"></th><th class="i18n" data-zh="单位" data-en="Unit"></th><th class="i18n" data-zh="预填" data-en="Pre-filled"></th><th class="i18n" data-zh="说明" data-en="Note"></th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="项目" data-en="Project"></td><td class="e">—</td><td style="background:var(--bg-highlight)"><span class="i18n" data-zh="第二实验学校扩建" data-en="No.2 school extension"></span></td><td class="hint i18n" data-zh="预填自 2024-06，请核对" data-en="Carried from 2024-06, please check"></td></tr>
+            <tr><td class="i18n" data-zh="出厂量" data-en="Shipped"></td><td class="i18n" data-zh="方" data-en="m³"></td><td class="e i18n" data-zh="留空" data-en="Blank"></td><td><span class="chip bad i18n" data-zh="必填" data-en="Required"></span></td></tr>
+            <tr><td class="i18n" data-zh="实际量" data-en="Received"></td><td class="i18n" data-zh="方" data-en="m³"></td><td class="e i18n" data-zh="留空" data-en="Blank"></td><td><span class="chip bad i18n" data-zh="必填" data-en="Required"></span></td></tr>
+            <tr><td class="i18n" data-zh="项目负责人" data-en="Project lead"></td><td class="e">—</td><td style="background:var(--bg-highlight)" class="i18n" data-zh="李工" data-en="Li"></td><td class="hint i18n" data-zh="预填自 2024-06，请核对" data-en="Carried from 2024-06, please check"></td></tr>
+          </tbody>
+        </table></div>
+        <div class="row"><span class="btn primary i18n" data-zh="下载模板" data-en="Download the template"></span><span class="hint i18n" data-zh="填好后回到「先自检」，同一个对话框里就能提交。" data-en="When it is filled in, return to Check first and submit from the same dialog."></span></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="pager"></div>
+</div>
+
+<script src="assets/design.js"></script>
+</body>
+</html>

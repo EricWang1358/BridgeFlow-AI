@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 · 字典与口径 — BridgeFlow AI</title>
+<link rel="stylesheet" href="assets/cds.css">
+</head>
+<body data-page="dictionary">
+<div id="chrome"></div>
+
+<div class="wrap">
+  <header class="pagehead">
+    <p class="kicker">05 · Dictionary and conventions</p>
+    <h1><span class="i18n" data-zh="字典、匹配与口径" data-en="Dictionary, matching and conventions"></span></h1>
+    <p class="lead i18n"
+       data-zh="字典由人预设，模型只做匹配。匹配的候选集是封闭的——只能来自标准字典里已经声明的字段——所以每条候选都能附上证据，让人做一道选择题。创造是开放的，没有知识库它立不住，所以「让模型发明一份字典」这类设计在这里不存在。"
+       data-en="The dictionary is authored by people; the model only matches against it. The candidate set is closed — only fields the dictionary already declares — so every candidate arrives with evidence as a multiple-choice question. Invention is open-ended and cannot stand without a knowledge base, so nothing here lets a model make a dictionary up."></p>
+    <nav class="toc">
+      <a href="#browse"><span class="i18n" data-zh="字段字典" data-en="Field dictionary"></span></a>
+      <a href="#profile"><span class="i18n" data-zh="列特征画像" data-en="Column profile"></span></a>
+      <a href="#match"><span class="i18n" data-zh="列匹配提议" data-en="Match proposal"></span></a>
+      <a href="#entities"><span class="i18n" data-zh="实体关系与别名" data-en="Relations and aliases"></span></a>
+      <a href="#memory"><span class="i18n" data-zh="映射记忆与失效" data-en="Memory and invalidation"></span></a>
+      <a href="#conventions"><span class="i18n" data-zh="口径清单" data-en="Conventions"></span></a>
+      <a href="#confirm"><span class="i18n" data-zh="确认与替换" data-en="Confirm or replace"></span></a>
+      <a href="#versions"><span class="i18n" data-zh="版本与冲突" data-en="Versions and conflicts"></span></a>
+    </nav>
+  </header>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="browse">
+    <header><h3 class="i18n" data-zh="字段字典" data-en="The field dictionary"></h3><span class="id">D01</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="E05-UC01。列名、实体类型、关系一律只来自这份 YAML：谈成什么样，改 YAML，不改代码。界面把「已声明」与「未声明」摆在一起，因为未声明才是导入失败的原因，而它在旧界面上根本看不见。"
+       data-en="E05-UC01. Column names, entity kinds and relations come only from this YAML: when the business agrees something, the YAML changes, not the code. The interface shows declared and undeclared side by side, because undeclared is what makes an import fail and it used to be invisible."></p>
+    <div class="frame">
+      <div class="pane">
+        <div class="pad divide"><div class="between">
+          <div><h4 class="i18n" data-zh="字段字典" data-en="Field dictionary"></h4><p class="hint mono">data/mappings/field-dictionary.yaml @ v8</p></div>
+          <div class="row"><span class="chip ok i18n" data-zh="生效中" data-en="In force"></span><span class="btn quiet sm i18n" data-zh="版本历史" data-en="Version history"></span></div>
+        </div></div>
+        <div class="scroll-x"><table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="部门" data-en="Department"></th>
+            <th class="i18n" data-zh="声明字段" data-en="Declared field"></th>
+            <th class="i18n" data-zh="实体类型" data-en="Entity kind"></th>
+            <th class="i18n" data-zh="可连接" data-en="Joinable"></th>
+            <th class="i18n" data-zh="单位与精度" data-en="Unit and precision"></th>
+            <th class="i18n" data-zh="公式" data-en="Formula"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td><span class="chip info i18n" data-zh="生产" data-en="Production"></span></td><td class="mono">project_code</td><td class="hint">project</td><td><span class="chip ok i18n" data-zh="是" data-en="Yes"></span></td><td class="e">—</td><td class="e">—</td></tr>
+            <tr><td><span class="chip info i18n" data-zh="生产" data-en="Production"></span></td><td class="mono">received_volume</td><td class="hint">measure</td><td class="e i18n" data-zh="否" data-en="No"></td><td class="i18n" data-zh="方 · 1 位" data-en="m³ · 1 decimal"></td><td class="e">—</td></tr>
+            <tr><td><span class="chip info i18n" data-zh="生产" data-en="Production"></span></td><td class="mono">signoff_rate</td><td class="hint">ratio</td><td class="e i18n" data-zh="否" data-en="No"></td><td class="i18n" data-zh="% · 2 位" data-en="% · 2 decimals"></td><td class="mono">received ÷ shipped</td></tr>
+            <tr><td><span class="chip info i18n" data-zh="采购" data-en="Procurement"></span></td><td class="mono">material_code</td><td class="hint">material</td><td><span class="chip ok i18n" data-zh="是" data-en="Yes"></span></td><td class="e">—</td><td class="e">—</td></tr>
+            <tr><td><span class="chip info i18n" data-zh="市场" data-en="Marketing"></span></td><td class="e" style="font-style:italic"><span class="i18n" data-zh="（3 个上传列未声明）" data-en="(3 uploaded columns undeclared)"></span></td><td class="e">—</td><td class="e">—</td><td class="e">—</td><td><span class="btn quiet sm i18n" data-zh="查看候选" data-en="See candidates"></span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="pad" style="border-top:.5px solid var(--border)">
+          <p class="hint i18n" data-zh="字典缺席时明确报「未配置」，不退回猜测。这与「无证据的结论被拒绝，而不是降级显示」是同一条原则。" data-en="A missing dictionary reports “not configured” rather than falling back to a guess. This is the same principle as refusing an unevidenced conclusion instead of showing a weaker version of it."></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="profile">
+    <header><h3 class="i18n" data-zh="列特征画像" data-en="Column profile"></h3><span class="id">D02</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="E05-UC02：有未知列需要匹配，但不能把单元格内容交给模型。画像只描述列的形状——唯一度、填充率、跨部门值重合度——全部不含单元格内容。这一屏的整个存在理由，就是让匹配这件事不需要看见数据。"
+       data-en="E05-UC02: unknown columns need matching without exposing cell values to the model. A profile describes only the shape of a column — uniqueness, fill rate, cross-department value overlap — and carries no cell contents at all. That is the entire reason this screen exists: matching without seeing the data."></p>
+    <div class="frame">
+      <div class="pane pad stack">
+        <div class="between"><h4 class="mono">市场.回款金额（含税）</h4><span class="chip warn i18n" data-zh="字典未声明" data-en="Undeclared"></span></div>
+        <div class="grid4">
+          <div class="metric"><dt class="i18n" data-zh="唯一度" data-en="Uniqueness"></dt><dd><b>0.98</b></dd></div>
+          <div class="metric"><dt class="i18n" data-zh="填充率" data-en="Fill rate"></dt><dd><b>1.00</b></dd></div>
+          <div class="metric"><dt class="i18n" data-zh="类型一致性" data-en="Type consistency"></dt><dd><b>1.00</b><small class="i18n" data-zh="全部为数值" data-en="all numeric"></small></dd></div>
+          <div class="metric"><dt class="i18n" data-zh="非空行" data-en="Non-empty rows"></dt><dd><b>301</b></dd></div>
+        </div>
+        <p class="eyebrow i18n" data-zh="跨部门值重合度" data-en="Cross-department value overlap"></p>
+        <div class="stack">
+          <div><div class="between"><span class="muted mono">财务.已收款</span><span class="num">0.91</span></div><div class="bar"><span style="width:91%"></span></div></div>
+          <div><div class="between"><span class="muted mono">财务.合同额</span><span class="num">0.12</span></div><div class="bar"><span style="width:12%"></span></div></div>
+          <div><div class="between"><span class="muted mono">生产.出厂量</span><span class="num">0.00</span></div><div class="bar"><span style="width:2%"></span></div></div>
+        </div>
+        <div class="callout">
+          <h4 class="i18n" data-zh="这里没有的东西" data-en="What is not here"></h4>
+          <p class="i18n" data-zh="没有任何一个单元格的值，也没有样本行。重合度是集合运算的结果，算完就丢。20 万行时这一屏的大小不变。" data-en="Not one cell value and not one sample row. The overlap figures come from a set operation whose inputs are discarded. At 200,000 rows this screen is exactly the same size."></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="match">
+    <header><h3 class="i18n" data-zh="列匹配提议" data-en="Column match proposal"></h3><span class="id">D03</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="E05-UC03：模型提议，人审核。候选只能来自本部门字典已声明的列，所以这永远是一道选择题，不是一道填空题。没有候选时，说清「需要字典负责人决定」，不硬凑一个。"
+       data-en="E05-UC03: the model proposes and a person decides. Candidates come only from columns already declared for that department, so this is always multiple choice and never free text. With no candidate it says the dictionary owner has to decide, rather than manufacturing one."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <div class="between"><h4 class="mono" style="font-size:13.5px">市场.回款金额（含税）</h4><span class="chip warn i18n" data-zh="待确认" data-en="Open question"></span></div>
+        <p class="eyebrow i18n" data-zh="候选（来自已声明字段）" data-en="Candidates (from declared fields)"></p>
+        <div class="opt"><span class="box round on"></span><div><span class="mono">财务.已收款</span><p class="hint i18n" data-zh="值重合 0.91 · 唯一度与填充率一致 · 单位同为元" data-en="0.91 value overlap · matching uniqueness and fill · same unit"></p></div></div>
+        <div class="opt"><span class="box round"></span><div><span class="mono">财务.合同额</span><p class="hint i18n" data-zh="值重合 0.12" data-en="0.12 value overlap"></p></div></div>
+        <div class="opt"><span class="box round"></span><div><span class="i18n" data-zh="都不是，留作未声明" data-en="Neither; leave it undeclared"></span><p class="hint i18n" data-zh="这一列不进主表，进待确认。" data-en="The column stays out of the master and becomes an open item."></p></div></div>
+        <div class="row"><span class="btn primary i18n" data-zh="提交给审批" data-en="Send for approval"></span></div>
+        <p class="hint i18n" data-zh="批准后用于后续导入，本批次不改；重新导入即生效。" data-en="Approval applies to later imports and leaves this batch alone; re-import to use it."></p>
+      </div>
+      <div class="pane pad stack">
+        <div class="between"><h4 class="mono" style="font-size:13.5px">采购.备注 2</h4><span class="chip bad i18n" data-zh="没有候选" data-en="No candidate"></span></div>
+        <div class="callout bad">
+          <h4 class="i18n" data-zh="需要字典负责人决定" data-en="The dictionary owner has to decide"></h4>
+          <p class="i18n" data-zh="这一列的形状与采购部已声明的任何字段都不相符。系统不会为它发明一个字段。" data-en="This column's shape matches no field declared for procurement, and the system will not invent one for it."></p>
+        </div>
+        <div class="row"><span class="btn i18n" data-zh="通知字典负责人" data-en="Notify the dictionary owner"></span><span class="btn quiet i18n" data-zh="导入时剔除" data-en="Drop it at import"></span></div>
+        <hr class="rule" style="margin:6px 0">
+        <p class="eyebrow i18n" data-zh="导入时剔除的列" data-en="Columns dropped at import"></p>
+        <p class="hint mono">采购.空列 F · <span class="i18n" data-zh="无可提取的显示值" data-en="no displayable value"></span><br>市场.打印页眉 · <span class="i18n" data-zh="无可提取的显示值" data-en="no displayable value"></span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="entities">
+    <header><h3 class="i18n" data-zh="跨部门实体关系与同类别名" data-en="Cross-department relations and same-entity aliases"></h3><span class="id">D04</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="E05-UC04。这两件事必须分开：别名是同一个东西的两种写法，关系是两个不同的东西之间的业务联系。字符串相似度只用于前者。SKU-A1 与 RM-Alu-6061 相似度 35.3，它们是产品与其原料——本来就不该字符相似，靠相似度去连它们只会连错。"
+       data-en="E05-UC04. Two different things kept apart: an alias is one entity written two ways, a relation is a business link between two different entities. String similarity serves only the first. SKU-A1 and RM-Alu-6061 score 35.3 and are a product and its raw material — they were never meant to look alike, and similarity would only mis-join them."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="同一实体的别名" data-en="Aliases of one entity"></p>
+        <div class="card flat stack pad-sm">
+          <div class="row"><code>城东物流园B区</code><span class="hint">≡</span><code>城东物流园 B 区</code></div>
+          <p class="hint"><span class="i18n" data-zh="依据" data-en="Evidence"></span>：<span class="i18n" data-zh="字符相似度 0.96 · 同一 project_code · 同期出现在财务与市场" data-en="0.96 string similarity · same project_code · both periods in finance and marketing"></span></p>
+          <div class="row"><span class="btn sm primary i18n" data-zh="接受" data-en="Accept"></span><span class="btn sm quiet i18n" data-zh="拒绝" data-en="Reject"></span></div>
+        </div>
+        <p class="hint i18n" data-zh="字符串相似度只用于这一类，已有测试锁死这条约束。" data-en="String similarity is confined to this case, and a test holds the constraint in place."></p>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="实体之间的关系" data-en="Relations between entities"></p>
+        <div class="card flat stack pad-sm">
+          <div class="row"><code>RM-Alu-6061</code><span class="hint i18n" data-zh="原料用于" data-en="material used in"></span><code>SKU-A1</code></div>
+          <p class="hint"><span class="i18n" data-zh="来源按可信度降序" data-en="Sources, most trusted first"></span>：</p>
+          <ol style="padding-left:18px;margin:0;font-size:12.5px">
+            <li><span class="i18n" data-zh="OA 字段字典声明" data-en="OA dictionary declaration"></span> — <span class="e i18n" data-zh="无" data-en="none"></span></li>
+            <li><span class="i18n" data-zh="行内共现" data-en="In-row co-occurrence"></span> — <b>214</b> <span class="i18n" data-zh="次" data-en="times"></span></li>
+            <li><span class="i18n" data-zh="模型裁决残余" data-en="Model adjudication, residual"></span> — <span class="i18n" data-zh="本次未使用" data-en="not used here"></span></li>
+          </ol>
+          <p class="hint"><span class="i18n" data-zh="字符相似度 35.3，未作为依据。" data-en="String similarity 35.3, not used as evidence."></span></p>
+          <div class="row"><span class="btn sm primary i18n" data-zh="提交给审批" data-en="Send for approval"></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="memory">
+    <header><h3 class="i18n" data-zh="映射记忆与失效" data-en="Mapping memory and invalidation"></h3><span class="id">D05</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="E05-UC05：下个月再导入时复用已批准的匹配，但依据变化时必须失效。列的形状变了还照旧沿用，等于把上个月的判断悄悄套在这个月的数据上——所以失效的那几条要单独列出来，重新确认。"
+       data-en="E05-UC05: next month's import reuses approved matches, and an approved match must lapse when its evidence changes. Reusing a decision after the column's shape changed quietly applies last month's judgement to this month's data, so lapsed entries are listed separately and asked again."></p>
+    <div class="frame">
+      <div class="pane">
+        <div class="pad divide"><div class="row"><span class="chip ok i18n" data-zh="沿用 12 条" data-en="12 reused"></span><span class="chip warn i18n" data-zh="失效 2 条" data-en="2 lapsed"></span></div></div>
+        <div class="scroll-x"><table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="上传列" data-en="Uploaded column"></th>
+            <th class="i18n" data-zh="匹配到" data-en="Matched to"></th>
+            <th class="i18n" data-zh="批准于" data-en="Approved"></th>
+            <th class="i18n" data-zh="批准人" data-en="Approved by"></th>
+            <th class="i18n" data-zh="状态" data-en="State"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="mono">回款金额（含税）</td><td class="mono">财务.已收款</td><td class="hint">2024-06-03</td><td class="hint i18n" data-zh="李工" data-en="Li"></td><td><span class="chip ok i18n" data-zh="已沿用" data-en="Reused"></span></td></tr>
+            <tr><td class="mono">物料编码</td><td class="mono">生产.产品编码</td><td class="hint">2024-05-08</td><td class="hint i18n" data-zh="王工" data-en="Wang"></td><td><span class="chip ok i18n" data-zh="已沿用" data-en="Reused"></span></td></tr>
+            <tr><td class="mono">项目简称</td><td class="mono">生产.project_code</td><td class="hint">2024-06-03</td><td class="hint i18n" data-zh="李工" data-en="Li"></td><td><span class="chip warn i18n" data-zh="需重新确认" data-en="Confirm again"></span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="pad" style="border-top:.5px solid var(--border)">
+          <div class="callout warn">
+            <h4 class="i18n" data-zh="列的形状变了，之前的决定没有沿用" data-en="The column's shape changed, so the earlier decision was not reused"></h4>
+            <p><span class="i18n" data-zh="项目简称：唯一度由 0.99 降到 0.41，填充率由 1.00 降到 0.62。这与批准时看到的不是同一列。" data-en="Project short name: uniqueness fell from 0.99 to 0.41 and fill from 1.00 to 0.62. This is not the column that was approved."></span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="conventions">
+    <header><h3 class="i18n" data-zh="口径清单" data-en="Declared conventions"></h3><span class="id">D06</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E13-UC05：系统按通用做法补了口径，业务方要逐条确认或替换。每条给出内容、依据、影响的字段，以及当前批次中受影响的单元格数——最后这个数字决定了确认它值不值得先做。"
+       data-en="E13-UC05: conventions filled in by best practice have to be confirmed or replaced by the business. Each shows its content, its rationale, the fields it touches and how many cells in the current batch depend on it — that last number is what tells somebody whether confirming it comes first."></p>
+    <div class="frame">
+      <div class="pane scroll-x">
+        <table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="编号" data-en="ID"></th>
+            <th class="i18n" data-zh="口径" data-en="Convention"></th>
+            <th class="i18n" data-zh="依据" data-en="Rationale"></th>
+            <th class="i18n" data-zh="影响字段" data-en="Fields"></th>
+            <th class="i18n" data-zh="受影响单元格" data-en="Cells"></th>
+            <th class="i18n" data-zh="状态" data-en="State"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="mono">C01</td><td class="i18n" data-zh="增值税税率 13%" data-en="VAT rate 13%"></td><td class="hint i18n" data-zh="按通用做法" data-en="Best practice"></td><td class="mono">margin · collected</td><td class="n">1,482</td><td><span class="chip warn i18n" data-zh="待确认" data-en="Open question"></span></td></tr>
+            <tr><td class="mono">C02</td><td class="i18n" data-zh="缺口 = 出厂量 − 实际量" data-en="Gap = shipped − received"></td><td class="hint i18n" data-zh="按通用做法" data-en="Best practice"></td><td class="mono">shortfall</td><td class="n">586</td><td><span class="chip warn i18n" data-zh="待确认" data-en="Open question"></span></td></tr>
+            <tr><td class="mono">C03</td><td class="i18n" data-zh="按日汇总到月" data-en="Daily figures roll up to the month"></td><td class="hint i18n" data-zh="业务确认 2024-05-20" data-en="Business confirmed 2024-05-20"></td><td class="mono">all measures</td><td class="n">1,482</td><td><span class="chip ok i18n" data-zh="已确认" data-en="Confirmed"></span></td></tr>
+            <tr><td class="mono">C04</td><td class="i18n" data-zh="签收率关注阈值 95%" data-en="Sign-off attention threshold 95%"></td><td class="hint i18n" data-zh="业务确认 2024-05-20" data-en="Business confirmed 2024-05-20"></td><td class="mono">signoff_rate</td><td class="n">586</td><td><span class="chip ok i18n" data-zh="已确认" data-en="Confirmed"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="confirm">
+    <header><h3 class="i18n" data-zh="确认或替换一条口径" data-en="Confirming or replacing a convention"></h3><span class="id">D07</span><span class="st designed">DESIGNED</span></header>
+    <p class="cap i18n"
+       data-zh="替换必须附来源（文件、会议纪要或书面说明），无来源的替换被拒绝。发布前给出影响预览：受影响单元格数与数值变化，让人在按下去之前看见后果。已冻结的批次不改写，重算才使用新版本。"
+       data-en="A replacement must carry its source — a file, a meeting record or a written note — and an unsourced one is refused. Before publishing, an impact preview shows how many cells move and by how much, so the consequence is visible before the button. Frozen batches are not rewritten; the new version applies on recomputation."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:620px">
+        <div class="between"><h4><span class="mono">C01</span> · <span class="i18n" data-zh="增值税税率" data-en="VAT rate"></span></h4><span class="chip warn i18n" data-zh="待确认" data-en="Open question"></span></div>
+        <div class="opt"><span class="box round on"></span><div><span class="i18n" data-zh="确认 13% 就是本企业适用税率" data-en="Confirm 13% is the rate this company uses"></span></div></div>
+        <div class="opt"><span class="box round"></span><div><span class="i18n" data-zh="替换为其他值或公式" data-en="Replace with another value or formula"></span></div></div>
+        <label class="field"><span class="lab i18n" data-zh="来源（必填）" data-en="Source (required)"></span><span class="input">2024-05 财务部书面说明《增值税适用税率》</span></label>
+        <p class="eyebrow i18n" data-zh="影响预览" data-en="Impact preview"></p>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="字段" data-en="Field"></th><th class="i18n" data-zh="受影响单元格" data-en="Cells"></th><th class="i18n" data-zh="当前" data-en="Now"></th><th class="i18n" data-zh="确认后" data-en="After"></th></tr></thead>
+          <tbody>
+            <tr><td class="mono">margin</td><td class="n">1,482</td><td class="n">62.40 <span class="grade g3">G3</span></td><td class="n">62.40 <span class="grade g2">G2</span></td></tr>
+            <tr><td class="mono">collected</td><td class="n">1,482</td><td class="n">1,042,000.00 <span class="grade g3">G3</span></td><td class="n">1,042,000.00 <span class="grade g2">G2</span></td></tr>
+          </tbody>
+        </table></div>
+        <p class="hint i18n" data-zh="数值不变，等级由 G3 升为 G2——确认一条口径改变的是可信度，不是数字。替换才会改数字。" data-en="The figures do not move; the grade rises from G3 to G2. Confirming a convention changes how much a number can be trusted, not the number. Replacing one changes the number."></p>
+        <div class="row"><span class="btn primary i18n" data-zh="提交给审批发布" data-en="Send for approval to publish"></span><span class="btn quiet i18n" data-zh="取消" data-en="Cancel"></span></div>
+        <div class="callout warn">
+          <p class="i18n" data-zh="已冻结的 2024-07 批次不会被改写。发布后该批次会提示「有更新的口径版本，可重算」。" data-en="The frozen 2024-07 batch is not rewritten. After publishing it will offer “a newer convention version exists; you can recompute”."></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="versions">
+    <header><h3 class="i18n" data-zh="版本、审计与并发冲突" data-en="Versions, audit and concurrent edits"></h3><span class="id">D08</span><span class="st designed">DESIGNED</span></header>
+    <p class="cap i18n"
+       data-zh="每个口径版本保留来源、确认人、时间与审批回执。两个人同时改同一条，后提交的按版本号冲突拒绝——不静默覆盖前一个人的决定，因为那个决定后面挂着一份来源和一次审批。"
+       data-en="Every version keeps its source, its confirmer, the time and the approval receipt. When two people edit the same convention, the later submission is refused on a version conflict rather than silently overwriting a decision that has a source and an approval behind it."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="版本历史" data-en="Version history"></p>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="版本" data-en="Version"></th><th class="i18n" data-zh="变更" data-en="Change"></th><th class="i18n" data-zh="确认人" data-en="Confirmed by"></th></tr></thead>
+          <tbody>
+            <tr><td class="mono">v8</td><td class="i18n" data-zh="C03 由「按通用做法」改为「已确认」" data-en="C03 moved from best practice to confirmed"></td><td class="hint i18n" data-zh="陈工 · 2024-05-20" data-en="Chen · 2024-05-20"></td></tr>
+            <tr><td class="mono">v7</td><td class="i18n" data-zh="新增采购 material_code 为可连接列" data-en="Procurement material_code declared joinable"></td><td class="hint i18n" data-zh="王工 · 2024-05-08" data-en="Wang · 2024-05-08"></td></tr>
+            <tr><td class="mono">v6</td><td class="i18n" data-zh="初始字典" data-en="Initial dictionary"></td><td class="hint i18n" data-zh="王工 · 2024-04-11" data-en="Wang · 2024-04-11"></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="并发冲突" data-en="Concurrent edit"></p>
+        <div class="callout bad">
+          <h4 class="i18n" data-zh="这条口径已被他人修改" data-en="Somebody else changed this convention"></h4>
+          <p class="i18n" data-zh="你基于 v7 编辑，当前已是 v8（陈工，14:02）。你的修改未保存，也没有覆盖对方的。" data-en="You edited from v7 and the current version is v8 (Chen, 14:02). Your change was not saved and did not overwrite theirs."></p>
+        </div>
+        <div class="row"><span class="btn i18n" data-zh="查看 v8 的改动" data-en="See what changed in v8"></span><span class="btn primary i18n" data-zh="基于 v8 重新编辑" data-en="Re-edit from v8"></span></div>
+        <p class="hint i18n" data-zh="你填的来源与说明保留在输入框里，重新编辑时不用重打。" data-en="The source and note you typed stay in the form; re-editing does not make you type them again."></p>
+      </div>
+    </div>
+  </section>
+
+  <div id="pager"></div>
+</div>
+
+<script src="assets/design.js"></script>
+</body>
+</html>

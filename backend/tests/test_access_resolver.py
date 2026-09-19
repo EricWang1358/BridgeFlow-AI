@@ -152,6 +152,26 @@ def test_a_missing_structure_file_fails_loudly(configured, monkeypatch, tmp_path
     assert failure.value.status_code == 503 and "not configured" in failure.value.detail
 
 
+def test_space_departments_maps_space_ids_to_declared_departments(configured):
+    mapping = access_resolver.space_departments()
+    assert mapping == {"spc_production": "production", "spc_procurement": "procurement",
+                       "spc_finance": "finance", "spc_marketing": "marketing"}
+    assert "spc_master" not in mapping
+
+
+def test_department_for_space_answers_declared_unmapped_and_unknown(configured):
+    assert access_resolver.department_for_space("spc_production") == "production"
+    assert access_resolver.department_for_space("spc_master") is None
+    assert access_resolver.department_for_space("spc_unknown") is None
+
+
+def test_department_for_space_fails_closed_on_a_missing_structure_file(configured, monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "access_control_path", str(tmp_path / "missing.yaml"))
+    with pytest.raises(HTTPException) as failure:
+        access_resolver.department_for_space("spc_production")
+    assert failure.value.status_code == 503
+
+
 def _invalid(configured, mutate):
     _, _, acl = configured
     config = yaml.safe_load(acl.read_text())

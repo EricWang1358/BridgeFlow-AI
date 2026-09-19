@@ -156,6 +156,32 @@ tenant 态发版即生效，无需全员重登），`member_role` 的 admin/memb
 桥接回 union_id。两个运维要点：**应用本体必须是每个知识库的成员**（否则 131006）；
 **群组/部门型成员不展开**，授权以「人直接加进知识库」为准。
 
+## 导入时按知识库自动确定部门（2026-09-19）
+
+导入文件前不再逐个人工选部门：`/tools/feishu-wiki-spaces` 的每个 space 增加可空
+`department` 字段，来自 `access-control.yaml` `spaces.departments` 的人工声明
+（`access_resolver.space_departments()`，纯结构查找，不询问飞书、不做推断）。
+浏览器端对已映射空间的文件行渲染锁定按钮（部门由该库决定），未映射空间
+（总经办、个人文档库）与 Drive 我的空间保持手动下拉。
+
+- **请求契约**：wiki 导入随每个文件上报 `wiki_space_id`（`ImportFile` 可选字段）。
+  后端导入端校验一致性：`wiki_space_id` 命中声明映射但与提交的 `department` 不符 →
+  422 明确报错，不静默覆盖；未命中映射或未提供 → 行为不变。校验顺序：
+  `_check_upload_scope`（403）在前、一致性（422）在后。
+- **边界**：校验依据浏览器上报的 space_id，防误选、不防恶意谎报——谎报受两道既有
+  闸门约束（飞书 enforce 文件可达性；`_check_upload_scope` enforce 部门 ⊆ 授权部门），
+  与手动下拉相比攻击面无增量。tenant 模型工具路径 `/tools/feishu-import` 不接入
+  此校验（字段在那里惰性）。
+- **fail-closed**：`access-control.yaml` 缺失或非法时，wiki-spaces 列表整体 503
+  （明确报错，不退回「静默手动」）；导入端在无 `wiki_space_id` 时不读该文件，
+  Drive 导入与既有测试零影响。
+- **顺手修复**：切换知识库时立即清空上一空间的节点列表与面包屑（原先残留到新
+  响应返回，自动部门下会在残留行上无声误指派）。
+- **兼容**：新后端 + 旧前端（多余键被无视）、新前端 + 旧后端（`department` 缺失
+  → falsy → 手动下拉）均优雅退化为现状。响应仅增加可空部门字符串，无单元格内容。
+- **离线验证**：`BRIDGEFLOW_TEST_FEISHU=1 pnpm --dir plugins smoke:web` 走
+  浏览器侧打桩的 wiki 浏览与提交契约（提交体含 `wiki_space_id`）。
+
 ## 需要人工操作与输入（阻塞项）
 
 | # | 事项 | 谁 | 说明 |

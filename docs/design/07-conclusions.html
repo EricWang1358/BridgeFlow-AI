@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7 · 结论 — BridgeFlow AI</title>
+<link rel="stylesheet" href="assets/cds.css">
+</head>
+<body data-page="conclusions">
+<div id="chrome"></div>
+
+<div class="wrap">
+  <header class="pagehead">
+    <p class="kicker">07 · Conclusions</p>
+    <h1><span class="i18n" data-zh="月度结论" data-en="Monthly conclusions"></span></h1>
+    <p class="lead i18n"
+       data-zh="这一段不新增任何计算口径：所有数字仍来自总表与声明指标，它只决定怎么比、怎么排、怎么说、怎么交付。结论页是只读投影，生成过程模型调用次数为 0。"
+       data-en="Nothing here computes anything new: every figure still comes from the master and the declared metrics. This section governs only comparison, ordering, wording and delivery. The brief is a read-only projection built with zero model calls."></p>
+    <nav class="toc">
+      <a href="#brief"><span class="i18n" data-zh="本月结论" data-en="The monthly brief"></span></a>
+      <a href="#compare"><span class="i18n" data-zh="跨期对比" data-en="Period comparison"></span></a>
+      <a href="#charts"><span class="i18n" data-zh="指标图" data-en="Charts"></span></a>
+      <a href="#chain"><span class="i18n" data-zh="依据链" data-en="The dependency chain"></span></a>
+      <a href="#export"><span class="i18n" data-zh="报告导出" data-en="Report export"></span></a>
+      <a href="#stale"><span class="i18n" data-zh="过期与拒绝" data-en="Stale and refused"></span></a>
+    </nav>
+  </header>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="brief">
+    <header><h3 class="i18n" data-zh="本月结论" data-en="This month"></h3><span class="id">C01</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E13-UC01：管理层一页看懂本月与要做的决定。顺序与关键指标来自字典的 brief 声明，缺声明就拒绝生成，不临时挑几个指标凑一页。每个数字可点开，跳到指标来源或单元格出处。"
+       data-en="E13-UC01: one page for management with this month's conclusions and the decisions they imply. Order and key metrics come from the dictionary's brief declaration, and with no declaration the page refuses rather than assembling a plausible-looking selection. Every figure opens onto its metric sources or cell provenance."></p>
+    <div class="frame">
+      <div class="pane pad stack-lg">
+        <div class="between">
+          <h3><span class="i18n" data-zh="本月结论" data-en="This month"></span> · 2024-07</h3>
+          <span class="chip warn i18n" data-zh="部分完成" data-en="Partial"></span>
+        </div>
+        <div class="callout warn">
+          <h4 class="i18n" data-zh="部分完成" data-en="Partial"></h4>
+          <p><span class="i18n" data-zh="以下部门研判未通过，其指标不参与排序，也不显示为正常" data-en="These departments did not validate; their metrics are neither ranked nor shown as OK"></span>：<span class="i18n" data-zh="财务" data-en="Finance"></span></p>
+        </div>
+        <div>
+          <p><span class="big">3</span> <span class="i18n" data-zh="项需关注" data-en="need attention"></span> · <span class="big">9</span> <span class="i18n" data-zh="项正常" data-en="OK"></span> · <span class="big">11</span> <span class="i18n" data-zh="待确认事项" data-en="Open items"></span></p>
+          <p class="hint"><span class="i18n" data-zh="依据等级" data-en="Evidence grades"></span>：G1 12 · G2 9 · G3 4 · G4 3 · <span class="i18n" data-zh="出处缺失" data-en="Provenance missing"></span> 1</p>
+        </div>
+        <div>
+          <h4 style="margin-bottom:8px" class="i18n" data-zh="关键指标" data-en="Key metrics"></h4>
+          <dl class="grid3">
+            <div class="metric"><dt class="i18n" data-zh="签收率" data-en="Sign-off rate"></dt><dd><b>85.26%</b> <span class="chip warn i18n" data-zh="需关注" data-en="Attention"></span><span class="grade g2">G2</span><small><span class="i18n" data-zh="实际量 ÷ 出厂量" data-en="received ÷ shipped"></span> · <span class="i18n" data-zh="运营负责人" data-en="Operations director"></span></small></dd></div>
+            <div class="metric"><dt class="i18n" data-zh="实际量" data-en="Received volume"></dt><dd><b>5,600.0 <span class="i18n" data-zh="方" data-en="m³"></span></b> <span class="chip ok i18n" data-zh="正常" data-en="OK"></span><span class="grade g1">G1</span><small>+320.0 <span class="i18n" data-zh="方（+6.1%，较 2024-06）" data-en="m³ (+6.1%, vs 2024-06)"></span></small></dd></div>
+            <div class="metric"><dt class="i18n" data-zh="单方毛利（不含税）" data-en="Margin per m³ (ex-tax)"></dt><dd><b>62.40 <span class="i18n" data-zh="元" data-en="元"></span></b> <span class="chip ok i18n" data-zh="正常" data-en="OK"></span><span class="grade g3">G3</span><small class="i18n" data-zh="依赖未确认的 13% 增值税口径" data-en="Depends on an unconfirmed 13% VAT convention"></small></dd></div>
+            <div class="metric"><dt class="i18n" data-zh="回款周期" data-en="Collection days"></dt><dd><b>47.0 <span class="i18n" data-zh="天" data-en="days"></span></b> <span class="chip warn i18n" data-zh="需关注" data-en="Attention"></span><span class="grade g2">G2</span><small class="i18n" data-zh="销售负责人" data-en="Sales director"></small></dd></div>
+          </dl>
+        </div>
+        <div>
+          <h4 style="margin-bottom:8px" class="i18n" data-zh="需关注事项（按声明的严重度排序）" data-en="Attention items (declared severity order)"></h4>
+          <ol style="padding-left:18px;margin:0">
+            <li style="margin-bottom:14px">
+              <div class="check"><span class="title i18n" data-zh="第二实验学校扩建 · 签收率" data-en="No.2 school extension · sign-off rate"></span><b>85.32%</b><span class="grade g2">G2</span></div>
+              <p class="hint"><span class="i18n" data-zh="低于阈值" data-en="Below threshold"></span> 95.00% · <span class="i18n" data-zh="决定人" data-en="Decision owner"></span> <span class="i18n" data-zh="运营负责人" data-en="Operations director"></span></p>
+              <p style="font-size:13px"><span class="i18n" data-zh="建议动作" data-en="Proposed action"></span>：<span class="i18n" data-zh="复核该项目 7 月的低签收车次。" data-en="Review that project's low sign-off trips for July."></span><span class="grade g4">G4</span></p>
+            </li>
+            <li style="margin-bottom:14px">
+              <div class="check"><span class="title i18n" data-zh="回款周期" data-en="Collection days"></span><b>47.0 <small><span class="i18n" data-zh="天" data-en="days"></span></small></b><span class="grade g2">G2</span></div>
+              <p class="hint"><span class="i18n" data-zh="高于阈值" data-en="Above threshold"></span> 40.0 <span class="i18n" data-zh="天 · 决定人 销售负责人" data-en="days · Decision owner Sales director"></span></p>
+            </li>
+          </ol>
+        </div>
+        <div>
+          <h4 style="margin-bottom:8px" class="i18n" data-zh="待确认事项" data-en="Open items"></h4>
+          <ul style="padding-left:18px;margin:0;font-size:13.5px">
+            <li><span class="i18n" data-zh="总表待确认" data-en="Master open questions"></span>：1 <span class="btn quiet sm i18n" data-zh="跨部门总表 ↗" data-en="Cross-department master ↗"></span></li>
+            <li><span class="i18n" data-zh="隔离行" data-en="Quarantined rows"></span>：6</li>
+            <li><span class="i18n" data-zh="待确认列匹配" data-en="Pending column matches"></span>：4</li>
+          </ul>
+          <p class="hint" style="margin-top:8px"><span class="i18n" data-zh="完整性" data-en="Completeness"></span>：1,471 / 1,482 <span class="i18n" data-zh="完整行 · 口径假设 4 条" data-en="complete rows · 4 declared conventions"></span></p>
+        </div>
+        <details><summary class="hint i18n" data-zh="管理决定与限制" data-en="Management decision and limitations"></summary></details>
+        <div class="row"><span class="btn i18n" data-zh="保存为笔记本产物" data-en="Save as a notebook artifact"></span><span class="hint i18n" data-zh="生成这一页调用模型 0 次。" data-en="Building this page made zero model calls."></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="compare">
+    <header><h3 class="i18n" data-zh="跨期对比与差异分解" data-en="Period comparison and variance decomposition"></h3><span class="id">C02</span><span class="st designed">DESIGNED</span></header>
+    <p class="cap i18n"
+       data-zh="E13-UC02：本月的数字要与上月、去年同期或计划比才有意义。分解的三部分——新增、消失、持续——之和必须等于总变化，这既是校验也是读法：读者一眼看出增长来自新项目还是老项目。基期缺失显示「无基期」，不以 0 代替。"
+       data-en="E13-UC02: this month's figures only mean something against last month, the same month last year, or plan. The decomposition into new, discontinued and continuing entities must sum to the total change — that is both the check and the reading, because it shows at a glance whether growth came from new projects or existing ones. A missing base shows “no base period” rather than a zero."></p>
+    <div class="frame">
+      <div class="pane pad stack">
+        <div class="row">
+          <span class="chip info i18n" data-zh="较上月" data-en="Versus last month"></span>
+          <span class="chip i18n" data-zh="较去年同期" data-en="Versus last year"></span>
+          <span class="chip i18n" data-zh="较计划" data-en="Versus plan"></span>
+          <span class="hint i18n" data-zh="两期使用同一字典版本 v8" data-en="Both periods use dictionary v8"></span>
+        </div>
+        <div class="scroll"><table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="项目" data-en="Project"></th>
+            <th>2024-06</th><th>2024-07</th>
+            <th class="i18n" data-zh="绝对变化" data-en="Absolute"></th>
+            <th class="i18n" data-zh="相对变化" data-en="Relative"></th>
+            <th class="i18n" data-zh="状态" data-en="Status"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="第二实验学校扩建" data-en="No.2 school extension"></td><td class="n">1,763.0</td><td class="n">1,058.0</td><td class="n">−705.0</td><td class="n">−39.99%</td><td><span class="chip warn i18n" data-zh="需关注" data-en="Attention"></span></td></tr>
+            <tr><td class="i18n" data-zh="滨江路桥改造" data-en="Riverside bridge"></td><td class="n">1,940.0</td><td class="n">2,104.0</td><td class="n">+164.0</td><td class="n">+8.45%</td><td><span class="chip ok i18n" data-zh="正常" data-en="OK"></span></td></tr>
+            <tr><td class="i18n" data-zh="城东物流园 B 区" data-en="East logistics park B"></td><td class="e i18n" data-zh="无基期" data-en="No base period"></td><td class="n">2,058.0</td><td class="n">+2,058.0</td><td class="e i18n" data-zh="无法计算" data-en="Not computable"></td><td><span class="chip i18n" data-zh="新增" data-en="New"></span></td></tr>
+            <tr><td class="i18n" data-zh="北环桥面修复" data-en="North ring resurfacing"></td><td class="n">1,577.0</td><td class="e i18n" data-zh="无" data-en="None"></td><td class="n">−1,577.0</td><td class="n">−100.00%</td><td><span class="chip i18n" data-zh="消失" data-en="Discontinued"></span></td></tr>
+            <tr class="sum"><td class="i18n" data-zh="合计" data-en="Total"></td><td class="n">5,280.0</td><td class="n">5,220.0</td><td class="n">−60.0</td><td class="n">−1.14%</td><td></td></tr>
+          </tbody>
+        </table></div>
+        <p class="eyebrow i18n" data-zh="差异分解" data-en="Variance decomposition"></p>
+        <div class="grid4">
+          <div class="metric"><dt class="i18n" data-zh="新增实体" data-en="New entities"></dt><dd><b class="ins">+2,058.0</b></dd></div>
+          <div class="metric"><dt class="i18n" data-zh="消失实体" data-en="Discontinued"></dt><dd><b class="del" style="text-decoration:none;color:var(--text-danger)">−1,577.0</b></dd></div>
+          <div class="metric"><dt class="i18n" data-zh="持续实体" data-en="Continuing"></dt><dd><b>−541.0</b></dd></div>
+          <div class="metric" style="background:var(--bg-accent)"><dt class="i18n" data-zh="合计变化" data-en="Total change"></dt><dd><b>−60.0</b><small class="i18n" data-zh="三部分之和相等" data-en="the three parts sum to this"></small></dd></div>
+        </div>
+        <div class="callout bad">
+          <h4 class="i18n" data-zh="字典版本不同时拒绝对比" data-en="Different dictionary versions refuse a comparison"></h4>
+          <p class="i18n" data-zh="若两期使用不同字典版本且未声明映射，这一屏不出结果，改为列出不一致的字段名。用两套字段定义算出来的变化，是没有意义的数字。" data-en="If two periods use different dictionary versions with no declared mapping, this screen produces nothing and lists the mismatched field names instead. A change computed across two sets of field definitions is a meaningless number."></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="charts">
+    <header><h3 class="i18n" data-zh="指标图与下钻" data-en="Charts with drill-down"></h3><span class="id">C03</span><span class="st designed">DESIGNED</span></header>
+    <p class="cap i18n"
+       data-zh="E13-UC03。标题写成结论句；阈值线与数据来自同一声明版本；缺失期间显示为断点，不插值；每张图配一份同值的表格视图。少于两期不画趋势线，改为说明——一个点的折线图是在假装有趋势。"
+       data-en="E13-UC03. The title states the conclusion; the threshold line and the data share one declaration version; a missing period stays a gap rather than an interpolation; and every chart ships an equivalent table. Fewer than two periods shows an explanation instead of a line, because a one-point trend chart is pretending to have a trend."></p>
+    <div class="frame stack">
+      <div class="pane pad stack">
+        <div class="between"><h4 class="i18n" data-zh="签收率连续三个月低于 95% 阈值" data-en="Sign-off has sat below the 95% threshold for three months"></h4><span class="chip warn i18n" data-zh="需关注" data-en="Attention"></span></div>
+        <svg viewBox="0 0 640 190" width="100%" height="190" role="img" aria-labelledby="t1 d1">
+          <title id="t1">签收率趋势 / Sign-off rate trend</title>
+          <desc id="d1">2024-04 至 2024-07 的签收率折线，阈值线在 95%，2024-06 缺失显示为断点。</desc>
+          <line x1="52" y1="150" x2="620" y2="150" stroke="currentColor" stroke-opacity=".18"></line>
+          <line x1="52" y1="12" x2="52" y2="150" stroke="currentColor" stroke-opacity=".18"></line>
+          <line x1="52" y1="46" x2="620" y2="46" stroke="var(--border-warning)" stroke-dasharray="4 4"></line>
+          <text x="614" y="40" font-size="10.5" fill="var(--text-warning)" text-anchor="end">95.00%</text>
+          <polyline points="140,78 330,80" fill="none" stroke="var(--fill-accent)" stroke-width="2"></polyline>
+          <polyline points="330,80 520,112" fill="none" stroke="var(--fill-accent)" stroke-width="2" stroke-dasharray="3 5" stroke-opacity=".4"></polyline>
+          <circle cx="140" cy="78" r="4" fill="var(--fill-accent)"></circle>
+          <circle cx="330" cy="80" r="4" fill="var(--fill-accent)"></circle>
+          <circle cx="425" cy="96" r="4" fill="var(--surface-2)" stroke="var(--border-strong)" stroke-width="1.5" stroke-dasharray="2 2"></circle>
+          <circle cx="520" cy="112" r="4" fill="var(--fill-accent)"></circle>
+          <text x="140" y="168" font-size="11" fill="var(--text-secondary)" text-anchor="middle">2024-04</text>
+          <text x="330" y="168" font-size="11" fill="var(--text-secondary)" text-anchor="middle">2024-05</text>
+          <text x="425" y="168" font-size="11" fill="var(--text-muted)" text-anchor="middle">2024-06</text>
+          <text x="520" y="168" font-size="11" fill="var(--text-secondary)" text-anchor="middle">2024-07</text>
+          <text x="425" y="84" font-size="10.5" fill="var(--text-muted)" text-anchor="middle">—</text>
+          <text x="44" y="50" font-size="10.5" fill="var(--text-muted)" text-anchor="end">95</text>
+          <text x="44" y="154" font-size="10.5" fill="var(--text-muted)" text-anchor="end">80</text>
+        </svg>
+        <p class="hint i18n" data-zh="2024-06 无冻结批次，显示为断点；不以 0 代替，也不插值。点击任一数据点下钻到该月的出处。" data-en="2024-06 has no frozen batch and shows as a gap — never zeroed, never interpolated. Any point drills to that month's sources."></p>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="期间" data-en="Period"></th><th class="i18n" data-zh="签收率" data-en="Sign-off rate"></th><th class="i18n" data-zh="较上期" data-en="Change"></th><th class="i18n" data-zh="状态" data-en="Status"></th></tr></thead>
+          <tbody>
+            <tr><td>2024-04</td><td class="n">92.10%</td><td class="e">—</td><td><span class="chip warn i18n" data-zh="需关注" data-en="Attention"></span></td></tr>
+            <tr><td>2024-05</td><td class="n">92.08%</td><td class="n">−0.02 pp</td><td><span class="chip warn i18n" data-zh="需关注" data-en="Attention"></span></td></tr>
+            <tr><td>2024-06</td><td class="e i18n" data-zh="无基期" data-en="No base period"></td><td class="e i18n" data-zh="无法计算" data-en="Not computable"></td><td><span class="chip i18n" data-zh="待确认" data-en="Open question"></span></td></tr>
+            <tr><td>2024-07</td><td class="n">85.26%</td><td class="e i18n" data-zh="无基期" data-en="No base period"></td><td><span class="chip warn i18n" data-zh="需关注" data-en="Attention"></span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <div class="pane pad stack">
+        <h4 class="i18n" data-zh="本月实际量下降 60.0 方，来自老项目收缩与一个新项目开工相抵" data-en="Volume fell 60.0 m³: one new project nearly offset contraction in the existing ones"></h4>
+        <svg viewBox="0 0 640 170" width="100%" height="170" role="img" aria-labelledby="t2 d2">
+          <title id="t2">实际量差异瀑布 / Volume variance waterfall</title>
+          <desc id="d2">从 2024-06 的 5,280 方到 2024-07 的 5,220 方，新增 +2,058、消失 −1,577、持续 −541。</desc>
+          <rect x="40" y="70" width="80" height="60" rx="4" fill="var(--bg-neutral)"></rect>
+          <text x="80" y="146" font-size="10.5" fill="var(--text-secondary)" text-anchor="middle">2024-06</text>
+          <text x="80" y="62" font-size="11" fill="var(--text-primary)" text-anchor="middle">5,280.0</text>
+          <rect x="170" y="26" width="80" height="44" rx="4" fill="var(--bg-success)"></rect>
+          <text x="210" y="146" font-size="10.5" fill="var(--text-secondary)" text-anchor="middle">+2,058.0</text>
+          <text x="210" y="18" font-size="10.5" fill="var(--text-success)" text-anchor="middle">新增 / new</text>
+          <rect x="300" y="26" width="80" height="34" rx="4" fill="var(--bg-danger)"></rect>
+          <text x="340" y="146" font-size="10.5" fill="var(--text-secondary)" text-anchor="middle">−1,577.0</text>
+          <text x="340" y="18" font-size="10.5" fill="var(--text-danger)" text-anchor="middle">消失 / gone</text>
+          <rect x="430" y="60" width="80" height="12" rx="4" fill="var(--bg-danger)"></rect>
+          <text x="470" y="146" font-size="10.5" fill="var(--text-secondary)" text-anchor="middle">−541.0</text>
+          <text x="470" y="52" font-size="10.5" fill="var(--text-danger)" text-anchor="middle">持续 / same</text>
+          <rect x="545" y="72" width="80" height="58" rx="4" fill="var(--bg-accent)"></rect>
+          <text x="585" y="146" font-size="10.5" fill="var(--text-secondary)" text-anchor="middle">2024-07</text>
+          <text x="585" y="64" font-size="11" fill="var(--text-accent)" text-anchor="middle">5,220.0</text>
+        </svg>
+        <p class="hint i18n" data-zh="三段之和等于总变化，这既是读法也是校验：对不上说明分解有问题，图不该画出来。" data-en="The three segments sum to the total change, which is both how to read it and how it is checked: if they do not add up, the decomposition is wrong and the chart should not be drawn."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="chain">
+    <header><h3 class="i18n" data-zh="依据链" data-en="The dependency chain"></h3><span class="id">C04</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="等级旁边永远能展开它是怎么来的。出处链断裂时不显示等级，标「出处缺失」，并进入待办收件箱——一个没有出处的数字，比一个标着低等级的数字更需要人处理。"
+       data-en="A grade always opens onto how it was reached. A broken chain gets no grade at all: it is labelled provenance missing and raised into the inbox, because a figure nobody can trace needs a person more urgently than a figure with a low grade."></p>
+    <div class="frame grid2">
+      <div class="pop">
+        <div class="between"><strong style="font-weight:500;font-size:13.5px" class="i18n" data-zh="单方毛利（不含税）62.40 元" data-en="Margin per m³ (ex-tax) 62.40"></strong><span class="grade g3" style="margin:0">G3</span></div>
+        <p class="tree" style="margin-top:8px">
+          G3 ← <span class="i18n" data-zh="口径" data-en="convention"></span> C01 vat_rate = 13% <span style="color:var(--text-warning)" class="i18n" data-zh="（未确认）" data-en="(unconfirmed)"></span><br>
+          &nbsp;&nbsp;└─ G2 ← <span class="i18n" data-zh="公式" data-en="formula"></span> (revenue − cost) ÷ volume<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ G1 ← <span class="i18n" data-zh="财务" data-en="finance"></span>.collected · row 7<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ G1 ← <span class="i18n" data-zh="采购" data-en="procurement"></span>.material_cost · row 42<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ G1 ← <span class="i18n" data-zh="生产" data-en="production"></span>.received · row 118
+        </p>
+        <div class="row" style="margin-top:10px"><span class="btn quiet sm i18n" data-zh="去确认这条口径 ↗" data-en="Confirm the convention ↗"></span></div>
+      </div>
+      <div class="pop">
+        <div class="between"><strong style="font-weight:500;font-size:13.5px" class="i18n" data-zh="城东物流园 B 区 · 回款" data-en="East logistics park B · collected"></strong><span class="grade gx" style="margin:0" data-i18n-skip>?</span></div>
+        <p class="muted i18n" style="margin-top:8px;font-size:13px" data-zh="出处缺失：财务与市场对该项目名写法不一致，字典未声明它们是同一实体，所以没有一条链能走通。" data-en="Provenance missing: finance and marketing spell this project differently and the dictionary does not declare them as one entity, so no chain resolves."></p>
+        <div class="row" style="margin-top:10px"><span class="btn quiet sm i18n" data-zh="在收件箱中处理 ↗" data-en="Handle it in the inbox ↗"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="export">
+    <header><h3 class="i18n" data-zh="月度报告导出" data-en="Exporting the monthly report"></h3><span class="id">C05</span><span class="st designed">DESIGNED</span></header>
+    <p class="cap i18n"
+       data-zh="E13-UC04：经营会、审计或存档需要一份格式规范、可离线阅读的报告。结构固定八章，正文每个数字在附录有出处编号——没有出处索引的报告，在审计场合等于没有报告。"
+       data-en="E13-UC04: a management meeting, an audit or an archive needs a properly formatted report that reads offline. Eight fixed sections, and every figure in the body carries a provenance number into the appendix — in an audit, a report without that index is not a report."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:620px">
+        <div class="row"><span class="chip i18n" data-zh="Word" data-en="Word"></span><span class="chip i18n" data-zh="PDF" data-en="PDF"></span></div>
+        <ol class="steps" style="gap:8px">
+          <li class="step done"><h4 style="margin:0" class="i18n" data-zh="封面：期间、批次、版本、生成时间" data-en="Cover: period, batch, versions, generated at"></h4></li>
+          <li class="step done"><h4 style="margin:0" class="i18n" data-zh="本月结论" data-en="This month's conclusion"></h4></li>
+          <li class="step done"><h4 style="margin:0" class="i18n" data-zh="关键指标与对比" data-en="Key metrics and comparison"></h4></li>
+          <li class="step done"><h4 style="margin:0" class="i18n" data-zh="各部门研判摘要" data-en="Department summaries"></h4></li>
+          <li class="step done"><h4 style="margin:0" class="i18n" data-zh="需关注事项与负责人" data-en="Attention items and their owners"></h4></li>
+          <li class="step done"><h4 style="margin:0" class="i18n" data-zh="待确认事项" data-en="Open items"></h4></li>
+          <li class="step done"><h4 style="margin:0" class="i18n" data-zh="口径假设与限制" data-en="Conventions and limitations"></h4></li>
+          <li class="step done"><h4 style="margin:0" class="i18n" data-zh="附录：来源清单、公式、出处索引" data-en="Appendix: sources, formulas, provenance index"></h4></li>
+        </ol>
+        <div class="row"><span class="btn primary i18n" data-zh="导出 Word" data-en="Export Word"></span><span class="hint">月度经营结论-2024-07-v3.docx</span></div>
+        <div class="callout warn">
+          <p class="i18n" data-zh="研判为部分完成时，封面与结论页首都标「部分完成」——一份没标的报告会被当成完整的引用出去。" data-en="When the review is partial, both the cover and the first page say so: an unmarked report gets quoted as if it were complete."></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="stale">
+    <header><h3 class="i18n" data-zh="过期与拒绝" data-en="Stale and refused"></h3><span class="id">C06</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="报告更新后旧结论页标为过期，不被覆盖——覆盖会让上周引用过它的人无从对照。过期的结论页拒绝导出，因为一份导出文件离开系统之后就没人知道它过期了。"
+       data-en="A newer report marks the old brief stale rather than overwriting it, because overwriting leaves anybody who quoted it last week with nothing to compare against. A stale brief refuses to export, since once a file leaves the system nobody can tell that it lapsed."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <div class="callout warn"><h4 class="i18n" data-zh="有更新的研判报告" data-en="A newer review exists"></h4><p class="i18n" data-zh="本页展示的是较早的一份（14:08）。最新报告生成于 16:41。" data-en="This page shows an earlier one from 14:08. The newest report was produced at 16:41."></p></div>
+        <div class="row"><span class="btn primary i18n" data-zh="生成最新结论" data-en="Build the current brief"></span><span class="btn quiet i18n" data-zh="继续看这一份" data-en="Keep reading this one"></span></div>
+      </div>
+      <div class="pane pad stack">
+        <div class="empty">
+          <strong class="i18n" data-zh="还没有研判报告" data-en="No review yet"></strong>
+          <span class="i18n" data-zh="本月结论由已保存的四部门研判生成；请先发起研判。生成结论不调用模型。" data-en="The brief is built from a saved four-department review; start the review first. Building the brief calls no model."></span>
+          <p style="margin-top:12px"><span class="btn primary i18n" data-zh="发起研判" data-en="Start the review"></span></p>
+        </div>
+        <p class="hint i18n" data-zh="没有报告时拒绝生成，不出一张空白页——空白页会被当成「本月没问题」。" data-en="With no report it refuses rather than producing a blank page, because a blank page reads as “nothing wrong this month”."></p>
+      </div>
+    </div>
+  </section>
+
+  <div id="pager"></div>
+</div>
+
+<script src="assets/design.js"></script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 · 报价 — BridgeFlow AI</title>
+<link rel="stylesheet" href="assets/cds.css">
+</head>
+<body data-page="quotation">
+<div id="chrome"></div>
+
+<div class="wrap">
+  <header class="pagehead">
+    <p class="kicker">11 · Quotation</p>
+    <h1><span class="i18n" data-zh="声明式报价与签发" data-en="Declared quotation and release"></span></h1>
+    <p class="lead i18n"
+       data-zh="报价由声明政策算出，不是模型估的。对外发送是一道门：草稿完成后，任何人或代理试图直接外发都会被挡下。报价与月度对账是两条独立的工作线，共用批次数据但不共用状态。"
+       data-en="A quotation is computed from the declared policy, not estimated by a model. Sending it out is a gate: after drafting, any person or agent attempting to release it directly is stopped. Quotation and the monthly close are separate tracks that share batch data but never share state."></p>
+    <nav class="toc">
+      <a href="#inputs"><span class="i18n" data-zh="输入清单" data-en="Input checklist"></span></a>
+      <a href="#extract"><span class="i18n" data-zh="从原件抽取" data-en="Extract from originals"></span></a>
+      <a href="#draft"><span class="i18n" data-zh="内部草稿" data-en="Internal draft"></span></a>
+      <a href="#scenarios"><span class="i18n" data-zh="方案比较" data-en="Scenario comparison"></span></a>
+      <a href="#gate"><span class="i18n" data-zh="放行门" data-en="The release gate"></span></a>
+    </nav>
+  </header>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="inputs">
+    <header><h3 class="i18n" data-zh="输入清单" data-en="What a quotation needs"></h3><span class="id">Q01</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E08-UC01：收到询价，先知道报价要哪些输入、各由谁提供。缺哪一项、缺了归谁，直接写在行上——报价慢通常不是算得慢，是没人知道在等谁。"
+       data-en="E08-UC01: an inquiry arrives and the owner needs to know which inputs it takes and who supplies each. What is missing and whose it is sits on the row, because a slow quotation is rarely slow arithmetic — it is nobody knowing who is being waited on."></p>
+    <div class="frame">
+      <div class="pane">
+        <div class="pad divide"><div class="between"><h4 class="i18n" data-zh="城东建设集团 · 3,200 方询价" data-en="East City Construction · 3,200 m³ inquiry"></h4><span class="chip warn i18n" data-zh="4 / 6 项齐备" data-en="4 of 6 inputs ready"></span></div></div>
+        <div class="scroll-x"><table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="输入" data-en="Input"></th>
+            <th class="i18n" data-zh="值" data-en="Value"></th>
+            <th class="i18n" data-zh="提供方" data-en="Supplied by"></th>
+            <th class="i18n" data-zh="来源" data-en="Source"></th>
+            <th class="i18n" data-zh="状态" data-en="State"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="方量" data-en="Volume"></td><td class="n">3,200.0 <span class="i18n" data-zh="方" data-en="m³"></span></td><td class="hint i18n" data-zh="客户询价函" data-en="Customer inquiry"></td><td class="hint i18n" data-zh="询价函 PDF" data-en="Inquiry PDF"></td><td><span class="chip ok i18n" data-zh="正常" data-en="OK"></span></td></tr>
+            <tr><td class="i18n" data-zh="单方原料成本" data-en="Material cost per m³"></td><td class="n">248.60 <span class="i18n" data-zh="元" data-en="元"></span></td><td class="hint i18n" data-zh="采购负责人" data-en="Procurement"></td><td class="hint">2024-07 <span class="i18n" data-zh="批次" data-en="batch"></span></td><td><span class="chip ok i18n" data-zh="正常" data-en="OK"></span></td></tr>
+            <tr><td class="i18n" data-zh="可用产能" data-en="Available capacity"></td><td class="n">78.40%</td><td class="hint i18n" data-zh="运营负责人" data-en="Operations"></td><td class="hint">2024-07 <span class="i18n" data-zh="批次" data-en="batch"></span></td><td><span class="chip ok i18n" data-zh="正常" data-en="OK"></span></td></tr>
+            <tr><td class="i18n" data-zh="增值税口径" data-en="VAT convention"></td><td class="n">13% <span class="grade g3">G3</span></td><td class="hint i18n" data-zh="财务负责人" data-en="Finance"></td><td class="hint i18n" data-zh="按通用做法，未确认" data-en="Best practice, unconfirmed"></td><td><span class="chip warn i18n" data-zh="待确认" data-en="Open question"></span></td></tr>
+            <tr><td class="i18n" data-zh="账期政策" data-en="Payment terms policy"></td><td class="e i18n" data-zh="缺" data-en="Missing"></td><td class="hint i18n" data-zh="财务负责人" data-en="Finance"></td><td class="e i18n" data-zh="无书面政策" data-en="No written policy"></td><td><span class="chip bad i18n" data-zh="已拒绝" data-en="Refused"></span></td></tr>
+            <tr><td class="i18n" data-zh="运距加价表" data-en="Distance surcharge table"></td><td class="e i18n" data-zh="缺" data-en="Missing"></td><td class="hint i18n" data-zh="销售负责人" data-en="Sales"></td><td class="e i18n" data-zh="未提供" data-en="Not supplied"></td><td><span class="chip warn i18n" data-zh="待确认" data-en="Open question"></span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="pad" style="border-top:.5px solid var(--border)">
+          <div class="callout bad">
+            <h4 class="i18n" data-zh="账期没有声明政策" data-en="Payment terms have no declared policy"></h4>
+            <p class="i18n" data-zh="系统不会替你定一个账期。这一项需要财务负责人书面给出，或明确写为本次一事一议。" data-en="The system will not choose one for you. Finance has to supply it in writing, or it must be recorded explicitly as a one-off for this deal."></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="extract">
+    <header><h3 class="i18n" data-zh="从合同与会话原件抽取" data-en="Extracting from contracts and conversations"></h3><span class="id">Q02</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E08-UC03：输入还在客户合同、会话记录等原件里。抽取出的每一项都指回原文位置，并且抽取结果永远是「候选」，要人确认之后才进入计算——把一段聊天记录里的数字直接算进报价，是这个产品最不该干的事之一。"
+       data-en="E08-UC03: the inputs are still inside customer contracts and conversation records. Every extracted value points back to where it came from and stays a candidate until a person confirms it — feeding a number out of a chat log straight into a price is among the worst things this product could do."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="原件片段" data-en="Original excerpt"></p>
+        <div class="card flat pad-sm" style="font-size:12.5px;line-height:1.85">
+          <p class="i18n" data-zh="……本合同标的为 C30 商品混凝土，暂定供应量 3200 立方米，供货期 2024 年 9 月至 11 月，结算方式为月结 60 天，运距约 18 公里……" data-en="…the subject of this contract is C30 ready-mix concrete, provisional volume 3,200 cubic metres, supplied September to November 2024, settled net 60, haul distance approximately 18 km…"></p>
+        </div>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="抽取候选（需确认）" data-en="Extracted candidates (need confirming)"></p>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="字段" data-en="Field"></th><th class="i18n" data-zh="候选值" data-en="Candidate"></th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="方量" data-en="Volume"></td><td class="mono">3200.0</td><td><span class="btn sm i18n" data-zh="确认" data-en="Confirm"></span></td></tr>
+            <tr><td class="i18n" data-zh="账期" data-en="Terms"></td><td class="mono i18n" data-zh="月结 60 天" data-en="Net 60"></td><td><span class="btn sm i18n" data-zh="确认" data-en="Confirm"></span></td></tr>
+            <tr><td class="i18n" data-zh="运距" data-en="Haul distance"></td><td class="mono">18 km <span class="chip warn i18n" data-zh="原文写「约」" data-en="original says “approximately”"></span></td><td><span class="btn sm i18n" data-zh="确认" data-en="Confirm"></span></td></tr>
+            <tr><td class="i18n" data-zh="标号" data-en="Grade"></td><td class="mono">C30</td><td><span class="btn sm i18n" data-zh="确认" data-en="Confirm"></span></td></tr>
+          </tbody>
+        </table></div>
+        <p class="hint i18n" data-zh="「约 18 公里」带着它的不确定性一起过来，不被悄悄取整成 18。确认时你决定是否接受这个近似。" data-en="“Approximately 18 km” arrives with its uncertainty intact rather than quietly becoming 18. Confirming it is where you decide whether the approximation is acceptable."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="draft">
+    <header><h3 class="i18n" data-zh="内部草稿" data-en="The internal draft"></h3><span class="id">Q03</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E08-UC02：输入齐备后按声明政策算出草稿。排版像一份单据，因为它就是一份单据。整份报价取其依赖中最弱的等级：单价依赖未确认的增值税口径，所以整份是 G3。"
+       data-en="E08-UC02: with the inputs in place, the draft is computed from the declared policy. It is laid out as a document because it is one. The whole quotation takes the weakest grade among its inputs: the unit price rests on an unconfirmed VAT convention, so the document is G3."></p>
+    <div class="frame">
+      <div class="paper" style="max-width:620px;margin:0 auto">
+        <header>
+          <div class="between">
+            <div>
+              <p class="eyebrow i18n" data-zh="内部草稿 · 未批准外发" data-en="Internal draft · not approved for release"></p>
+              <h3 class="i18n" data-zh="商品混凝土供应报价" data-en="Ready-mix concrete quotation"></h3>
+            </div>
+            <span class="chip warn i18n" data-zh="待确认" data-en="Open question"></span>
+          </div>
+        </header>
+        <dl>
+          <div><dt class="i18n" data-zh="客户" data-en="Customer"></dt><dd class="i18n" data-zh="城东建设集团" data-en="East City Construction"></dd></div>
+          <div><dt class="i18n" data-zh="标号与方量" data-en="Grade and volume"></dt><dd>C30 · 3,200.0 <span class="i18n" data-zh="方" data-en="m³"></span></dd></div>
+          <div><dt class="i18n" data-zh="单方成本" data-en="Cost per m³"></dt><dd>248.60 <span class="i18n" data-zh="元" data-en="元"></span> <span class="grade g1">G1</span></dd></div>
+          <div><dt class="i18n" data-zh="单价（含税）" data-en="Unit price (incl. tax)"></dt><dd>486.00 <span class="i18n" data-zh="元" data-en="元"></span> <span class="grade g3">G3</span></dd></div>
+          <div><dt class="i18n" data-zh="合计（含税）" data-en="Total (incl. tax)"></dt><dd>1,555,200.00 <span class="i18n" data-zh="元" data-en="元"></span> <span class="grade g3">G3</span></dd></div>
+          <div><dt class="i18n" data-zh="账期" data-en="Payment terms"></dt><dd class="i18n" data-zh="月结 60 天（本次一事一议）" data-en="Net 60 (one-off for this deal)"></dd></div>
+        </dl>
+        <details class="hint" style="margin-top:14px"><summary class="i18n" data-zh="公式与缺失依据" data-en="Formulas and missing evidence"></summary>
+          <p class="tree" style="margin-top:8px">unit_price = cost × (1 + margin_rate) × (1 + vat_rate)<br>margin_rate = 0.58 <span class="i18n" data-zh="（声明政策 v3）" data-en="(declared policy v3)"></span><br>vat_rate = 0.13 <span style="color:var(--text-warning)" class="i18n" data-zh="（未确认）" data-en="(unconfirmed)"></span></p>
+        </details>
+        <div class="callout warn" style="margin-top:14px">
+          <p class="i18n" data-zh="单价依赖未确认的 13% 增值税口径，所以整份报价取 G3。确认该口径后自动升为 G2。" data-en="The unit price depends on an unconfirmed 13% VAT convention, so the whole quotation takes G3. Confirming it lifts the document to G2."></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="scenarios">
+    <header><h3 class="i18n" data-zh="方案比较" data-en="Comparing scenarios"></h3><span class="id">Q04</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E08-UC04：比较价格、账期、交期等方案，并批准对外版本。每个方案给出它自己的依据等级——一个算得更漂亮但依赖更多未确认口径的方案，不该看起来和别的一样可靠。"
+       data-en="E08-UC04: price, terms and delivery scenarios are compared and one is approved for release. Each carries its own evidence grade, because a scenario that looks better while resting on more unconfirmed conventions should not read as equally solid."></p>
+    <div class="frame">
+      <div class="pane scroll-x">
+        <table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="方案" data-en="Scenario"></th>
+            <th class="i18n" data-zh="单价（含税）" data-en="Unit price"></th>
+            <th class="i18n" data-zh="账期" data-en="Terms"></th>
+            <th class="i18n" data-zh="交期" data-en="Delivery"></th>
+            <th class="i18n" data-zh="毛利率" data-en="Margin"></th>
+            <th class="i18n" data-zh="依据" data-en="Grade"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="A · 标准" data-en="A · standard"></td><td class="n">486.00</td><td class="i18n" data-zh="月结 60 天" data-en="Net 60"></td><td class="i18n" data-zh="9–11 月" data-en="Sep–Nov"></td><td class="n">36.7%</td><td><span class="grade g3" style="margin:0">G3</span></td></tr>
+            <tr style="background:var(--bg-accent)"><td class="i18n" data-zh="B · 缩短账期" data-en="B · shorter terms"></td><td class="n">468.00</td><td class="i18n" data-zh="月结 30 天" data-en="Net 30"></td><td class="i18n" data-zh="9–11 月" data-en="Sep–Nov"></td><td class="n">34.4%</td><td><span class="grade g3" style="margin:0">G3</span></td></tr>
+            <tr><td class="i18n" data-zh="C · 压缩交期" data-en="C · compressed delivery"></td><td class="n">512.00</td><td class="i18n" data-zh="月结 60 天" data-en="Net 60"></td><td class="i18n" data-zh="9–10 月" data-en="Sep–Oct"></td><td class="n">39.9%</td><td><span class="grade gx" style="margin:0" data-i18n-skip>?</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pane pad stack" style="margin-top:12px">
+        <div class="callout bad">
+          <h4 class="i18n" data-zh="方案 C 的产能依据缺失" data-en="Scenario C has no capacity evidence"></h4>
+          <p class="i18n" data-zh="压缩到两个月需要月产能 1,600 方，但 9–10 月的可用产能没有声明来源。该方案不能作为对外版本提交。" data-en="Two months requires 1,600 m³ a month, and available capacity for September and October has no declared source. This scenario cannot be submitted for release."></p>
+        </div>
+        <div class="row"><span class="btn primary i18n" data-zh="以方案 B 提交放行" data-en="Request release for scenario B"></span><span class="btn quiet i18n" data-zh="补充 C 的产能依据" data-en="Supply capacity evidence for C"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="gate">
+    <header><h3 class="i18n" data-zh="放行门" data-en="The release gate"></h3><span class="id">Q05</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="E08-UC05：草稿完成后，有人或代理试图直接外发。挡下来的时候要说清挡的是什么、需要谁批准、以及现在可以做什么——一个只写「无权限」的拦截，会被理解成系统坏了。"
+       data-en="E08-UC05: after drafting, a person or an agent attempts to send it out. The block has to say what was stopped, who can approve it and what can be done now — an interception that only says “not permitted” gets read as the system being broken."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <div class="callout bad">
+          <h4 class="i18n" data-zh="未批准，不能外发" data-en="Not approved, cannot be sent"></h4>
+          <p class="i18n" data-zh="这份报价是内部草稿。对外发送需要报价负责人提交、审批人批准；批准会记录批准人与这一版内容。" data-en="This quotation is an internal draft. Releasing it needs the quotation owner to submit and an approver to approve, and the approval records who approved and exactly this version."></p>
+        </div>
+        <div class="row"><span class="btn primary i18n" data-zh="提交放行" data-en="Request release"></span><span class="btn quiet i18n" data-zh="导出内部草稿" data-en="Export as an internal draft"></span></div>
+        <p class="hint i18n" data-zh="内部草稿导出件带「未批准外发」水印，便于在内部传阅而不被误发。" data-en="An internal export carries a “not approved for release” watermark so it can circulate inside without being sent by mistake."></p>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="代理试图外发时" data-en="When an agent attempts it"></p>
+        <div class="card flat pad-sm">
+          <div class="between"><strong class="mono" style="font-weight:500;font-size:13px">quotation_send</strong><span class="chip bad i18n" data-zh="已拒绝" data-en="Refused"></span></div>
+          <p class="hint i18n" style="margin-top:4px" data-zh="操作未执行。报价未取得放行批准。" data-en="The operation did not execute. This quotation has no release approval."></p>
+        </div>
+        <p class="hint i18n" data-zh="提示词里写「客户很急，请直接发出」不会改变这一点：放行是工具声明层的门，不是措辞问题。" data-en="A prompt saying the customer is in a hurry changes nothing: release is a gate at the tool-declaration level, not a matter of wording."></p>
+      </div>
+    </div>
+  </section>
+
+  <div id="pager"></div>
+</div>
+
+<script src="assets/design.js"></script>
+</body>
+</html>

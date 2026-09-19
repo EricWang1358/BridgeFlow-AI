@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 · 外壳 — BridgeFlow AI</title>
+<link rel="stylesheet" href="assets/cds.css">
+</head>
+<body data-page="shell">
+<div id="chrome"></div>
+
+<div class="wrap">
+  <header class="pagehead">
+    <p class="kicker">02 · Shell</p>
+    <h1><span class="i18n" data-zh="笔记本外壳" data-en="The notebook shell"></span></h1>
+    <p class="lead i18n"
+       data-zh="三栏都是官方插槽：不替换原生输入框，不另建聊天存储，不起第二个 React 根。外壳的工作是把来源、对话与产物放在同一页上，让人不用在三个地方之间回忆自己刚才看到了什么。"
+       data-en="All three panes are official slots: the native composer is not replaced, no second chat store is built, and there is no second React root. The shell's job is to put sources, conversation and artifacts on one page so nobody has to remember across three of them."></p>
+    <nav class="toc">
+      <a href="#three"><span class="i18n" data-zh="三栏" data-en="Three panes"></span></a>
+      <a href="#blank"><span class="i18n" data-zh="空白会话" data-en="Blank session"></span></a>
+      <a href="#sources"><span class="i18n" data-zh="来源栏" data-en="Sources pane"></span></a>
+      <a href="#studio"><span class="i18n" data-zh="工作室栏" data-en="Studio pane"></span></a>
+      <a href="#list"><span class="i18n" data-zh="笔记本列表" data-en="Notebook list"></span></a>
+      <a href="#dirty"><span class="i18n" data-zh="未保存离开" data-en="Leaving unsaved"></span></a>
+      <a href="#tour"><span class="i18n" data-zh="操作导览" data-en="Product tour"></span></a>
+      <a href="#narrow"><span class="i18n" data-zh="窄屏" data-en="Narrow screens"></span></a>
+    </nav>
+  </header>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="three">
+    <header><h3 class="i18n" data-zh="三栏笔记本" data-en="The three-pane notebook"></h3><span class="id">S01</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="左右两栏可拖动，宽度存在浏览器里，双击回到默认。分隔条是 role=separator，方向键每次 20 px，Home 回到最小宽度——拖动不能是唯一的调整方式。视口窄于 1100 px 时分隔条撤掉。"
+       data-en="The side panes drag and remember their width in the browser; a double-click restores the default. Each resizer is a role=separator moving 20 px per arrow key, with Home returning to its minimum — dragging cannot be the only way to size a pane. Below 1100 px the resizers withdraw."></p>
+    <div class="frame">
+      <div class="shellbar">
+        <div class="row">
+          <span class="btn quiet" aria-hidden="true">≡</span>
+          <strong style="font-size:13px;font-weight:500" class="i18n" data-zh="业务笔记本" data-en="Business notebook"></strong>
+          <span class="chip ok i18n" data-zh="已保存" data-en="Saved"></span>
+        </div>
+        <div class="row">
+          <span class="chip info i18n" data-zh="月度对账" data-en="Monthly review"></span>
+          <span class="avatar sm">王</span>
+          <span class="btn quiet i18n" data-zh="会话与设置" data-en="Sessions &amp; settings"></span>
+        </div>
+      </div>
+      <div class="shell">
+        <section>
+          <p class="panetitle i18n" data-zh="来源" data-en="Sources"></p>
+          <div class="srcitem"><b class="i18n" data-zh="生产" data-en="Production"></b><br><span class="hint">2024-07-production.xlsx</span></div>
+          <div class="srcitem"><b class="i18n" data-zh="采购" data-en="Procurement"></b><br><span class="hint">2024-07-procurement.csv</span></div>
+          <div class="srcitem"><b class="i18n" data-zh="财务" data-en="Finance"></b><br><span class="hint">2024-07-finance.xlsx</span></div>
+          <div class="srcitem"><b class="i18n" data-zh="市场" data-en="Marketing"></b><br><span class="hint">2024-07-marketing.csv</span></div>
+          <p style="margin-top:12px"><span class="btn primary full i18n" data-zh="添加来源" data-en="Add sources"></span></p>
+        </section>
+        <section>
+          <p class="panetitle i18n" data-zh="对话" data-en="Chat"></p>
+          <div class="stack">
+            <div class="msg user i18n" data-zh="把 2024-07 这四份表对一下，有问题的先告诉我。" data-en="Reconcile the four July sheets and tell me what is off."></div>
+            <div class="msg bot i18n" data-zh="已导入 1,482 行，规则清洗 37 处，隔离 6 行。主表已建，可以发起研判。" data-en="Imported 1,482 rows, 37 rule corrections, 6 rows quarantined. The master is built and the review can start."></div>
+            <div class="card flat pad-sm">
+              <div class="between"><strong style="font-size:13px;font-weight:500" class="i18n" data-zh="队长汇总" data-en="Captain finalization"></strong><span class="chip ok i18n" data-zh="已完成" data-en="Completed"></span></div>
+              <p class="hint i18n" style="margin-top:4px" data-zh="四个部门 4/4 返回，其中 3 项需关注。" data-en="Four of four departments returned; three items need attention."></p>
+              <div class="row" style="margin-top:8px"><span class="btn quiet sm i18n" data-zh="查看摘要" data-en="Show summary"></span><span class="btn quiet sm i18n" data-zh="查看调用轨迹" data-en="Inspect native trace"></span></div>
+            </div>
+          </div>
+          <p style="margin-top:14px"></p>
+          <div class="composer"><span class="i18n" data-zh="继续与队长核对…" data-en="Keep working with your captain…"></span><span class="btn brand sm" aria-hidden="true">↑</span></div>
+        </section>
+        <section>
+          <p class="panetitle i18n" data-zh="工作室" data-en="Studio"></p>
+          <div class="stack">
+            <div class="card flat pad-sm">
+              <p class="hint i18n" data-zh="业务状态" data-en="Business state"></p>
+              <div class="row" style="margin-top:6px"><span class="chip ok i18n" data-zh="可研判" data-en="Ready"></span><span class="chip warn i18n" data-zh="需关注" data-en="Attention"></span><span class="badge">3</span></div>
+            </div>
+            <div class="card flat pad-sm">
+              <p class="hint i18n" data-zh="产物" data-en="Artifacts"></p>
+              <p style="font-size:12.5px;margin-top:4px" class="i18n" data-zh="四部门报告 · 2024-07" data-en="Department report · 2024-07"></p>
+              <p style="font-size:12.5px" class="i18n" data-zh="本月结论 · 2024-07" data-en="This month · 2024-07"></p>
+            </div>
+            <span class="btn full i18n" data-zh="主表" data-en="Master table"></span>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="blank">
+    <header><h3 class="i18n" data-zh="空白会话" data-en="Blank session"></h3><span class="id">S02</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="宿主自己的空白页提供的是编程提示语，对被要求做月末对账的人没有意义，而且那页上没有任何东西说出产品名、流程或唯一的入口——入口本身还是全页最暗的控件。这张卡片补上这四件事，并且只在会话真的还没开始时出现：草稿、排队中或在途都算开始。"
+       data-en="The host's own blank state offers a coding prompt, which means nothing to somebody asked to close the month, and nothing on that screen named the product, the flow or the one entry point — which was itself the faintest control on the page. This card supplies all four, and appears only while the session has genuinely not started: a draft, a queued message or anything in flight counts as started."></p>
+    <div class="frame">
+      <div class="pane pad" style="max-width:774px;margin:0 auto">
+        <p style="color:var(--fill-accent);font-size:32px;line-height:1">✦</p>
+        <h3 style="margin:10px 0 8px;font-size:21px" class="i18n" data-zh="从这里开始你的业务笔记本" data-en="Let’s start your business notebook"></h3>
+        <p class="muted i18n" data-zh="把部门文件放到左侧，在这里与队长核对，在右侧查看产物与依据。" data-en="Add department files on the left, work with your captain here, and preview outputs and evidence on the right."></p>
+        <div class="card" style="margin-top:18px">
+          <h4 class="i18n" data-zh="四个部门的月度数据，对到一张表上" data-en="Four departments, one reconciled table"></h4>
+          <p class="hint i18n" style="margin-top:4px" data-zh="先导入本月四份表，规则会先跑一遍；模型只解释算出来的数，不替你算。" data-en="Import this month’s four sheets first. Rules run before any model call; the model explains the figures, it does not compute them."></p>
+          <ol class="steps" style="margin-top:14px">
+            <li class="step"><h4 class="i18n" data-zh="导入四部门文件" data-en="Import the four sheets"></h4><p class="hint i18n" data-zh="CSV 或单工作表 XLSX，不调用模型" data-en="CSV or single-sheet XLSX. No model call."></p></li>
+            <li class="step"><h4 class="i18n" data-zh="检查清洗与隔离" data-en="Check corrections and quarantine"></h4><p class="hint i18n" data-zh="看规则改了什么、扣下了什么" data-en="See what the rules changed and what they held back"></p></li>
+            <li class="step"><h4 class="i18n" data-zh="在会话里发起研判" data-en="Ask for a review in the conversation"></h4><p class="hint i18n" data-zh="队长派活给四个部门，逐条带证据" data-en="The captain dispatches four departments; every finding cites its rows"></p></li>
+            <li class="step"><h4 class="i18n" data-zh="审批要写入的决定" data-en="Approve anything that writes"></h4><p class="hint i18n" data-zh="没人点，就不写" data-en="Nothing is written unless a person clicks"></p></li>
+          </ol>
+          <div class="row" style="margin-top:16px">
+            <span class="btn primary i18n" data-zh="开始导入" data-en="Start an import"></span>
+            <span class="btn i18n" data-zh="报价" data-en="Quotation"></span>
+            <span class="btn quiet i18n" data-zh="打开示例笔记本" data-en="Open sample notebook"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="sources">
+    <header><h3 class="i18n" data-zh="来源栏：列表、预览与出处" data-en="Sources: list, preview and provenance"></h3><span class="id">S03</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="预览是清洗前的解析视图，分页在浏览器里做。文件指纹用来核对内容是否一致，它不是业务结论——这句话必须挨着指纹写，否则有人会把一串 SHA 当成对账通过。旧批次没有保留原件时，说清「这一批没有」，不给一个空预览。"
+       data-en="The preview is the parsed original before cleaning, paginated in the browser. The fingerprint identifies file content and is not a business finding — saying so next to it stops a SHA being read as a passed reconciliation. Where an older batch kept no original, say so rather than showing an empty preview."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <div class="between"><h4 class="i18n" data-zh="来源" data-en="Sources"></h4><span class="btn quiet sm i18n" data-zh="添加" data-en="Add"></span></div>
+        <p class="hint i18n" data-zh="月度对账 · 上传的部门文件保留在这里，点击即可预览。" data-en="Monthly review · Uploaded department files appear here. Select a file to preview."></p>
+        <div>
+          <div class="srcitem" style="background:var(--bg-accent);border-radius:8px;padding:8px 10px"><b class="i18n" data-zh="生产" data-en="Production"></b><br><span class="hint">2024-07-production.xlsx · 586 <span class="i18n" data-zh="行" data-en="rows"></span></span></div>
+          <div class="srcitem"><b class="i18n" data-zh="采购" data-en="Procurement"></b><br><span class="hint">2024-07-procurement.csv · 412 <span class="i18n" data-zh="行" data-en="rows"></span></span></div>
+          <div class="srcitem"><b class="i18n" data-zh="财务" data-en="Finance"></b><br><span class="hint">2024-07-finance.xlsx · 301 <span class="i18n" data-zh="行" data-en="rows"></span></span></div>
+          <div class="srcitem"><b class="i18n" data-zh="市场" data-en="Marketing"></b><br><span class="hint i18n" data-zh="旧批次未保留原件预览" data-en="Original preview unavailable for this older batch"></span></div>
+        </div>
+      </div>
+      <div class="pane">
+        <div class="pad divide"><div class="between"><h4 class="i18n" data-zh="来源预览" data-en="Source preview"></h4><span class="chip info i18n" data-zh="生产" data-en="Production"></span></div>
+          <p class="hint i18n" style="margin-top:4px" data-zh="原始表格的解析视图，未经清洗；数据仅供浏览器分页预览。" data-en="Parsed original table before cleaning; paginated browser preview only."></p></div>
+        <div class="scroll-x"><table class="t">
+          <thead><tr><th><span class="i18n" data-zh="项目" data-en="Project"></span><small>A</small></th><th><span class="i18n" data-zh="出厂量" data-en="Shipped"></span><small>B</small></th><th><span class="i18n" data-zh="实际量" data-en="Received"></span><small>C</small></th><th><span class="i18n" data-zh="浇筑日期" data-en="Pour date"></span><small>D</small></th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="第二实验学校扩建" data-en="No.2 school extension"></td><td class="n">1,240.0</td><td class="n">1,058.0</td><td>2024-07-03</td></tr>
+            <tr><td class="i18n" data-zh="滨江路桥改造" data-en="Riverside bridge"></td><td class="n">2,180.0</td><td class="n">2,104.0</td><td>2024-07-08</td></tr>
+            <tr><td class="i18n" data-zh="城东物流园 B 区" data-en="East logistics park B"></td><td class="n">2,180.0</td><td class="n">2,058.0</td><td>03/11/2025</td></tr>
+          </tbody>
+        </table></div>
+        <div class="pad stack" style="border-top:.5px solid var(--border)">
+          <div class="row"><span class="btn quiet sm i18n" data-zh="上一页" data-en="Previous"></span><span class="hint"><span class="i18n" data-zh="第" data-en="Page"></span> 1 / 12</span><span class="btn quiet sm i18n" data-zh="下一页" data-en="Next"></span></div>
+          <dl class="kv">
+            <dt class="i18n" data-zh="上传文件" data-en="Uploaded file"></dt><dd class="mono">2024-07-production.xlsx</dd>
+            <dt class="i18n" data-zh="工作表" data-en="Worksheet"></dt><dd class="mono">7月产量</dd>
+            <dt class="i18n" data-zh="文件指纹" data-en="Fingerprint"></dt><dd class="mono">sha256:4f2a…c81d</dd>
+          </dl>
+          <p class="hint i18n" data-zh="用于核对上传文件的内容是否一致，不是业务结论。计算口径请查看主表或研判报告。" data-en="Identifies the uploaded file content; it is not a business finding. See the master table or review for calculations."></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="studio">
+    <header><h3 class="i18n" data-zh="工作室栏：状态、产物与工具" data-en="Studio: state, artifacts and tools"></h3><span class="id">S04</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="导入与报告状态属于所选批次，审批属于当前原生会话——两者来源不同，所以在界面上也分成两块，不混成一个「进度」。"
+       data-en="Import and report state belong to the selected batch; approvals belong to the current native session. They come from different places, so they stay two blocks rather than merging into one “progress”."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="属于批次" data-en="Belongs to the batch"></p>
+        <div class="card flat pad-sm"><div class="between"><span class="muted i18n" data-zh="导入" data-en="Import"></span><span class="chip ok i18n" data-zh="可研判" data-en="Ready"></span></div></div>
+        <div class="card flat pad-sm"><div class="between"><span class="muted i18n" data-zh="研判" data-en="Review"></span><span class="chip warn i18n" data-zh="部分完成" data-en="Partial"></span></div></div>
+        <p class="eyebrow i18n" style="margin-top:6px" data-zh="属于本次会话" data-en="Belongs to this session"></p>
+        <div class="card flat pad-sm"><div class="between"><span class="muted mono">confirm_mapping</span><span class="chip ok i18n" data-zh="允许一次" data-en="Allow once"></span></div></div>
+        <p class="hint i18n" data-zh="详细轨迹可在中栏查看。" data-en="Open the centre trace for details."></p>
+      </div>
+      <div class="pane pad stack">
+        <div class="between"><p class="eyebrow i18n" data-zh="产物" data-en="Artifacts"></p><span class="btn quiet sm i18n" data-zh="刷新产物" data-en="Refresh"></span></div>
+        <div class="card flat pad-sm"><div class="between"><span style="font-size:13px" class="i18n" data-zh="四部门报告 · 2024-07" data-en="Department report · 2024-07"></span><span class="chip warn i18n" data-zh="部分完成" data-en="Partial"></span></div><p class="hint" style="margin-top:3px">14:08 · 3/4</p></div>
+        <div class="card flat pad-sm"><div class="between"><span style="font-size:13px" class="i18n" data-zh="本月结论 · 2024-07" data-en="This month · 2024-07"></span><span class="chip i18n" data-zh="已过期" data-en="Stale"></span></div><p class="hint i18n" style="margin-top:3px" data-zh="有更新的研判报告，这份是较早的一份。" data-en="A newer review exists; this one is earlier."></p></div>
+        <div class="card flat pad-sm"><div class="between"><span style="font-size:13px" class="i18n" data-zh="跨部门总表 · XLSX" data-en="Cross-department master · XLSX"></span><span class="btn quiet sm i18n" data-zh="下载" data-en="Download"></span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="list">
+    <header><h3 class="i18n" data-zh="笔记本列表" data-en="Notebook list"></h3><span class="id">S05</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="从 DSH 已保存的会话中打开笔记本，来源与产物按保存的批次恢复。未保存的空白笔记本不列入历史——否则列表会被一串「未命名」淹没。"
+       data-en="Notebooks open from saved DSH sessions with their sources and artifacts restored from the saved batch. Unsaved empty notebooks are omitted; otherwise the list fills with untitled rows."></p>
+    <div class="frame">
+      <div class="pane">
+        <div class="pad divide"><div class="between"><h4 class="i18n" data-zh="笔记本" data-en="Notebooks"></h4><span class="btn primary sm i18n" data-zh="新建笔记本" data-en="Create notebook"></span></div></div>
+        <div class="scroll-x"><table class="t">
+          <thead><tr><th class="i18n" data-zh="名称" data-en="Name"></th><th class="i18n" data-zh="用途" data-en="Purpose"></th><th class="i18n" data-zh="来源" data-en="Sources"></th><th class="i18n" data-zh="最近打开" data-en="Last opened"></th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="7 月对账" data-en="July close"></td><td><span class="chip info i18n" data-zh="月度对账" data-en="Monthly review"></span></td><td class="n">4</td><td class="hint">2024-08-02 14:08</td><td><span class="chip ok i18n" data-zh="已保存" data-en="Saved"></span></td></tr>
+            <tr><td class="i18n" data-zh="城东项目报价" data-en="East city quotation"></td><td><span class="chip info i18n" data-zh="报价" data-en="Quotation"></span></td><td class="n">2</td><td class="hint">2024-08-01 09:41</td><td><span class="chip ok i18n" data-zh="已保存" data-en="Saved"></span></td></tr>
+            <tr><td class="i18n" data-zh="业务演示 · 模拟商砼公司 2024-07" data-en="Business demo · fictional concrete supplier 2024-07"></td><td><span class="chip i18n" data-zh="综合工作" data-en="Combined work"></span></td><td class="n">4</td><td class="hint">2024-07-30 16:22</td><td><span class="chip i18n" data-zh="示例" data-en="Sample"></span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="pad" style="border-top:.5px solid var(--border)">
+          <p class="hint i18n" data-zh="示例笔记本是虚构数据，按业务方 v2 四部门模板填写。研判需手动发起，会使用配置的模型。" data-en="The sample is fictional data on the business side's v2 department templates. Starting a review is a manual action and uses the configured model."></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="dirty">
+    <header><h3 class="i18n" data-zh="未保存离开" data-en="Leaving with unsaved edits"></h3><span class="id">S06</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="三个答案，取消排在最后且是默认焦点。关键是把「不保存会丢什么」写清楚：丢的只是名称与来源选择，已记录的对话、已上传文件和报告都还在。不写这一句，用户只能选最保守的那个。"
+       data-en="Three answers, with cancel last and holding focus. What matters is naming exactly what discarding loses: only the name and source selection, while recorded conversations, uploaded files and reports remain. Without that sentence a user can only pick the most cautious option."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:480px;margin:0 auto">
+        <h4 class="i18n" data-zh="离开前保存笔记本？" data-en="Save this notebook before leaving?"></h4>
+        <p class="muted i18n" data-zh="保存名称和来源选择，之后可从笔记本列表重新打开。不保存仅放弃本次名称和来源选择；已记录的对话、已上传文件和报告仍保留。" data-en="Save the name and source selection to reopen from Notebooks. Discard only drops these edits; recorded conversations, uploaded files and reports remain."></p>
+        <div class="row end">
+          <span class="btn quiet i18n" data-zh="不保存并继续" data-en="Discard and continue"></span>
+          <span class="btn focus i18n" data-zh="取消，继续编辑" data-en="Cancel, keep editing"></span>
+          <span class="btn primary i18n" data-zh="保存并继续" data-en="Save and continue"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="tour">
+    <header><h3 class="i18n" data-zh="可恢复的操作导览" data-en="A resumable product tour"></h3><span class="id">S07</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="每一步按真实事件推进，不能伪造完成标记：只有导入真的发生了，第二步才算过。刷新可恢复，关标签页不保证继续。导览从不自动审批，也不调用模型。"
+       data-en="Each step advances on a real event and a completion mark cannot be forged: step two passes only once an import actually happened. A refresh resumes; closing the tab need not. The tour never auto-approves and never calls a model."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:520px">
+        <div class="between"><span class="eyebrow i18n" data-zh="第 3 步，共 8 步" data-en="Step 3 of 8"></span><span class="btn quiet sm i18n" data-zh="稍后再说" data-en="Later"></span></div>
+        <div class="bar"><span style="width:37.5%"></span></div>
+        <h4 class="i18n" data-zh="看看主表" data-en="Look at the master table"></h4>
+        <p class="muted i18n" data-zh="四个部门的行已经按字典声明的可连接列对到一起。每个数字旁边的小方块是依据等级，点开能看到它从哪来。" data-en="Rows from four departments are now joined on the columns the dictionary declares. The small mark beside each figure is its evidence grade; open it to see where the number came from."></p>
+        <div class="row">
+          <span class="btn quiet i18n" data-zh="上一步" data-en="Back"></span>
+          <span class="btn primary i18n" data-zh="打开主表" data-en="Open the master table"></span>
+        </div>
+        <p class="hint i18n" data-zh="这一步在你真的打开主表之后才算完成。" data-en="This step completes when you actually open it."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="narrow">
+    <header><h3 class="i18n" data-zh="窄屏与键盘" data-en="Narrow screens and keyboard"></h3><span class="id">S08</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="NFR09：760 px 以下三栏叠成一栏，报告角色卡与状态图变单列。焦点环是 2 px 强调色，顺序跟随阅读顺序，分隔条用方向键调整。把这一页的窗口拉窄可以直接看到。"
+       data-en="NFR09: below 760 px the three panes stack and both the role cards and the state map collapse to one column. Focus rings are a 2 px accent, order follows reading order, and the resizers move with arrow keys. Narrowing this window shows it directly."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack" style="max-width:340px;margin:0 auto">
+        <div class="row"><span class="period">2024-07</span><span class="chip warn i18n" data-zh="部分完成" data-en="Partial"></span></div>
+        <div class="metric"><dt class="i18n" data-zh="签收率" data-en="Sign-off rate"></dt><dd><b>85.26%</b> <span class="chip warn i18n" data-zh="需关注" data-en="Attention"></span><span class="grade g2">G2</span></dd></div>
+        <div class="metric"><dt class="i18n" data-zh="回款周期" data-en="Collection days"></dt><dd><b>47.0 <span class="i18n" data-zh="天" data-en="days"></span></b> <span class="chip warn i18n" data-zh="需关注" data-en="Attention"></span><span class="grade g2">G2</span></dd></div>
+        <span class="btn primary full focus i18n" data-zh="查看本月结论" data-en="Open this month"></span>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="键盘" data-en="Keyboard"></p>
+        <dl class="kv">
+          <dt><span class="kbd">Tab</span></dt><dd class="i18n" data-zh="按阅读顺序移动，焦点始终可见" data-en="Moves in reading order with focus always visible"></dd>
+          <dt><span class="kbd">Esc</span></dt><dd class="i18n" data-zh="关闭抽屉与模态，焦点回到打开它的控件" data-en="Closes drawers and modals, returning focus to whatever opened them"></dd>
+          <dt><span class="kbd">←</span> <span class="kbd">→</span></dt><dd class="i18n" data-zh="在分隔条上每次调整 20 px" data-en="Resizes a separator by 20 px"></dd>
+          <dt><span class="kbd">Home</span></dt><dd class="i18n" data-zh="分隔条回到最小宽度" data-en="Returns a separator to its minimum"></dd>
+        </dl>
+        <p class="hint i18n" data-zh="尊重「减少动态效果」：开启后所有过渡与动画关闭，不是缩短。" data-en="Reduced motion is respected: transitions and animations are switched off, not shortened."></p>
+      </div>
+    </div>
+  </section>
+
+  <div id="pager"></div>
+</div>
+
+<script src="assets/design.js"></script>
+</body>
+</html>

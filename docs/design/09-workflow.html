@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9 · 流转 — BridgeFlow AI</title>
+<link rel="stylesheet" href="assets/cds.css">
+</head>
+<body data-page="workflow">
+<div id="chrome"></div>
+
+<div class="wrap">
+  <header class="pagehead">
+    <p class="kicker">09 · Workflow</p>
+    <h1><span class="i18n" data-zh="标准化与流转" data-en="Standards and handoff"></span></h1>
+    <p class="lead i18n"
+       data-zh="员工手里是非标准原件，要落到批准模板；记录经批准写入目标系统；数据就绪通知下一个部门。所有业务标准来自人工声明——AI 可以提出草案，但不能发布标准。"
+       data-en="Staff hold non-standard originals that have to land on an approved template; approved records are written to the target system; ready data notifies the next department. Business standards stay human-authored — a model may draft one, never publish it."></p>
+    <nav class="toc">
+      <a href="#catalogue"><span class="i18n" data-zh="模板目录" data-en="Template catalogue"></span></a>
+      <a href="#draft"><span class="i18n" data-zh="填报草稿" data-en="Draft record"></span></a>
+      <a href="#clarify"><span class="i18n" data-zh="补问" data-en="Clarifications"></span></a>
+      <a href="#submit"><span class="i18n" data-zh="复核并提交" data-en="Approve and submit"></span></a>
+      <a href="#board"><span class="i18n" data-zh="流转看板" data-en="Handoff board"></span></a>
+      <a href="#downstream"><span class="i18n" data-zh="下游处理" data-en="Downstream action"></span></a>
+      <a href="#revised"><span class="i18n" data-zh="上游修订" data-en="Upstream revision"></span></a>
+      <a href="#checklist"><span class="i18n" data-zh="月度进度" data-en="Monthly checklist"></span></a>
+      <a href="#inbox"><span class="i18n" data-zh="待办收件箱" data-en="Open-item inbox"></span></a>
+    </nav>
+  </header>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="catalogue">
+    <header><h3 class="i18n" data-zh="模板目录与版本" data-en="Template catalogue and versions"></h3><span class="id">W01</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E02-UC01/UC02：批准的 MVP 细化为阶段、模板与字段血缘；模板草案先在一线试用，再发布版本。已发布与草案分开摆，因为拿错版本填一个月，下个月才会发现。"
+       data-en="E02-UC01 and UC02: an approved MVP becomes stages, templates and field lineage, and a draft template is piloted before a version is released. Published and draft are kept apart, because filling in the wrong version takes a month to notice."></p>
+    <div class="frame">
+      <div class="pane scroll-x">
+        <table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="模板" data-en="Template"></th>
+            <th class="i18n" data-zh="部门" data-en="Department"></th>
+            <th class="i18n" data-zh="版本" data-en="Version"></th>
+            <th class="i18n" data-zh="字段" data-en="Fields"></th>
+            <th class="i18n" data-zh="试点反馈" data-en="Pilot feedback"></th>
+            <th class="i18n" data-zh="状态" data-en="State"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="生产日报汇总" data-en="Production daily rollup"></td><td><span class="chip info i18n" data-zh="生产" data-en="Production"></span></td><td class="mono">v2</td><td class="n">11</td><td class="hint">7</td><td><span class="chip ok i18n" data-zh="已发布" data-en="Published"></span></td></tr>
+            <tr><td class="i18n" data-zh="采购入库台账" data-en="Procurement receipts"></td><td><span class="chip info i18n" data-zh="采购" data-en="Procurement"></span></td><td class="mono">v2</td><td class="n">9</td><td class="hint">4</td><td><span class="chip ok i18n" data-zh="已发布" data-en="Published"></span></td></tr>
+            <tr><td class="i18n" data-zh="回款明细" data-en="Collections detail"></td><td><span class="chip info i18n" data-zh="市场" data-en="Marketing"></span></td><td class="mono">v3</td><td class="n">7</td><td class="hint">2</td><td><span class="chip warn i18n" data-zh="草案 · 试点中" data-en="Draft · in pilot"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="hint i18n" style="margin-top:10px" data-zh="v3 的改动来自试点反馈，未发布前不影响任何人本月的填报。" data-en="The v3 changes came out of the pilot and affect nobody's filing this month until it is published."></p>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="draft">
+    <header><h3 class="i18n" data-zh="从原件到草稿" data-en="From an original to a draft"></h3><span class="id">W02</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E02-UC03：员工手里是非标准原件——表格、文字、甚至一段微信记录。抽取出的每一个值都标明它来自原件的哪一处，未抽到的字段留空并标「需补」，不用一个看起来合理的值填上。"
+       data-en="E02-UC03: what the staff member holds is non-standard — a table, a paragraph, sometimes a chat log. Every extracted value points back to where in the original it came from, and anything not found stays empty and flagged rather than filled with something plausible."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="原件" data-en="Original"></p>
+        <div class="card flat pad-sm" style="font-size:12.5px;line-height:1.8">
+          <p class="i18n" data-zh="7月3日 第二实验学校 发车12车 共1240方 实收1058方 现场签收单缺2张 已联系补" data-en="3 July, No.2 school, 12 loads dispatched, 1,240 m³ total, 1,058 m³ received, 2 signed dockets missing, being chased"></p>
+        </div>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="草稿（模板 v2）" data-en="Draft (template v2)"></p>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="字段" data-en="Field"></th><th class="i18n" data-zh="值" data-en="Value"></th><th class="i18n" data-zh="来自原件" data-en="From the original"></th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="日期" data-en="Date"></td><td class="mono">2024-07-03</td><td class="hint i18n" data-zh="「7月3日」" data-en="“3 July”"></td></tr>
+            <tr><td class="i18n" data-zh="项目" data-en="Project"></td><td class="mono i18n" data-zh="第二实验学校扩建" data-en="No.2 school extension"></td><td class="hint i18n" data-zh="「第二实验学校」+ 字典别名" data-en="“No.2 school” plus a dictionary alias"></td></tr>
+            <tr><td class="i18n" data-zh="出厂量" data-en="Shipped"></td><td class="mono">1240.0</td><td class="hint i18n" data-zh="「共1240方」" data-en="“1,240 m³ total”"></td></tr>
+            <tr><td class="i18n" data-zh="实际量" data-en="Received"></td><td class="mono">1058.0</td><td class="hint i18n" data-zh="「实收1058方」" data-en="“1,058 m³ received”"></td></tr>
+            <tr><td class="i18n" data-zh="车次" data-en="Loads"></td><td class="mono">12</td><td class="hint i18n" data-zh="「发车12车」" data-en="“12 loads dispatched”"></td></tr>
+            <tr><td class="i18n" data-zh="签收单号" data-en="Docket numbers"></td><td class="e i18n" data-zh="需补" data-en="Needs input"></td><td class="hint i18n" data-zh="原件未给出" data-en="Not in the original"></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="clarify">
+    <header><h3 class="i18n" data-zh="补问" data-en="Clarifications"></h3><span class="id">W03</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E02-UC04：抽取结果有缺项、冲突或需要确认的值。补问一次问一件事，并说明为什么要问——「因为原件没有」和「因为两处说法不一致」对填报员是两种不同的工作。"
+       data-en="E02-UC04: an extracted record has missing, conflicting or unconfirmed values. One clarification asks one thing and says why it is asking, because “the original does not say” and “two places disagree” are different jobs for the person answering."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:620px">
+        <div class="card flat stack pad-sm">
+          <div class="between"><strong style="font-weight:500;font-size:13px" class="i18n" data-zh="签收单号" data-en="Docket numbers"></strong><span class="chip warn i18n" data-zh="缺项" data-en="Missing"></span></div>
+          <p class="hint i18n" data-zh="原件提到「现场签收单缺 2 张」，但没有给出单号。模板要求必填。" data-en="The original says two signed dockets are missing but gives no numbers, and the template requires them."></p>
+          <span class="input ph i18n" data-zh="例：SD-20240703-07, SD-20240703-11" data-en="e.g. SD-20240703-07, SD-20240703-11"></span>
+        </div>
+        <div class="card flat stack pad-sm">
+          <div class="between"><strong style="font-weight:500;font-size:13px" class="i18n" data-zh="实际量" data-en="Received volume"></strong><span class="chip warn i18n" data-zh="冲突" data-en="Conflict"></span></div>
+          <p class="hint i18n" data-zh="原件写 1058 方，财务台账同日同项目写 1082 方。两者相差 24 方。" data-en="The original says 1,058 m³; the finance ledger says 1,082 m³ for the same project on the same day, a 24 m³ gap."></p>
+          <div class="opt"><span class="box round on"></span><span class="i18n" data-zh="以原件为准（1058.0）" data-en="Use the original (1,058.0)"></span></div>
+          <div class="opt"><span class="box round"></span><span class="i18n" data-zh="以财务台账为准（1082.0）" data-en="Use the finance ledger (1,082.0)"></span></div>
+          <div class="opt"><span class="box round"></span><span class="i18n" data-zh="都不确定，留作待确认" data-en="Unsure; leave it as an open question"></span></div>
+        </div>
+        <div class="row"><span class="btn primary i18n" data-zh="保存草稿" data-en="Save the draft"></span><span class="hint i18n" data-zh="保存草稿不写入目标系统。" data-en="Saving a draft writes nothing to the target system."></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="submit">
+    <header><h3 class="i18n" data-zh="复核并提交" data-en="Approve and submit"></h3><span class="id">W04</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E02-UC05：标准记录经批准后写入目标系统。提交前把「将要写什么、写到哪、还有什么没答」一次摆清；未答完的补问挡住提交，而不是提交后再报错。"
+       data-en="E02-UC05: an approved record is written to the target system. Before submitting, what will be written, where, and what remains unanswered are stated together; unanswered clarifications block the submission rather than surfacing as an error after it."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:620px">
+        <div class="between"><h4 class="i18n" data-zh="提交前复核" data-en="Review before submitting"></h4><span class="chip ok i18n" data-zh="补问 3/3 已答" data-en="3 of 3 clarifications answered"></span></div>
+        <dl class="kv">
+          <dt class="i18n" data-zh="记录" data-en="Record"></dt><dd>2024-07 · <span class="i18n" data-zh="生产 · 第二实验学校扩建" data-en="production · No.2 school extension"></span></dd>
+          <dt class="i18n" data-zh="模板版本" data-en="Template version"></dt><dd class="mono">v2</dd>
+          <dt class="i18n" data-zh="目标系统" data-en="Target system"></dt><dd class="mono">feishu://bitable/生产台账</dd>
+          <dt class="i18n" data-zh="写入字段" data-en="Fields written"></dt><dd>11</dd>
+        </dl>
+        <div class="callout info"><p class="i18n" data-zh="提交需要一次审批。未经批准不会写入目标系统。" data-en="Submitting needs one approval. Nothing is written to the target system without it."></p></div>
+        <div class="row"><span class="btn primary i18n" data-zh="提交给审批" data-en="Send for approval"></span><span class="btn quiet i18n" data-zh="继续编辑" data-en="Keep editing"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="board">
+    <header><h3 class="i18n" data-zh="流转看板" data-en="The handoff board"></h3><span class="id">W05</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E02-UC06：数据就绪要通知下一个部门，并在看板上可见。通知本身有自己的状态——已发送、发送失败、已放弃——因为「我以为通知过了」是跨部门协作里最常见的一种延误。"
+       data-en="E02-UC06: ready data notifies the next department and shows on the board. The notification carries its own state — sent, failed, abandoned — because “I thought they had been told” is the most common way cross-department work stalls."></p>
+    <div class="frame">
+      <div class="pane pad">
+        <div class="board">
+          <section>
+            <h4 class="i18n" data-zh="待填报" data-en="To submit"></h4>
+            <div class="t"><span class="chip info i18n" data-zh="市场" data-en="Marketing"></span><br><span class="hint">2024-07 · <span class="i18n" data-zh="回款明细" data-en="Collections"></span></span></div>
+          </section>
+          <section>
+            <h4 class="i18n" data-zh="待复核" data-en="To review"></h4>
+            <div class="t"><span class="chip warn i18n" data-zh="需关注" data-en="Attention"></span><br><span class="hint"><span class="i18n" data-zh="采购 · 单价为负 1 行" data-en="Procurement · 1 row, negative price"></span></span></div>
+          </section>
+          <section>
+            <h4 class="i18n" data-zh="已交接" data-en="Handed off"></h4>
+            <div class="t"><span class="chip warn i18n" data-zh="上游已修订" data-en="Upstream revised"></span><br><span class="hint i18n" data-zh="生产 7 月产量已改，需确认影响" data-en="July output changed upstream; confirm the impact"></span></div>
+            <div class="t"><span class="chip ok i18n" data-zh="已完成" data-en="Completed"></span><br><span class="hint"><span class="i18n" data-zh="财务" data-en="Finance"></span> · 2024-07</span></div>
+          </section>
+          <section>
+            <h4 class="i18n" data-zh="通知" data-en="Notice"></h4>
+            <div class="t"><span class="chip ok i18n" data-zh="已发送" data-en="Sent"></span><br><span class="hint">14:12 · <span class="i18n" data-zh="财务" data-en="finance"></span></span></div>
+            <div class="t"><span class="chip bad i18n" data-zh="发送失败" data-en="Send failed"></span><br><span class="hint i18n" data-zh="飞书接口 502 · 可重试" data-en="Feishu returned 502 · retryable"></span></div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="downstream">
+    <header><h3 class="i18n" data-zh="下游处理" data-en="Downstream action"></h3><span class="id">W06</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E02-UC07：下游部门收到交接，可以开始、退回或完成。退回必须写理由并指回具体字段，否则上游收到的只是一个「不对」。"
+       data-en="E02-UC07: a downstream department receives a handoff and can start, return or complete it. Returning requires a reason pointing at a specific field, or all the upstream receives is the word “wrong”."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:600px">
+        <div class="between"><h4 class="i18n" data-zh="来自生产部的交接" data-en="Handoff from production"></h4><span class="chip info i18n" data-zh="待处理" data-en="Waiting"></span></div>
+        <p class="muted i18n" data-zh="2024-07 生产台账已提交，财务可以开始核对回款。" data-en="The July production ledger is submitted; finance can begin reconciling collections."></p>
+        <div class="row"><span class="btn primary i18n" data-zh="开始处理" data-en="Start"></span><span class="btn i18n" data-zh="标记完成" data-en="Complete"></span><span class="btn danger i18n" data-zh="退回上游" data-en="Return upstream"></span></div>
+        <hr class="rule" style="margin:6px 0">
+        <label class="field"><span class="lab i18n" data-zh="退回理由（必填，指向具体字段）" data-en="Reason for returning (required, naming a field)"></span><span class="input area">实际量字段与我们收到的签收单不一致：7 月 3 日应为 1,082 方。</span></label>
+        <div class="row end"><span class="btn danger i18n" data-zh="退回" data-en="Return"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="revised">
+    <header><h3 class="i18n" data-zh="上游修订了已交接的记录" data-en="An upstream record was revised after handoff"></h3><span class="id">W07</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E02-UC08：下游要确认影响，而不是被静默覆盖。变了什么、变前变后各是多少、下游已经基于旧值做了什么——三件事一起给出，才谈得上确认。"
+       data-en="E02-UC08: the downstream side confirms the impact rather than being silently overwritten. What changed, the before and after, and what the downstream already did on the old value have to appear together before confirming means anything."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:620px">
+        <div class="callout warn">
+          <h4 class="i18n" data-zh="上游已修订" data-en="Upstream revised"></h4>
+          <p class="i18n" data-zh="生产部在你开始处理之后修改了 7 月 3 日的实际量。你的处理没有被覆盖。" data-en="Production changed the received volume for 3 July after you started. Your work was not overwritten."></p>
+        </div>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="字段" data-en="Field"></th><th class="i18n" data-zh="修订前" data-en="Before"></th><th class="i18n" data-zh="修订后" data-en="After"></th><th class="i18n" data-zh="你基于旧值做的" data-en="What you did on the old value"></th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="实际量 · 7 月 3 日" data-en="Received · 3 July"></td><td class="n del">1,058.0</td><td class="n ins">1,082.0</td><td class="hint i18n" data-zh="已核对回款 402,000.00" data-en="Reconciled collections of 402,000.00"></td></tr>
+          </tbody>
+        </table></div>
+        <div class="row"><span class="btn primary i18n" data-zh="确认影响，重新核对" data-en="Confirm and re-reconcile"></span><span class="btn i18n" data-zh="影响不大，保持原处理" data-en="No material impact, keep my work"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="checklist">
+    <header><h3 class="i18n" data-zh="月度对账进度清单" data-en="The monthly close checklist"></h3><span class="id">W08</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E14-UC01：进入新月份，汇总负责人需要知道对账走到哪一步、还差谁什么。每个未完成步骤带负责人角色与一个下一步按钮——一份只报告状态、不给动作的清单，等于让人自己再去找四个人。"
+       data-en="E14-UC01: a new month starts and the consolidation lead needs to know how far the close has got and who still owes what. Every incomplete step carries its owner and one next action, because a checklist that reports state without offering an action just sends somebody off to find four people."></p>
+    <div class="frame">
+      <div class="pane">
+        <div class="pad divide"><div class="between"><h4>2024-07 <span class="i18n" data-zh="对账进度" data-en="close progress"></span></h4><span class="chip warn i18n" data-zh="4 / 7 步完成" data-en="4 of 7 steps done"></span></div></div>
+        <div class="pad">
+          <ol class="steps" style="gap:12px">
+            <li class="step done"><div class="between"><h4 style="margin:0" class="i18n" data-zh="生产已交，自检通过" data-en="Production submitted, self-check passed"></h4><span class="hint">07-31 16:04</span></div></li>
+            <li class="step done"><div class="between"><h4 style="margin:0" class="i18n" data-zh="采购已交，6 行隔离" data-en="Procurement submitted, 6 rows quarantined"></h4><span class="btn quiet sm i18n" data-zh="打开隔离行" data-en="Open quarantine"></span></div></li>
+            <li class="step done"><div class="between"><h4 style="margin:0" class="i18n" data-zh="财务已交" data-en="Finance submitted"></h4><span class="hint">08-01 09:12</span></div></li>
+            <li class="step todo"><div class="between"><h4 style="margin:0" class="i18n" data-zh="市场未交" data-en="Marketing has not submitted"></h4><span class="btn sm i18n" data-zh="提醒市场部" data-en="Remind marketing"></span></div><p class="hint i18n" data-zh="负责人：市场部填报员 · 已逾期 2 天" data-en="Owner: marketing contributor · two days overdue"></p></li>
+            <li class="step done"><div class="between"><h4 style="margin:0" class="i18n" data-zh="总表已生成" data-en="Master table built"></h4><span class="hint">1,482 <span class="i18n" data-zh="行" data-en="rows"></span></span></div></li>
+            <li class="step todo"><div class="between"><h4 style="margin:0" class="i18n" data-zh="11 项待确认" data-en="11 open items"></h4><span class="btn sm i18n" data-zh="打开待确认事项" data-en="Open the inbox"></span></div></li>
+            <li class="step todo"><div class="between"><h4 style="margin:0" class="i18n" data-zh="研判部分完成，结论页未生成" data-en="Review is partial, no brief yet"></h4><span class="btn sm i18n" data-zh="查看报告" data-en="Open the report"></span></div></li>
+          </ol>
+          <div class="callout" style="margin-top:16px">
+            <p class="i18n" data-zh="全部必需步骤完成后，这里显示「本月可结账」并记录完成时间。" data-en="Once every required step is done, this reads “ready to close” and records the time."></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="inbox">
+    <header><h3 class="i18n" data-zh="待确认事项收件箱" data-en="The open-item inbox"></h3><span class="id">W09</span><span class="st designed">DESIGNED</span></header>
+    <p class="cap i18n"
+       data-zh="E14-UC05：待确认事项分散在总表、隔离行、列匹配、填报草稿、出处缺失、过期结论六处，没人知道自己该处理什么。收件箱只聚合本人有权处理的事项，处理完在原模块自动消失——一份需要手动勾掉的待办，很快就没人信了。"
+       data-en="E14-UC05: open items are scattered across the master, quarantine, column matches, drafts, missing provenance and stale briefs, and nobody knows which are theirs. The inbox aggregates only what this person may act on, and an item disappears when its own module resolves it — a to-do list that needs manual ticking stops being trusted quickly."></p>
+    <div class="frame">
+      <div class="pane">
+        <div class="pad divide"><div class="row">
+          <h4 class="i18n" data-zh="我的待办" data-en="My open items"></h4>
+          <span class="badge">5</span>
+          <span class="spacer" style="flex:1"></span>
+          <span class="chip i18n" data-zh="2024-07" data-en="2024-07"></span>
+          <span class="chip i18n" data-zh="全部类型" data-en="All types"></span>
+        </div></div>
+        <div class="scroll-x"><table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="事项" data-en="Item"></th>
+            <th class="i18n" data-zh="来源模块" data-en="From"></th>
+            <th class="i18n" data-zh="批次" data-en="Batch"></th>
+            <th class="i18n" data-zh="创建" data-en="Created"></th>
+            <th></th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="城东物流园 B 区 · 回款出处缺失" data-en="East logistics park B · provenance missing for collections"></td><td><span class="chip i18n" data-zh="总表" data-en="Master"></span></td><td class="mono">a41f…9c2e</td><td class="hint">08-01</td><td><span class="btn quiet sm i18n" data-zh="处理 ↗" data-en="Handle ↗"></span></td></tr>
+            <tr><td class="i18n" data-zh="生产 203 行 · 日期歧义" data-en="Production row 203 · ambiguous date"></td><td><span class="chip i18n" data-zh="隔离行" data-en="Quarantine"></span></td><td class="mono">a41f…9c2e</td><td class="hint">08-01</td><td><span class="btn quiet sm i18n" data-zh="处理 ↗" data-en="Handle ↗"></span></td></tr>
+            <tr><td class="mono">市场.回款金额（含税）</td><td><span class="chip i18n" data-zh="列匹配" data-en="Column match"></span></td><td class="mono">a41f…9c2e</td><td class="hint">08-01</td><td><span class="btn quiet sm i18n" data-zh="处理 ↗" data-en="Handle ↗"></span></td></tr>
+            <tr><td class="i18n" data-zh="签收单号未填" data-en="Docket numbers not supplied"></td><td><span class="chip i18n" data-zh="填报草稿" data-en="Draft"></span></td><td class="e">—</td><td class="hint">07-31</td><td><span class="btn quiet sm i18n" data-zh="处理 ↗" data-en="Handle ↗"></span></td></tr>
+            <tr><td class="i18n" data-zh="C01 增值税税率未确认" data-en="C01 VAT rate unconfirmed"></td><td><span class="chip i18n" data-zh="口径" data-en="Convention"></span></td><td class="e i18n" data-zh="全部" data-en="All"></td><td class="hint">07-20</td><td><span class="btn quiet sm i18n" data-zh="处理 ↗" data-en="Handle ↗"></span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="pad" style="border-top:.5px solid var(--border)">
+          <p class="hint i18n" data-zh="只列出你有权处理的事项；别人部门的不在这里，也不告诉你它们存在。" data-en="Only items you may act on appear here; another department's are absent and their existence is not announced."></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="pager"></div>
+</div>
+
+<script src="assets/design.js"></script>
+</body>
+</html>

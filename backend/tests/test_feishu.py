@@ -1,4 +1,5 @@
 """Feishu Drive shortcuts (#140), tested against a simulated tenant — no real Feishu call."""
+import copy
 import csv as csvlib
 import io
 import json
@@ -6,8 +7,10 @@ import re
 
 import httpx
 import pytest
+import yaml
 from conftest import receipt
 from fastapi.testclient import TestClient
+from test_access_resolver import ROLES, SPACES
 from test_business_mvp import CASES, judgement
 
 from bridgeflow import business, feishu, store
@@ -125,6 +128,17 @@ def tenant(monkeypatch):
                         lambda token: feishu.FeishuDrive.for_user(token, "https://feishu.test", transport=httpx.MockTransport(fake)))
     monkeypatch.setattr(settings, "field_dictionary_path", str(CASES / "dictionary.yaml"))
     return fake
+
+
+@pytest.fixture
+def acl(monkeypatch, tmp_path):
+    """A declared space -> department mapping whose production space is the fake tenant's spc1."""
+    spaces = copy.deepcopy(SPACES)
+    spaces["departments"]["production"]["space_id"] = "spc1"
+    path = tmp_path / "access-control.yaml"
+    path.write_text(yaml.safe_dump({"spaces": spaces, "roles": ROLES}), encoding="utf-8")
+    monkeypatch.setattr(settings, "access_control_path", str(path))
+    return path
 
 
 @pytest.fixture
@@ -272,10 +286,13 @@ def test_wiki_endpoints_require_a_user_token(client, tenant):
     assert tenant.token_calls == 0  # a missing user token never falls back to the tenant
 
 
-def test_wiki_spaces_and_nodes_are_metadata_only(client, tenant):
+def test_wiki_spaces_and_nodes_are_metadata_only(client, tenant, acl):
+    tenant.wiki_spaces.append({"space_id": "spc-personal", "name": "我的文档库", "description": "personal"})
     spaces = client.post("/tools/feishu-wiki-spaces", content="{}", headers=USER)
     assert spaces.status_code == 200, spaces.text
     assert spaces.json()["spaces"][0]["space_id"] == "spc1"
+    assert spaces.json()["spaces"][0]["department"] == "production"  # the declared mapping, annotated server-side
+    assert spaces.json()["spaces"][1]["department"] is None  # unmapped spaces stay manual in the browser
     nodes = client.post("/tools/feishu-wiki-list", content=json.dumps({"space_id": "spc1"}), headers=USER)
     assert nodes.status_code == 200, nodes.text
     body = nodes.json()
@@ -283,6 +300,38 @@ def test_wiki_spaces_and_nodes_are_metadata_only(client, tenant):
     assert body["nodes"][0]["token"] == "wikinode1"
     assert body["nodes"][0]["obj_token"] == "tokproduction"
     assert "secret_cell" not in json.dumps(spaces.json()) + json.dumps(body)  # metadata only, ever
+
+
+def test_wiki_spaces_fail_closed_without_a_structure_file(client, tenant, monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "access_control_path", str(tmp_path / "missing.yaml"))
+    response = client.post("/tools/feishu-wiki-spaces", content="{}", headers=USER)
+    assert response.status_code == 503 and "not configured" in response.json()["detail"]
+
+
+def test_a_wiki_import_contradicting_the_declared_mapping_is_rejected(client, tenant, acl):
+    payload = import_payload(files=[{"department": "finance", "file_token": "tokproduction",
+                                     "wiki_space_id": "spc1"}])
+    response = client.post("/tools/feishu-import-user", content=json.dumps(payload), headers=USER)
+    assert response.status_code == 422, response.text
+    detail = response.json()["detail"]
+    assert "production" in detail and "finance" in detail
+
+
+def test_a_wiki_import_matching_or_outside_the_mapping_imports(client, tenant, acl):
+    matching = import_payload(files=[{"department": "production", "file_token": "tokproduction",
+                                      "wiki_space_id": "spc1"}])
+    assert client.post("/tools/feishu-import-user", content=json.dumps(matching), headers=USER).status_code == 200
+    # Unmapped spaces keep the hand-picked department: spc1 is production's, spc-personal declares none.
+    unmapped = import_payload(files=[{"department": "finance", "file_token": "tokfinance",
+                                      "wiki_space_id": "spc-personal"}])
+    assert client.post("/tools/feishu-import-user", content=json.dumps(unmapped), headers=USER).status_code == 200
+
+
+def test_the_tenant_path_ignores_the_wiki_space_hint(client, tenant, acl):
+    payload = import_payload(files=[{"department": "finance", "file_token": "tokproduction",
+                                     "wiki_space_id": "spc1"}])
+    response = post(client, "/tools/feishu-import", payload)
+    assert response.status_code == 200, response.text
 
 
 def test_wiki_upload_lands_in_drive_then_attaches(client, tenant):

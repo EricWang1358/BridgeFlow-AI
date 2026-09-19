@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6 · 研判 — BridgeFlow AI</title>
+<link rel="stylesheet" href="assets/cds.css">
+</head>
+<body data-page="review">
+<div id="chrome"></div>
+
+<div class="wrap">
+  <header class="pagehead">
+    <p class="kicker">06 · Review</p>
+    <h1><span class="i18n" data-zh="四部门研判" data-en="The four-department review"></span></h1>
+    <p class="lead i18n"
+       data-zh="四个角色读同一份算好的指标，各自出结论，从不互相说话——给它们一条协商通道，正是「子代理越权」的来源。指标由规则确定性算出，模型只解释算出来的数，不替你算；每条结论都必须带证据，无证据的结论被拒绝，不是降级显示。"
+       data-en="Four roles read the same computed metrics, each reaching its own conclusion, and never speak to one another — a negotiation channel between them is exactly where subagents start exceeding their remit. Metrics are computed deterministically by rules; the model explains figures rather than producing them. Every finding must carry evidence, and one without it is refused rather than shown in a weaker form."></p>
+    <nav class="toc">
+      <a href="#start"><span class="i18n" data-zh="发起研判" data-en="Start a review"></span></a>
+      <a href="#dispatch"><span class="i18n" data-zh="派活过程" data-en="Dispatch"></span></a>
+      <a href="#report"><span class="i18n" data-zh="研判报告" data-en="The report"></span></a>
+      <a href="#check"><span class="i18n" data-zh="单条检查" data-en="One check"></span></a>
+      <a href="#partial"><span class="i18n" data-zh="部分完成" data-en="Partial results"></span></a>
+      <a href="#rejected"><span class="i18n" data-zh="校验拒绝" data-en="Validation refusal"></span></a>
+      <a href="#assign"><span class="i18n" data-zh="关注项指派" data-en="Assigning attention items"></span></a>
+      <a href="#usage"><span class="i18n" data-zh="用量与轨迹" data-en="Usage and trace"></span></a>
+    </nav>
+  </header>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="start">
+    <header><h3 class="i18n" data-zh="发起研判" data-en="Starting a review"></h3><span class="id">R01</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="研判请求直接发进当前会话，不用复制粘贴；也保留「改一改再发」，因为有人想在请求里加一句自己的关注点。批次没就绪时不给按钮，给的是把它变就绪的那一步。"
+       data-en="The request goes straight into the current conversation rather than through the clipboard, with a copy-instead option for anybody who wants to add their own emphasis. When the batch is not ready there is no button here — there is the step that makes it ready."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <div class="row"><span class="period">2024-07</span><span class="chip ok i18n" data-zh="可研判" data-en="Ready"></span></div>
+        <div class="callout info">
+          <h4 class="i18n" data-zh="下一步" data-en="Next step"></h4>
+          <p class="i18n" data-zh="数据可用了。发起四部门研判，队长会把活派给运营、采购、财务、销售四个角色。" data-en="The data is usable. Start the four-department review and the captain dispatches operations, procurement, finance and sales."></p>
+        </div>
+        <div class="row"><span class="btn primary i18n" data-zh="发起研判" data-en="Start the review"></span><span class="btn quiet i18n" data-zh="改一改再发（复制）" data-en="Copy instead"></span></div>
+        <p class="hint i18n" data-zh="直接把研判请求发到当前会话，不用复制粘贴。没有会话就新建一个。这一步会使用配置的模型。" data-en="Sends the request straight into the current conversation; a session is created if none is open. This step uses the configured model."></p>
+      </div>
+      <div class="pane pad stack">
+        <div class="row"><span class="period">2024-04</span><span class="chip warn i18n" data-zh="需要人工复核" data-en="Review required"></span></div>
+        <div class="callout warn">
+          <h4 class="i18n" data-zh="下一步" data-en="Next step"></h4>
+          <p class="i18n" data-zh="有行被扣下或有映射待确认。先看隔离行和待确认映射两个页签，再发起研判。" data-en="Rows were held back or mappings are unconfirmed. Check the quarantine and pending-mapping tabs before asking for a review."></p>
+        </div>
+        <div class="row"><span class="btn i18n" data-zh="打开隔离行" data-en="Open quarantine"></span><span class="btn i18n" data-zh="打开待确认映射" data-en="Open pending mappings"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="dispatch">
+    <header><h3 class="i18n" data-zh="派活过程" data-en="While the captain dispatches"></h3><span class="id">R02</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="四个子代理是扇出，不是团队：它们同时开始、各自结束，互不等待。统一期限现行 180 秒；超时后迟到的结果不得覆盖终态，这条要在界面上说出来，否则用户会盯着一个已经定了的报告等第四个部门。"
+       data-en="The four subagents are a fan-out, not a team: they start together, finish separately and never wait on one another. The shared deadline is currently 180 seconds, and a late result cannot overwrite a terminal state — which the interface has to say, or somebody sits watching a finished report waiting for a fourth department."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:560px">
+        <div class="between"><h4 class="i18n" data-zh="队长正在派活" data-en="The captain is dispatching"></h4><span class="chip i18n" data-zh="正在派活" data-en="Dispatching"></span></div>
+        <div class="stack">
+          <div class="between"><span class="muted i18n" data-zh="运营负责人" data-en="Operations director"></span><span class="chip ok i18n" data-zh="已返回" data-en="Returned"></span></div>
+          <div class="between"><span class="muted i18n" data-zh="采购负责人" data-en="Procurement manager"></span><span class="chip ok i18n" data-zh="已返回" data-en="Returned"></span></div>
+          <div class="between"><span class="muted i18n" data-zh="财务负责人" data-en="Finance controller"></span><span class="chip i18n" data-zh="处理中" data-en="Running"></span></div>
+          <div class="bar"><span style="width:58%"></span></div>
+          <div class="between"><span class="muted i18n" data-zh="销售负责人" data-en="Sales director"></span><span class="chip ok i18n" data-zh="已返回" data-en="Returned"></span></div>
+        </div>
+        <p class="hint"><span class="i18n" data-zh="统一期限" data-en="Shared deadline"></span> 180 <span class="i18n" data-zh="秒 · 已过 112 秒" data-en="seconds · 112 elapsed"></span></p>
+        <div class="callout">
+          <p class="i18n" data-zh="超时后迟到的结果不会覆盖已定的报告。到时仍未返回的部门标为「未完成」。" data-en="A result arriving after the deadline will not overwrite a settled report. Any department still out at that point is marked unvalidated."></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="report">
+    <header><h3 class="i18n" data-zh="四部门研判报告" data-en="The four-department report"></h3><span class="id">R03</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="未通过和有需关注项的角色排在前面，因为读者要先看到有问题的那几个。第一句永远是同一句免责：仅形成建议，未执行业务变更。"
+       data-en="Roles that did not validate, or carry an attention item, sort first, because that is what the reader came for. The first line is always the same disclaimer: these are proposals and no business change was executed."></p>
+    <div class="frame">
+      <div class="pane pad stack-lg">
+        <div>
+          <div class="row"><h3>2024-07</h3><span class="chip warn i18n" data-zh="部分完成" data-en="Partial"></span><span class="badge">3/4</span></div>
+          <p class="muted i18n" style="margin-top:6px" data-zh="仅形成建议，未执行业务变更。模型解释须由业务负责人复核。" data-en="Proposals only; no business changes executed. Business owners must review model explanations."></p>
+          <p class="attention i18n" style="margin-top:10px" data-zh="本月签收率整体下滑，第二实验学校扩建低于阈值 9.7 个百分点，建议先复核该项目的低签收车次。" data-en="Sign-off fell overall this month; the No.2 school extension sits 9.7 points below threshold. Review that project's low sign-off trips first."></p>
+        </div>
+
+        <div class="grid2">
+          <article class="card stack">
+            <div class="between"><h4 class="i18n" data-zh="运营负责人" data-en="Operations director"></h4><span class="chip ok i18n" data-zh="已校验" data-en="Validated"></span></div>
+            <p class="hint"><span class="i18n" data-zh="职责" data-en="Responsibility"></span>: <span class="i18n" data-zh="产量与交付" data-en="Output and delivery"></span><br><span class="i18n" data-zh="决策负责人" data-en="Decision owner"></span>: <span class="i18n" data-zh="运营负责人" data-en="Operations director"></span></p>
+            <section class="attention">
+              <div class="check"><span class="title i18n" data-zh="签收率" data-en="Sign-off rate"></span><b>85.26 <small>%</small></b><span class="chip warn i18n" data-zh="需要处理" data-en="Attention"></span></div>
+              <p style="font-size:13px"><span class="i18n" data-zh="建议" data-en="Proposal"></span>: <span class="i18n" data-zh="复核第二实验学校扩建的低签收车次。" data-en="Review the low sign-off trips on the school extension."></span></p>
+            </section>
+            <section>
+              <div class="check"><span class="title i18n" data-zh="产能利用率" data-en="Capacity utilisation"></span><b>78.40 <small>%</small></b><span class="chip ok i18n" data-zh="正常范围" data-en="Within threshold"></span></div>
+            </section>
+          </article>
+          <article class="card stack">
+            <div class="between"><h4 class="i18n" data-zh="财务负责人" data-en="Finance controller"></h4><span class="chip bad i18n" data-zh="未完成" data-en="Unvalidated"></span></div>
+            <p class="err i18n" data-zh="子代理在声明职责外给出结论，已被校验拒绝。" data-en="The subagent produced a finding outside its declared responsibility and was rejected in validation."></p>
+          </article>
+          <article class="card stack">
+            <div class="between"><h4 class="i18n" data-zh="采购负责人" data-en="Procurement manager"></h4><span class="chip ok i18n" data-zh="已校验" data-en="Validated"></span></div>
+            <section><div class="check"><span class="title i18n" data-zh="单方原料成本" data-en="Material cost per m³"></span><b>248.60 <small><span class="i18n" data-zh="元" data-en="元"></span></small></b><span class="chip ok i18n" data-zh="正常范围" data-en="Within threshold"></span></div></section>
+          </article>
+          <article class="card stack">
+            <div class="between"><h4 class="i18n" data-zh="销售负责人" data-en="Sales director"></h4><span class="chip ok i18n" data-zh="已校验" data-en="Validated"></span></div>
+            <section class="attention"><div class="check"><span class="title i18n" data-zh="回款周期" data-en="Collection days"></span><b>47.0 <small><span class="i18n" data-zh="天" data-en="days"></span></small></b><span class="chip warn i18n" data-zh="需要处理" data-en="Attention"></span></div></section>
+          </article>
+        </div>
+
+        <div class="row"><span class="btn quiet i18n" data-zh="队长会话 ↗" data-en="Captain session ↗"></span><span class="btn quiet i18n" data-zh="报告编号: 4f2ac81d ↗" data-en="Report ID: 4f2ac81d ↗"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="check">
+    <header><h3 class="i18n" data-zh="单条检查与它的证据" data-en="One check and its evidence"></h3><span class="id">R04</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="值、公式、阈值、建议在上面，证据折叠在下面。引用次数与展示来源必须分开写：引用 N 次不等于 N 个不同单元格，展示封顶也不等于只算了样本——这两句话拦住的是两种完全不同的误读。"
+       data-en="Value, formula, threshold and proposal on top, evidence folded underneath. Reference count and shown sources are stated separately: N references is not N distinct cells, and a capped display does not mean the arithmetic sampled. Those two sentences stop two entirely different misreadings."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:640px">
+        <div class="check"><span class="title i18n" data-zh="签收率" data-en="Sign-off rate"></span><b>85.26 <small>%</small></b><span class="chip warn i18n" data-zh="需要处理" data-en="Attention"></span></div>
+        <p style="font-size:13.5px"><span class="i18n" data-zh="建议" data-en="Proposal"></span>: <span class="i18n" data-zh="复核第二实验学校扩建的低签收车次。" data-en="Review the low sign-off trips on the school extension."></span></p>
+        <dl class="kv">
+          <dt class="i18n" data-zh="公式" data-en="Formula"></dt><dd class="mono"><span class="i18n" data-zh="实际量 ÷ 出厂量" data-en="received ÷ shipped"></span></dd>
+          <dt class="i18n" data-zh="关注阈值" data-en="Threshold"></dt><dd>&lt; 95.00 %</dd>
+          <dt class="i18n" data-zh="引用次数" data-en="Input references"></dt><dd>586</dd>
+          <dt class="i18n" data-zh="展示来源" data-en="Sources shown"></dt><dd>20 <span class="hint i18n" data-zh="（封顶）" data-en="(capped)"></span></dd>
+        </dl>
+        <div class="callout">
+          <p class="i18n" data-zh="引用 N 次不等于 N 个不同单元格；展示封顶不等于只算样本。分母仍是全部 586 行。" data-en="N references do not mean N distinct cells, and a capped display does not mean sampled arithmetic. The denominator is still all 586 rows."></p>
+        </div>
+        <p class="eyebrow i18n" data-zh="模型解释（待复核）" data-en="Model explanation (needs review)"></p>
+        <p class="muted i18n" data-zh="下滑集中在第二实验学校扩建：该项目 7 月有 12 车签收量低于出厂量 10% 以上，其余项目未见同类偏差。" data-en="The decline is concentrated on the school extension: 12 loads in July signed off more than 10% below the shipped figure, and no other project shows a comparable gap."></p>
+        <p class="eyebrow i18n" data-zh="原始来源" data-en="Original sources"></p>
+        <div class="scroll"><table class="t">
+          <tbody>
+            <tr><td><span class="chip info i18n" data-zh="生产" data-en="Production"></span></td><td class="mono">2024-07-production.xlsx / 7月产量</td><td class="mono"><span class="i18n" data-zh="原表行" data-en="row"></span> 118</td><td class="mono">实际量（方）</td><td><span class="btn quiet sm i18n" data-zh="打开 ↗" data-en="Open ↗"></span></td></tr>
+            <tr><td><span class="chip info i18n" data-zh="生产" data-en="Production"></span></td><td class="mono">2024-07-production.xlsx / 7月产量</td><td class="mono"><span class="i18n" data-zh="原表行" data-en="row"></span> 119</td><td class="mono">出厂量（方）</td><td><span class="btn quiet sm i18n" data-zh="打开 ↗" data-en="Open ↗"></span></td></tr>
+            <tr><td colspan="5" class="hint i18n" data-zh="…另有 18 条，共 586 次引用" data-en="…18 more shown, out of 586 references"></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="partial">
+    <header><h3 class="i18n" data-zh="部分完成与人工复核意见" data-en="Partial results and the human review note"></h3><span class="id">R05</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="缺失判断不能代签。缺的那个部门的指标不参与排序，也不显示为「正常」——把没跑出来的东西显示成正常，是这类产品最容易犯也最贵的一个错。人工意见交给队长，不会自动重跑。"
+       data-en="A missing finding cannot be signed off for. The absent department's metrics are neither ranked nor shown as OK — rendering something that never ran as “normal” is the cheapest mistake to make here and the most expensive to discover. A human note goes to the captain and triggers no automatic rerun."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:600px">
+        <div class="callout warn">
+          <h4 class="i18n" data-zh="部分完成：财务部缺失" data-en="Partial: finance is missing"></h4>
+          <p class="i18n" data-zh="财务部研判未通过，其指标不参与排序，也不显示为正常。" data-en="The finance review did not validate; its metrics are neither ranked nor shown as OK."></p>
+        </div>
+        <p class="muted i18n" data-zh="缺失判断不能代签。可先提交人工复核意见，或修正输入后启动新批次。" data-en="Missing findings cannot be signed off. Submit a human review note, or correct inputs and start a new batch."></p>
+        <label class="field"><span class="lab i18n" data-zh="人工复核意见（最多 240 字符）" data-en="Human review note (up to 240 characters)"></span><span class="input area">财务口径本月未变，回款数据以银行流水为准，已人工核对一致。</span></label>
+        <div class="row"><span class="btn primary i18n" data-zh="交给队长复核" data-en="Send to captain"></span><span class="hint i18n" data-zh="复核意见保存验证过的作者，不会自动重跑研判。" data-en="The note records its verified author and does not rerun the review."></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="rejected">
+    <header><h3 class="i18n" data-zh="校验拒绝" data-en="Validation refusal"></h3><span class="id">R06</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="E07-UC04：部门子代理提交结论，校验数值、证据与职责边界。三种拒绝各有各的说法，因为修法不同：数值对不上要改数据，证据缺失要补引用，越权要改声明或换角色。"
+       data-en="E07-UC04: a subagent's findings are checked for their figures, their evidence and their remit. The three refusals read differently because the fixes differ: a mismatched figure means the data, missing evidence means the citation, and exceeding a remit means the declaration or the role."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <div class="callout bad"><h4 class="i18n" data-zh="越权" data-en="Outside its remit"></h4><p class="i18n" data-zh="财务负责人对生产排班给出了建议，但排班不在其声明职责内。整条结论被拒绝，不降级显示。" data-en="The finance controller advised on production scheduling, which its declared responsibility does not cover. The whole finding is refused rather than shown with a caveat."></p></div>
+        <div class="callout bad"><h4 class="i18n" data-zh="无证据" data-en="No evidence"></h4><p class="i18n" data-zh="结论未引用任何指标或单元格。Finding 在 schema 层强制证据非空。" data-en="The finding cites no metric and no cell. Evidence is required at the schema level, not checked afterwards."></p></div>
+        <div class="callout bad"><h4 class="i18n" data-zh="数值对不上" data-en="Figure does not match"></h4><p class="i18n" data-zh="子代理写的 85.9% 与确定性算出的 85.26% 不一致。以算出的为准，结论退回。" data-en="The subagent wrote 85.9% where the deterministic value is 85.26%. The computed figure stands and the finding is returned."></p></div>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="禁用话题" data-en="Unsupported topics"></p>
+        <p class="muted i18n" data-zh="各部门声明中列为 unsupported_topics 的词，即使在否定句中也不出现。写「本次研判不涉及坏账」同样违反它，因为它仍然把那个词放进了管理层的视野。" data-en="Terms listed in a role's unsupported topics never appear, not even negated. Writing “this review does not cover bad debt” breaks the rule just the same, because it still puts the term in front of management."></p>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="角色" data-en="Role"></th><th class="i18n" data-zh="不支持的话题" data-en="Unsupported topics"></th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="财务负责人" data-en="Finance controller"></td><td class="mono i18n" data-zh="坏账 · 税务筹划 · 授信" data-en="bad debt · tax planning · credit lines"></td></tr>
+            <tr><td class="i18n" data-zh="运营负责人" data-en="Operations director"></td><td class="mono i18n" data-zh="人事 · 安全事故定责" data-en="personnel · incident liability"></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="assign">
+    <header><h3 class="i18n" data-zh="关注项指派与关闭" data-en="Assigning and closing attention items"></h3><span class="id">R07</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E07-UC07：报告里有需关注项，要指派、处置并审批关闭。关闭需要审批，因为「这项我看过了，没问题」本身是一个会被引用的判断。"
+       data-en="E07-UC07: attention items in a report get assigned, handled and closed with approval. Closing needs approval because “I looked at this and it is fine” is itself a judgement somebody will later cite."></p>
+    <div class="frame">
+      <div class="pane scroll-x">
+        <table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="关注项" data-en="Attention item"></th>
+            <th class="i18n" data-zh="值 / 阈值" data-en="Value / threshold"></th>
+            <th class="i18n" data-zh="负责角色" data-en="Owner"></th>
+            <th class="i18n" data-zh="处置" data-en="Handling"></th>
+            <th class="i18n" data-zh="状态" data-en="State"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="第二实验学校扩建 · 签收率" data-en="No.2 school extension · sign-off"></td><td class="n">85.32% / 95.00%</td><td class="i18n" data-zh="运营负责人" data-en="Operations director"></td><td class="i18n" data-zh="已联系项目部核对送货单" data-en="Delivery notes being checked with the site team"></td><td><span class="chip warn i18n" data-zh="处理中" data-en="In progress"></span></td></tr>
+            <tr><td class="i18n" data-zh="回款周期" data-en="Collection days"></td><td class="n">47.0 / 40.0</td><td class="i18n" data-zh="销售负责人" data-en="Sales director"></td><td class="e i18n" data-zh="未开始" data-en="Not started"></td><td><span class="chip i18n" data-zh="待指派" data-en="Unassigned"></span></td></tr>
+            <tr><td class="i18n" data-zh="单方原料成本" data-en="Material cost per m³"></td><td class="n">248.60 / 260.00</td><td class="i18n" data-zh="采购负责人" data-en="Procurement manager"></td><td class="i18n" data-zh="在阈值内，本月无动作" data-en="Within threshold, no action this month"></td><td><span class="chip ok i18n" data-zh="已关闭" data-en="Closed"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="usage">
+    <header><h3 class="i18n" data-zh="用量、轨迹与超时收尾" data-en="Usage, trace and deadline recovery"></h3><span class="id">R08</span><span class="st impl">IMPLEMENTED</span></header>
+    <p class="cap i18n"
+       data-zh="E07-UC05/UC06：研判结束后保存报告、用量与轨迹供复查；中途超时、失败或服务重启，在途研判要能收尾。用量摆出来是有原因的——付费运行有请求数与 token 上限，看不见用量就没法判断一次研判值不值。"
+       data-en="E07-UC05 and UC06: a finished review keeps its report, usage and trace for later checking, and an in-flight review has to close itself after a timeout, a failure or a restart. Usage is shown deliberately: billed runs have request and token caps, and without seeing them nobody can judge whether a review was worth it."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="用量" data-en="Usage"></p>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="角色" data-en="Role"></th><th class="i18n" data-zh="步数" data-en="Steps"></th><th>Tokens</th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="队长编排" data-en="Captain orchestration"></td><td class="n">9</td><td class="n">14,208</td></tr>
+            <tr><td class="i18n" data-zh="运营负责人" data-en="Operations director"></td><td class="n">6 / 12</td><td class="n">7,940</td></tr>
+            <tr><td class="i18n" data-zh="采购负责人" data-en="Procurement manager"></td><td class="n">5 / 12</td><td class="n">6,512</td></tr>
+            <tr><td class="i18n" data-zh="财务负责人" data-en="Finance controller"></td><td class="n">12 / 12</td><td class="n">15,330</td></tr>
+            <tr><td class="i18n" data-zh="销售负责人" data-en="Sales director"></td><td class="n">4 / 12</td><td class="n">5,104</td></tr>
+          </tbody>
+        </table></div>
+        <p class="hint i18n" data-zh="财务用满了每部门步数上限，这与它这次未通过校验大概率相关，值得一起看。" data-en="Finance hit its per-department step cap, which is probably related to it failing validation and is worth reading together."></p>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="超时收尾" data-en="Deadline recovery"></p>
+        <div class="callout warn">
+          <h4 class="i18n" data-zh="研判已结束：超过统一期限" data-en="The review ended: the shared deadline passed"></h4>
+          <p class="i18n" data-zh="180 秒期限到达时财务部尚未返回，报告以「部分完成」定稿。之后到达的结果不会覆盖它。" data-en="Finance had not returned when the 180-second deadline passed, so the report was settled as partial. Anything arriving afterwards will not overwrite it."></p>
+        </div>
+        <p class="eyebrow i18n" data-zh="调用轨迹" data-en="Call trace"></p>
+        <p class="tree">
+          review_context &nbsp;&nbsp;14:06:02<br>
+          Spawn ×4 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;14:06:03<br>
+          review_finalize &nbsp;14:09:03 · <span style="color:var(--text-warning)" class="i18n" data-zh="超时定稿" data-en="settled on deadline"></span>
+        </p>
+        <div class="row"><span class="btn quiet i18n" data-zh="查看原生调用轨迹 ↗" data-en="Inspect the native trace ↗"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="pager"></div>
+</div>
+
+<script src="assets/design.js"></script>
+</body>
+</html>

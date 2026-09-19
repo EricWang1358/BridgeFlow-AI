@@ -18,6 +18,7 @@ const discoveryMode = process.env.BRIDGEFLOW_TEST_DISCOVERY === '1'
 assert(!discoveryMode || !live, 'Discovery fixtures require offline mode')
 const employeeMode = process.env.BRIDGEFLOW_TEST_EMPLOYEE === '1'
 assert(!employeeMode || !live, 'Synthetic employee mode is an offline test only')
+const feishuMode = process.env.BRIDGEFLOW_TEST_FEISHU === '1'
 let portalServer
 let employeeToken = '', secondEmployeeToken = ''
 const scratch = await mkdtemp(`${tmpdir()}/bridgeflow-web-e2e-`)
@@ -548,6 +549,48 @@ try {
   await page.getByRole('main', { name: '业务状态' }).getByRole('button', { name: '已拒绝 1', exact: true }).click()
   await page.getByRole('main', { name: '业务状态' }).getByText('客户编码未核实，请销售负责人确认后再提交。', { exact: true }).waitFor()
   await page.screenshot({ path: `${scratch}/business-state.png`, fullPage: true })
+  if (feishuMode) {
+    // docs/31 wiki import auto-department: browser-side stubs stand in for the portal
+    // user-token flow and the wiki listing; the import submission is intercepted to
+    // assert the request contract, then answered 422 so the panel shows the refusal.
+    await page.route('**/bridgeflow/config', route => route.fulfill({ status: 200, body: JSON.stringify({ portalUrl: 'https://portal.test' }) }))
+    await page.route('https://portal.test/**', route => route.fulfill({ status: 200, body: JSON.stringify({ access_token: 'u-1', expires_at: Math.floor(Date.now() / 1000) + 3600 }) }))
+    await page.route('**/bridgeflow/tools/feishu-wiki-spaces', route => route.fulfill({ status: 200, body: JSON.stringify({ spaces: [
+      { space_id: 'spc1', name: '生产知识库', description: '', department: 'production' },
+      { space_id: 'spc-personal', name: '个人文档库', description: '', department: null }], has_more: false, next_page_token: '' }) }))
+    await page.route('**/bridgeflow/tools/feishu-wiki-list', route => route.fulfill({ status: 200, body: JSON.stringify({ nodes: [
+      { token: 'wikin1', obj_token: 'tokp', obj_type: 'file',
+        title: route.request().postDataJSON().space_id === 'spc1' ? 'production.csv' : 'personal.csv',
+        has_child: false }], has_more: false, next_page_token: '' }) }))
+    let importBody = null
+    await page.route('**/bridgeflow/tools/feishu-import-user', route => {
+      importBody = route.request().postDataJSON()
+      return route.fulfill({ status: 422, body: JSON.stringify({ detail: 'file tokp: this wiki space is declared as department production, not finance' }) })
+    })
+    await page.getByRole('button', { name: '会话与设置', exact: true }).click()
+    await page.getByRole('button', { name: '导入与数据', exact: true }).click()
+    await page.getByText('从飞书选择', { exact: true }).click()
+    await page.getByRole('button', { name: '知识库', exact: true }).click()
+    await page.getByRole('button', { name: /生产知识库/ }).click()
+    const row = page.getByRole('button', { name: '生产', exact: true })
+    await row.waitFor()
+    await row.click()
+    await page.locator('dialog[open] input[type=month]').fill('2025-11')
+    await page.getByRole('button', { name: /导入选中文件/ }).click()
+    await page.waitForRequest(r => r.url().includes('/tools/feishu-import-user'))
+    // The core contract: the wiki space rides along so the backend can check consistency.
+    assert.deepEqual(importBody.files[0], { department: 'production', file_token: 'tokp', kind: 'file', wiki_space_id: 'spc1' })
+    await page.getByText(/declared as department production/).waitFor()  // the 422 surfaces, never silently
+    // Unmapped spaces keep the manual dropdown; entering a space clears the stale rows at once.
+    await page.getByRole('button', { name: '选择知识库', exact: true }).click()
+    await page.getByRole('button', { name: /个人文档库/ }).click()
+    assert.equal(await page.getByRole('button', { name: '生产', exact: true }).count(), 0)
+    await page.locator('dialog[open] select[aria-label=部门]').waitFor()
+    for (const pattern of ['**/bridgeflow/config', 'https://portal.test/**', '**/bridgeflow/tools/feishu-wiki-spaces',
+                           '**/bridgeflow/tools/feishu-wiki-list', '**/bridgeflow/tools/feishu-import-user']) {
+      await page.unroute(pattern)
+    }
+  }
   await coldReload({page,web,start,args:['web','--patch',`${scratch}/web.yml`,'--no-open','--port',String(webPort)],readLogs:()=>logs,sessionIds:[noteSession]})
   const restoredNotes=await page.evaluate(async id=>(await fetch(`/bridgeflow/approval-note-audit?session_id=${encodeURIComponent(id)}`)).json(),noteSession)
   assert.deepEqual(restoredNotes,noteAudit,'Refusal note audit must survive a full host restart')
@@ -570,7 +613,7 @@ try {
   await writeFile(`${scratch}/approval-note-audit.json`, JSON.stringify(noteAudit, null, 2))
   await writeFile(`${scratch}/approval-events.json`, JSON.stringify(finalEvents.filter(e => ['approval/asked', 'approval/decided', 'bridgeflow/approval-note', 'tool/result'].includes(e.type)), null, 2))
   console.log(JSON.stringify({ ...measurement, artifacts: scratch }))
-  console.log(JSON.stringify({ status: 'passed', screenshot: `${scratch}/data-workspace.png`, approvalScreenshot: `${scratch}/native-approval.png`, checks: ['native shell', 'plugin loading', 'upload', 'master table', 'authenticated proxy', 'write proxy denied', `native approval allow/reject/timeout with ${live ? 'live model' : 'offline adapter'}`, 'approval summary retry after failure', 'keyboard-only rejection', 'image paste guidance', 'paired native audit events', 'zero browser errors'] }))
+  console.log(JSON.stringify({ status: 'passed', screenshot: `${scratch}/data-workspace.png`, approvalScreenshot: `${scratch}/native-approval.png`, checks: ['native shell', 'plugin loading', 'upload', 'master table', 'authenticated proxy', 'write proxy denied', `native approval allow/reject/timeout with ${live ? 'live model' : 'offline adapter'}`, 'approval summary retry after failure', 'keyboard-only rejection', 'image paste guidance', 'paired native audit events', 'zero browser errors', ...(feishuMode ? ['wiki auto-department picker'] : [])] }))
 } catch (error) {
   if (page) { await page.screenshot({path: `${scratch}/failure.png`}); console.error('Screenshot:', `${scratch}/failure.png`); console.error((await page.locator('body').innerText()).slice(0,3000)); await writeFile(`${scratch}/failure.html`, await page.content()); console.error(await page.evaluate(() => ({scripts: [...document.scripts].map(x => x.src), boot: window.__DSH_BOOT__}))) }
   console.error(logs.replace(/([?&]token=)[^\s)]+/g, '$1<redacted>'))

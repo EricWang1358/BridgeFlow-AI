@@ -97,6 +97,20 @@ def structure() -> dict:
     return {"spaces": spaces, "roles": roles}
 
 
+def space_departments() -> dict[str, str]:
+    """space_id -> department, as a human declared in spaces.departments.
+
+    Pure structure: never consults Feishu, never guesses. A missing or invalid
+    file raises 503 like every other structure() consumer.
+    """
+    return {entry["space_id"]: unit for unit, entry in structure()["spaces"]["departments"].items()}
+
+
+def department_for_space(space_id: str) -> str | None:
+    """The department a wiki space stands for, or None when it declares none."""
+    return space_departments().get(space_id)
+
+
 # --- Feishu side: tenant-token wiki member reads, sync because access.py is sync --------
 
 _token: tuple[str, float] | None = None

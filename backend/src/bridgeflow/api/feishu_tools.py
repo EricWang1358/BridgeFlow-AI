@@ -12,7 +12,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 
-from bridgeflow import feishu, feishu_tabular
+from bridgeflow import access_resolver, feishu, feishu_tabular
 from bridgeflow.api.batches import _check_upload_scope, _import_batch, _visible, load_batch
 from bridgeflow.api.reviews import saved_review
 from bridgeflow.config import settings
@@ -55,6 +55,10 @@ class ImportFile(BaseModel):
     sheet_id: Token | None = None
     table_id: Token | None = None
     header_row: int | None = Field(None, ge=1)
+    #: Where the file was picked in wiki mode, reported by the browser. Lets the
+    #: import contradict the declared space -> department mapping loudly (422)
+    #: instead of trusting a hand-picked department. Inert on the tenant path.
+    wiki_space_id: str | None = Field(None, max_length=64)
 
     @model_validator(mode="after")
     def _kind_fields(self) -> ImportFile:
@@ -191,11 +195,30 @@ async def feishu_list(request: ListRequest, http_request: Request) -> dict:
         await drive.close()
 
 
+def _check_wiki_space_departments(files: list[ImportFile]) -> None:
+    """A wiki import may not contradict the declared space -> department mapping.
+
+    Stops a picked-the-wrong-space mixup loudly; not a security boundary — Feishu
+    enforces which files a user can reach, and _check_upload_scope still bounds the
+    department to the caller's grants. Unmapped spaces are ignored: a hand-picked
+    department there is legitimate (master office, personal library).
+    """
+    declared = access_resolver.space_departments()
+    for item in files:
+        if not item.wiki_space_id:
+            continue
+        mapped = declared.get(item.wiki_space_id)
+        if mapped and mapped != item.department:
+            raise HTTPException(422, f"file {item.file_token}: this wiki space is declared as "
+                                     f"department {mapped}, not {item.department}")
+
+
 @router.post("/feishu-import-user")
 async def feishu_import_user(request: ImportRequest, http_request: Request,
                              user: Annotated[UserIdentity | None, Depends(require_user)]) -> dict:
     """Download the files the signed-in user picked and import them as one batch."""
     _check_upload_scope([f.department for f in request.files], user)
+    _check_wiki_space_departments(request.files)
     return await _import_with(_user_client(http_request), request, user)
 
 
@@ -244,11 +267,17 @@ async def feishu_wiki_spaces(request: WikiSpacesRequest, http_request: Request) 
     """List the knowledge bases the signed-in user may see. Metadata only."""
     drive = _user_client(http_request)
     try:
-        return await drive.list_wiki_spaces(request.page_token)
+        page = await drive.list_wiki_spaces(request.page_token)
     except feishu.FeishuError as exc:
         raise HTTPException(502, str(exc)) from exc
     finally:
         await drive.close()
+    # Which unit each space stands for is a human-declared structure fact (issue
+    # #204's mapping); unlisted spaces (personal library, master office) get None
+    # and keep the manual pick in the browser. Fail closed on a bad config.
+    declared = access_resolver.space_departments()
+    page["spaces"] = [{**space, "department": declared.get(space["space_id"])} for space in page["spaces"]]
+    return page
 
 
 @router.post("/feishu-wiki-list")

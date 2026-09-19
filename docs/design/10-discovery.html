@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · 立项发现 — BridgeFlow AI</title>
+<link rel="stylesheet" href="assets/cds.css">
+</head>
+<body data-page="discovery">
+<div id="chrome"></div>
+
+<div class="wrap">
+  <header class="pagehead">
+    <p class="kicker">10 · Discovery</p>
+    <h1><span class="i18n" data-zh="立项发现" data-en="Discovery"></span></h1>
+    <p class="lead i18n"
+       data-zh="从一堆材料到一个被批准的 MVP：登记手里有什么，找出值得改进的跨部门场景，画清信息怎么流转，按难度与价值排序，开会确认，记录决策。管理层的决定不能被一个 AI 排名代替——排序是输入，不是结论。"
+       data-en="From a pile of materials to an approved MVP: register what exists, find cross-department scenarios worth improving, map how information moves, rank by effort and value, meet, and record the decision. An AI ranking cannot stand in for management's decision — the ordering is an input, not a conclusion."></p>
+    <nav class="toc">
+      <a href="#materials"><span class="i18n" data-zh="材料清单" data-en="Materials"></span></a>
+      <a href="#opportunities"><span class="i18n" data-zh="候选场景" data-en="Candidates"></span></a>
+      <a href="#graph"><span class="i18n" data-zh="流转图" data-en="Flow graph"></span></a>
+      <a href="#quadrant"><span class="i18n" data-zh="四象限" data-en="The quadrant"></span></a>
+      <a href="#meeting"><span class="i18n" data-zh="会议纪要" data-en="Meeting record"></span></a>
+      <a href="#decision"><span class="i18n" data-zh="决策与投票" data-en="Decision and votes"></span></a>
+    </nav>
+  </header>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="materials">
+    <header><h3 class="i18n" data-zh="材料清单" data-en="Materials inventory"></h3><span class="id">G01</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E01-UC01：项目启动时收到部门报表、说明或会议纪要，先弄清手里有哪些材料。清单是版本化的，并且专门留一列给「未确认的问题」——立项阶段最有价值的信息往往是「这件事还没人知道」。"
+       data-en="E01-UC01: kickoff brings department reports, notes and minutes that have to be inventoried first. The list is versioned, with a column reserved for unresolved questions — at this stage the most valuable thing on the page is usually what nobody knows yet."></p>
+    <div class="frame">
+      <div class="pane scroll-x">
+        <table class="t">
+          <thead><tr>
+            <th class="i18n" data-zh="材料" data-en="Material"></th>
+            <th class="i18n" data-zh="来源" data-en="Source"></th>
+            <th class="i18n" data-zh="涉及部门" data-en="Departments"></th>
+            <th class="i18n" data-zh="登记于" data-en="Registered"></th>
+            <th class="i18n" data-zh="未确认的问题" data-en="Unresolved questions"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="生产日报（3 个月）" data-en="Production daily reports, 3 months"></td><td class="hint i18n" data-zh="生产部提供" data-en="From production"></td><td><span class="chip info i18n" data-zh="生产" data-en="Production"></span></td><td class="hint">2024-04-11</td><td class="hint i18n" data-zh="车次口径是否含退货？" data-en="Do load counts include returns?"></td></tr>
+            <tr><td class="i18n" data-zh="采购入库台账" data-en="Procurement receipts ledger"></td><td class="hint i18n" data-zh="OA 导出" data-en="OA export"></td><td><span class="chip info i18n" data-zh="采购" data-en="Procurement"></span></td><td class="hint">2024-04-11</td><td class="e i18n" data-zh="无" data-en="None"></td></tr>
+            <tr><td class="i18n" data-zh="4 月 9 日跨部门会议纪要" data-en="Cross-department meeting, 9 April"></td><td class="hint i18n" data-zh="行政记录" data-en="Admin record"></td><td><span class="chip i18n" data-zh="四部门" data-en="All four"></span></td><td class="hint">2024-04-12</td><td class="hint i18n" data-zh="口头约定的字段规则未成文" data-en="Field rules agreed verbally, never written down"></td></tr>
+            <tr><td class="i18n" data-zh="回款对账表（1 个月）" data-en="Collections reconciliation, 1 month"></td><td class="hint i18n" data-zh="财务部提供" data-en="From finance"></td><td><span class="chip info i18n" data-zh="财务" data-en="Finance"></span></td><td class="hint">2024-04-15</td><td class="hint i18n" data-zh="只有一个月，不足以看趋势" data-en="One month only; not enough for a trend"></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="opportunities">
+    <header><h3 class="i18n" data-zh="候选场景" data-en="Candidate scenarios"></h3><span class="id">G02</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E01-UC02：把登记的材料变成候选的跨部门场景。每条候选写清「现在怎么做」与「痛在哪」，并挂上它依据的材料——没有材料支撑的候选，是会议上最难反驳也最不该采纳的那一类。"
+       data-en="E01-UC02: registered materials become candidate cross-department scenarios. Each names how the work is done today and where it hurts, and cites the materials behind it — a candidate with no material behind it is the hardest to argue against in a meeting and the least safe to adopt."></p>
+    <div class="frame grid2">
+      <div class="card stack">
+        <div class="between"><h4 class="i18n" data-zh="月度四部门对账" data-en="Monthly four-department close"></h4><span class="chip ok i18n" data-zh="已选入 MVP" data-en="In the MVP"></span></div>
+        <p class="muted i18n" data-zh="现在：四个部门各交一张 Excel，财务 BP 手工对到一张表上，平均两天。" data-en="Today: four departments each send a spreadsheet and the finance BP merges them by hand, about two days."></p>
+        <p class="hint"><span class="i18n" data-zh="痛点" data-en="Pain"></span>：<span class="i18n" data-zh="字段写法每月都不一样；对不上的地方只能挨个打电话。" data-en="Field spellings change every month, and every mismatch turns into a phone call."></span></p>
+        <p class="hint"><span class="i18n" data-zh="依据材料" data-en="Materials"></span>：<span class="i18n" data-zh="生产日报、采购台账、回款对账表" data-en="production reports, procurement ledger, collections reconciliation"></span></p>
+      </div>
+      <div class="card stack">
+        <div class="between"><h4 class="i18n" data-zh="对外报价" data-en="Customer quotation"></h4><span class="chip warn i18n" data-zh="二期" data-en="Phase two"></span></div>
+        <p class="muted i18n" data-zh="现在：销售问成本、问产能、问账期，三个部门各回一次，一天半。" data-en="Today: sales asks about cost, capacity and terms, gets three separate answers, about a day and a half."></p>
+        <p class="hint"><span class="i18n" data-zh="痛点" data-en="Pain"></span>：<span class="i18n" data-zh="报价口径没有书面政策，全靠经验。" data-en="There is no written pricing policy; it runs on experience."></span></p>
+      </div>
+      <div class="card stack">
+        <div class="between"><h4 class="i18n" data-zh="考勤汇总" data-en="Attendance rollup"></h4><span class="chip i18n" data-zh="未表决" data-en="Not voted"></span></div>
+        <p class="muted i18n" data-zh="现在：人事每月汇总各班组考勤。" data-en="Today: HR collects shift attendance every month."></p>
+        <div class="callout warn" style="margin-top:4px"><p class="i18n" data-zh="缺少一线参与者，没有材料支撑，未进入表决。" data-en="No frontline participant and no supporting material, so it did not reach a vote."></p></div>
+      </div>
+      <div class="card stack">
+        <div class="between"><h4 class="i18n" data-zh="新增候选" data-en="Add a candidate"></h4></div>
+        <label class="field"><span class="lab i18n" data-zh="场景名称" data-en="Scenario name"></span><span class="input ph i18n" data-zh="例：季度成本复盘" data-en="e.g. quarterly cost review"></span></label>
+        <label class="field"><span class="lab i18n" data-zh="依据材料（至少一项）" data-en="Supporting materials (at least one)"></span><span class="input ph i18n" data-zh="从材料清单中选择" data-en="Choose from the inventory"></span></label>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="graph">
+    <header><h3 class="i18n" data-zh="信息与文件流转图" data-en="How information and files move"></h3><span class="id">G03</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E01-UC03：业务方选定候选后，要看清信息与文件如何在部门间流转。图上标出每一段的载体与耗时——瓶颈通常不在某个部门内部，而在两个部门之间那条线上。"
+       data-en="E01-UC03: once the business picks a candidate, it needs to see how information and files actually move. Each edge carries its medium and its elapsed time, because the bottleneck is rarely inside a department — it is on the line between two of them."></p>
+    <div class="frame">
+      <div class="pane pad">
+        <svg viewBox="0 0 640 210" width="100%" height="210" role="img" aria-labelledby="gt gd">
+          <title id="gt">月度对账信息流转 / Monthly close information flow</title>
+          <desc id="gd">生产、采购、市场三个部门各自把 Excel 发给财务 BP，财务 BP 手工合并后交管理层。生产到财务用邮件耗时 1 天，采购用微信 2 天，市场用飞书 0.5 天，合并耗时 2 天。</desc>
+          <rect x="16" y="14" width="120" height="40" rx="8" fill="var(--bg-accent)"></rect><text x="76" y="39" font-size="12" fill="var(--text-accent)" text-anchor="middle">生产 / Production</text>
+          <rect x="16" y="82" width="120" height="40" rx="8" fill="var(--bg-accent)"></rect><text x="76" y="107" font-size="12" fill="var(--text-accent)" text-anchor="middle">采购 / Procure.</text>
+          <rect x="16" y="150" width="120" height="40" rx="8" fill="var(--bg-accent)"></rect><text x="76" y="175" font-size="12" fill="var(--text-accent)" text-anchor="middle">市场 / Marketing</text>
+
+          <line x1="140" y1="34" x2="292" y2="94" stroke="var(--border-strong)"></line>
+          <line x1="140" y1="102" x2="292" y2="102" stroke="var(--border-warning)" stroke-width="2"></line>
+          <line x1="140" y1="170" x2="292" y2="110" stroke="var(--border-strong)"></line>
+          <text x="210" y="56" font-size="10" fill="var(--text-muted)" text-anchor="middle">邮件 · 1d</text>
+          <text x="210" y="96" font-size="10" fill="var(--text-warning)" text-anchor="middle">微信 · 2d</text>
+          <text x="210" y="152" font-size="10" fill="var(--text-muted)" text-anchor="middle">飞书 · 0.5d</text>
+
+          <rect x="296" y="82" width="130" height="40" rx="8" fill="var(--bg-warning)"></rect><text x="361" y="101" font-size="12" fill="var(--text-warning)" text-anchor="middle">财务 BP 手工合并</text><text x="361" y="115" font-size="10" fill="var(--text-warning)" text-anchor="middle">manual merge · 2d</text>
+
+          <line x1="430" y1="102" x2="500" y2="102" stroke="var(--border-strong)"></line>
+          <rect x="504" y="82" width="120" height="40" rx="8" fill="var(--bg-neutral)"></rect><text x="564" y="107" font-size="12" fill="var(--text-secondary)" text-anchor="middle">管理层 / Mgmt</text>
+        </svg>
+        <p class="hint i18n" data-zh="总耗时 4 天，其中 2 天在手工合并这一段。两条最慢的边都不是「部门慢」，是「交接方式不同」。" data-en="Four days in total, two of them in the manual merge. Neither slow edge is a slow department; both are a difference in how the handoff happens."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="quadrant">
+    <header><h3 class="i18n" data-zh="四象限排序" data-en="The effort–value quadrant"></h3><span class="id">G04</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E01-UC04：候选超过一个时，管理层需要按落地难度与价值排序。量表与投票规则都要声明，并显示在图旁边——一个不知道量表是什么的四象限，读者只能按位置感觉。这是立项评分，不是月度指标图，两者不共用记号。"
+       data-en="E01-UC04: with more than one candidate, management needs them ranked by effort and value. The scale and the voting rule are declared and shown beside the chart, because a quadrant whose scale is unstated leaves the reader judging by position alone. This is project scoring, not a monthly metric chart, and the two share no notation."></p>
+    <div class="frame grid2">
+      <div class="pane pad">
+        <div class="quad">
+          <div class="ax h"></div><div class="ax v"></div>
+          <span class="ql i18n" style="left:8px;top:6px" data-zh="高价值 · 难落地" data-en="High value · hard"></span>
+          <span class="ql i18n" style="right:8px;top:6px" data-zh="高价值 · 易落地" data-en="High value · easy"></span>
+          <span class="ql i18n" style="left:8px;bottom:6px" data-zh="低价值 · 难落地" data-en="Low value · hard"></span>
+          <span class="ql i18n" style="right:8px;bottom:6px" data-zh="低价值 · 易落地" data-en="Low value · easy"></span>
+          <span class="dot i18n" style="left:72%;top:24%" data-zh="月度对账" data-en="Monthly close"></span>
+          <span class="dot i18n" style="left:28%;top:34%" data-zh="报价" data-en="Quotation"></span>
+          <span class="dot i18n" style="left:66%;top:70%" data-zh="考勤汇总" data-en="Attendance"></span>
+        </div>
+      </div>
+      <div class="pane pad stack">
+        <p class="eyebrow i18n" data-zh="声明的量表" data-en="Declared scale"></p>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="维度" data-en="Axis"></th><th class="i18n" data-zh="1" data-en="1"></th><th class="i18n" data-zh="5" data-en="5"></th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="价值" data-en="Value"></td><td class="hint i18n" data-zh="每月省 &lt; 2 小时" data-en="Saves under 2 hours a month"></td><td class="hint i18n" data-zh="每月省 &gt; 2 人天" data-en="Saves over 2 person-days a month"></td></tr>
+            <tr><td class="i18n" data-zh="落地难度" data-en="Effort"></td><td class="hint i18n" data-zh="现有数据即可" data-en="Existing data suffices"></td><td class="hint i18n" data-zh="需新建接口与制度" data-en="Needs a new interface and new rules"></td></tr>
+          </tbody>
+        </table></div>
+        <p class="eyebrow i18n" data-zh="评分" data-en="Scores"></p>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="i18n" data-zh="候选" data-en="Candidate"></th><th class="i18n" data-zh="价值" data-en="Value"></th><th class="i18n" data-zh="难度" data-en="Effort"></th><th class="i18n" data-zh="评分人" data-en="Scored by"></th></tr></thead>
+          <tbody>
+            <tr><td class="i18n" data-zh="月度对账" data-en="Monthly close"></td><td class="n">4.5</td><td class="n">2.1</td><td class="hint">6</td></tr>
+            <tr><td class="i18n" data-zh="报价" data-en="Quotation"></td><td class="n">4.0</td><td class="n">3.8</td><td class="hint">6</td></tr>
+            <tr><td class="i18n" data-zh="考勤汇总" data-en="Attendance"></td><td class="n">2.2</td><td class="n">2.4</td><td class="hint">3</td></tr>
+          </tbody>
+        </table></div>
+        <p class="hint i18n" data-zh="考勤只有 3 人评分，低于声明的最少评分人数，所以它的位置不作为决策依据。" data-en="Attendance was scored by three people, below the declared minimum, so its position is not treated as a basis for the decision."></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="meeting">
+    <header><h3 class="i18n" data-zh="会议纪要" data-en="Meeting record"></h3><span class="id">G05</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E01-UC05/E05-UC06：会上口头约定的字段规则要作为有来源的规则上下文登记，否则下个月没人记得「当时说好按含税算」。纪要里的每条约定都能直接变成一条字典草案，附上这次会议作为来源。"
+       data-en="E01-UC05 and E05-UC06: field rules agreed verbally have to be registered with their source, or next month nobody remembers that everyone agreed to work tax-inclusive. Each agreement in the record can become a dictionary draft with this meeting attached as its source."></p>
+    <div class="frame">
+      <div class="pane pad stack" style="max-width:640px">
+        <div class="between"><h4 class="i18n" data-zh="2024-04-19 跨部门立项会" data-en="Cross-department kickoff, 19 April 2024"></h4><span class="chip ok i18n" data-zh="已登记" data-en="Registered"></span></div>
+        <p class="hint"><span class="i18n" data-zh="参与者" data-en="Attendees"></span>：<span class="i18n" data-zh="生产、采购、财务、市场负责人各一，管理层两人" data-en="one owner from each of the four departments, two from management"></span></p>
+        <p class="eyebrow i18n" data-zh="形成的约定" data-en="Agreements reached"></p>
+        <div class="stack">
+          <div class="card flat pad-sm">
+            <p style="font-size:13px" class="i18n" data-zh="回款金额一律按含税口径填报。" data-en="Collections are always filed tax-inclusive."></p>
+            <div class="row" style="margin-top:6px"><span class="btn sm i18n" data-zh="登记为字典草案" data-en="Register as a dictionary draft"></span><span class="hint i18n" data-zh="来源：本次会议" data-en="Source: this meeting"></span></div>
+          </div>
+          <div class="card flat pad-sm">
+            <p style="font-size:13px" class="i18n" data-zh="项目名以市场部合同台账的写法为准。" data-en="Project names follow the spelling in the marketing contract ledger."></p>
+            <div class="row" style="margin-top:6px"><span class="btn sm i18n" data-zh="登记为字典草案" data-en="Register as a dictionary draft"></span><span class="hint i18n" data-zh="来源：本次会议" data-en="Source: this meeting"></span></div>
+          </div>
+        </div>
+        <div class="callout"><p class="i18n" data-zh="登记只创建草案。发布为字典版本需要审批——AI 可以提出草案，但不能发布标准。" data-en="Registering creates a draft only. Publishing it as a dictionary version needs approval: a model may draft a standard, never publish one."></p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- -->
+  <section class="screen" id="decision">
+    <header><h3 class="i18n" data-zh="决策与投票" data-en="Decisions and votes"></h3><span class="id">G06</span><span class="st partial">PARTIAL</span></header>
+    <p class="cap i18n"
+       data-zh="E01-UC06：记录共识、投票并确认 MVP 范围。条件式决策要原样保存——「先做四部门对账，报价延到二期」比一个「通过」有用得多，因为三个月后争的正是那个条件。"
+       data-en="E01-UC06: consensus, votes and the agreed MVP scope get recorded. A conditional decision is kept verbatim — “four-department close first, quotation in phase two” is far more useful than “approved”, because three months later the argument is about exactly that condition."></p>
+    <div class="frame grid2">
+      <div class="pane pad stack">
+        <div class="between"><h4 class="i18n" data-zh="月度对账 MVP" data-en="Monthly close MVP"></h4><span class="chip ok i18n" data-zh="已确认" data-en="Confirmed"></span></div>
+        <p style="font-size:13.5px" class="i18n" data-zh="条件式通过：先做四部门对账，报价延到二期；前提是采购部能在 5 月前提供两个月的历史台账。" data-en="Conditionally approved: the four-department close first and the quotation in phase two, on condition that procurement supplies two months of history before May."></p>
+        <dl class="kv">
+          <dt class="i18n" data-zh="投票" data-en="Votes"></dt><dd>5 / 6</dd>
+          <dt class="i18n" data-zh="声明规则" data-en="Declared rule"></dt><dd class="i18n" data-zh="过半且业务负责人在列" data-en="Majority with the business owner present"></dd>
+          <dt class="i18n" data-zh="定稿于" data-en="Settled"></dt><dd class="hint">2024-04-19 16:40</dd>
+        </dl>
+        <p class="hint i18n" data-zh="定稿是写入操作，需要一次审批。" data-en="Settling a decision writes, so it needs one approval."></p>
+      </div>
+      <div class="pane pad stack">
+        <div class="between"><h4 class="i18n" data-zh="考勤汇总" data-en="Attendance rollup"></h4><span class="chip i18n" data-zh="待确认" data-en="Open question"></span></div>
+        <div class="callout warn"><p class="i18n" data-zh="缺少一线参与者，评分人数低于声明下限，未进入表决。补齐后可重新排期。" data-en="No frontline participant and fewer scorers than the declared minimum, so it did not reach a vote. It can be rescheduled once both are addressed."></p></div>
+        <p class="eyebrow i18n" data-zh="未表决不等于否决" data-en="Not voted is not rejected"></p>
+        <p class="hint i18n" data-zh="界面上这两者用不同状态词，因为它们在下一轮的处理方式完全不同。" data-en="The interface gives these two different status words, because what happens to them next round is entirely different."></p>
+      </div>
+    </div>
+  </section>
+
+  <div id="pager"></div>
+</div>
+
+<script src="assets/design.js"></script>
+</body>
+</html>
