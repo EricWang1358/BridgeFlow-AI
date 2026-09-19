@@ -182,7 +182,8 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           || /^\/discovery\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/(scoring-policy|decision-policy)$/.test(path)
           || /^\/discovery\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/material\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/original$/.test(path)
           || /^\/integration\/batches\/[a-f0-9]{32}(\/xlsx)?$/.test(path)
-          || /^\/conclusions\/batches\/[a-f0-9]{32}(\/comparison)?$/.test(path))
+          || /^\/conclusions\/batches\/[a-f0-9]{32}(\/comparison)?$/.test(path)
+          || /^\/conventions\/batches\/[a-f0-9]{32}(\/preview)?$/.test(path))
         const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo' || path === '/batches/self-check' || path === '/discovery/uploads')
         // Feishu user-identity calls (docs/30, docs/31, docs/33): the browser relays the
         // user's own token; these endpoints are never model tools, so the click is the

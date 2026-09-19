@@ -417,6 +417,10 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-grade[data-grade=missing] { color: var(--bf-danger); background: var(--bf-danger-bg) }
 /* Period-on-period change (E13-UC02): direction is never colour alone; the sign carries it. */
 .bf-change { margin-left: 8px; font-size: 11px; font-weight: 600; white-space: nowrap }
+.bf-convention { font-size: .85em; padding: 0 .4em; border-radius: .6em; border: 1px solid currentColor; }
+.bf-convention[data-state=unconfirmed] { color: var(--bf-warn, #8a6100); }
+.bf-convention[data-state=confirmed] { color: var(--bf-ok, #1c6b3a); }
+.bf-convention[data-state=replacement_requested] { color: var(--bf-info, #1f4f8f); }
 .bf-change[data-state=up] { color: var(--bf-ok) }
 .bf-change[data-state=down] { color: var(--bf-warn) }
 .bf-change[data-state=flat], .bf-change[data-state=none] { color: var(--bf-muted); font-weight: 500 }

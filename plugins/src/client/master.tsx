@@ -12,7 +12,8 @@ import { Chip } from './workspace.tsx'
 type Issue = { kind: string; field: string; key: string[]; departments: string[]; message: string }
 type Row = { key: string[]; values: Record<string, unknown>; provenance: Record<string, Record<string, unknown>>; complete: boolean }
 type Grade = { grade: string | null; chain: string[]; missing: string[] }
-type Master = { version: string; columns: string[]; rows: Row[]; issues: Issue[]; assumptions?: Record<string, string>; grades?: Record<string, Grade>[]; grade_summary?: Record<string, number> }
+type Convention = { id: string; text: string; kind: string; affected_fields: string[]; state: string; version: number; source: string; note: string; requested_value: string; decided_by: string; at: string; declaration_change: string }
+type Master = { version: string; columns: string[]; rows: Row[]; issues: Issue[]; assumptions?: Record<string, string>; conventions?: Convention[]; grades?: Record<string, Grade>[]; grade_summary?: Record<string, number> }
 
 function origin(p: Record<string, unknown> | undefined): string {
   if (!p) return ''
@@ -64,7 +65,17 @@ export function MasterTable({ batchId }: { batchId: string }) {
     {master.grade_summary && <p className="bf-hint">{t('evidenceGrades')}：{['G1', 'G2', 'G3', 'G4'].map(g => `${g} ${master.grade_summary![g] ?? 0}`).join(' · ')}{master.grade_summary.missing ? ` · ${t('gradeMissing')} ${master.grade_summary.missing}` : ''} · {t('gradeLegend')}</p>}
     {Object.keys(master.assumptions ?? {}).length > 0 && <details className="bf-callout" data-tone="info">
       <summary>{t('integrationAssumptions')}（{Object.keys(master.assumptions!).length}）</summary>
-      <ul>{Object.entries(master.assumptions!).map(([name, text]) => <li key={name}><strong>{name}</strong>：{text}</li>)}</ul>
+      <ul>{Object.entries(master.assumptions!).map(([name, text]) => {
+        const decided = master.conventions?.find(c => c.id === name)
+        return <li key={name}>
+          <strong>{name}</strong> <span className="bf-convention" data-state={decided?.state ?? 'unconfirmed'}>{t(`conventionState_${decided?.state ?? 'unconfirmed'}`)}</span>
+          {decided && <span className="bf-hint"> · {t(`conventionKind_${decided.kind}`)}{decided.affected_fields.length ? ` · ${t('conventionAffects')} ${decided.affected_fields.join('、')}` : ''}</span>}
+          <div>{text}</div>
+          {decided && decided.state !== 'unconfirmed' && <div className="bf-hint">{t('conventionSource')}：{decided.source}（{decided.decided_by} · v{decided.version}）{decided.note ? ` · ${decided.note}` : ''}</div>}
+          {decided?.declaration_change && <div className="bf-hint">{t('conventionDeclarationChange')}：<code>{decided.declaration_change}</code></div>}
+        </li>
+      })}</ul>
+      <p className="bf-hint">{t('conventionHelp')}</p>
     </details>}
     <details data-tour-id="master-questions" className="bf-master-questions" onToggle={e => { if (e.currentTarget.open) tourEvent('issues', batchId) }}><summary data-tour-id="master-issues">{t('masterOpenQuestions')} · {master.issues.length}</summary>
     {master.issues.map((issue, i) => <div className="bf-callout" data-tone={issue.kind === 'undeclared_constant' ? 'info' : 'warn'} key={i}>

@@ -25,7 +25,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 | E13-UC02 | 跨期对比与差异解释 / Period comparison and variance explanation | IMPLEMENTED_OFFLINE | Must |
 | E13-UC03 | 指标可视化与下钻 / Metric charts with drill-down | DESIGNED | Should |
 | E13-UC04 | 月度报告文档导出 / Export the monthly report document | PARTIAL | Should |
-| E13-UC05 | 口径假设确认与替换 / Confirm or replace declared conventions | PARTIAL | Must |
+| E13-UC05 | 口径假设确认与替换 / Confirm or replace declared conventions | IMPLEMENTED_OFFLINE | Must |
 | E13-UC06 | 结论依据等级标注 / Label conclusions with evidence grades | PARTIAL | Should |
 
 ## E13-UC01 — 一页月度结论 / One-page monthly brief
@@ -173,7 +173,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 
 ## E13-UC05 — 口径假设确认与替换 / Confirm or replace declared conventions
 
-**Status: PARTIAL**
+**Status: IMPLEMENTED_OFFLINE**
 
 ### 中文需求与验收
 
@@ -194,7 +194,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
   - AC-4 Given 两人同时修改同一口径 When 后提交者保存 Then 因版本冲突被拒绝，不覆盖前者。
 - 后置：每个口径版本保留来源、确认人、时间与审批回执。
 - 依赖：E05-UC01、E06-UC03、E09-UC01、E09-UC06、E13-UC06。
-- 当前证据与缺口：口径已在 [integration.yaml](../../data/company_templates/integration.yaml) 的 `assumptions` 中声明，并在单元格出处、xlsx 与总控摘要中展示；没有确认、替换、版本发布与影响预览流程。
+- 当前证据与缺口（2026-09-19 第三轮）：[conclusions/conventions.py](../../backend/src/bridgeflow/conclusions/conventions.py) 记录逐条口径的决定（版本号、来源、决定人、时间），[api/conventions.py](../../backend/src/bridgeflow/api/conventions.py) 提供工作室清单、影响试算与写入接口；写入走原生审批回执与 `convention_decide` 操作授权（只授予总表管理者，见 D11），无来源拒绝、版本冲突拒绝。确认后依据等级经 [grades.py](../../backend/src/bridgeflow/conclusions/grades.py) 的 `ConventionNode(confirmed=True)` 由 G3 升为 G2，总表视图与本月结论同步。插件工具 `convention_list / convention_preview / convention_decide`（[conventions.ts](../../plugins/src/tools/conventions.ts)），工作室在「按通用做法补的口径」块显示状态徽标与该改的声明内容（[master.tsx](../../plugins/src/client/master.tsx)）。[行为测试](../../backend/tests/test_conventions.py) 覆盖 AC-1–4。剩余：替换不自动生成新声明版本（D8，按设计如此），字段级「本批次受影响单元格数」只对常数给出试算（D10）。
 
 ### English requirements and acceptance
 
@@ -205,7 +205,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 - Exceptions: unsourced replacements are refused; drafts that break formulas cannot be published; concurrent edits conflict by version.
 - Acceptance: AC-1 confirming the 13% VAT rate relabels it and grades margin G2 after recomputation; AC-2 an unsourced replacement is refused; AC-3 a frozen batch is unchanged and offers recomputation; AC-4 a concurrent edit is rejected.
 - Postcondition: every version keeps its source, confirmer, time and approval receipt.
-- Evidence and gap: conventions are declared and shown in provenance, workbook and summary; confirmation, replacement, publishing and impact preview are missing.
+- Evidence and gap (2026-09-19, round 3): decisions are versioned and recorded with source, decider and time (`conclusions/conventions.py`), served and written through `api/conventions.py` behind a native approval receipt and the `convention_decide` grant held only by the master-table owner (D11); unsourced decisions and version conflicts are refused. Confirmation lifts dependent figures from G3 to G2 through `ConventionNode(confirmed=True)`, in both the master view and the monthly brief. Tools `convention_list / convention_preview / convention_decide`; the studio shows each convention's state and the declaration change to apply. Behaviour tests cover AC-1–4. Remaining by design: a replacement does not generate a declaration version (D8), and the impact dry run exists for constants only (D10).
 
 ## E13-UC06 — 结论依据等级标注 / Label conclusions with evidence grades
 
@@ -257,6 +257,10 @@ Where the requirement left a choice open, it was decided during implementation. 
 | D5 | 计划对比在业务方给出计划来源前一律拒绝 | 计划值没有声明来源，编一个基准等于编一个结论 | `DeclaredPlan.unavailable`，测试覆盖 |
 | D6 | 实体键 = 总表主键去掉期间字段（按 `period_from` 识别，不写死字段名） | 主键含报表年月，保留它会让两期没有一行能对上，每行都显示为「新增」——实现时实测到这一点 | `comparison.entity_axis` |
 | D7 | 指标本身是比率时（单位 %），变化按**百分点**给出，不给相对百分比 | 净利率 0.09% → −0.5% 的相对变化是 −679%，读者无法使用；界面初版就出现了这一幕 | `comparison.POINT_UNITS`；测试断言 `basis == "percentage_points"` |
+| D8 | 「替换」只记录业务方的决定、来源与该改的声明内容，**不由系统改写公式、判定阈值或汇总口径**；只有常数替换能给出试算 | 需求主流程写的是「系统生成新声明版本草案」。但 CLAUDE.md 定下「字典由人预设、改 YAML 不改 Python」：让系统按一句自由文本重写 `derived` 树，等于让模型发明声明，且声明文件将不再是唯一事实来源。记录决定 + 指明该改哪一行，既留痕又把改动留在人手里 | `conventions.decide` 的 `replacement_requested` 状态与 `_declaration_change`；测试 `test_replacing_a_formula_asks_for_a_declaration_change...` |
+| D9 | 「确认」是唯一会改变运行时行为的决定，且只改**依据等级**（G3→G2），不改任何数值 | 确认的含义是「这条通用做法就是我们的口径」，数值本来就是按它算的；若确认还改数值，说明之前展示的数是错的而不是待确认的 | `grades.ConventionNode(confirmed=True)`；测试 `test_confirming_lifts_the_figures_that_rest_on_it_from_g3_to_g2` |
+| D10 | 影响试算是**干跑**：用替换值重新整合一次并逐格比对，返回变化单元格数、变化行数与字段名；给队长的返回值不含单元格值，浏览器端才给最多 20 格样例 | 20 万行时「影响多少」是可回答的，「影响了哪些格」不是；这与「工具返回值里也不能有原始行」是同一条约束 | `conventions.preview` 与 `/tools/convention-preview` 的裁剪；测试 `test_a_constant_can_be_previewed_and_the_captain_sees_counts_not_cells` |
+| D11 | `convention_decide` 只授予总表管理者（`master_office_admin`），部门主管不得确认口径 | 口径是跨部门的总表声明，一条税率同时影响物资与市场的字段；与 `confirm_mapping` 同理，按单部门授权会让一个部门替全表定口径 | `data/mappings/access-control.yaml`；`write_authorization.OPERATIONS` 与批次可见性复核 |
 
 ## Epic 数据与实现设计 / Epic data and implementation design
 

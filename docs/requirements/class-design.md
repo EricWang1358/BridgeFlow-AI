@@ -195,8 +195,9 @@ classDiagram
 | Composite + Visitor | `ProvenanceNode` 族、`EvidenceGrader` | 一个数字的依据是树：公式节点包含输入节点；等级为子树最弱一级，递归天然适合组合模式；把计算放在访问者里，节点类型保持简单 | NFR06 可追溯；`MissingSource` 让断链显式可见 |
 | Template Method | `ReportRenderer` | 报告章节顺序固定（E13-UC04 验收），格式不同；模板方法锁定顺序，子类只管排版 | 章节缺失会导致抽象方法未实现，编译期或测试期即暴露 |
 | Strategy | `NumberFormatter` | 00-foundations §5.1 按单位类型格式化，界面、导出与模型叙述共用同一实现，避免三处写法漂移 | 呈现规范一致 |
-| Versioned aggregate + optimistic concurrency | `ConventionRegistry`、`ConventionVersion` | 口径确认必须保留历史、来源与确认人；并发修改按 `expected_seq` 冲突拒绝（E13-UC05 AC-4） | P5；复用 `WorkflowStore` 的追加日志与 `expected` 版本检查（`ConcurrencyError`） |
-| Command（审批绑定） | `publish(draft, receipt)` | 发布是写操作，需要一次性回执；预览是无副作用的 dry run，复用纯函数 `integrate` | E09-UC01；冻结批次不被改写 |
+| Versioned aggregate + optimistic concurrency（已实现为 `conclusions/conventions.py`） | `ConventionDecision` 追加日志、`ConventionView` 投影 | 口径确认必须保留历史、来源与确认人；并发修改按 `expected_version` 冲突拒绝（E13-UC05 AC-4）。实现时按 `_write` 的原子写落一份 JSON/口径，不引入第二套存储 | P5；无来源拒绝、版本冲突拒绝均在领域层 |
+| Command（审批绑定） | `decide(...)` 经 `/tools/convention-decide` + `consume_approval` | 决定是写操作，需要一次性回执并记下审批人为决定人；预览是无副作用的 dry run，复用纯函数 `integrate` | E09-UC01；冻结批次不被改写 |
+| 刻意不做 / Deliberately absent | 「自动生成新声明版本草案」 | 需求主流程这样写，但声明文件由人维护（CLAUDE.md「字典由人预设」）。系统据自由文本重写 `derived` 树等于让模型发明声明；改为记录决定并给出该改的那一行（13-conclusions D8） | P2：字段与口径只来自声明 |
 
 ### 2.3 时序：生成一页结论 / Sequence: build the brief
 

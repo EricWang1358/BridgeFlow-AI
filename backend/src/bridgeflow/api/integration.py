@@ -10,17 +10,15 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from bridgeflow import integration
 from bridgeflow.api.batches import BatchRef, _visible, batch_path, load_batch
+from bridgeflow.conclusions import conventions
 from bridgeflow.conclusions.grades import grade_master
 from bridgeflow.identity import UserIdentity, require_user
 
 router = APIRouter(tags=["integration"])
 
 
-def _result(batch_id: str, user: UserIdentity | None = None) -> integration.MasterResult:
-    batch = _visible(load_batch(batch_id), user)
-    if batch.integration_snapshot is None:
-        raise HTTPException(409, "Batch has no frozen integration declaration; import a new batch")
-    spec = integration.IntegrationSpec.model_validate(batch.integration_snapshot)
+def sheets_of(batch_id: str, batch) -> list:
+    """The batch's retained department sheets, as integration reads them."""
     folder = batch_path(batch_id).parent / "sources" / batch_id
     sheets = []
     for table in batch.clean_tables:
@@ -28,7 +26,15 @@ def _result(batch_id: str, user: UserIdentity | None = None) -> integration.Mast
         if not path.is_file():
             raise HTTPException(409, "This batch kept no original sheets; import the department templates again")
         sheets.append(integration.sheet_from_preview(table.department, json.loads(path.read_text(encoding="utf-8"))))
-    return integration.integrate(spec, sheets)
+    return sheets
+
+
+def _result(batch_id: str, user: UserIdentity | None = None) -> integration.MasterResult:
+    batch = _visible(load_batch(batch_id), user)
+    if batch.integration_snapshot is None:
+        raise HTTPException(409, "Batch has no frozen integration declaration; import a new batch")
+    spec = integration.IntegrationSpec.model_validate(batch.integration_snapshot)
+    return integration.integrate(spec, sheets_of(batch_id, batch))
 
 
 @router.get("/integration/batches/{batch_id}")
@@ -37,9 +43,12 @@ async def master_for_batch(batch_id: str,
     """Browser view: every row, value and source, and each cell's evidence grade (E13-UC06).
 
     Rows stay in the authenticated browser."""
+    batch = _visible(load_batch(batch_id), user)
     result = _result(batch_id, user)
-    grades, summary = grade_master([row.provenance for row in result.rows])
-    return {**result.model_dump(mode="json"), "grades": grades, "grade_summary": summary}
+    confirmed = frozenset(conventions.confirmed(batch.integration_snapshot or {}))
+    grades, summary = grade_master([row.provenance for row in result.rows], confirmed)
+    return {**result.model_dump(mode="json"), "grades": grades, "grade_summary": summary,
+            "conventions": [view.model_dump(mode="json") for view in conventions.views(batch.integration_snapshot or {})]}
 
 
 @router.get("/integration/batches/{batch_id}/xlsx")
@@ -53,7 +62,9 @@ async def master_workbook(batch_id: str,
 @router.post("/tools/integration-summary")
 async def integration_summary(request: BatchRef) -> dict:
     """For the captain: counts and open items only, never a value from a sheet."""
+    batch = load_batch(request.batch_id)
     result = _result(request.batch_id)
+    states = {view.id: view.state for view in conventions.views(batch.integration_snapshot or {})}
     counts: dict[str, int] = {}
     for issue in result.issues:
         counts[issue.kind] = counts.get(issue.kind, 0) + 1
@@ -63,6 +74,9 @@ async def integration_summary(request: BatchRef) -> dict:
         "columns": len(result.columns), "issues_by_kind": counts,
         # Declaration text, not sheet data: which gaps rest on a convention rather than the business side's word.
         "assumptions": result.assumptions,
+        # Which of them the business side has since decided, so the captain stops calling a
+        # confirmed convention "unconfirmed" (E13-UC05).
+        "convention_states": states,
         "open_items": [{"kind": i.kind, "field": i.field, "departments": i.departments,
                         "message": "Inspect the original source and the detailed conflict in the master-table view."}
                        for i in result.issues[:20]],

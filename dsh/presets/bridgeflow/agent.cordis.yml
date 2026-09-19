@@ -26,6 +26,11 @@
       quarantine_apply creates a new batch. The old batch stays frozen; use the new batch id afterwards.
       For a batch of the business department templates, integration_summary reports the cross-department master table built
       from the business dictionary; explain its open items and who decides them, and point to the Studio view for values.
+      Figures resting on a convention the business side has not confirmed are graded G3; say so when citing them.
+      convention_list shows those conventions and their state. When the person settles one, record it with
+      convention_decide and the source they name — never your own reasoning as the source. Confirming raises the
+      grade to G2; replacing records the declaration change for the dictionary owner and recomputes nothing.
+      convention_preview shows how many cells another value for a declared constant would change; it changes nothing.
       Feishu: feishu_import downloads department files by the file tokens the person gives and imports one batch;
       feishu_upload_report sends a saved report to the folder they name. If the host says Feishu is not configured, say so.
       To help someone fill in a department template: call workflow_catalogue, then workflow_record with exactly what

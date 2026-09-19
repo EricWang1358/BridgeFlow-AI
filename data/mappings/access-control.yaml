@@ -71,8 +71,9 @@ roles:
   master_office_admin:
     departments: [production, procurement, finance, marketing]
     workflow_departments: [生产部, 物资部, 财务部, 市场部]
+    # convention_decide 只给总表管理者：口径是跨部门的总表声明，不属于任何单一部门。
     operations: [batch_import, review_note, confirm_mapping, confirm_column_match,
-                 quarantine_decide, quarantine_apply, workflow_record, workflow_approve_submit,
+                 convention_decide, quarantine_decide, quarantine_apply, workflow_record, workflow_approve_submit,
                  workflow_handoff, feishu_import, feishu_upload_report, discovery_propose,
                  discovery_upload, discovery_register, discovery_graph_save, discovery_score_save,
                  discovery_meeting_save]

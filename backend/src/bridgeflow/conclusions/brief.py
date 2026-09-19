@@ -110,6 +110,8 @@ class BriefBuilder:
     batch_counts: dict[str, int]
     master: Any = None  # integration.MasterResult | None
     comparison: Comparison | None = None
+    #: Conventions the business side has confirmed (E13-UC05): what rests on them grades G2.
+    confirmed_conventions: frozenset[str] = frozenset()
     _declared: BriefDeclaration | None = None
     _validated: dict[str, dict] = field(default_factory=dict)
     _missing: list[str] = field(default_factory=list)
@@ -135,7 +137,7 @@ class BriefBuilder:
 
     def _metric_grade(self, check: dict[str, Any]) -> dict[str, Any]:
         conventions = self._declared.conventions.get(check["metric"], []) if self._declared else []
-        return self._count(self._grader.grade(review_check(check, conventions)).as_dict())
+        return self._count(self._grader.grade(review_check(check, conventions, self.confirmed_conventions)).as_dict())
 
     def key_metrics(self) -> list[MetricLine]:
         lines = []
@@ -163,7 +165,7 @@ class BriefBuilder:
                 unit=check["unit"], threshold=check["threshold"], attention_when=check["attention_when"],
                 owner=check["role"], decision_owner=check["decision_owner"], action=check["action"],
                 explanation=check["explanation"], grade=self._metric_grade(check),
-                advice_grade=self._count(self._grader.grade(advice(check, conventions)).as_dict())))
+                advice_grade=self._count(self._grader.grade(advice(check, conventions, self.confirmed_conventions)).as_dict())))
         return items
 
     def build(self) -> ConclusionBrief:
@@ -175,7 +177,7 @@ class BriefBuilder:
         master_issues = len(self.master.issues) if self.master is not None else 0
         complete_rows = sum(1 for r in self.master.rows if r.complete) if self.master is not None else 0
         if self.master is not None:
-            _, cell_grades = grade_master([row.provenance for row in self.master.rows])
+            _, cell_grades = grade_master([row.provenance for row in self.master.rows], self.confirmed_conventions)
             assumptions = len(self.master.assumptions)
         else:
             cell_grades, assumptions = {}, 0
