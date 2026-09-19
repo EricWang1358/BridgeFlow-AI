@@ -10,6 +10,10 @@ conclusion needs (docs/requirements/00-foundations.md §5.3):
     G3 convention  depends on a convention the business side has not confirmed
     G4 judgement   a subagent's explanation or proposed action
 
+A convention the business side has confirmed (E13-UC05) stops weakening what rests on it: the node
+still names the convention, but grades G2 with "(confirmed)" in the chain, so a reader sees both
+that a convention is involved and that somebody with authority signed it.
+
 A provenance tree takes the **weakest** grade among its nodes (Composite). A broken chain is a
 node of its own, `MissingSource`, so it is reported rather than silently graded. The grader is a
 separate visitor so node classes stay plain data. No business name appears here; conventions are
@@ -127,7 +131,8 @@ def _assumption_key(note: str) -> str:
     return note.split(":", 1)[0].strip()
 
 
-def master_cell(column: str, provenance: dict[str, dict[str, Any]], seen: frozenset[str] = frozenset()) -> ProvenanceNode:
+def master_cell(column: str, provenance: dict[str, dict[str, Any]], seen: frozenset[str] = frozenset(),
+                confirmed: frozenset[str] = frozenset()) -> ProvenanceNode:
     """The provenance tree of one master-table cell, from the integration provenance record."""
     cell = provenance.get(column)
     if cell is None:
@@ -136,7 +141,7 @@ def master_cell(column: str, provenance: dict[str, dict[str, Any]], seen: frozen
         return MissingSource(f"{column}: departments disagree or the formula contradicts the value")
     if "formula" in cell or "rule" in cell:
         name = str(cell.get("formula") or cell.get("rule"))
-        inputs = tuple(master_cell(i, provenance, seen | {column}) if i not in seen else MissingSource(f"{i}: cyclic")
+        inputs = tuple(master_cell(i, provenance, seen | {column}, confirmed) if i not in seen else MissingSource(f"{i}: cyclic")
                        for i in cell.get("inputs", []))
         node: ProvenanceNode = FormulaNode(name, inputs)
     elif "department" in cell:
@@ -150,11 +155,12 @@ def master_cell(column: str, provenance: dict[str, dict[str, Any]], seen: frozen
         # must merely be identical across the rolled-up rows does not rest on it.
         if key.startswith("rollup.") and cell.get("rollup") == "identical":
             continue
-        node = ConventionNode(key, node)
+        node = ConventionNode(key, node, confirmed=key in confirmed)
     return node
 
 
-def review_check(check: dict[str, Any], conventions: list[str]) -> ProvenanceNode:
+def review_check(check: dict[str, Any], conventions: list[str],
+                 confirmed: frozenset[str] = frozenset()) -> ProvenanceNode:
     """A validated review check: its metric is a declared formula over cited cells."""
     sources = tuple(SourceCell(f"{s.get('department', '')} · {s.get('filename', '')} · row {s.get('source_row') or s.get('row')} · "
                                f"{s.get('original_column') or s.get('column', '')}") for s in check.get("sources", []))
@@ -162,22 +168,24 @@ def review_check(check: dict[str, Any], conventions: list[str]) -> ProvenanceNod
         return MissingSource(f"{check.get('metric', '')}: no cited cells")
     node: ProvenanceNode = FormulaNode(str(check.get("metric", "")), sources)
     for key in conventions:
-        node = ConventionNode(key, node)
+        node = ConventionNode(key, node, confirmed=key in confirmed)
     return node
 
 
-def advice(check: dict[str, Any], conventions: list[str]) -> ProvenanceNode:
+def advice(check: dict[str, Any], conventions: list[str],
+           confirmed: frozenset[str] = frozenset()) -> ProvenanceNode:
     """A subagent's proposed action and explanation rest on the check they cite."""
-    return JudgementNode((review_check(check, conventions),))
+    return JudgementNode((review_check(check, conventions, confirmed),))
 
 
-def grade_master(provenance_rows: list[dict[str, dict[str, Any]]]) -> tuple[list[dict[str, dict[str, Any]]], dict[str, int]]:
+def grade_master(provenance_rows: list[dict[str, dict[str, Any]]],
+                 confirmed: frozenset[str] = frozenset()) -> tuple[list[dict[str, dict[str, Any]]], dict[str, int]]:
     """Grade every cell of every row; returns per-row grade maps and the grade distribution."""
     grader, graded, counts = EvidenceGrader(), [], {"G1": 0, "G2": 0, "G3": 0, "G4": 0, "missing": 0}
     for provenance in provenance_rows:
         row = {}
         for column in provenance:
-            result = grader.grade(master_cell(column, provenance))
+            result = grader.grade(master_cell(column, provenance, confirmed=confirmed))
             row[column] = result.as_dict()
             counts[result.grade.label if result.grade else "missing"] += 1
         graded.append(row)

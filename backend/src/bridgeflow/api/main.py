@@ -11,6 +11,7 @@ from bridgeflow import __version__, store
 from bridgeflow.api.approvals import router as approvals_router
 from bridgeflow.api.batches import router as batches_router
 from bridgeflow.api.conclusions import router as conclusions_router
+from bridgeflow.api.conventions import router as conventions_router
 from bridgeflow.api.discovery import router as discovery_router
 from bridgeflow.api.discovery import tools_router as discovery_tools_router
 from bridgeflow.api.documents import router as documents_router
@@ -55,6 +56,7 @@ app.include_router(quarantine_tools_router, dependencies=[Depends(require_host)]
 app.include_router(feishu_tools_router, dependencies=[Depends(require_host)])
 app.include_router(integration_router, dependencies=[Depends(require_host)])
 app.include_router(conclusions_router, dependencies=[Depends(require_host)])
+app.include_router(conventions_router, dependencies=[Depends(require_host)])
 
 orchestrator = Orchestrator()
 

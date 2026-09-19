@@ -10,6 +10,7 @@ from bridgeflow import column_matches
 from bridgeflow.api.batches import _visible, load_batch
 from bridgeflow.api.reviews import saved_review
 from bridgeflow.conclusions import comparison as comparison_module
+from bridgeflow.conclusions import conventions
 from bridgeflow.conclusions.brief import BriefBuilder, ConclusionBrief, declaration
 from bridgeflow.identity import UserIdentity, require_user
 
@@ -83,4 +84,5 @@ async def monthly_brief(batch_id: str, user: Annotated[UserIdentity | None, Depe
                                               reason="The current period could not be compared")
     return BriefBuilder(batch_id=batch_id, report=report, latest_report_id=latest["report_id"],
                         dictionary=batch.dictionary_snapshot or {}, batch_counts=counts, master=master,
-                        comparison=change).build()
+                        comparison=change,
+                        confirmed_conventions=frozenset(conventions.confirmed(batch.integration_snapshot or {}))).build()

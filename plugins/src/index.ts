@@ -17,6 +17,7 @@ import { columnCandidates } from './tools/column-candidates.ts'
 import { confirmColumnMatch } from './tools/confirm-column-match.ts'
 import { feishuImport, feishuUploadReport } from './tools/feishu.ts'
 import { integrationSummary } from './tools/integration.ts'
+import { conventionDecide, conventionList, conventionPreview } from './tools/conventions.ts'
 import { quarantineApply, quarantineDecide, quarantineList } from './tools/quarantine.ts'
 import { workflowApproveSubmit, workflowBoard, workflowCatalogue, workflowDraft, workflowGuidance, workflowHandoff, workflowRecord } from './tools/workflow.ts'
 import { listMetrics } from './tools/list-metrics.ts'
@@ -79,8 +80,11 @@ export function apply(ctx: Context, config: Config): void {
     catalogue.register(ctx, confirmColumnMatch(backend, receipts))
     catalogue.register(ctx, quarantineDecide(backend, receipts))
     catalogue.register(ctx, quarantineApply(backend, receipts))
+    catalogue.register(ctx, conventionDecide(backend, receipts))
   }
   catalogue.register(ctx, quarantineList(backend))
+  catalogue.register(ctx, conventionList(backend))
+  catalogue.register(ctx, conventionPreview(backend))
   catalogue.register(ctx, integrationSummary(backend))
   catalogue.register(ctx, workflowCatalogue(backend))
   catalogue.register(ctx, workflowDraft(backend))
