@@ -270,6 +270,47 @@ def _locate(sheet: Sheet, ref: SourceColumn) -> list[int] | None:
     return found
 
 
+def period_field(spec: IntegrationSpec) -> str | None:
+    """Which declared field carries the report period, read from the declaration.
+
+    The period is the grain field some department supplies as a period (`period_from`); no
+    field name is written here, because the real schema is still being negotiated.
+    """
+    for name in spec.grain:
+        decl = spec.fields.get(name)
+        if decl and any(ref.period_from for ref in decl.sources.values()):
+            return name
+    return None
+
+
+def periods_in(spec: IntegrationSpec, sheet: Sheet) -> set[str]:
+    """The report periods one department's own rows state (E14-UC04 AC-4).
+
+    Unreadable or empty cells are left out rather than guessed: a file whose period cannot be
+    read is not thereby a file for this month.
+    """
+    name = period_field(spec)
+    ref = spec.fields[name].sources.get(sheet.department) if name else None
+    where = _locate(sheet, ref) if ref else None
+    if where is None:
+        return set()
+    found = set()
+    for raw in sheet.rows:
+        cells = [raw[i] if i < len(raw) else None for i in where]
+        value = _period(*cells) if ref.period_from else _period_text(cells[0])
+        if value:
+            found.add(value)
+    return found
+
+
+def _period_text(value: Any) -> str | None:
+    """A period written in one cell, in any of the forms a template uses (2024-07, 2024年7月)."""
+    match = re.search(r"(\d{4})\D{0,3}(\d{1,2})", str(value or ""))
+    if not match or not 1 <= int(match.group(2)) <= 12:
+        return None
+    return f"{match.group(1)}-{int(match.group(2)):02d}"
+
+
 # --- integrating -------------------------------------------------------------------------
 
 

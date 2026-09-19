@@ -80,6 +80,15 @@ def _current() -> dict[str, dict]:
     return index
 
 
+def successors(batch_id: str) -> list[str]:
+    """Batches derived from this one (E14-UC04).
+
+    Read forwards from the index rather than written back into the frozen batch: a corrected
+    batch must not change the file it corrects, not even its lineage field.
+    """
+    return sorted(entry["batch_id"] for entry in _current().values() if entry.get("derived_from") == batch_id)
+
+
 def batches_for(period: str) -> list[dict]:
     """Every indexed batch of that period, newest import first."""
     found = [e for e in _current().values() if e.get("period") == period]

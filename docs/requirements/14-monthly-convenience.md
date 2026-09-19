@@ -24,7 +24,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 | E14-UC01 | 月度对账进度清单 / Monthly close checklist | PARTIAL | Must |
 | E14-UC02 | 模板下载与上月预填 / Template download with carry-over | DESIGNED | Should |
 | E14-UC03 | 提交前自检 / Self-check before submission | IMPLEMENTED_OFFLINE | Must |
-| E14-UC04 | 单部门补传生成新版本 / Replace one department's file as a new version | DESIGNED | Must |
+| E14-UC04 | 单部门补传生成新版本 / Replace one department's file as a new version | IMPLEMENTED_OFFLINE | Must |
 | E14-UC05 | 待确认事项收件箱 / Open-item inbox by owner | DESIGNED | Should |
 | E14-UC06 | 飞书文件夹批量导入 / Import from a Feishu folder | DESIGNED | Could |
 
@@ -134,7 +134,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 
 ## E14-UC04 — 单部门补传生成新版本 / Replace one department's file as a new version
 
-**Status: DESIGNED**
+**Status: IMPLEMENTED_OFFLINE**
 
 ### 中文需求与验收
 
@@ -154,7 +154,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
   - AC-4 Given 补传的是 2024-06 的文件 When 提交到 2024-07 批次 Then 拒绝并说明月份不一致。
 - 后置：新旧批次形成版本链；进度清单与收件箱改用最新批次。
 - 依赖：E04-UC01、E14-UC03、E06-UC02、E07-UC06。
-- 当前证据与缺口：隔离行处置已有派生批次机制（[quarantine.py](../../backend/src/bridgeflow/quarantine.py)，同一处置重复应用返回同一派生批次），可复用；没有按部门替换来源的派生。
+- 当前证据与缺口（2026-09-19 第四轮）：`POST /batches/{id}/departments/{department}`（[batches.py](../../backend/src/bridgeflow/api/batches.py) 的 `replace_department`）派生新批次，其余部门沿用原批次的原件与清洗结果（摘要不变），被替换部门重新解析、清洗、跑同一条检查链；差异由 [monthly/resupply.py](../../backend/src/bridgeflow/monthly/resupply.py) 的 `diff` 给出（总表行数、变化单元格数与字段名、各类待确认事项的增减）。拒绝路径：文件逐字节相同、按行读出的月份不是本批次月份、部门不在本批次、批次未留存原件。版本链由 [periods.successors](../../backend/src/bridgeflow/conclusions/periods.py) 正向查出，冻结批次一个字节都不改写（D12）。界面在导入面板内「补传单个部门」，批次状态区提示「数据已更新，可重新研判」（[shell.tsx](../../plugins/src/client/shell.tsx)、[workspace.tsx](../../plugins/src/client/workspace.tsx)）。[行为测试](../../backend/tests/test_resupply.py) 覆盖 AC-1–4，[浏览器旅程](../../plugins/tests/round1-journey.mjs) 覆盖界面与「文件未变化」拒绝（截图 `docs/evidence/round1-e13-e14/resupply-unchanged.png`）。剩余：补传前不强制跑一次自检（D13），进度清单与收件箱尚未实现，因此「改用最新批次」目前体现在批次状态区的提示。
 
 ### English requirements and acceptance
 
@@ -165,7 +165,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 - Exceptions: period or department mismatch is refused; an unknown or unauthorized batch returns 404; an identical file reports “unchanged” without deriving.
 - Acceptance: AC-1 correcting production clears the disagreement while other sources keep their digests; AC-2 the original batch, master and report are unchanged; AC-3 an identical file derives nothing; AC-4 a wrong-period file is refused.
 - Postcondition: batches form a version chain; checklist and inbox follow the latest.
-- Evidence and gap: quarantine disposal already derives idempotent batches and can be reused; per-department replacement does not exist.
+- Evidence and gap (2026-09-19, round 4): `POST /batches/{id}/departments/{department}` derives the new batch; the other departments keep their originals and cleaned tables (their digests do not change) while the replaced one is parsed, cleaned and run through the same check chain. `monthly/resupply.py` reports the master diff (row counts, changed cells and fields, per-kind open-item deltas). Refusals: a byte-identical file, a file whose own rows report another month, a department not in the batch, a batch that kept no originals. The version chain is read forwards from the period index, so the frozen batch is never rewritten (D12). The studio offers it inside the import panel and shows “data updated, review again” on the superseded batch. `backend/tests/test_resupply.py` covers AC-1–4 and the browser journey covers the UI and the “unchanged file” refusal. Remaining: self-check is not forced before a replacement (D13); the checklist and inbox are not built yet, so “follow the latest” shows up as a prompt on the batch.
 
 ## E14-UC05 — 待确认事项收件箱 / Open-item inbox by owner
 
@@ -244,6 +244,19 @@ See class-design.md §3. The checklist and inbox are event projections (CQRS rea
 建议实施顺序：E14-UC03（共用检查链，收益最大）→ E14-UC04 → E14-UC01 → E14-UC05 → E14-UC02 → E14-UC06。
 
 Suggested order: UC03 (shared check chain, highest payoff), UC04, UC01, UC05, UC02, UC06.
+
+## 本轮设计判定与依据 / Design decisions and their evidence
+
+需求没有写死的地方由开发侧评估决定，判定与依据记在这里，业务方可以直接推翻。
+
+Where the requirement left a choice open, it was decided during implementation; the evidence is recorded here.
+
+| # | 判定 / Decision | 依据 / Evidence | 落在哪 / Where |
+| --- | --- | --- | --- |
+| D12 | 版本链**正向查出**（谁从我派生），不把 `superseded_by` 写回原批次 | 「原批次不改变」是本 UC 的验收条件之一；为了写一个指针去改写冻结文件，会让「未改变」这句话需要加注释才成立。索引本来就按批次记了 `derived_from` | `periods.successors`；测试 `test_the_original_batch_its_master_and_its_report_are_unchanged` 逐字节比对原批次文件 |
+| D13 | 补传**不强制**先过自检，但补传件照样跑同一条检查链，结果落在新批次的 `intake_checks` | 自检（E14-UC03）是给填报员的事前工具，强制它会让「文件明明是对的、系统不让我交」成为新的卡点；而检查结果必须存在，否则新批次比原批次少一份记录 | `replace_department` 调用 `checks.CHAIN`；新批次 `intake_checks[department]` 被替换 |
+| D14 | 月份是否相符，以**文件自身的行**为准（按声明找到期间字段再读），表单里的月份只做第二道校验 | 表单里的月份是上传者的说法，而这个 UC 的触发场景正是「拿错了文件」。按行判断才抓得住 AC-4 | `integration.periods_in` + `resupply.periods_refusal`；测试上传 6 月文件但表单填 7 月，仍被拒 |
+| D15 | 其余部门**沿用原批次的清洗结果**，不重新清洗 | 重新清洗会让没出错的部门的行号、修正记录与摘要发生变化，AC-1「其余三部门来源摘要与原批次相同」就不成立；也会把一次更正变成四次重算 | `replace_department` 只替换一个 `CleanTable`，其余原样复制；测试比对三部门 `sha256` |
 
 ## 发布与状态维护 / Release and status maintenance
 
