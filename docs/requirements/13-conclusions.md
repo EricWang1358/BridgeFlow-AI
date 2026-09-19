@@ -23,7 +23,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 | --- | --- | --- | --- |
 | E13-UC01 | 一页月度结论 / One-page monthly brief | PARTIAL | Must |
 | E13-UC02 | 跨期对比与差异解释 / Period comparison and variance explanation | IMPLEMENTED_OFFLINE | Must |
-| E13-UC03 | 指标可视化与下钻 / Metric charts with drill-down | DESIGNED | Should |
+| E13-UC03 | 指标可视化与下钻 / Metric charts with drill-down | IMPLEMENTED_OFFLINE | Should |
 | E13-UC04 | 月度报告文档导出 / Export the monthly report document | PARTIAL | Should |
 | E13-UC05 | 口径假设确认与替换 / Confirm or replace declared conventions | IMPLEMENTED_OFFLINE | Must |
 | E13-UC06 | 结论依据等级标注 / Label conclusions with evidence grades | PARTIAL | Should |
@@ -104,7 +104,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 
 ## E13-UC03 — 指标可视化与下钻 / Metric charts with drill-down
 
-**Status: DESIGNED**
+**Status: IMPLEMENTED_OFFLINE**
 
 ### 中文需求与验收
 
@@ -123,7 +123,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
   - AC-3 Given 深色主题与读屏工具 When 访问同一图 Then 表格视图给出与图相同的数值，状态不只靠颜色区分。
 - 后置：图表不保存独立数值副本；数值变化时从来源重新生成。
 - 依赖：E07-UC01、E13-UC02、E10-UC05、00-foundations §5.5。
-- 当前证据与缺口：月度指标没有任何图表；E01-UC04 的四象限视图是立项评分，不是月度指标图。
+- 当前证据与缺口（2026-09-19 第七轮）：图表由字典 `business_review.charts` 声明（种类、指标或字段、期数、阈值取自哪条判定），[conclusions/charts.py](../../backend/src/bridgeflow/conclusions/charts.py) 只把声明变成数据点，不保存任何数值副本；`GET /conclusions/batches/{id}/charts` 每次从各期自己的批次重算。三种图：多期趋势（阈值线取自同一声明里的判定阈值）、差异瀑布（复用 E13-UC02 的新增/消失/持续分解，四段之和等于总变化）、按实体条形（超出声明阈值的实体带标记）。每个点带批次号，点击下钻到该期总表。界面 [charts.tsx](../../plugins/src/client/charts.tsx) 用内联 SVG 绘制，并在同一份数据上提供等价表格（读屏与复制），状态不只靠颜色（▲ 标记 + 表格文字）。[行为测试](../../backend/tests/test_charts.py) 覆盖 AC-1–3 与「无声明只给表格」；[浏览器旅程](../../plugins/tests/round1-journey.mjs) 断言表格与图同源，截图 `docs/evidence/round1-e13-e14/metric-charts.png`。剩余：点击下钻目前到该期总表，未定位到单个指标的公式输入单元格（D19）。
 
 ### English requirements and acceptance
 
@@ -134,7 +134,7 @@ This epic adds no computation of its own. Every number still comes from the E06 
 - Exceptions: fewer than two periods shows an explanation instead of a trend; missing periods are gaps; metrics without a chart declaration show tables only.
 - Acceptance: AC-1 a three-point sign-off trend with the 95% threshold drills to July's source; AC-2 one period shows “at least two periods needed”; AC-3 the table view matches the chart and status is not colour-only.
 - Postcondition: charts keep no separate copy of values.
-- Evidence and gap: no charts exist for monthly metrics; the E01-UC04 quadrant is project scoring, not a monthly metric chart.
+- Evidence and gap (2026-09-19, round 7): charts are declared in the dictionary (`business_review.charts`); `conclusions/charts.py` turns a declaration into points and keeps no copy of any value, and `GET /conclusions/batches/{id}/charts` recomputes each period from that period's own batch. Three kinds: a multi-period trend with the threshold line taken from the same declared check, a variance waterfall reusing the E13-UC02 decomposition (the parts sum to the change), and entity bars marking declared breaches. Every point carries its batch so a click drills to that period's master. The studio draws them as inline SVG with an equivalent table from the same numbers, and status never rests on colour alone. `backend/tests/test_charts.py` covers AC-1–3 and the undeclared-charts case; the journey asserts the table matches the chart. Remaining: a click drills to the period's master, not yet to the individual formula input cell (D19).
 
 ## E13-UC04 — 月度报告文档导出 / Export the monthly report document
 
@@ -257,6 +257,8 @@ Where the requirement left a choice open, it was decided during implementation. 
 | D5 | 计划对比在业务方给出计划来源前一律拒绝 | 计划值没有声明来源，编一个基准等于编一个结论 | `DeclaredPlan.unavailable`，测试覆盖 |
 | D6 | 实体键 = 总表主键去掉期间字段（按 `period_from` 识别，不写死字段名） | 主键含报表年月，保留它会让两期没有一行能对上，每行都显示为「新增」——实现时实测到这一点 | `comparison.entity_axis` |
 | D7 | 指标本身是比率时（单位 %），变化按**百分点**给出，不给相对百分比 | 净利率 0.09% → −0.5% 的相对变化是 −679%，读者无法使用；界面初版就出现了这一幕 | `comparison.POINT_UNITS`；测试断言 `basis == "percentage_points"` |
+| D19 | 下钻落在**该期总表行**，不是指标公式的每个输入单元格 | 一个指标的输入常有上百个单元格（求和），逐个列出既不可读也会把原始行推回上下文；总表行是既能定位又已带出处的最小单位 | `charts.Point.batch_id/key`；界面跳转到该批次总表 |
+| D20 | 缺失期间**断线**，不插值、不补零 | 一条穿过没人报过的月份的线，是系统自己做出的断言；补零还会把「没报」显示成「掉到零」 | `charts.trend` 分段绘制；测试 `test_a_month_without_a_batch_is_a_gap_and_never_interpolated` |
 | D8 | 「替换」只记录业务方的决定、来源与该改的声明内容，**不由系统改写公式、判定阈值或汇总口径**；只有常数替换能给出试算 | 需求主流程写的是「系统生成新声明版本草案」。但 CLAUDE.md 定下「字典由人预设、改 YAML 不改 Python」：让系统按一句自由文本重写 `derived` 树，等于让模型发明声明，且声明文件将不再是唯一事实来源。记录决定 + 指明该改哪一行，既留痕又把改动留在人手里 | `conventions.decide` 的 `replacement_requested` 状态与 `_declaration_change`；测试 `test_replacing_a_formula_asks_for_a_declaration_change...` |
 | D9 | 「确认」是唯一会改变运行时行为的决定，且只改**依据等级**（G3→G2），不改任何数值 | 确认的含义是「这条通用做法就是我们的口径」，数值本来就是按它算的；若确认还改数值，说明之前展示的数是错的而不是待确认的 | `grades.ConventionNode(confirmed=True)`；测试 `test_confirming_lifts_the_figures_that_rest_on_it_from_g3_to_g2` |
 | D10 | 影响试算是**干跑**：用替换值重新整合一次并逐格比对，返回变化单元格数、变化行数与字段名；给队长的返回值不含单元格值，浏览器端才给最多 20 格样例 | 20 万行时「影响多少」是可回答的，「影响了哪些格」不是；这与「工具返回值里也不能有原始行」是同一条约束 | `conventions.preview` 与 `/tools/convention-preview` 的裁剪；测试 `test_a_constant_can_be_previewed_and_the_captain_sees_counts_not_cells` |

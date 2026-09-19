@@ -6,11 +6,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from bridgeflow import column_matches
+from bridgeflow import business, column_matches
 from bridgeflow.api.batches import _visible, load_batch
 from bridgeflow.api.reviews import saved_review
+from bridgeflow.conclusions import charts, conventions
 from bridgeflow.conclusions import comparison as comparison_module
-from bridgeflow.conclusions import conventions
 from bridgeflow.conclusions.brief import BriefBuilder, ConclusionBrief, declaration
 from bridgeflow.identity import UserIdentity, require_user
 
@@ -86,3 +86,69 @@ async def monthly_brief(batch_id: str, user: Annotated[UserIdentity | None, Depe
                         dictionary=batch.dictionary_snapshot or {}, batch_counts=counts, master=master,
                         comparison=change,
                         confirmed_conventions=frozenset(conventions.confirmed(batch.integration_snapshot or {}))).build()
+
+
+@router.get("/conclusions/batches/{batch_id}/charts")
+async def metric_charts(batch_id: str, user: Annotated[UserIdentity | None, Depends(require_user)]) -> dict:
+    """The declared charts for this batch (E13-UC03).
+
+    Every number is recomputed from its batch; no chart keeps a copy. A trend reads each
+    period's own latest visible batch, so a month without one is a gap rather than a guess.
+    """
+    batch = _visible(load_batch(batch_id), user)
+    dictionary = batch.dictionary_snapshot or {}
+    specs = charts.declared(dictionary)
+    if not specs:
+        return {"batch_id": batch_id, "period": batch.period, "charts": [],
+                "refusal": "No charts are declared for this dictionary; a metric without a chart declaration is shown as a table"}
+    master = _master_or_none(batch_id, user)
+    comparison = None
+    if any(spec.kind == "variance" for spec in specs):
+        try:
+            comparison = comparison_module.build(
+                batch_id=batch_id, batch=batch, base_kind="prior_month",
+                metrics=declaration(dictionary).key_metrics, master=master, load_batch=load_batch,
+                master_for=lambda other: _master_or_none(other, user), visible=_visibility(user))
+        except HTTPException:
+            comparison = None
+    built = []
+    for spec in specs:
+        if spec.kind == "trend":
+            built.append(charts.trend(spec, dictionary, _metric_series(spec, batch, user)))
+        elif spec.kind == "variance":
+            built.append(charts.variance(spec, comparison, batch_id=batch_id, period=batch.period))
+        else:
+            built.append(charts.entity_bars(spec, master, comparison.breaches if comparison else [],
+                                            comparison_module.entity_axis(batch.integration_snapshot)))
+    return {"batch_id": batch_id, "period": batch.period,
+            "charts": [chart.model_dump(mode="json") for chart in built]}
+
+
+def _metric_series(spec: charts.ChartSpec, batch, user: UserIdentity | None) -> list[dict]:
+    """One declared metric across the last N periods, each from that period's own batch.
+
+    A period with no visible batch, or one whose figures cannot be computed, is a point with
+    no value: the chart shows a gap, because a line drawn through it would be an assertion
+    nobody made.
+    """
+    series = []
+    for period in _recent_periods(batch.period, spec.periods):
+        entry = comparison_module.periods.latest_for(period, _visibility(user))
+        if entry is None:
+            series.append({"period": period, "batch_id": "", "value": None, "unit": ""})
+            continue
+        other = load_batch(entry["batch_id"]) if entry["batch_id"] != "" else None
+        value, unit = None, ""
+        try:
+            facts = business.context(entry["batch_id"], other)["facts"]
+            fact = facts.get(spec.metric)
+            if fact is not None:
+                value, unit = fact["value"], fact["unit"]
+        except Exception:  # noqa: BLE001 - a period that cannot be computed is a gap, not a zero
+            value, unit = None, ""
+        series.append({"period": period, "batch_id": entry["batch_id"], "value": value, "unit": unit})
+    return series
+
+
+def _recent_periods(period: str, count: int) -> list[str]:
+    return [comparison_module.shift(period, offset) for offset in range(-(count - 1), 1)]
