@@ -15,6 +15,7 @@ from bridgeflow.api.conclusions import router as conclusions_router
 from bridgeflow.api.conventions import router as conventions_router
 from bridgeflow.api.discovery import router as discovery_router
 from bridgeflow.api.discovery import tools_router as discovery_tools_router
+from bridgeflow.api.dispositions import router as dispositions_router
 from bridgeflow.api.documents import router as documents_router
 from bridgeflow.api.feishu_tools import router as feishu_tools_router
 from bridgeflow.api.integration import router as integration_router
@@ -59,6 +60,7 @@ app.include_router(integration_router, dependencies=[Depends(require_host)])
 app.include_router(conclusions_router, dependencies=[Depends(require_host)])
 app.include_router(conventions_router, dependencies=[Depends(require_host)])
 app.include_router(checklist_router, dependencies=[Depends(require_host)])
+app.include_router(dispositions_router, dependencies=[Depends(require_host)])
 
 orchestrator = Orchestrator()
 

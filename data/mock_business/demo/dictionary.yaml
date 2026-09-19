@@ -68,6 +68,20 @@ monthly_close:
   - {id: review_validated, kind: review_validated, owner_role: 各部门负责人, required: true}
   - {id: brief_ready, kind: brief_ready, owner_role: 月度汇总负责人, required: true}
 
+# 预警的处置状态与流转由公司流程决定，必须声明（E07-UC07）：没有声明就不提供状态机，
+# 而不是给一套看起来合理的默认流程。by_role 用研判角色名，requires_note 的动作没有理由就拒绝。
+# 本处为模拟公司的示例流程，业务方确认后照此改写即可。
+risk_disposition:
+  states: [待确认, 已确认, 处理中, 已驳回, 已关闭]
+  initial: 待确认
+  closed: [已驳回, 已关闭]
+  transitions:
+  - {action: confirm, from_state: 待确认, to_state: 已确认, requires_note: false}
+  - {action: reject, from_state: 待确认, to_state: 已驳回, requires_note: true}
+  - {action: assign, from_state: 已确认, to_state: 处理中, requires_note: true}
+  - {action: close, from_state: 处理中, to_state: 已关闭, requires_note: true}
+  - {action: reopen, from_state: 已关闭, to_state: 已确认, requires_note: true}
+
 business_review:
   case: 模拟商砼公司 2024-07 月度对账（业务方 v2 模板，虚构数据）
   inputs:

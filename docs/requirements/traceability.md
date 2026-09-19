@@ -25,7 +25,7 @@ Sources: PRD, current code/tests, issue bodies and material closure comments. Th
 | FR15 | 市场视角 / Marketing review | [E07-UC01](07-review.md), [E07-UC03](07-review.md), [E07-UC04](07-review.md) |
 | FR16 | 预警证据与阈值 / Finding evidence and thresholds | [E07-UC02](07-review.md), [E07-UC04](07-review.md) |
 | FR17 | 风险状态 / Risk lifecycle | [E07-UC07](07-review.md) |
-| FR18 | 月季年总表 / Month-quarter-year masters | [E06-UC01](06-master-integration.md), [E06-UC02](06-master-integration.md), [E06-UC06](06-master-integration.md) |
+| FR18 | IMPLEMENTED_OFFLINE | [E06-UC01](06-master-integration.md), [E06-UC02](06-master-integration.md), [E06-UC06](06-master-integration.md) |
 | FR19 | 权限视图及下钻 / Scoped views and drilldown | [E06-UC04](06-master-integration.md), [E09-UC05](09-security-approval.md) |
 | FR20 | 报告与审批卡 / Reports and approval cards | [E07-UC06](07-review.md), [E07-UC07](07-review.md), [E09-UC01](09-security-approval.md) |
 | FR21 | XLSX/PDF 导出 / XLSX/PDF export | [E06-UC05](06-master-integration.md), [E06-UC06](06-master-integration.md) |
@@ -66,8 +66,8 @@ OPEN/CLOSED is tracker state, not delivery state. Use UC details and implementat
 | [#16](https://github.com/EricWang1358/BridgeFlow-AI/issues/16) | CLOSED | FR 02: 补齐列错位、重复行、字段名拼写差异的识别 | [E04-UC03](04-intake-quality.md) |
 | [#17](https://github.com/EricWang1358/BridgeFlow-AI/issues/17) | CLOSED | FR 05: 币种与单位归一，以及按月补齐时间序列 | [E04-UC08](04-intake-quality.md) |
 | [#18](https://github.com/EricWang1358/BridgeFlow-AI/issues/18) | CLOSED | FR 09: 日周月粒度统一到月度，保留原始粒度 | [E06-UC01](06-master-integration.md) |
-| [#19](https://github.com/EricWang1358/BridgeFlow-AI/issues/19) | OPEN | Risk decisions: define business-owned disposition and approval states | [E07-UC07](07-review.md) |
-| [#20](https://github.com/EricWang1358/BridgeFlow-AI/issues/20) | OPEN | Quotation: compare declared scenarios and require approval before release | [E08-UC04](08-quotation.md), [E08-UC05](08-quotation.md) |
+| [#19](https://github.com/EricWang1358/BridgeFlow-AI/issues/19) | CLOSED | Risk decisions: define business-owned disposition and approval states | [E07-UC07](07-review.md) |
+| [#20](https://github.com/EricWang1358/BridgeFlow-AI/issues/20) | IMPLEMENTED_OFFLINE | Quotation: compare declared scenarios and require approval before release | [E08-UC04](08-quotation.md), [E08-UC05](08-quotation.md) |
 | [#21](https://github.com/EricWang1358/BridgeFlow-AI/issues/21) | CLOSED | PRD 第十一章: 权限、角色与审计日志 | [E09-UC01](09-security-approval.md), [E09-UC04](09-security-approval.md), [E09-UC06](09-security-approval.md) |
 | [#22](https://github.com/EricWang1358/BridgeFlow-AI/issues/22) | CLOSED | FR 21: 导出 XLSX 与 PDF | [E06-UC05](06-master-integration.md), [E06-UC06](06-master-integration.md) |
 | [#23](https://github.com/EricWang1358/BridgeFlow-AI/issues/23) | OPEN | Business inputs: confirm templates, policies and quotation ownership | [E02-UC09](02-standardization.md), [E08-UC01](08-quotation.md), [E08-UC03](08-quotation.md) |

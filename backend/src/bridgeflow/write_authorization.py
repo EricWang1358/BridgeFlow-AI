@@ -15,7 +15,7 @@ from bridgeflow.identity import UserIdentity
 from bridgeflow.store import _root
 
 OPERATIONS = frozenset({"confirm_mapping", "confirm_column_match", "quarantine_decide",
-                       "quarantine_apply", "convention_decide", "workflow_record", "workflow_approve_submit",
+                       "quarantine_apply", "convention_decide", "risk_disposition", "workflow_record", "workflow_approve_submit",
                        "workflow_handoff", "feishu_import", "feishu_upload_report", "discovery_propose", "discovery_register", "discovery_graph_save", "discovery_score_save", "discovery_meeting_save", "discovery_decision_propose", "discovery_decision_vote",
                        "discovery_decision_resolve", "discovery_decision_finalize"})
 SCHEMA = """
@@ -52,7 +52,7 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> Resol
     from bridgeflow.api.batches import _visible, load_batch
 
     if operation in {"confirm_column_match", "quarantine_decide", "quarantine_apply",
-                     "convention_decide", "feishu_upload_report"}:
+                     "convention_decide", "risk_disposition", "feishu_upload_report"}:
         _visible(load_batch(str(body.get("batch_id", ""))), user)
     elif operation in {"discovery_decision_propose", "discovery_decision_vote",
                        "discovery_decision_resolve", "discovery_decision_finalize"}:
