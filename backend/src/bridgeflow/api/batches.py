@@ -6,9 +6,11 @@ import hashlib
 import io
 import json
 import re
+import shutil
 import uuid
 import zipfile
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -28,7 +30,7 @@ from bridgeflow.conclusions import periods
 from bridgeflow.config import REPO_ROOT, settings
 from bridgeflow.identity import UserIdentity, require_user
 from bridgeflow.metrics import dictionary_path
-from bridgeflow.monthly import checks
+from bridgeflow.monthly import checks, resupply
 from bridgeflow.schemas import CleanTable, Department, PipelineResult
 from bridgeflow.store import _root, _write
 
@@ -62,6 +64,9 @@ class BatchSnapshot(PipelineResult):
     #: The frozen batch this one was derived from by applying quarantine decisions (#88).
     derived_from: str | None = None
     dispositions: list[dict] = Field(default_factory=list)
+    #: One entry per replaced department file (E14-UC04): who replaced it, why, and the
+    #: digests before and after, so a version chain can be read without diffing files.
+    replacements: list[dict] = Field(default_factory=list)
     #: Per department, the shared intake check report (E14-UC03): identical to what self-check returns.
     intake_checks: dict[str, dict] = Field(default_factory=dict)
     #: Portal union_id of whoever imported it; "" = system/tool import or predates
@@ -134,6 +139,9 @@ class BatchSummary(BaseModel):
     #: Uploaded columns the dictionary does not know that might be a declared column
     #: this department is missing. Non-zero means the captain has something to propose.
     column_questions: int = 0
+    #: Batches derived from this one (E14-UC04). Non-empty means a report bound to this
+    #: batch was built on data that has since been corrected: review the newest batch.
+    superseded_by: list[str] = Field(default_factory=list)
     derived_from: str | None = None
     #: Intake columns dropped as unrepresentable (docs/33); empty for plain file uploads.
     dropped_columns: list[dict] = Field(default_factory=list)
@@ -175,6 +183,7 @@ def summary(batch_id: str, result: BatchSnapshot) -> BatchSummary:
         stale_matches=result.stale_matches,
         column_questions=column_matches.count_questions(result.dictionary_snapshot, result.clean_tables),
         derived_from=result.derived_from,
+        superseded_by=periods.successors(batch_id),
         dropped_columns=result.dropped_columns,
     )
 
@@ -605,6 +614,123 @@ async def list_sources(batch_id: str,
             sources.append({"id": table.department, "filename": table.filename,
                             "sheet": table.sheet, "preview_available": False})
     return {"batch_id": batch_id, "sources": sources}
+
+
+class ResupplyResult(BaseModel):
+    """The derived batch and what the correction changed (E14-UC04)."""
+    batch: BatchSummary
+    replaced: str
+    reason: str
+    previous_batch: str
+    diff: resupply.MasterDiff
+    next_step: str = ""
+
+
+@router.post("/{batch_id}/departments/{department}", response_model=ResupplyResult)
+async def replace_department(
+    batch_id: str,
+    department: Department,
+    period: Annotated[str, Form(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")],
+    reason: Annotated[str, Form(min_length=1, max_length=300)],
+    file: Annotated[UploadFile, File()],
+    user: Annotated[UserIdentity | None, Depends(require_user)],
+    sheet: Annotated[str, Form()] = "",
+    header_row: Annotated[str, Form()] = "",
+) -> ResupplyResult:
+    """Correct one department's file, deriving a new batch (E14-UC04).
+
+    The other departments keep the sources and cleaned tables they already had, so their
+    digests do not change and nobody re-uploads for a mistake that was not theirs. The
+    original batch, its master and its reports stay exactly as they were.
+    """
+    batch = _visible(load_batch(batch_id), user)
+    _check_upload_scope([department], user)
+    if department not in {table.department for table in batch.clean_tables}:
+        raise HTTPException(404, "That department is not in this batch; import a batch that includes it")
+    if period != batch.period:
+        raise HTTPException(422, f"This batch is {batch.period}; a file for {period} belongs to its own batch")
+    if batch.integration_snapshot is None and batch.dictionary_snapshot is None:
+        raise HTTPException(409, "This batch has no frozen declaration; import a new batch instead")
+    folder = batch_path(batch_id).parent / "sources" / batch_id
+    if not (folder / "index.json").is_file():
+        raise HTTPException(409, "This batch kept no original sheets, so the other departments cannot be carried over; import a new batch")
+
+    dictionary_raw, dictionary, date_orders = _load_dictionary(dictionary_path())
+    try:
+        declared_layout = Layout.declared(dictionary_raw.get("sheet_layout"), department)
+    except (ValueError, TypeError, AttributeError, KeyError) as exc:
+        raise HTTPException(503, "Field dictionary configuration is invalid; ask the administrator to correct it before importing") from exc
+    payload = await file.read(settings.bridgeflow_max_upload_bytes + 1)
+    if len(payload) > settings.bridgeflow_max_upload_bytes:
+        raise HTTPException(413, "Batch exceeds configured upload size limit")
+    parsed = _parse_department_file(department, file.filename or "", payload,
+                                    Layout.from_form(sheet, header_row).over(declared_layout))
+
+    manifest = {item["id"]: item for item in json.loads((folder / "index.json").read_text(encoding="utf-8"))["sources"]}
+    refusal = resupply.unchanged_refusal(manifest.get(department), parsed.sha256)
+    if refusal:
+        raise HTTPException(409, refusal)
+    source = _source_record(parsed)
+    spec_snapshot = batch.integration_snapshot
+    if spec_snapshot is not None:
+        from bridgeflow import integration as integration_module
+
+        spec = integration_module.IntegrationSpec.model_validate(spec_snapshot)
+        refusal = resupply.periods_refusal(spec, integration_module.sheet_from_preview(department, source), batch.period)
+        if refusal:
+            raise HTTPException(422, refusal)
+
+    from bridgeflow.api.integration import _result
+
+    before = None
+    if spec_snapshot is not None:
+        try:
+            before = _result(batch_id, user)
+        except HTTPException:
+            before = None
+
+    new_id = uuid.uuid4().hex
+    derived = batch.model_copy(deep=True)
+    table = await _clean(parsed, batch.period, date_orders.get(department), new_id)
+    derived.clean_tables = [table if t.department == department else t for t in derived.clean_tables]
+    for other in derived.clean_tables:
+        other.batch = new_id
+    if not dictionary.is_empty:
+        # Only the replaced table is new; remembered matches for the others were applied
+        # when their batch was imported and are already in their column names.
+        applied, stale = column_matches.apply([table], dictionary_raw)
+        derived.column_matches = [m for m in derived.column_matches if m.department != department] + applied
+        derived.stale_matches = [s for s in derived.stale_matches if not s.startswith(f"{department}.")] + stale
+    report = checks.CHAIN.run(checks.CheckSubject(department, parsed.filename, _declaration_label(dictionary_raw, _integration_spec()),
+                                                  table=table, source=source, spec=_integration_spec()))
+    derived.intake_checks = {**derived.intake_checks, department: report.model_dump(mode="json")}
+    derived.derived_from = batch_id
+    derived.replacements = [*batch.replacements, {"department": department, "reason": reason,
+                                                  "before_sha256": (manifest.get(department) or {}).get("sha256", ""),
+                                                  "after_sha256": parsed.sha256, "filename": parsed.filename,
+                                                  "by": getattr(user, "sub", "") or "", "at": datetime.now(UTC).isoformat()}]
+    await assemble(derived, dictionary)
+
+    new_folder = batch_path(new_id).parent / "sources" / new_id
+    shutil.copytree(folder, new_folder)
+    _write(new_folder / f"{department}.json", source)
+    entry = {key: source[key] for key in ("id", "filename", "sheet", "sha256", "bytes")} | {"total": len(source["rows"])}
+    _write(new_folder / "index.json", {"sources": [entry if item["id"] == department else item
+                                                   for item in manifest.values()]})
+    _write(batch_path(new_id), derived.model_dump(mode="json"))
+    periods.record(new_id, derived)
+
+    after = None
+    if derived.integration_snapshot is not None:
+        try:
+            after = _result(new_id, user)
+        except HTTPException:
+            after = None
+    return ResupplyResult(
+        batch=summary(new_id, derived), replaced=department, reason=reason, previous_batch=batch_id,
+        diff=resupply.diff(before, after),
+        next_step=("Use the new batch from now on. The previous batch and any report bound to it are unchanged; "
+                   "a report built on the old data must be run again against this batch."))
 
 
 @router.get("/{batch_id}/sources/{source_id}")

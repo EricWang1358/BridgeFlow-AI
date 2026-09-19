@@ -111,6 +111,16 @@ try {
   await dialog.locator('.bf-callout[data-tone="ok"]').filter({ hasText: 'Ready to submit' }).waitFor()
   await dialog.locator('.bf-callout[data-tone="warn"]').scrollIntoViewIfNeeded()
   await shot('self-check')
+  // E14-UC04: correcting one department is offered on the batch itself, and a file identical
+  // to the one already in it derives nothing instead of quietly making a second batch.
+  const state = dialog
+  await state.locator('.bf-resupply > summary').click()
+  await state.locator('.bf-resupply input[name=reason]').fill('journey: unchanged file')
+  await state.locator('.bf-resupply input[name=file]').setInputFiles(`${root}/data/mock_business/demo/production.xlsx`)
+  await state.locator('.bf-resupply button[type=submit]').click()
+  await state.locator('.bf-resupply .bf-error').filter({ hasText: 'identical' }).waitFor()
+  await shot('resupply-unchanged')
+
   assert.deepEqual(errors, [])
   console.log(JSON.stringify({ status: 'passed', batch, attention: items, evidence }))
 } catch (error) { console.error(logs.slice(-3000)); await page?.screenshot({ path: `${evidence}/failure.png` }).catch(() => {}); throw error }

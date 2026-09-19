@@ -83,6 +83,19 @@ const labels = {
   approval_quarantine_decide: ['隔离行处置审批', 'Quarantine decision approval'], approvalTitle_quarantine_decide: ['确认这一隔离行放行或丢弃', 'Confirm releasing or discarding this quarantined row'],
   approval_quarantine_apply: ['隔离处置应用审批', 'Apply quarantine decisions'], approvalTitle_quarantine_apply: ['按已记录的决定生成新批次（原批次不变）', 'Create a new batch from the recorded decisions (this batch stays unchanged)'],
   approval_convention_decide: ['口径决定审批', 'Convention decision approval'], approvalTitle_convention_decide: ['确认或替换一条字典未写明的口径', 'Confirm or replace a convention the dictionary does not state'],
+  file: ['文件', 'File'],
+  resupply: ['补传单个部门', 'Replace one department\u2019s file'],
+  resupplyHelp: ['只有一个部门的文件需要更正时，不必四个部门重传：其余部门沿用本批次的原件与清洗结果，只有补传部门重新导入，生成新批次；本批次及其报告保持不变。',
+    'When only one department\u2019s file is wrong, the others do not upload again: they keep this batch\u2019s originals and cleaned tables, only the replaced department is re-imported, and a new batch is derived. This batch and its report stay as they are.'],
+  resupplyDepartment: ['补传部门', 'Department'], resupplyReason: ['更正原因', 'Reason for the correction'],
+  resupplyDone: ['已生成新批次', 'A new batch was derived'],
+  resupplyDiff: ['与原批次相比', 'Compared with the original batch'],
+  resupplyChangedCells: ['变化单元格', 'changed cells'], resupplyChangedFields: ['涉及字段', 'in fields'],
+  resupplyRows: ['总表行数', 'master rows'], resupplyIssues: ['待确认事项变化', 'open items'],
+  superseded: ['数据已更新，可重新研判', 'Data has been updated; run the review again'],
+  supersededHint: ['本批次之后已有更正批次。本批次与它的报告不会改变，但要用最新数据下结论，请打开新批次重新研判。',
+    'A corrected batch was derived from this one. This batch and its report do not change, but conclusions should be drawn on the newest batch.'],
+  openNewest: ['打开最新批次', 'Open the newest batch'],
   convention_list: ['口径清单', 'Conventions'], convention_preview: ['口径影响试算', 'Convention impact preview'], convention_decide: ['口径决定', 'Convention decision'],
   quarantine_list: ['隔离行清单', 'Quarantined rows'], quarantine_decide: ['隔离行处置', 'Quarantine decision'], quarantine_apply: ['应用隔离处置', 'Apply quarantine decisions'],
   view_department: ['部门', 'Department'], view_column: ['上传列', 'Uploaded column'], view_original: ['原始表头', 'Header as written'], view_candidate: ['已声明候选列', 'Declared candidate'], view_role: ['声明角色', 'Declared role'], view_type_fits: ['类型相符', 'Type fits'], view_shared_values: ['值重合', 'Shared values'], view_decision: ['决定', 'Decision'], view_index: ['序号', 'Index'],
@@ -441,6 +454,8 @@ export type Summary = { demo_case?: string | null; batch_id: string; period: str
   stale_matches?: string[]
   column_questions?: number
   derived_from?: string | null
+  /** Batches derived from this one (E14-UC04): this batch's report rests on corrected data. */
+  superseded_by?: string[]
   /** Intake columns dropped as unrepresentable (docs/33): names and types, never values. */
   dropped_columns?: { department: string; column: string; field_type: string; reason: string }[] }
 

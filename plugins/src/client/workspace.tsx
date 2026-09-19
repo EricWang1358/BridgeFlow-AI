@@ -242,7 +242,14 @@ export function DataWorkspace() {
           <p className="bf-mono">{batch.dropped_columns.map(c => `${t(c.department)}.${c.column}（${c.field_type}）`).join(' · ')}</p>
         </div>}
 
+        {!!batch.superseded_by?.length && <div className="bf-callout" data-tone="warn">
+          <h3>{t('superseded')}</h3><p>{t('supersededHint')}</p>
+          <div className="bf-actions" style={{ marginBottom: 0 }}>
+            <button onClick={() => selectBatch(batch.superseded_by!.at(-1)!)}>{t('openNewest')}</button>
+          </div>
+        </div>}
         {batch.derived_from && <p className="bf-hint">{t('derivedFrom')}: <code className="bf-mono">{batch.derived_from}</code></p>}
+        <ResupplyForm batch={batch} onDerived={id => selectBatch(id)} />
         <div className="bf-stats">{batch.departments.map(d => <div className="bf-stat" key={d.department}>
           <b>{d.rows}</b><span>{t(d.department)} · {d.corrections} {t('corrections')} / {d.quarantined} {t('quarantine')}</span>
         </div>)}</div>
@@ -285,3 +292,57 @@ export function DataWorkspace() {
     </dialog>
   </>
 }
+
+
+/** Correct one department's file, deriving a new batch (E14-UC04).
+ *
+ * Deliberately not a second import form: the period and the other departments come from the
+ * batch being corrected, so the only things to say are which department, which file and why.
+ */
+export function ResupplyForm({ batch, onDerived }: { batch: Summary; onDerived: (batchId: string) => void }) {
+  const { t } = useUI()
+  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [result, setResult] = useState<Resupply | null>(null)
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setError(''); setResult(null)
+    const form = new FormData(event.currentTarget), body = new FormData()
+    const file = form.get('file')
+    if (!(file instanceof File) || !file.size || !/\.(csv|xlsx)$/i.test(file.name)) { setError(t('invalidUpload')); return }
+    body.set('period', batch.period); body.set('reason', String(form.get('reason') ?? ''))
+    body.set('file', file); body.set('sheet', String(form.get('sheet') ?? '')); body.set('header_row', String(form.get('header_row') ?? ''))
+    setBusy(true)
+    try {
+      const derived = await api<Resupply>(`/batches/${batch.batch_id}/departments/${String(form.get('department'))}`, { method: 'POST', body })
+      setResult(derived)
+      onDerived(derived.batch.batch_id)
+    } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
+  }
+  return <details className="bf-resupply">
+    <summary>{t('resupply')}</summary>
+    <p className="bf-hint">{t('resupplyHelp')}</p>
+    <form onSubmit={submit}>
+      <label>{t('resupplyDepartment')} <select name="department" defaultValue={batch.departments[0]?.department}>
+        {batch.departments.map(d => <option key={d.department} value={d.department}>{t(d.department)}</option>)}
+      </select></label>
+      <label>{t('resupplyReason')} <input name="reason" required maxLength={300} /></label>
+      <label>{t('file')} <input type="file" name="file" accept=".csv,.xlsx" required /></label>
+      <details className="bf-hint"><summary>{t('sheetLayout')}</summary>
+        <input name="sheet" placeholder={t('sheetName')} aria-label={t('sheetName')} />
+        <input name="header_row" type="number" min={1} placeholder={t('headerRow')} aria-label={t('headerRow')} />
+      </details>
+      {error && <p role="alert" className="bf-error">{error}</p>}
+      <button className="bf-primary" type="submit" disabled={busy}>{t(busy ? 'busy' : 'resupply')}</button>
+    </form>
+    {result && <div className="bf-callout" data-tone="ok" role="status">
+      <h3>{t('resupplyDone')} · <code className="bf-mono">{result.batch.batch_id}</code></h3>
+      <p>{t('resupplyDiff')}：{result.diff.cells_changed} {t('resupplyChangedCells')}
+        {result.diff.fields_changed.length ? ` · ${t('resupplyChangedFields')} ${result.diff.fields_changed.join('、')}` : ''}
+        {` · ${t('resupplyRows')} ${result.diff.rows_before} → ${result.diff.rows_after}`}</p>
+      {Object.keys(result.diff.issues_delta).length > 0 && <p className="bf-hint">{t('resupplyIssues')}：{
+        Object.entries(result.diff.issues_delta).map(([kind, delta]) => `${t(`issue_${kind}`)} ${delta > 0 ? '+' : ''}${delta}`).join(' · ')}</p>}
+      <p className="bf-hint">{result.next_step}</p>
+    </div>}
+  </details>
+}
+type Resupply = { batch: Summary; replaced: string; reason: string; previous_batch: string; next_step: string
+  diff: { rows_before: number; rows_after: number; rows_added: number; rows_removed: number
+    cells_changed: number; fields_changed: string[]; issues_delta: Record<string, number> } }
