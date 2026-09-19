@@ -55,7 +55,7 @@ try {
   await page.locator('.bf-resource-list button').first().waitFor()
   const batch = new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('batch')
   assert.match(batch, /^[a-f0-9]{32}$/)
-  await studio('This month').click()
+  await studio('Conclusions').click()
   await page.getByText('No review yet', { exact: true }).waitFor()
 
   // A scripted review through the host tools, as test_business_mvp does (no model)
@@ -99,6 +99,7 @@ try {
   await shot('brief-comparison')
 
   // E13-UC03: the declared trend draws two periods, and the table beside it says the same
+  await page.locator('.bf-brief-fold > summary').filter({ hasText: 'Metric charts' }).click()
   const trend = page.locator('.bf-chart-card').filter({ hasText: 'Sign-off rate trend' })
   await trend.locator('svg.bf-chart').waitFor()
   await trend.getByRole('button', { name: 'Show the table' }).click()
@@ -113,7 +114,10 @@ try {
   const saved = await download
   assert.match(saved.suggestedFilename(), /^月度经营结论-2024-07-.*\.docx$/)
 
-  // E13-UC06 in the master view: a selected cell shows its grade
+  // E13-UC06 in the master view: reached from the Data destination, which owns it now
+  await studio('Data').click()
+  await page.locator('.bf-data-row').first().waitFor()
+  await shot('data-timeline')
   await target('master-open').click(); await target('master-status').waitFor()
   await target('master-evidence-open').click()
   await page.locator('.bf-cell-evidence .bf-grade').waitFor()
@@ -125,30 +129,32 @@ try {
   await dialog.locator('input[name=period]').fill('2024-07')
   await dialog.locator('input[name=marketing]').setInputFiles(`${root}/data/mock_business/monthly/2024-07-模拟留出/市场部.xlsx`)
   await dialog.locator('input[name=finance]').setInputFiles(`${root}/data/mock_business/monthly/2024-07-模拟留出/财务部.xlsx`)
-  // E14-UC02: the approved template downloads from the same panel, prefilled where declared
-  const templateFile = page.waitForEvent('download')
-  await dialog.locator('.bf-template-download button').click()
-  assert.match((await templateFile).suggestedFilename(), /^生产部-2024-07-.*\.xlsx$/)
-  await dialog.locator('.bf-template-download [role=status]').waitFor()
-  await shot('template-download')
-
   await dialog.getByRole('button', { name: 'Check first', exact: true }).click()
   await dialog.locator('.bf-callout[data-tone="warn"]').filter({ hasText: '市场_可争取' }).waitFor()
   await dialog.locator('.bf-callout[data-tone="ok"]').filter({ hasText: 'Ready to submit' }).waitFor()
   await dialog.locator('.bf-callout[data-tone="warn"]').scrollIntoViewIfNeeded()
   await shot('self-check')
-  // E14-UC04: correcting one department is offered on the batch itself, and a file identical
-  // to the one already in it derives nothing instead of quietly making a second batch.
-  const state = dialog
-  await state.locator('.bf-resupply > summary').click()
-  await state.locator('.bf-resupply input[name=reason]').fill('journey: unchanged file')
-  await state.locator('.bf-resupply input[name=file]').setInputFiles(`${root}/data/mock_business/demo/production.xlsx`)
-  await state.locator('.bf-resupply button[type=submit]').click()
-  await state.locator('.bf-resupply .bf-error').filter({ hasText: 'identical' }).waitFor()
+  // E14-UC02 and E14-UC04 live on the department's own row in Data: take its template, and
+  // correct its file. A file identical to the one already in the batch derives nothing.
+  await dialog.locator('header button').first().click()
+  await studio('Data').click()
+  const productionRow = page.locator('.bf-data-row').first()
+  await productionRow.waitFor()
+  await productionRow.scrollIntoViewIfNeeded()
+  const templateFile = page.waitForEvent('download')
+  await productionRow.locator('.bf-template-download button').click()
+  assert.match((await templateFile).suggestedFilename(), /^生产部-2024-07-.*\.xlsx$/)
+  await productionRow.locator('.bf-template-download [role=status]').waitFor()
+  await shot('template-download')
+
+  await productionRow.locator('.bf-resupply > summary').click()
+  await productionRow.locator('.bf-resupply input[name=reason]').fill('journey: unchanged file')
+  await productionRow.locator('.bf-resupply input[name=file]').setInputFiles(`${root}/data/mock_business/demo/production.xlsx`)
+  await productionRow.locator('.bf-resupply button[type=submit]').click()
+  await productionRow.locator('.bf-resupply .bf-error').filter({ hasText: 'identical' }).waitFor()
   await shot('resupply-unchanged')
 
-  // E14-UC01: the close checklist reads the same state the pages do
-  await state.locator('header button').first().click()
+  // E14-UC01 + E14-UC05: one destination, the steps and the items they are waiting on
   await target('state-open').click()
   const checklist = page.locator('.bf-checklist')
   await checklist.waitFor()
@@ -156,6 +162,13 @@ try {
   assert.ok(done.includes('Department files submitted'), `files step should be done: ${done}`)
   await checklist.locator('li[data-state=open]').first().waitFor()
   await shot('close-checklist')
+
+  // Focusing a step narrows the items to the ones that step is waiting on, and the total stays.
+  const before = await page.locator('.bf-inbox li').count()
+  await checklist.locator('li[data-state=open] button', { hasText: 'Show its items' }).first().click()
+  await page.locator('.bf-inbox [role=status]').filter({ hasText: 'focused step' }).waitFor()
+  assert.ok(await page.locator('.bf-inbox li').count() <= before, 'focusing a step narrows the list')
+  await page.locator('.bf-inbox [role=status] button').click()
 
   // E14-UC05: the same open items, listed as what is waiting on whom — with no decision buttons
   const waiting = page.locator('.bf-inbox li')

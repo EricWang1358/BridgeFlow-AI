@@ -96,11 +96,13 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
     {exportError && <p role="alert" className="bf-error">{exportError}</p>}
     {brief.stale && <div className="bf-callout" data-tone="warn"><p>{t('briefStale')}</p></div>}
     {brief.missing_departments.length > 0 && <div className="bf-callout" data-tone="warn"><h3>{t('partial')}</h3><p>{t('briefMissing')}：{brief.missing_departments.map(d => t(d)).join('、')}</p></div>}
+    <div className="bf-brief-layer" data-layer="1">{t('briefLayerOne')}</div>
     <p className="bf-brief-headline" role="status">
       <strong>{brief.headline.attention}</strong> {t('briefAttention')} · <strong>{brief.headline.ok}</strong> {t('briefOk')} · <strong>{brief.headline.open_items}</strong> {t('briefOpenItems')}
     </p>
     <p className="bf-hint">{t('evidenceGrades')}：{grades}{brief.grade_summary.missing ? ` · ${t('gradeMissing')} ${brief.grade_summary.missing}` : ''} · {t('gradeLegend')}</p>
 
+    <div className="bf-brief-layer" data-layer="2">{t('briefLayerTwo')}</div>
     <h4>{t('briefKeyMetrics')}</h4>
     <dl className="bf-brief-metrics">{brief.key_metrics.map(m => <div key={m.metric}>
       <dt>{m.title}</dt>
@@ -125,7 +127,9 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
       </details>}
     </li>)}</ol>
 
-    <h4>{t('periodComparison')}</h4>
+    <div className="bf-brief-layer" data-layer="3">{t('briefLayerThree')}</div>
+    <details className="bf-brief-fold" open={!!brief.comparison?.breaches?.length}>
+      <summary>{t('periodComparison')}</summary>
     {!brief.comparison || brief.comparison.status !== 'compared'
       ? <p className="bf-hint" role="status">{t(brief.comparison?.status === 'no_base' ? 'comparisonNoBase'
         : brief.comparison?.status === 'declaration_changed' ? 'comparisonChanged'
@@ -145,6 +149,7 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
               <td data-numeric="true">{number(row.new_entities, '')} / {number(row.discontinued, '')} / {number(row.continuing, '')}</td></tr>)}</tbody></table></div>
         </details>
       </>}
+    </details>
 
     <h4>{t('briefOpenItems')}</h4>
     <ul className="bf-brief-open">
@@ -154,6 +159,8 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
     </ul>
     <p className="bf-hint">{t('briefCompleteness')}：{brief.completeness.complete_rows} / {brief.completeness.master_rows} {t('masterCompleteRows')} · {t('integrationAssumptions')} {brief.completeness.assumptions}</p>
     <details><summary>{t('briefDecisionAndLimits')}</summary><p>{brief.manager_decision}</p><ul>{brief.limitations.map((l, i) => <li key={i}>{l}</li>)}</ul></details>
-    <MetricCharts batchId={batchId} />
+    <details className="bf-brief-fold"><summary>{t('metricCharts')}</summary>
+      <MetricCharts batchId={batchId} />
+    </details>
   </section>
 }

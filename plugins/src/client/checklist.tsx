@@ -23,7 +23,8 @@ type Inbox = { total: number; items: Item[]; by_kind: Record<string, number>; by
  * Every row ends in one button: open the module that settles it. There is deliberately no
  * approve or reject here — the evidence and the approval live where the item came from.
  */
-export function OpenItemInbox({ period, batchId }: { period: string; batchId: string }) {
+export function OpenItemInbox({ period, batchId, focusView = '', onClearFocus }:
+  { period: string; batchId: string; focusView?: string; onClearFocus?: () => void }) {
   const { t } = useUI()
   const [inbox, setInbox] = useState<Inbox | null>(null), [error, setError] = useState(''), [department, setDepartment] = useState('')
   useEffect(() => {
@@ -38,16 +39,21 @@ export function OpenItemInbox({ period, batchId }: { period: string; batchId: st
   if (!period) return null
   if (error) return <p role="alert" className="bf-error">{error}</p>
   if (!inbox) return <p role="status" className="bf-loading">{t('loading')}</p>
+  // A step in the checklist and the items behind it are the same facts read twice; focusing
+  // a step narrows this list instead of showing the person a second, separate count.
+  const shown = focusView ? inbox.items.filter(item => item.next_view === focusView) : inbox.items
   return <section className="bf-inbox" aria-label={t('openItems')}>
     <h3>{t('openItems')} <span className="bf-badge">{inbox.total}</span></h3>
-    <p className="bf-hint">{t('openItemsHint')}</p>
+    {focusView
+      ? <p className="bf-hint" role="status">{t('inboxFocused')} <button onClick={() => onClearFocus?.()}>{t('inboxClearFocus')}</button></p>
+      : <p className="bf-hint">{t('openItemsHint')}</p>}
     <label>{t('department')} <select value={department} onChange={e => setDepartment(e.target.value)}>
       <option value="">{t('allDepartments')}</option>
       {Object.keys(inbox.by_department).map(name => <option key={name} value={name}>{t(name)} · {inbox.by_department[name]}</option>)}
     </select></label>
     {inbox.unreadable.map(reason => <p key={reason} className="bf-hint">{t('inboxUnreadable')}：{reason}</p>)}
-    {!inbox.items.length && <p className="bf-hint">{t('inboxEmpty')}</p>}
-    <ul>{inbox.items.map(item => <li key={item.id}>
+    {!shown.length && <p className="bf-hint">{t('inboxEmpty')}</p>}
+    <ul>{shown.map(item => <li key={item.id}>
       <b>{t(`item_${item.kind}`) === `item_${item.kind}` ? item.kind : t(`item_${item.kind}`)}</b>
       {item.subject && <span className="bf-mono"> · {item.subject}</span>}
       <span className="bf-hint"> · {item.departments.map(d => t(d)).join('、')}</span>
@@ -57,7 +63,8 @@ export function OpenItemInbox({ period, batchId }: { period: string; batchId: st
   </section>
 }
 
-export function CloseChecklist({ period, batchId, onImport }: { period: string; batchId: string; onImport: () => void }) {
+export function CloseChecklist({ period, batchId, onImport, onFocus, focusView = '' }:
+  { period: string; batchId: string; onImport: () => void; onFocus?: (nextView: string) => void; focusView?: string }) {
   const { t } = useUI()
   const [list, setList] = useState<Checklist | null>(null), [error, setError] = useState('')
   useEffect(() => {
@@ -77,17 +84,20 @@ export function CloseChecklist({ period, batchId, onImport }: { period: string; 
     {list.ready_to_close
       ? <div className="bf-callout" data-tone="ok"><h3>{t('readyToClose')}</h3><p>{t('readyToCloseHint')}</p></div>
       : <p className="bf-hint">{t('checklistHint')}</p>}
-    <ol>{list.steps.map(step => <li key={step.id} data-state={step.state}>
+    <ol>{list.steps.map(step => <li key={step.id} data-state={step.state} data-focused={step.next_view === focusView}>
       <span className="bf-step-state" data-state={step.state}>{t(`stepState_${step.state}`)}</span>
       <b>{t(`step_${step.id}`)}</b>
       {step.owner_role && <span className="bf-hint"> · {t('stepOwner')} {step.owner_role}</span>}
       {step.state !== 'done' && <>
         {step.outstanding.length > 0 && <div className="bf-hint">{t('stepOutstanding')}：{step.outstanding.map(name => t(name) === name ? name : t(name)).join('、')}</div>}
         {step.reason && <div className="bf-hint">{step.reason}</div>}
-        {step.next_view && <button onClick={() => {
-          if (step.next_view === 'import') onImport()
-          else navigate({ ...(batchId ? { batch: batchId } : {}), view: step.next_view })
-        }}>{t(`stepGo_${step.next_view}`)}</button>}
+        <div className="bf-actions" style={{ marginBottom: 0 }}>
+          {step.count > 0 && onFocus && <button onClick={() => onFocus(step.next_view)}>{t('stepShowItems')}</button>}
+          {step.next_view && <button onClick={() => {
+            if (step.next_view === 'import') onImport()
+            else navigate({ ...(batchId ? { batch: batchId } : {}), view: step.next_view })
+          }}>{t(`stepGo_${step.next_view}`)}</button>}
+        </div>
       </>}
     </li>)}</ol>
   </section>
