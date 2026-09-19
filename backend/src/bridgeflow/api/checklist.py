@@ -1,4 +1,7 @@
-"""This month's close checklist (E14-UC01): what is done, what is missing and from whom.
+"""This month's close checklist (E14-UC01) and the open-item inbox (E14-UC05).
+
+Both are read-only projections over the same batch, master and review, so they are served
+side by side: the checklist answers "which step is outstanding", the inbox "which thing".
 
 A read-only projection over the batch, the master and the saved review. Two surfaces: the
 authenticated browser gets the steps with their outstanding names; the captain gets the same
@@ -15,6 +18,7 @@ from bridgeflow.api.batches import _visible, load_batch
 from bridgeflow.conclusions import periods
 from bridgeflow.identity import UserIdentity, require_user
 from bridgeflow.monthly import checklist as checklist_module
+from bridgeflow.monthly import inbox as inbox_module
 
 router = APIRouter(tags=["checklist"])
 
@@ -91,3 +95,60 @@ async def monthly_checklist_tool(request: dict) -> dict:
                        "unknown was not read — say so instead of treating it as done.")),
         "outstanding": len(open_steps),
     }
+
+
+def _inbox_context(period: str, user: UserIdentity | None) -> inbox_module.Context:
+    ctx, _dictionary, _declaration = _context(period, user)
+    return inbox_module.Context(batch_id=ctx.batch_id, period=period, batch=ctx.batch, master=ctx.master,
+                                has_report=ctx.report is not None,
+                                earlier_reported=_reported_earlier(period, ctx.batch_id, user))
+
+
+def _reported_earlier(period: str, batch_id: str, user: UserIdentity | None) -> list[str]:
+    """Other batches of this month that carry a saved review."""
+    from bridgeflow.api.reviews import saved_review
+
+    found = []
+    for entry in periods.batches_for(period):
+        other = entry["batch_id"]
+        if other == batch_id or not _visibility(user)(entry):
+            continue
+        try:
+            saved_review(other)
+        except HTTPException:
+            continue
+        found.append(other)
+    return found
+
+
+def _scope(user: UserIdentity | None) -> inbox_module.Scope:
+    """An item whose departments the viewer may not see is neither shown nor counted."""
+    if user is None:
+        return inbox_module.Scope(all=True)
+    from bridgeflow.access import departments_for
+
+    return inbox_module.Scope(departments=departments_for(user.sub))
+
+
+@router.get("/monthly/inbox")
+async def open_item_inbox(user: Annotated[UserIdentity | None, Depends(require_user)],
+                          period: Annotated[str, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")],
+                          department: str = "", kind: str = "") -> dict:
+    """What is still waiting on someone, across modules (E14-UC05).
+
+    Every item carries where to settle it and nothing else: the inbox never decides for the
+    module that owns the evidence and the approval path.
+    """
+    return inbox_module.collect(_inbox_context(period, user), _scope(user), department=department, kind=kind)
+
+
+@router.post("/tools/monthly-inbox")
+async def open_item_inbox_tool(request: dict) -> dict:
+    """For the captain: counts by kind and department, and each item's handle. No cell values."""
+    period = str(request.get("period", ""))
+    if not period:
+        raise HTTPException(422, "Give the period as YYYY-MM")
+    result = inbox_module.collect(_inbox_context(period, None), inbox_module.Scope(all=True),
+                                  department=str(request.get("department", "")), kind=str(request.get("kind", "")))
+    return result | {"next_step": ("Say what is waiting, on whom, and where it is settled. The inbox itself decides "
+                                   "nothing: each item is handled in its own module, with its own approval.")}

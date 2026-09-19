@@ -25,7 +25,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 | E14-UC02 | 模板下载与上月预填 / Template download with carry-over | DESIGNED | Should |
 | E14-UC03 | 提交前自检 / Self-check before submission | IMPLEMENTED_OFFLINE | Must |
 | E14-UC04 | 单部门补传生成新版本 / Replace one department's file as a new version | IMPLEMENTED_OFFLINE | Must |
-| E14-UC05 | 待确认事项收件箱 / Open-item inbox by owner | DESIGNED | Should |
+| E14-UC05 | 待确认事项收件箱 / Open-item inbox by owner | IMPLEMENTED_OFFLINE | Should |
 | E14-UC06 | 飞书文件夹批量导入 / Import from a Feishu folder | DESIGNED | Could |
 
 ## E14-UC01 — 月度对账进度清单 / Monthly close checklist
@@ -169,7 +169,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 
 ## E14-UC05 — 待确认事项收件箱 / Open-item inbox by owner
 
-**Status: DESIGNED**
+**Status: IMPLEMENTED_OFFLINE**
 
 ### 中文需求与验收
 
@@ -189,7 +189,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
   - AC-4 Given 收件箱中的任意事项 When 查看可用操作 Then 只有「打开处理」，没有批准或拒绝按钮。
 - 后置：收件箱是事件投影，不保存独立的处理状态。
 - 依赖：E06-UC03、E04-UC06、E05-UC03、E02-UC04、E09-UC05、E13-UC06。
-- 当前证据与缺口：各模块分别有待确认计数（总表 issues、隔离行、`column_questions`、填报草稿待补项）；没有跨模块聚合与按负责人过滤。
+- 当前证据与缺口（2026-09-19 第六轮）：[monthly/inbox.py](../../backend/src/bridgeflow/monthly/inbox.py) 按来源端口聚合四类事项（总表各类问题、隔离行、待匹配上传列、研判落在已更正数据上），每项只带「去哪处理」，没有批准/拒绝（AC-4 由返回结构本身保证）。不保存处理状态：事项存在与否完全取决于原模块还报不报它，所以在原模块处理完就自动消失（实测更正生产部文件后，跨部门不一致由 2 条降为 1 条）。可见性与批次一致：不可见的事项既不显示也不计入总数。接口 `GET /monthly/inbox?period=&department=&kind=` 与 `POST /tools/monthly-inbox`，工具 `monthly_inbox`，界面在工作室状态区（[checklist.tsx](../../plugins/src/client/checklist.tsx) 的 `OpenItemInbox`）。[行为测试](../../backend/tests/test_inbox.py) 覆盖 AC-1–4，[浏览器旅程](../../plugins/tests/round1-journey.mjs) 断言每项只有一个按钮，截图 `docs/evidence/round1-e13-e14/open-items.png`。剩余：填报草稿补问与出处缺失两类来源尚未接入（D18）。
 
 ### English requirements and acceptance
 
@@ -200,7 +200,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 - Exceptions: the inbox never decides on a module's behalf; unauthorized items are neither shown nor counted.
 - Acceptance: AC-1 four items of the right types; AC-2 department scoping including counts; AC-3 released rows disappear; AC-4 only “open” actions.
 - Postcondition: the inbox is an event projection without its own handling state.
-- Evidence and gap: each module has its own open-item counts; no cross-module aggregation or owner filtering.
+- Evidence and gap (2026-09-19, round 6): `monthly/inbox.py` aggregates four sources (master questions, quarantined rows, unmatched columns, a review left on corrected data). Each item carries only where it is settled — no approve or reject, so AC-4 holds by the shape of the response. It keeps no handling state: an item exists exactly as long as its own module reports it, so settling it there makes it disappear (measured: correcting the production file takes cross-department disagreements from 2 to 1). Visibility follows the batch rule: an item the viewer may not see is neither shown nor counted. Served by `GET /monthly/inbox` and `POST /tools/monthly-inbox` with the `monthly_inbox` tool and a studio panel; `backend/tests/test_inbox.py` covers AC-1–4 and the journey asserts one button per item. Remaining: filling-draft clarifications and missing-provenance items are not wired in (D18).
 
 ## E14-UC06 — 飞书文件夹批量导入 / Import from a Feishu folder
 
@@ -256,6 +256,7 @@ Where the requirement left a choice open, it was decided during implementation; 
 | D12 | 版本链**正向查出**（谁从我派生），不把 `superseded_by` 写回原批次 | 「原批次不改变」是本 UC 的验收条件之一；为了写一个指针去改写冻结文件，会让「未改变」这句话需要加注释才成立。索引本来就按批次记了 `derived_from` | `periods.successors`；测试 `test_the_original_batch_its_master_and_its_report_are_unchanged` 逐字节比对原批次文件 |
 | D13 | 补传**不强制**先过自检，但补传件照样跑同一条检查链，结果落在新批次的 `intake_checks` | 自检（E14-UC03）是给填报员的事前工具，强制它会让「文件明明是对的、系统不让我交」成为新的卡点；而检查结果必须存在，否则新批次比原批次少一份记录 | `replace_department` 调用 `checks.CHAIN`；新批次 `intake_checks[department]` 被替换 |
 | D14 | 月份是否相符，以**文件自身的行**为准（按声明找到期间字段再读），表单里的月份只做第二道校验 | 表单里的月份是上传者的说法，而这个 UC 的触发场景正是「拿错了文件」。按行判断才抓得住 AC-4 | `integration.periods_in` + `resupply.periods_refusal`；测试上传 6 月文件但表单填 7 月，仍被拒 |
+| D18 | 收件箱**不保存处理状态**，也不提供任何决定按钮；来源读不到时只报「这个来源读不到」，其余照常显示 | 若收件箱保存自己的状态，就会出现「收件箱说已处理、原模块说没有」的两套事实；决定需要证据与审批，而两者都在原模块 | `inbox.collect` 每次重算，`unreadable` 单列；测试断言事项字段里没有任何动作字段 |
 | D16 | 「可结账」是**算出来的读数**，不写「已结账」记录；响应里带上它绑定的批次、报告与声明版本 | 后置条件要的是「完成记录绑定批次与报告版本」，而本 UC 没有任何授权动作。系统自己写一条没人批准的「已结账」，就是它自己做出的断言——与「无证据的结论被拒绝」是同一条原则 | `Checklist.ready_to_close` 与 `bound`；界面文案写明结账仍由人执行 |
 | D17 | 步骤**必须声明**才出现，字典没声明就拒绝整张清单而不是给一份默认流程 | 每月要走哪些步骤是公司流程；给一份看似合理的默认清单，会让人以为系统知道他们的流程 | `checklist.declared_steps` 只认 `EVALUATORS` 里有的 kind；测试 `test_a_dictionary_that_declares_no_steps_refuses_instead_of_inventing_them` |
 | D15 | 其余部门**沿用原批次的清洗结果**，不重新清洗 | 重新清洗会让没出错的部门的行号、修正记录与摘要发生变化，AC-1「其余三部门来源摘要与原批次相同」就不成立；也会把一次更正变成四次重算 | `replace_department` 只替换一个 `CleanTable`，其余原样复制；测试比对三部门 `sha256` |

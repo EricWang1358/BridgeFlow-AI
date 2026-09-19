@@ -163,7 +163,7 @@ These UCs come from the three-perspective review rather than individual issues; 
 | [E14-UC02](14-monthly-convenience.md) 模板预填 / Template carry-over | 便民性 / Ease of use | — | DESIGNED |
 | [E14-UC03](14-monthly-convenience.md) 提交前自检 / Self-check | 便民性 / Ease of use | [#47](https://github.com/EricWang1358/BridgeFlow-AI/issues/47)、[#199](https://github.com/EricWang1358/BridgeFlow-AI/issues/199) | IMPLEMENTED_OFFLINE |
 | [E14-UC04](14-monthly-convenience.md) 单部门补传 / Single-department correction | 便民性 / Ease of use | [#200](https://github.com/EricWang1358/BridgeFlow-AI/issues/200) | IMPLEMENTED_OFFLINE |
-| [E14-UC05](14-monthly-convenience.md) 待确认收件箱 / Open-item inbox | 便民性 / Ease of use | [#144](https://github.com/EricWang1358/BridgeFlow-AI/issues/144) | DESIGNED |
+| [E14-UC05](14-monthly-convenience.md) 待确认收件箱 / Open-item inbox | 便民性 / Ease of use | [#201](https://github.com/EricWang1358/BridgeFlow-AI/issues/201) | IMPLEMENTED_OFFLINE |
 | [E14-UC06](14-monthly-convenience.md) 飞书文件夹导入 / Feishu folder import | 便民性 / Ease of use | [#140](https://github.com/EricWang1358/BridgeFlow-AI/issues/140) | DESIGNED |
 
 ## 关闭原因与实现不能混同 / Closure is not delivery

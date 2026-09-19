@@ -131,6 +131,12 @@ try {
   await checklist.locator('li[data-state=open]').first().waitFor()
   await shot('close-checklist')
 
+  // E14-UC05: the same open items, listed as what is waiting on whom — with no decision buttons
+  const waiting = page.locator('.bf-inbox li')
+  await waiting.first().waitFor()
+  assert.equal(await waiting.first().locator('button').count(), 1, 'an item offers one action: open where it is settled')
+  await shot('open-items')
+
   assert.deepEqual(errors, [])
   console.log(JSON.stringify({ status: 'passed', batch, attention: items, evidence }))
 } catch (error) { console.error(logs.slice(-3000)); await page?.screenshot({ path: `${evidence}/failure.png` }).catch(() => {}); throw error }

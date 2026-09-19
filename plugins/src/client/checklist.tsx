@@ -13,6 +13,50 @@ type Step = { id: string; kind: string; owner_role: string; required: boolean; s
   count: number; outstanding: string[]; next_view: string; reason: string }
 type Checklist = { period: string; batch_id: string; steps: Step[]; ready_to_close: boolean; refusal: string }
 
+type Item = { id: string; kind: string; source: string; batch_id: string; period: string
+  departments: string[]; subject: string; detail: string; next_view: string }
+type Inbox = { total: number; items: Item[]; by_kind: Record<string, number>; by_department: Record<string, number>; unreadable: string[] }
+
+/**
+ * What is still waiting on someone (E14-UC05).
+ *
+ * Every row ends in one button: open the module that settles it. There is deliberately no
+ * approve or reject here — the evidence and the approval live where the item came from.
+ */
+export function OpenItemInbox({ period, batchId }: { period: string; batchId: string }) {
+  const { t } = useUI()
+  const [inbox, setInbox] = useState<Inbox | null>(null), [error, setError] = useState(''), [department, setDepartment] = useState('')
+  useEffect(() => {
+    if (!period) return
+    const controller = new AbortController()
+    setInbox(null); setError('')
+    const query = `period=${encodeURIComponent(period)}${department ? `&department=${encodeURIComponent(department)}` : ''}`
+    void api<Inbox>(`/monthly/inbox?${query}`, { signal: controller.signal })
+      .then(setInbox).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
+    return () => controller.abort()
+  }, [period, batchId, department])
+  if (!period) return null
+  if (error) return <p role="alert" className="bf-error">{error}</p>
+  if (!inbox) return <p role="status" className="bf-loading">{t('loading')}</p>
+  return <section className="bf-inbox" aria-label={t('openItems')}>
+    <h3>{t('openItems')} <span className="bf-badge">{inbox.total}</span></h3>
+    <p className="bf-hint">{t('openItemsHint')}</p>
+    <label>{t('department')} <select value={department} onChange={e => setDepartment(e.target.value)}>
+      <option value="">{t('allDepartments')}</option>
+      {Object.keys(inbox.by_department).map(name => <option key={name} value={name}>{t(name)} · {inbox.by_department[name]}</option>)}
+    </select></label>
+    {inbox.unreadable.map(reason => <p key={reason} className="bf-hint">{t('inboxUnreadable')}：{reason}</p>)}
+    {!inbox.items.length && <p className="bf-hint">{t('inboxEmpty')}</p>}
+    <ul>{inbox.items.map(item => <li key={item.id}>
+      <b>{t(`item_${item.kind}`) === `item_${item.kind}` ? item.kind : t(`item_${item.kind}`)}</b>
+      {item.subject && <span className="bf-mono"> · {item.subject}</span>}
+      <span className="bf-hint"> · {item.departments.map(d => t(d)).join('、')}</span>
+      {item.detail && <div className="bf-hint">{item.detail}</div>}
+      <button onClick={() => navigate({ ...(item.batch_id ? { batch: item.batch_id } : {}), view: item.next_view })}>{t('openToSettle')}</button>
+    </li>)}</ul>
+  </section>
+}
+
 export function CloseChecklist({ period, batchId, onImport }: { period: string; batchId: string; onImport: () => void }) {
   const { t } = useUI()
   const [list, setList] = useState<Checklist | null>(null), [error, setError] = useState('')
