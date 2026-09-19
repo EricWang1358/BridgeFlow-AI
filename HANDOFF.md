@@ -8,7 +8,9 @@
 - 全项目需求与逐 UC 状态：[requirements/README](docs/requirements/README.md)；一份双语 Markdown 对应一个 Epic，既有能力与历史延期范围也已纳入。14x 只是其中三个 Epic。实现顺序：[implementation-plan](docs/requirements/implementation-plan.md)；issue/PRD 对照：[traceability](docs/requirements/traceability.md)。
 - 2026-09-17 需求复核（仅文档，未写代码）：按项目完整性、流程便民性、结论直观性与专业性三个视角补充 [00-foundations](docs/requirements/00-foundations.md)（角色目录、逐 UC 参与者与触发、非功能需求、结论呈现规范、优先级与 Given/When/Then 验收写法），新增 [E13 月度结论呈现与口径治理](docs/requirements/13-conclusions.md) 与 [E14 月度流程便民](docs/requirements/14-monthly-convenience.md) 共 12 个 UC，以及 [类设计](docs/requirements/class-design.md)；目录现为 14 个 Epic、85 个 UC。看板 Epic #189（E13）、#196（E14），每个 UC 一个子 issue。第一轮已实现 E13-UC01 一页结论主流程（#190）、E13-UC06 依据等级（#195）、E14-UC03 提交前自检（#199，离线完成），证据见 docs/00；下一轮建议 E13-UC05 口径确认与 E14-UC04 单部门补传。
 - 测试数量、命令、截图及验收边界仅记录于 [docs/00](docs/00-status.md)。不要从“代码存在”“issue 已关闭”或离线通过推定企业验收。
+- 2026-09-17 飞书在线表格/多维表格读取（分支 `feature/feishu-user-docs-20260916`）：规格 [docs/32](docs/32-feishu-sheets-bitable-read.md)，计划与实现 [docs/33](docs/33-feishu-sheets-bitable-impl.md)。代码与离线测试完成；第 4 步真实联调进行中：人工前置（scope 发版 + 全员重登）已生效，联调暴露的代理路由白名单与两处端上缺陷已修复。剩余：导入端到端与大表分页压测。测试数字与联调证据见 [docs/00](docs/00-status.md#飞书在线表格--多维表格读取联调docs32--docs332026-09-17)。
 - 必读硬约束：[CLAUDE.md](CLAUDE.md)、[架构权威 docs/13](docs/13-golden-standard.md)、[产品扩展契约 docs/23](docs/23-extension-contracts.md)。
+- 2026-09-18 #204 授权数据源迁移（分支 `feature/feishu-user-docs-20260916`，本条目所记代码未提交）：`access-control.yaml` 从逐人花名册改为「结构映射 + 角色策略」，成员关系运行时解析自飞书知识库成员（wiki-only 路径，不申请 contact 高敏权限；总经办也建知识库，其 admin = 总表管理者）。已拍板：fail-closed（映射缺失/飞书不可达均 503）、成员表 5 分钟缓存、飞书侧调岗无需改 BridgeFlow 文件。实现：`access_resolver.py` 新模块（同步 httpx、tenant token、`wiki/v2/spaces/{id}/members` 分页、429 有界重试），`access.py` 瘦身为门面（三函数签名不动，下游零改动），`identity.py` 记录 JWT 里的 open_id 桥（wiki 接口返回 open_id ≠ union_id）。后端 620 测试全绿（新增 test_access_resolver.py 25 项），ruff 过。人工前置（scope 发版 + 应用加为五库成员）已确认生效：2026-09-18 真实租户侦察五库全部可读，envelope 为 `data.members`、`ou_` 前缀；联调发现成员接口 page_size 上限 50（传 100 报 131002），已修复并记 docs/00。**剩余**：真人尚未加入任何知识库（各库现仅 1 名 admin，疑为应用本体），真人入库后做登录端到端与角色判定验证；群组/部门型成员不会被展开（人须直接加库）。本地配置：`data/mappings/access-control.yaml`（已建、gitignored）+ env.sh 导出 `FEISHU_APP_ID/_SECRET`（与门户同一应用）。另：`.gitignore` 补上 `access-control.yaml`（docs/22 此前声称已忽略，实际没有）。
 
 ## 当前交付范围
 
@@ -68,7 +70,7 @@ python scripts/start_web.py --demo
 - `DSH_*` 和 `DEEPSEEK_BASE_URL` 只由 shell 导出，不能进 `.env`。仓库根启动不读取 `backend/.env`。
 - `FIELD_DICTIONARY_PATH` 指定人工字典；缺失拒绝猜测。`--demo` 使用合成样例声明，不会为新评分/决策自动配置真实政策。
 - `DISCOVERY_SCORING_POLICY_PATH`、`DISCOVERY_DECISION_POLICY_PATH` 为人工 YAML/JSON，默认空；当前各支持一个项目文件。缺文件/非法政策返回 503，历史评分/决策详情也要求当前政策可读。不要把测试政策放入生产。
-- 门户开启后，ACL 需显式 `workflow_departments`（准确部门名）及 `operations`；省略不扩权。示例：[access-control.example.yaml](data/mappings/access-control.example.yaml)。真实门户接入见 [docs/27-login](docs/27-login-portal.md)。
+- 门户开启后，ACL 的角色需显式 `workflow_departments`（准确部门名）及 `operations`；省略不扩权。成员名单不登记在文件里，由飞书知识库成员实时解析（#204）。示例：[access-control.example.yaml](data/mappings/access-control.example.yaml)。真实门户接入见 [docs/27-login](docs/27-login-portal.md)。
 - 暂存支持 `DISCOVERY_UPLOAD_OWNER_COUNT/BYTES/TOTAL_BYTES` 配额。`scripts/cleanup_discovery_uploads.py` 默认预览，`--apply` 才删除过期暂存；使用服务相同 `RESULT_STORE_PATH`。未安装生产调度，不保证 SQLite 缩容/安全擦除；失败写入留下的无引用正式 blob 清理策略未定。
 
 ## 复测入口

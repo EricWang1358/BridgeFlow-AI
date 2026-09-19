@@ -31,7 +31,8 @@ class Tenant:
             code = json.loads(request.content)["code"]
             if code not in self.users:
                 return httpx.Response(400, json={"code": 20003, "msg": "invalid code"})
-            return httpx.Response(200, json={"code": 0, "data": {"access_token": "u-1"}})
+            return httpx.Response(200, json={"code": 0, "data": {"access_token": "u-1", "refresh_token": "r-1",
+                                                                 "expires_in": 7200, "refresh_expires_in": 2592000}})
         if path.endswith("/user_info"):
             if request.headers.get("authorization") != "Bearer u-1":
                 return httpx.Response(401, json={"code": 99991663, "msg": "invalid token"})
@@ -309,3 +310,76 @@ def test_an_invalid_registry_fails_fast(tmp_path):
     cfg = Settings(apps_path=str(apps), session_secret="s" * 32)
     with pytest.raises(RuntimeError, match="audience"):
         create_app(cfg)
+
+
+# --- Feishu user-token custody (docs/30) -----------------------------------------------
+
+class RefreshingTenant(Tenant):
+    """A fake Feishu that also rotates refresh tokens."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.refresh_calls = 0
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/oidc/refresh_access_token"):
+            self.refresh_calls += 1
+            if json.loads(request.content)["refresh_token"] != "r-1":
+                return httpx.Response(400, json={"code": 20037, "msg": "invalid refresh token"})
+            return httpx.Response(200, json={"code": 0, "data": {"access_token": "u-2",
+                                             "refresh_token": "r-2", "expires_in": 7200}})
+        return super().__call__(request)
+
+
+def test_seal_secret_round_trips_and_resists_tampering():
+    blob = tokens.seal_secret('{"refresh_token":"r-1"}', "s" * 32)
+    assert json.loads(tokens.unseal_secret(blob, "s" * 32))["refresh_token"] == "r-1"
+    assert tokens.unseal_secret(blob, "t" * 32) is None           # wrong key
+    assert tokens.unseal_secret(blob[:-4] + "AAAA", "s" * 32) is None  # tampered
+    assert tokens.unseal_secret("garbage", "s" * 32) is None
+
+
+def test_session_cookie_never_carries_tokens_in_plaintext(portal):
+    login(portal)
+    cookie = portal.cookies.get(SESSION_COOKIE)
+    assert "u-1" not in cookie and "r-1" not in cookie
+    session = tokens.unseal(cookie, "s" * 32)
+    data = json.loads(tokens.unseal_secret(session["feishu"], "s" * 32))
+    assert data["access_token"] == "u-1" and data["refresh_token"] == "r-1"
+
+
+def test_user_token_endpoint_serves_the_cached_token(portal):
+    assert portal.get("/feishu/user-token").status_code == 401  # no session
+    login(portal)
+    body = portal.get("/feishu/user-token").json()
+    assert body["access_token"] == "u-1" and body["expires_at"] > 0
+
+
+def test_user_token_endpoint_refreshes_and_rotates(tmp_path):
+    tokens.generate_keypair(tmp_path / "portal.pem")
+    apps = tmp_path / "apps.yaml"
+    apps.write_text(yaml.safe_dump({"apps": {"bridgeflow": {
+        "audience": "bridgeflow", "redirect_uri": "http://web.test/after-login",
+        "origins": ["http://web.test"]}}}), encoding="utf-8")
+    cfg = Settings(feishu_app_id="cli_test", feishu_app_secret="secret",
+                   feishu_base_url="https://feishu.test", key_path=str(tmp_path / "portal.pem"),
+                   session_secret="s" * 32, external_base_url="http://portal.test",
+                   apps_path=str(apps))
+    fake = RefreshingTenant()
+    with TestClient(create_app(cfg, transport=httpx.MockTransport(fake)), follow_redirects=False) as client:
+        login(client)
+        # Force the cached access token into the past; the next call must refresh.
+        session = tokens.unseal(client.cookies.get(SESSION_COOKIE), "s" * 32)
+        data = json.loads(tokens.unseal_secret(session["feishu"], "s" * 32))
+        data["access_exp"] = 1
+        session["feishu"] = tokens.seal_secret(json.dumps(data), "s" * 32)
+        client.cookies.clear()
+        client.cookies.set(SESSION_COOKIE, tokens.seal(session, "s" * 32, 3600))
+        response = client.get("/feishu/user-token")
+        assert response.json()["access_token"] == "u-2" and fake.refresh_calls == 1
+        # The rotated refresh token was persisted into the replacement cookie.
+        replacement = httpx.Cookies()
+        replacement.extract_cookies(response)
+        refreshed = json.loads(tokens.unseal_secret(
+            tokens.unseal(replacement.get(SESSION_COOKIE), "s" * 32)["feishu"], "s" * 32))
+        assert refreshed["refresh_token"] == "r-2"

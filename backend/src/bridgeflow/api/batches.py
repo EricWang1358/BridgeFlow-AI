@@ -67,6 +67,9 @@ class BatchSnapshot(PipelineResult):
     #: the identity layer. Visibility: the batch's departments ⊆ the viewer's
     #: authorized departments, or the viewer is the owner (docs/27).
     owner: str = ""
+    #: Intake columns dropped because nothing in them was representable (docs/33, FR-5).
+    #: Column-level fact, kept apart from quarantine, which is row-level disposition.
+    dropped_columns: list[dict] = Field(default_factory=list)
 
 
 def _visible(batch: BatchSnapshot, user: UserIdentity | None) -> BatchSnapshot:
@@ -131,6 +134,8 @@ class BatchSummary(BaseModel):
     #: this department is missing. Non-zero means the captain has something to propose.
     column_questions: int = 0
     derived_from: str | None = None
+    #: Intake columns dropped as unrepresentable (docs/33); empty for plain file uploads.
+    dropped_columns: list[dict] = Field(default_factory=list)
 
 
 def _declared_entities(snapshot: dict | None) -> dict[str, list[str]]:
@@ -169,6 +174,7 @@ def summary(batch_id: str, result: BatchSnapshot) -> BatchSummary:
         stale_matches=result.stale_matches,
         column_questions=column_matches.count_questions(result.dictionary_snapshot, result.clean_tables),
         derived_from=result.derived_from,
+        dropped_columns=result.dropped_columns,
     )
 
 
@@ -349,8 +355,13 @@ class ParsedFile:
     size: int
 
 
-def _parse_department_file(department: str, filename: str, payload: bytes, layout: Layout) -> ParsedFile:
-    """Read one department file exactly as import does; refusals are HTTP errors with a reason."""
+def _parse_department_file(department: str, filename: str, payload: bytes, layout: Layout,
+                           source_header_row: int | None = None) -> ParsedFile:
+    """Read one department file exactly as import does; refusals are HTTP errors with a reason.
+
+    source_header_row is the header's row in the original source when the payload was
+    materialized from elsewhere (a Feishu sheet sliced at the chosen header): parsing reads
+    row 1 of the CSV, but provenance row numbers map back to the original rows."""
     filename = filename.replace("\\", "/").rsplit("/", 1)[-1]
     sheet = ""
     header_row = 1
@@ -362,6 +373,7 @@ def _parse_department_file(department: str, filename: str, payload: bytes, layou
             sheet, frame, header_row = _read_xlsx(payload, filename, layout)
         elif filename.lower().endswith(".csv"):
             frame = pd.read_csv(io.BytesIO(payload), skip_blank_lines=False, nrows=settings.bridgeflow_max_batch_rows + 1)
+            header_row = source_header_row or 1
         else:
             raise HTTPException(415, "Use CSV or an XLSX workbook")
     except HTTPException:
@@ -437,7 +449,9 @@ async def self_check(
 
 async def _import_batch(period: str, departments: list[Department], files: list[UploadFile],
                         source_dictionary: Path | None = None, demo_case: str | None = None,
-                        choices: list[Layout] | None = None, owner: str = "") -> BatchSummary:
+                        choices: list[Layout] | None = None, owner: str = "",
+                        dropped_columns: list[dict] | None = None,
+                        source_header_rows: list[int | None] | None = None) -> BatchSummary:
     if len(files) != len(departments) or not 1 <= len(files) <= 4:
         raise HTTPException(422, "Provide one file per department (1–4 departments)")
     if len(set(departments)) != len(departments):
@@ -457,12 +471,15 @@ async def _import_batch(period: str, departments: list[Department], files: list[
     sources = []
     byte_count = row_count = 0
     intake_reports: dict[str, dict] = {}
-    for department, upload, declared_layout, chosen in zip(departments, files, layouts, choices or [Layout()] * len(files), strict=True):
+    for department, upload, declared_layout, chosen, source_header in zip(
+            departments, files, layouts, choices or [Layout()] * len(files),
+            source_header_rows or [None] * len(files), strict=True):
         payload = await upload.read(settings.bridgeflow_max_upload_bytes + 1)
         byte_count += len(payload)
         if byte_count > settings.bridgeflow_max_upload_bytes:
             raise HTTPException(413, "Batch exceeds configured upload size limit")
-        parsed = _parse_department_file(department, upload.filename or "", payload, chosen.over(declared_layout))
+        parsed = _parse_department_file(department, upload.filename or "", payload,
+                                        chosen.over(declared_layout), source_header_row=source_header)
         frame = parsed.frame
         row_count += len(frame)
         if row_count > settings.bridgeflow_max_batch_rows:
@@ -475,7 +492,8 @@ async def _import_batch(period: str, departments: list[Department], files: list[
         intake_reports[department] = report.model_dump(mode="json")
         tables.append(table)
     result = BatchSnapshot(period=period, clean_tables=tables, dictionary_snapshot=dictionary_raw or {},
-                           integration_snapshot=integration_snapshot, owner=owner, intake_checks=intake_reports)
+                           integration_snapshot=integration_snapshot, owner=owner, intake_checks=intake_reports,
+                           dropped_columns=dropped_columns or [])
     if not dictionary.is_empty:
         # Before anything reads the tables: a remembered match makes this upload look
         # the way the dictionary already describes it. Frozen batches are never redone.

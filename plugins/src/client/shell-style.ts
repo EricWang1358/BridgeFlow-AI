@@ -184,4 +184,21 @@ body[data-ds-dark-theme] .bf-save-state[data-dirty=true] { color: #dfbd76 }
   .bf-shell-top button { padding: 5px 7px; font-size: 11px }
 }
 .bf-route-notice { position: fixed; z-index: 2147483000; top: 64px; left: 50%; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px)); display: flex; gap: 12px; align-items: center; box-shadow: 0 8px 24px rgb(0 0 0 / 30%) }
+/* Feishu user-identity browser (docs/30) */
+.bf-feishu { margin-top: 14px; border-top: 1px solid #ffffff1a; padding-top: 10px }
+.bf-feishu > summary { cursor: pointer; font-weight: 600 }
+.bf-feishu-crumbs { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 }
+.bf-feishu-crumbs button { border: 0; background: transparent; color: inherit; cursor: pointer; padding: 2px 4px; border-radius: 4px; opacity: 0.75 }
+.bf-feishu-crumbs button[aria-current=true] { opacity: 1; font-weight: 600 }
+.bf-feishu-crumbs button:hover { background: #ffffff14 }
+.bf-feishu-folder { display: block; width: 100%; text-align: left; border: 0; background: transparent; color: inherit; cursor: pointer; padding: 6px 8px; border-radius: 6px }
+.bf-feishu-folder:hover { background: #ffffff14 }
+.bf-feishu-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px }
+.bf-feishu-item[data-disabled=true] { opacity: 0.5 }
+.bf-feishu-item select { margin-left: auto }
+.bf-feishu-go { display: flex; gap: 8px; align-items: center; margin-top: 10px }
+.bf-feishu-upload-dialog .bf-feishu-browser, .bf-feishu-import .bf-feishu-browser { max-height: 46vh; overflow-y: auto }
+.bf-feishu-mode { display: flex; gap: 6px; margin: 8px 0 }
+.bf-feishu-mode button { border: 1px solid #ffffff2a; background: transparent; color: inherit; cursor: pointer; padding: 3px 10px; border-radius: 999px; opacity: 0.75 }
+.bf-feishu-mode button[aria-pressed=true] { opacity: 1; font-weight: 600; background: #ffffff14 }
 `

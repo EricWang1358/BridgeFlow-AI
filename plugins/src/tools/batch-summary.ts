@@ -21,6 +21,8 @@ export function batchSummary(config: BackendConfig) {
           matched_columns: { type: 'array', items: { type: 'string' } },
           stale_matches: { type: 'array', items: { type: 'string' } },
           column_questions: { type: 'number' }, derived_from: { type: 'string' },
+          // Intake columns dropped as unrepresentable (docs/33); names and types, never values.
+          dropped_columns: { type: 'array', items: { type: 'object', additionalProperties: true } },
           departments: { type: 'array', required: true, items: { type: 'object', properties: {
             department: { type: 'string', required: true }, rows: { type: 'number', required: true },
             corrections: { type: 'number', required: true }, quarantined: { type: 'number', required: true },

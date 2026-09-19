@@ -48,3 +48,5 @@ Thumbs.db
 .idea/
 .vscode/
 
+logs/
+data/mappings/access-control.yaml

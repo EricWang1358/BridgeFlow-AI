@@ -43,20 +43,29 @@ before. Nothing is assumed beyond "you can open a terminal".
 | Column matching and quarantine release through native approval | Built | Section 11 |
 | Guided product tour for first-time users | Built | Section 6 |
 | Quotation drafts from a declared policy | Declaration and mock samples only; no extraction from real documents, no sending | Section 13 |
-| Filling & handoff (Agent 2 foundation): assisted filling, approval, handoff board | Foundation and read-only board; no downstream actions, no real notifications | Section 13 |
-| Workflow generation (Agent 1): candidate scenarios, information/file-flow diagrams, field-lineage graph, four-quadrant proposal, MVP decision | **Not built.** Planned in [`HANDOFF.md`](HANDOFF.md) | — |
-| Organisational rollout (Agent 3): onboarding guidance, frontline feedback, retrospectives | **Not built** beyond adoption signals from the event log | — |
-| Feishu upload/download shortcuts | Code and mock-tenant tests; not connected to a real tenant | [`docs/27`](docs/27-external-inputs.md) |
+| Filling & handoff (Agent 2): assisted filling, approval, handoff board, native downstream start/return/complete | Template-governance consumption of the approved scope not wired; no real notifications | Section 13 |
+| Workflow generation (Agent 1): discovery materials, candidate scenarios, flow diagrams, four-quadrant scoring, meetings, MVP decision under declared rules with per-person votes | Built: the browser completes materials → candidates → diagram → scoring → meeting → decision end to end; real business sign-off and Agent 2 template-governance consumption outstanding | Section 13 |
+| Organisational rollout (Agent 3): role guidance, frontline feedback, retrospectives | Role guidance generated from declared templates, plus adoption signals; no pilot pages, feedback handling or retrospectives | Section 13 |
+| Feishu integration: file upload/download, online-sheet and bitable reads, wiki import; department access control from wiki membership | Real-tenant integration testing in progress: metadata and membership reads verified, import end-to-end and large-table pagination still to measure ([docs/00](docs/00-status.md)) | [`docs/32`](docs/32-feishu-sheets-bitable-read.md) |
 
 All sample data is fictional. Real customer exports, the business side's confirmation of the conventions
 filled in by best practice, and a real held-out evaluation are still outstanding.
 
 ## Before you start
 
+**Public demo.** The deployed instance lives at <https://47.130.178.176.sslip.io/> (AWS Lightsail,
+`47.130.178.176`), with the sign-in portal at <https://portal.47.130.178.176.sslip.io/>. Merges to
+`main` deploy to it automatically ([docs/22](docs/22-lightsail-deploy.md)).
+
 **What this is.** A business-use-case demonstration built for a hackathon. The data on screen is
-generated and labelled synthetic. It is not an enterprise deployment: there is no employee SSO, no
-role or tenant isolation and no formal report sign-off. Authentication identifies a shared DSH
-session, recorded as `dsh-authenticated-session`.
+generated and labelled synthetic. It is not a certified enterprise deployment. On the deployed
+instance, sign-in is per-employee Feishu OAuth through the portal; data routes carry that identity,
+and an access-control map resolved live from Feishu wiki membership decides which batches and
+operations each employee may touch — an invisible batch answers 404, and every write still waits on
+a native approval. Still missing: per-employee isolation of the native chat session and of
+model-side reads, personal audit of rejections, and formal report sign-off — no full multi-tenant
+boundary is claimed. Locally, following this guide without the portal keeps the identity layer off
+(one shared DSH session, recorded as `dsh-authenticated-session`).
 
 **What costs money.** Importing files and computing the master table are deterministic and free.
 Starting a review sends a request to the configured model, and that bills. One review of the sample
@@ -218,7 +227,7 @@ The first time you open the workspace, a welcome card offers a guided task: open
 read the cross-department master table, follow one number to its original file, download the workbook
 and save the notebook. Each step only advances when the real action succeeded. **Help & guided tours**
 in the top bar resumes it, replays it, or explains the department review and the quotation path. The
-tour covers the monthly review only; the workflow features that are not built yet are not in it.
+tour covers the monthly review only; the workflow features (discovery, filling & handoff) are not in it.
 
 ## 7 The fastest complete loop: the sample notebook
 
@@ -456,11 +465,15 @@ the departments choose; **Agent 2** turns the chosen flow into templates, helps 
 hands standard records to the next department; **Agent 3** supports rollout with onboarding guidance and
 frontline feedback.
 
-What exists is the foundation: a declared workflow catalogue, a state machine and event log, assisted
-filling through the captain (every write needs native approval), and the read-only **Filling & handoff**
-view with the handoff board, drafts, field lineage list and adoption signals. The Agent 1 features,
-downstream actions (start / return / complete), real notifications and Agent 3 are not built. The
-item-by-item comparison with the design and the planned order are in [`HANDOFF.md`](HANDOFF.md).
+What exists: the Agent 1 chain — discovery materials, candidate scenarios, the information/file-flow
+diagram, four-quadrant scoring, meeting minutes, and an MVP decision under declared rules with
+per-person votes (editors prepare, the native approval records every save; nothing is auto-generated
+or auto-approved); assisted filling through the captain (every write needs native approval); native
+downstream actions (start / return / complete) with revision confirmation and expiry protection; and
+role guidance generated from the declared templates. Not built: the Agent 2 consumer that turns an
+approved decision into governed templates, pilot-facing guidance pages, the feedback and
+retrospective loop, and real notification channels. The item-by-item comparison with the design and
+the planned order are in [`HANDOFF.md`](HANDOFF.md).
 
 
 ## 14 Check that your install is healthy

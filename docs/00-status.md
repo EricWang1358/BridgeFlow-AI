@@ -7,9 +7,52 @@
 「每个数字都量过、可追溯」是本项目对评委的核心叙事，评委抓到一处对不上，整个叙事就打折。
 所以改数字只改这一处。
 
-最后更新：2026-09-17。新增一轮时照第三节的格式写，并附上复现命令。
+最后更新：2026-09-18。新增一轮时照第三节的格式写，并附上复现命令。
 
 ---
+
+## #204 授权数据源迁移到飞书知识库（2026-09-18）
+
+离线实现与测试之外，**真实租户 Phase 0/3 侦察已完成**（2026-09-18，
+`source env.sh && python scripts/feishu_membership_check.py`，env.sh 需含
+`FEISHU_APP_ID` / `FEISHU_APP_SECRET`）：五个空间全部 `ok`，各 **1** 名成员
+（admin，`ou_` 前缀），单库查询 **0.5–0.6 s**、总耗时 **2.65 s**。envelope
+实测为 `data.members`（无 `items`），条目键 `member_id / member_perm /
+member_role / member_type`。联调发现并修复一处真实缺陷：成员接口
+`page_size` 上限为 **50**，传 100 被 **131002 param err** 拒绝（五个空间全部
+复现），已改传 50，`test_access_resolver.py` 未断言该值故无需翻转。
+`131006`（应用未加库）与 scope 未发版两种前置问题均已排除——当前各库唯一的
+admin 成员疑为应用本体，**真人尚未加入任何知识库**，登录端到端与角色判定
+待真人入库后验证。
+
+- 后端 **620 passed**（基线 595 + 新增 `test_access_resolver.py` **25** 条：
+  角色绑定、多空间并集、open_id 桥、TTL 缓存与失败不缓存、结构文件 7 类非法 → 503、
+  429 重试后 503、HTTP 级分页与非人员成员过滤）。Ruff 通过。
+  复现：`cd backend && pytest -q`（v0.1 离线，无计费）。
+- 逐人花名册删除：共享身份夹具从「写 users 名单」翻转为「写 spaces+roles 映射 +
+  假成员表」，7 个测试文件的授权助手改键路径不改结构。
+- `employee_authorizations` 账本新增 `roles` 列（消费时刻角色快照，旧库 ALTER 原地迁移）。
+- `.gitignore` 补上 `data/mappings/access-control.yaml`（docs/22 此前声称已忽略，实测未含）。
+- 已知边界：进程重启后 open_id 观察对为空，60 秒许可窗口内重启
+  会导致消费端 403（fail-closed，瞬时）；成员表缓存 5 分钟，飞书侧调岗后
+  最长延迟 5 分钟生效。
+
+## 飞书在线表格 / 多维表格读取联调（docs/32 / docs/33，2026-09-17）
+
+离线实现完成；第 4 步真实联调进行中，导入端到端与大表分页压测数字待补本节。
+
+- 后端 **595 passed**（本篇新增 10 条），ruff 通过；插件 typecheck、build 通过。
+  复现：`cd backend && pytest -q`、`pnpm --dir plugins typecheck && pnpm --dir plugins build`（离线，无计费）。
+- 人工前置已生效：用户态 `sheets:spreadsheet:readonly` 与 `bitable:app:readonly` 发版并
+  全员重登后，curl 直连 `sheets/v3/spreadsheets/{token}/sheets/query` 返回 `code: 0`。
+- 联调暴露并已修复三处：
+  1. dsh web 代理路由白名单（`plugins/src/web.ts` 的 `feishuUser` 正则）未含
+     `sheet-meta`/`bitable-meta`，浏览器调用被 403「Route not authorized」拦在代理层；已补上并重新 build。
+  2. 选中 sheet 后导入按钮不亮：`choose()` 未初始化 `header_row`，显示默认 1 与
+     `ready()` 的 `?? 0` 不一致；已改为选中即置 1。
+  3. `feishu-import-user` 报 503「Access control is not configured」：运行环境未按 docs/27
+     创建 `data/mappings/access-control.yaml`；按 `access-control.example.yaml` 声明后解除
+     （当时为逐人名单格式；#204 起改为 spaces+roles 映射）。
 
 ## E13/E14 第一轮：一页结论、依据等级、提交前自检（2026-09-17，#190 / #195 / #199）
 

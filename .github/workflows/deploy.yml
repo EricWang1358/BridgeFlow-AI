@@ -81,14 +81,54 @@ jobs:
       # git-resets the working tree it would otherwise be executing from
       # (bash reads scripts lazily), and the /tmp copy guarantees the script
       # version matches the commit being deployed.
-      - name: Upload deploy script
+      - name: Upload deploy scripts
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "deploy/deploy.sh"
+          source: "deploy/deploy.sh,deploy/config-put.sh"
           target: "/tmp/bf-deploy"
+
+      # Instance-side config (docs/22 §5/§9c) is gitignored, so code deploys never
+      # carry it. The file contents live as production-environment secrets and are
+      # piped to the instance base64-encoded — a plain export would break on the
+      # apostrophes in YAML comments. config-put.sh validates with the product's
+      # own loaders before an atomic swap; an invalid file fails here, before
+      # deploy.sh restarts anything. An unset secret is skipped, not an error:
+      # a hand-placed instance file keeps serving until a secret replaces it.
+      - name: Encode configuration for transfer
+        id: config_b64
+        run: |
+          echo "acl=$(printf '%s' "$ACCESS_CONTROL_YAML" | base64 -w0)" >> "$GITHUB_OUTPUT"
+          echo "dictionary=$(printf '%s' "$FIELD_DICTIONARY_YAML" | base64 -w0)" >> "$GITHUB_OUTPUT"
+        env:
+          ACCESS_CONTROL_YAML: ${{ secrets.ACCESS_CONTROL_YAML }}
+          FIELD_DICTIONARY_YAML: ${{ secrets.FIELD_DICTIONARY_YAML }}
+
+      - name: Sync instance configuration
+        uses: appleboy/ssh-action@v1
+        env:
+          # base64 of a secret is NOT masked in logs (it is not the literal);
+          # these are piped into config-put.sh, never echoed.
+          ACL_B64: ${{ steps.config_b64.outputs.acl }}
+          DICT_B64: ${{ steps.config_b64.outputs.dictionary }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: ACL_B64,DICT_B64
+          script: |
+            if [ -n "$ACL_B64" ]; then
+              printf '%s' "$ACL_B64" | bash /tmp/bf-deploy/deploy/config-put.sh access-control.yaml
+            else
+              echo "config-put: skip access-control.yaml (secret ACCESS_CONTROL_YAML is empty)"
+            fi
+            if [ -n "$DICT_B64" ]; then
+              printf '%s' "$DICT_B64" | bash /tmp/bf-deploy/deploy/config-put.sh field-dictionary.yaml
+            else
+              echo "config-put: skip field-dictionary.yaml (secret FIELD_DICTIONARY_YAML is empty)"
+            fi
 
       - name: Run deploy on instance
         uses: appleboy/ssh-action@v1

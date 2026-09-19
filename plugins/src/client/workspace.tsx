@@ -237,6 +237,10 @@ export function DataWorkspace() {
         {!!batch.stale_matches?.length && <div className="bf-callout" data-tone="warn">
           <h3>{t('staleMatches')}</h3><p className="bf-mono">{batch.stale_matches.join(' · ')}</p>
         </div>}
+        {!!batch.dropped_columns?.length && <div className="bf-callout" data-tone="warn">
+          <h3>{t('droppedColumns')}</h3>
+          <p className="bf-mono">{batch.dropped_columns.map(c => `${t(c.department)}.${c.column}（${c.field_type}）`).join(' · ')}</p>
+        </div>}
 
         {batch.derived_from && <p className="bf-hint">{t('derivedFrom')}: <code className="bf-mono">{batch.derived_from}</code></p>}
         <div className="bf-stats">{batch.departments.map(d => <div className="bf-stat" key={d.department}>

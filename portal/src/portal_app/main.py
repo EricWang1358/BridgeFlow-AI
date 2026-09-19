@@ -15,6 +15,7 @@ Run:  uvicorn portal_app.main:app --port 8100   (after sourcing env.sh)
 # annotations by name at runtime, and the Depends() closures below live inside
 # create_app, unreachable from module globals.
 
+import json
 import logging
 import secrets
 import time
@@ -30,11 +31,15 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from portal_app import pages
 from portal_app.config import Settings, settings
 from portal_app.feishu import FeishuError, FeishuOAuth, NotConfigured
-from portal_app.tokens import Signer, seal, unseal
+from portal_app.tokens import Signer, seal, seal_secret, unseal, unseal_secret
 
 SESSION_COOKIE = "portal_session"
 # A login state lives only for the redirect round-trip.
 STATE_TTL_SECONDS = 600
+#: Feishu codes that mean the stored refresh token is dead (invalid, revoked or
+#: expired) — only these justify sending the browser back through login (401).
+#: Rate limits (429) and every other refusal are transient upstream trouble (502).
+_DEAD_GRANT_CODES = {20037}
 
 logger = logging.getLogger("portal_app")
 
@@ -139,17 +144,26 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
             return error(403, "登录状态无效或已过期", "登录链接只在发起后 10 分钟内有效，请重新发起登录。")
         client = feishu()
         try:
-            user = await client.fetch_user(code)
+            exchanged = await client.exchange_code(code)
         except NotConfigured as exc:
             return error(503, "登录未配置", str(exc))
         except FeishuError as exc:
             return error(502, "飞书拒绝了这次登录", str(exc))
         finally:
             await client.close()
+        user = exchanged["user"]
         session = seal({
             "sub": user["union_id"], "open_id": user.get("open_id", ""),
             "name": user.get("name", ""), "email": user.get("email", ""),
             "avatar": user.get("avatar_url", ""),
+            # Drive-capable tokens, AEAD-encrypted inside the signed session (docs/30).
+            # Empty refresh_token = the app lacks offline_access; /feishu/user-token
+            # says so instead of guessing.
+            "feishu": seal_secret(json.dumps({
+                "refresh_token": exchanged["refresh_token"],
+                "access_token": exchanged["access_token"],
+                "access_exp": int(time.time()) + exchanged["access_expires_in"],
+            }), cfg.session_secret),
         }, cfg.session_secret, cfg.session_ttl_seconds)
         response = RedirectResponse(registry[proven["app"]]["redirect_uri"], status_code=302)
         response.set_cookie(SESSION_COOKIE, session, httponly=True, samesite="lax",
@@ -235,6 +249,57 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
     @app.get("/me")
     async def me(session: Annotated[dict, Depends(current_session)]) -> dict:
         return {k: session.get(k, "") for k in ("sub", "open_id", "name", "email", "avatar")}
+
+    @app.get("/feishu/user-token")
+    async def feishu_user_token(request: Request, response: Response) -> dict:
+        """Hand the signed-in browser its own Feishu user access token (docs/30).
+
+        The token is the user's, scoped to what Feishu lets them see; the browser
+        relays it to the backend per call. Cached in the encrypted session blob and
+        refreshed when it is about to expire — a dead refresh token means re-login,
+        never silent renewal.
+        """
+        session = read_session(request)
+        if session is None:
+            raise HTTPException(401, "Sign in through the portal first")
+        blob = session.get("feishu", "")
+        tokens = json.loads(raw) if (raw := unseal_secret(blob, cfg.session_secret)) else None
+        if tokens is None:
+            # A session from before this feature carries no blob: say re-login, not 500.
+            raise HTTPException(401, "Sign in again to grant Feishu Drive access")
+        now = time.time()
+        if float(tokens.get("access_exp", 0)) < now + 60:
+            if not tokens.get("refresh_token"):
+                raise HTTPException(503, "Feishu granted no refresh token; the app needs the "
+                                         "offline_access scope, then sign in again")
+            try:
+                client = feishu()
+            except NotConfigured as exc:
+                raise HTTPException(503, str(exc)) from exc
+            try:
+                fresh = await client.refresh(tokens["refresh_token"])
+            except FeishuError as exc:
+                # A dead grant (invalid or revoked refresh token) means
+                # re-login — the browser's recovery flow keys off 401.
+                # Rate limits and other transient refusals must NOT force
+                # re-login; they are upstream trouble and stay 502.
+                if exc.code in _DEAD_GRANT_CODES:
+                    raise HTTPException(401, str(exc)) from exc
+                raise HTTPException(502, str(exc)) from exc
+            finally:
+                await client.close()
+            tokens = {"refresh_token": fresh["refresh_token"],
+                      "access_token": fresh["access_token"],
+                      "access_exp": int(now) + fresh["access_expires_in"]}
+            session["feishu"] = seal_secret(json.dumps(tokens), cfg.session_secret)
+            # Feishu rotates the refresh token on use: persist the new one now.
+            # The reseal keeps the session's original expiry — a token refresh
+            # must not extend how long the session itself lives.
+            remaining = max(1, int(session.get("exp", now)) - int(now))
+            response.set_cookie(SESSION_COOKIE, seal(session, cfg.session_secret, remaining),
+                                httponly=True, samesite="lax", secure=cfg.cookie_secure,
+                                max_age=remaining, domain=cfg.cookie_domain or None)
+        return {"access_token": tokens["access_token"], "expires_at": tokens["access_exp"]}
 
     @app.post("/logout")
     async def logout() -> RedirectResponse:

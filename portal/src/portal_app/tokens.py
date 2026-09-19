@@ -17,6 +17,9 @@ from pathlib import Path
 import jwt
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from nacl import bindings as nacl_bindings
+from nacl import utils as nacl_utils
+from nacl.exceptions import CryptoError
 
 
 def generate_keypair(path: Path) -> None:
@@ -72,8 +75,40 @@ def unseal(token: str, secret: str) -> dict | None:
         return None
     try:
         payload = json.loads(base64.urlsafe_b64decode(body.encode()))
-    except (ValueError, UnicodeDecodeError):
+    except ValueError:
         return None
     if not isinstance(payload, dict) or payload.get("exp", 0) < time.time():
         return None
     return payload
+
+
+# Domain separator for the AEAD key: the session secret must never double as an
+# encryption key directly, and this blob must never collide with another use.
+_TOKEN_KEY_DOMAIN = b"portal-feishu-token-v1\x00"
+
+
+def _token_key(secret: str) -> bytes:
+    return hashlib.sha256(_TOKEN_KEY_DOMAIN + secret.encode()).digest()
+
+
+def seal_secret(plaintext: str, secret: str) -> str:
+    """AEAD-encrypt a secret (a Feishu token) for storage inside the signed session.
+
+    seal() alone is not enough there: it signs but does not hide, and the session
+    cookie is readable by the browser holding it. XChaCha20-Poly1305 via libsodium.
+    """
+    nonce = nacl_utils.random(nacl_bindings.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES)
+    box = nacl_bindings.crypto_aead_xchacha20poly1305_ietf_encrypt(
+        plaintext.encode(), None, nonce, _token_key(secret))
+    return base64.urlsafe_b64encode(nonce + box).decode()
+
+
+def unseal_secret(blob: str, secret: str) -> str | None:
+    """Reverse seal_secret(); None for any tampering or malformation."""
+    try:
+        raw = base64.urlsafe_b64decode(blob.encode())
+        nonce_size = nacl_bindings.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES
+        return nacl_bindings.crypto_aead_xchacha20poly1305_ietf_decrypt(
+            raw[nonce_size:], None, raw[:nonce_size], _token_key(secret)).decode()
+    except (ValueError, CryptoError, IndexError):
+        return None

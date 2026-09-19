@@ -1,11 +1,9 @@
 import json
 import sqlite3
-from pathlib import Path
 
-import yaml
 from test_discovery import material
 from test_employee_approval import grants, native, permit
-from test_identity import auth, make_token
+from test_identity import auth, edit_role, make_token
 from test_identity import client as client  # noqa: PLC0414 -- pytest fixture re-export
 
 from bridgeflow.api.discovery import service, uploads
@@ -14,11 +12,8 @@ from bridgeflow.config import settings
 
 def setup(monkeypatch):
     monkeypatch.setattr(settings, "bridgeflow_allow_workflow_write", True)
-    path = Path(settings.access_control_path)
-    acl = yaml.safe_load(path.read_text())
-    acl["users"]["ou_alice"]["workflow_departments"] = ["production"]
-    acl["users"]["ou_alice"]["operations"] = ["discovery_upload", "discovery_register"]
-    path.write_text(yaml.safe_dump(acl))
+    edit_role("ou_alice", "workflow_departments", ["production"])
+    edit_role("ou_alice", "operations", ["discovery_upload", "discovery_register"])
 
 
 def upload(client, item=None):

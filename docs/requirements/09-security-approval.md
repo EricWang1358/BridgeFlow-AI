@@ -168,8 +168,8 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 - 参与者：部门负责人（A02）、平台运维管理员（A10）；写入操作按工具声明取得审批。
 - 触发：员工只应看到本部门有权查看的批次。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
-- 主流程：按人工访问配置限制上传和批次读取，不可见批次返回 404；未配置失败关闭。
-- 异常、验收和边界：浏览器批次、总表/XLSX 与工作流目录/看板/草稿/信号现已按身份过滤。工具路径仍为共享主机权限，个人操作授权待补。
+- 主流程：按人工访问配置限制上传和批次读取，不可见批次返回 404；未配置失败关闭。成员关系自 #204 起实时解析自飞书知识库（5 分钟缓存），配置只保留部门 ↔ 知识库映射与角色 → 操作规则。
+- 异常、验收和边界：浏览器批次、总表/XLSX 与工作流目录/看板/草稿/信号现已按身份过滤。工具路径仍为共享主机权限，个人操作授权待补。飞书 API 不可达时授权判定 503（fail-closed），不退回过期缓存。
 - 后置：成功时返回与本次输入、版本一致的结果；失败明确说明并保留可恢复输入，不伪造成功或替换历史结果。
 
 ### English use case
@@ -177,13 +177,13 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 - Actors: Department owner (A02), Platform operator (A10); writes follow the tool-declared approval policy.
 - Trigger: an employee must see only batches their department may view.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
-- Main flow: Use human access configuration to restrict uploads and batch reads; hidden batches return 404 and missing configuration fails closed.
-- Exceptions, acceptance and boundary: Browser batches, master/XLSX and workflow catalogue/board/drafts/signals now enforce identity scope. Tools retain shared host authority; individual operation authorization remains open.
+- Main flow: Use human access configuration to restrict uploads and batch reads; hidden batches return 404 and missing configuration fails closed. Since #204 membership resolves live from Feishu wiki spaces (5-minute cache); the configuration keeps only the department ↔ space mapping and role → operation rules.
+- Exceptions, acceptance and boundary: Browser batches, master/XLSX and workflow catalogue/board/drafts/signals now enforce identity scope. Tools retain shared host authority; individual operation authorization remains open. Authorization checks return 503 (fail closed) when the Feishu API is unreachable; no stale-cache fallback.
 - Postcondition: success returns an input/version-consistent result; failures preserve recoverable inputs and explicitly report refusal rather than invent success or replace history.
 
 ### 实现与验证 / Implementation and verification
 
-[代码或范围记录 / Code or scope record](../../backend/src/bridgeflow/access.py)；[行为测试 / Behavioral tests](../../backend/tests/test_identity.py)。
+[代码或范围记录 / Code or scope record](../../backend/src/bridgeflow/access.py)（门面）与 [解析器](../../backend/src/bridgeflow/access_resolver.py)（飞书知识库成员 → 角色）；[行为测试 / Behavioral tests](../../backend/tests/test_identity.py)、[解析器测试](../../backend/tests/test_access_resolver.py)。
 
 验收应同时检查主流程和上列拒绝路径、引用及版本；不能仅凭 issue 关闭或 HTTP 200 标记完成。IMPLEMENTED 表示已找到现行实现和相关验证资产，不代表本轮重新跑过每条用户旅程，也不表示真实企业签核。
 
@@ -202,7 +202,7 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 - 触发：需要限定谁能批准哪类操作，并留下个人审计记录。
 - 前置：选定正确批次/会话或配置版本；读取范围由实际端点授权，不从角色名称推定。未实现项的前置条件是目标设计，并非已有系统保证。
 - 主流程：目标：将批准动作绑定员工身份、角色权限和审计记录，分离查看、上传和批准权限。
-- 异常、验收和边界：批准写入已绑定验签员工、明确操作权限和精确请求；拒绝审计及原生会话读取仍未实现员工隔离，不可把 confirmed_by 文本当身份认证。
+- 异常、验收和边界：批准写入已绑定验签员工、明确操作权限和精确请求；`employee_authorizations` 账本自 #204 起另记消费时刻解析出的角色快照（飞书侧后续变更不回溯）。拒绝审计及原生会话读取仍未实现员工隔离，不可把 confirmed_by 文本当身份认证。
 - 后置：成功时返回与本次输入、版本一致的结果；失败明确说明并保留可恢复输入，不伪造成功或替换历史结果。
 
 ### English use case
@@ -211,12 +211,12 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 - Trigger: who may approve which action must be restricted and individually audited.
 - Preconditions: identify the correct batch/session or configuration version; enforce access at the actual endpoint rather than infer it from a role label. Preconditions for unimplemented work are design goals, not existing guarantees.
 - Main flow: Target: bind approval to employee identity, operation roles and audit records, separating view/upload/approval permissions.
-- Exceptions, acceptance and boundary: Approved mutations bind the verified employee, explicit operation grants and exact request. Refusal audit and native session reads still lack employee isolation; confirmed_by text is not authentication.
+- Exceptions, acceptance and boundary: Approved mutations bind the verified employee, explicit operation grants and exact request. Since #204 the `employee_authorizations` ledger also records the role snapshot resolved at consumption time (later Feishu-side changes do not rewrite it). Refusal audit and native session reads still lack employee isolation; confirmed_by text is not authentication.
 - Postcondition: success returns an input/version-consistent result; failures preserve recoverable inputs and explicitly report refusal rather than invent success or replace history.
 
 ### 实现与验证 / Implementation and verification
 
-[代码或范围记录 / Code or scope record](../../backend/src/bridgeflow/security.py)；[行为测试 / Behavioral tests](../../backend/tests/test_approvals.py)。
+[代码或范围记录 / Code or scope record](../../backend/src/bridgeflow/write_authorization.py)（员工授权与消费时刻角色快照）与 [原生回执](../../backend/src/bridgeflow/security.py)；[行为测试 / Behavioral tests](../../backend/tests/test_employee_approval.py)、[回执测试](../../backend/tests/test_approvals.py)。
 
 验收应同时检查主流程和上列拒绝路径、引用及版本；不能仅凭 issue 关闭或 HTTP 200 标记完成。IMPLEMENTED 表示已找到现行实现和相关验证资产，不代表本轮重新跑过每条用户旅程，也不表示真实企业签核。
 

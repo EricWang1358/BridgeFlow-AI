@@ -91,6 +91,19 @@ const labels = {
   approval_feishu_import: ['飞书文件导入审批', 'Feishu import approval'], approvalTitle_feishu_import: ['从飞书下载这些文件并导入为新批次', 'Download these Feishu files into a new batch'],
   approval_feishu_upload_report: ['上传到飞书审批', 'Feishu upload approval'], approvalTitle_feishu_upload_report: ['把这份研判报告上传到飞书文件夹', 'Upload this review report to the Feishu folder'],
   feishu_import: ['从飞书导入', 'Import from Feishu'], feishu_upload_report: ['上传报告到飞书', 'Upload report to Feishu'],
+  feishuPick: ['从飞书选择', 'Choose from Feishu'],
+  feishuPickHelp: ['浏览你有权访问的飞书云文档，选中文件、在线表格或多维表格并指定部门后导入；表格需再选工作表与表头行，多维表格需再选数据表。只能看到你自己有权限的内容。', 'Browse the Feishu files your own account can access; pick files, sheets or bitables, assign departments, then import. A sheet also needs its worksheet and header row; a bitable needs its data table. You only see what your own account may access.'],
+  feishuRoot: ['我的空间', 'My space'], feishuEmpty: ['这个文件夹是空的', 'This folder is empty'], feishuMore: ['加载更多', 'Load more'],
+  feishuUnsupported: ['此类型暂不支持导入', 'This type cannot be imported yet'], feishuAssign: ['部门', 'Department'],
+  feishuImportGo: ['导入选中文件', 'Import selected files'], feishuPickFolder: ['选择当前文件夹', 'Choose this folder'],
+  feishuUpload: ['上传报告到飞书', 'Upload report to Feishu'], feishuUploadHere: ['上传到当前文件夹', 'Upload to this folder'],
+  feishuUploaded: ['已上传到飞书', 'Uploaded to Feishu'], feishuNoReport: ['先完成一次研判，才能把报告传回飞书。', 'Finish a review before sending a report back to Feishu.'],
+  feishuTarget: ['目标', 'Target'], feishuWiki: ['知识库', 'Wiki'],
+  feishuWikiHelp: ['浏览你有权访问的知识库（个人文档库与团队知识库）。选中文件、在线表格或多维表格节点并指定部门后导入；表格需再选工作表与表头行，多维表格需再选数据表。', 'Browse the wiki spaces your own account can access (personal library and team spaces); pick file, sheet or bitable nodes, assign departments, then import. A sheet also needs its worksheet and header row; a bitable needs its data table.'],
+  feishuTablePick: ['数据表', 'Data table'],
+  feishuSpaces: ['选择知识库', 'Choose a wiki space'], feishuSpacesEmpty: ['没有可见的知识库', 'No wiki spaces visible'],
+  feishuUploadFileWiki: ['上传本地文件到知识库', 'Upload a local file to wiki'], feishuPickFile: ['选择文件', 'Choose file'],
+  feishuWikiUploaded: ['已上传到知识库', 'Uploaded to wiki'], feishuUploadWikiHere: ['上传到当前位置', 'Upload here'],
   integrationMaster: ['跨部门总表', 'Cross-department master'], downloadMaster: ['下载总表 xlsx', 'Download master xlsx'],
   integrationAssumptions: ['按通用做法补的口径（业务方确认后可在声明里替换）', 'Conventions filled in where the dictionary is silent (replaceable once the business side confirms)'],
   integrationHelp: ['按业务字典对齐四部门模板生成；悬停单元格可看出处（部门、文件、行、表头，或公式），✓ 表示部门填写值已按字典公式核对。', 'Built from the four department templates by the business dictionary; hover a cell for its source (department, file, row, header, or formula); ✓ means a department value was checked against the dictionary formula.'],
@@ -204,6 +217,7 @@ const labels = {
   columnQuestions: ['个上传列可能对应字典已声明的列', 'uploaded column(s) may match a declared column'],
   matchedColumns: ['按已批准的决定匹配的列', 'Columns matched by approved decisions'],
   staleMatches: ['列的形状变了，之前的决定没有沿用，需要重新确认', 'Column shape changed, so these earlier decisions were not reused and need confirming again'],
+  droppedColumns: ['导入时剔除的列（无可提取的显示值）', 'Columns dropped at import (no displayable value)'],
   dictionaryInForce: ['本批次冻结的字典', 'Dictionary frozen into this batch'],
   declaresEntities: ['它为各部门声明的可连接列', 'Joinable columns it declares'],
   declaresNothing: ['未声明任何可连接列', 'declares none'],
@@ -319,6 +333,28 @@ async function refreshPortalToken(): Promise<boolean> {
   } catch { return false }
 }
 
+/**
+ * The signed-in user's own Feishu access token (docs/30), cached until near expiry.
+ * It rides one header per Drive call and is never persisted beyond this page's memory.
+ * Throws 'loginRequired' when the portal asks for a fresh sign-in.
+ */
+let feishuToken = { value: '', expiresAt: 0 }
+export async function feishuUserToken(): Promise<string> {
+  if (feishuToken.value && feishuToken.expiresAt > Date.now() / 1000 + 120) return feishuToken.value
+  const base = await ensurePortalBase()
+  if (!base) throw new Error('The login portal is not configured')
+  const response = await fetch(`${base}/feishu/user-token`, { credentials: 'include' })
+  if (response.status === 401) { reportRouteError('loginRequired'); throw new Error('Sign in again to grant Feishu Drive access') }
+  if (!response.ok) {
+    const detail = (await response.json().catch(() => ({}))) as { detail?: string }
+    throw new Error(String(detail.detail ?? `portal answered ${response.status}`))
+  }
+  const body = (await response.json()) as { access_token?: string; expires_at?: number }
+  if (!body.access_token) throw new Error('The portal returned no Feishu token')
+  feishuToken = { value: body.access_token, expiresAt: Number(body.expires_at ?? 0) }
+  return feishuToken.value
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return request(path, init, true)
 }
@@ -381,7 +417,9 @@ export type Summary = { demo_case?: string | null; batch_id: string; period: str
   matched_columns?: string[]
   stale_matches?: string[]
   column_questions?: number
-  derived_from?: string | null }
+  derived_from?: string | null
+  /** Intake columns dropped as unrepresentable (docs/33): names and types, never values. */
+  dropped_columns?: { department: string; column: string; field_type: string; reason: string }[] }
 
 let runtime: { sessions: ISessions; conversation: Context['conversation'] }
 export function configureRuntime(ctx: Context) { runtime = ctx as unknown as typeof runtime; configureLocale(ctx.locale) }

@@ -1,24 +1,82 @@
-# 访问控制：哪个登录用户可以访问哪些部门的数据源。
+# 访问控制：部门 ↔ 飞书知识库的结构映射 + 角色业务规则（issue #204）。
 #
-# 谁来写这个文件：人，事先。与字段字典同一条规则——映射由人声明，不由模型推断。
-# 键是飞书 union_id（登录门户签发的 JWT 里的 sub）。
+# 成员关系的事实来源是飞书：每个业务部门与总经理办公室各对应一个知识库，
+# 谁在库里、是 member 还是 admin，运行时向飞书查询（5 分钟缓存）。本文件只声明
+# 两件飞书表达不了的事：哪个知识库代表哪个单位，以及每个角色能做什么。
+# 与字段字典同一条规则——映射由人声明，不由模型推断。
 #
-# 未列出的用户看不到任何批次；文件缺失或非法时服务明确报「未配置」（503），
-# 绝不退回猜测。可见性规则：批次的部门集合 ⊆ 用户授权部门，或批次由该用户导入。
-users:
-  ou_example_union_id:
-    name: 示例用户
-    departments: [production, procurement, finance, marketing]
-    # Exact workflow catalogue department labels. Separate from the fixed import
-    # department IDs above: no automatic translation or inferred permission.
-    # Missing list means no workflow data access once portal identity is enabled.
-    workflow_departments: [生产部, 市场部]
-    # Explicit operation grants; omitted means read-only. Grant only required actions.
+# 飞书侧前置条件（管理后台，人工一次）：
+# - 自建应用加 wiki:member:retrieve 权限并发版（tenant token 调用，无需全员重登）；
+# - 把应用本体加为每个知识库的成员，否则成员查询被拒（131006）；
+# - 人必须直接加进知识库：群组/部门型成员不会被展开。
+#
+# 文件缺失或非法、飞书不可达，服务都明确报「未配置」（503），绝不退回猜测。
+# 飞书里没有任何库籍的用户看不到任何批次。可见性规则不变：批次的部门集合 ⊆
+# 用户授权部门，或批次由该用户导入。
+spaces:
+  departments:                # 键必须是四个业务部门的固定 ID，缺一不可
+    production:  {space_id: "7686136266059959272",  member: production_member,  admin: production_admin}
+    procurement: {space_id: "7686304258668366823", member: procurement_member, admin: procurement_admin}
+    finance:     {space_id: "7686136089186175957",     member: finance_member,     admin: finance_admin}
+    marketing:   {space_id: "7686136327422626786",   member: marketing_member,   admin: marketing_admin}
+  master_office: {space_id: "7686753513279343836", member: master_office_member, admin: master_office_admin}
+
+roles:
+  # 部门成员：本部门上传 + 读取。改/删文件走飞书原生申请，BridgeFlow 不参与。
+  # workflow_departments 是工作流目录的准确部门名，与上面的固定部门 ID 分开，
+  # 不做自动翻译；缺省为空即无工作流数据访问。
+  production_member:
+    departments: [production]
+    workflow_departments: [生产部]
     operations: [batch_import, review_note]
-    # Native approved writes additionally accept: confirm_mapping, confirm_column_match,
-    # quarantine_decide, quarantine_apply, workflow_record, workflow_approve_submit,
-    # workflow_handoff, feishu_import, feishu_upload_report, discovery_propose, discovery_register, discovery_graph_save, discovery_score_save, discovery_meeting_save.
-    # MVP decisions: discovery_decision_propose, discovery_decision_vote,
+  # 部门主管 = 该知识库 admin，本部门完整权限。
+  production_admin:
+    departments: [production]
+    workflow_departments: [生产部]
+    operations: [batch_import, review_note, quarantine_decide, quarantine_apply,
+                 workflow_record, workflow_approve_submit, workflow_handoff]
+  procurement_member:
+    departments: [procurement]
+    workflow_departments: [物资部]
+    operations: [batch_import, review_note]
+  procurement_admin:
+    departments: [procurement]
+    workflow_departments: [物资部]
+    operations: [batch_import, review_note, quarantine_decide, quarantine_apply,
+                 workflow_record, workflow_approve_submit, workflow_handoff]
+  finance_member:
+    departments: [finance]
+    workflow_departments: [财务部]
+    operations: [batch_import, review_note]
+  finance_admin:
+    departments: [finance]
+    workflow_departments: [财务部]
+    operations: [batch_import, review_note, quarantine_decide, quarantine_apply,
+                 workflow_record, workflow_approve_submit, workflow_handoff]
+  marketing_member:
+    departments: [marketing]
+    workflow_departments: [市场部]
+    operations: [batch_import, review_note]
+  marketing_admin:
+    departments: [marketing]
+    workflow_departments: [市场部]
+    operations: [batch_import, review_note, quarantine_decide, quarantine_apply,
+                 workflow_record, workflow_approve_submit, workflow_handoff]
+  # 总经办成员：四部门上传 + 读取。
+  master_office_member:
+    departments: [production, procurement, finance, marketing]
+    workflow_departments: [生产部, 物资部, 财务部, 市场部]
+    operations: [batch_import, review_note]
+  # 总表管理者 = 总经办知识库 admin。授 confirm_mapping 的角色必须声明全部四个部门。
+  master_office_admin:
+    departments: [production, procurement, finance, marketing]
+    workflow_departments: [生产部, 物资部, 财务部, 市场部]
+    operations: [batch_import, review_note, confirm_mapping, confirm_column_match,
+                 quarantine_decide, quarantine_apply, workflow_record, workflow_approve_submit,
+                 workflow_handoff, feishu_import, feishu_upload_report, discovery_propose,
+                 discovery_upload, discovery_register, discovery_graph_save, discovery_score_save,
+                 discovery_meeting_save]
+    # MVP decisions additionally: discovery_decision_propose, discovery_decision_vote,
     # discovery_decision_resolve, discovery_decision_finalize; declared policy roles also required.
     # Data scope and native approval are still required; a grant alone cannot write.
     # discovery_upload allows staging files only; discovery_register additionally needs native approval.

@@ -158,6 +158,17 @@ chmod 600 env.sh
 source env.sh && [ -n "$DEEPSEEK_API_KEY" ] && [ -d "$DSH_HOME" ] && echo ok
 ```
 
+### 5b 配置经流水线同步（可选）
+
+实例侧的两个 gitignored 配置可以改由流水线分发，不再 SSH 手改：文件内容存为
+`production` 环境的 GitHub secrets（`ACCESS_CONTROL_YAML`、`FIELD_DICTIONARY_YAML`），
+部署时 base64 经 SSH 管道送到实例，由 `deploy/config-put.sh` 先用产品自己的
+加载器校验（`access_resolver.structure()` / 导入侧 `_load_dictionary`），再原子替换。
+**非法配置让部署失败，而不是到达运行时**；内容没变就不写；被替换的旧文件保留为
+`*.bak` 一代。某个 secret 留空则跳过该文件，实例上已有文件继续生效。env.sh 里的
+真凭证（`DEEPSEEK_API_KEY`、`FEISHU_APP_SECRET`、`PORTAL_*`）**不走这条通道**，
+维持「凭证只住实例」的既有决策（deploy.yml 文件头）。
+
 ---
 
 ## 6 客户端 bundle 与首次冒烟
@@ -342,7 +353,7 @@ curl -sI https://<domain>/                                # 主站过 forward_au
 journalctl -u bridgeflow-portal -n 5 --no-pager           # 启动日志打印 registry（app → redirect_uri），配置错这里现形
 ```
 
-### 9c 后端开身份层 + 首登拿 union_id
+### 9c 后端开身份层 + 配置结构映射（#204）
 
 ```bash
 sudo systemctl restart bridgeflow   # 后端与 web 代理拿到 PORTAL_BASE_URL
@@ -350,12 +361,22 @@ sudo systemctl restart bridgeflow   # 后端与 web 代理拿到 PORTAL_BASE_URL
 
 浏览器打开主站：forward_auth 401 → 引导页送去门户 → 飞书 OAuth →
 回调落门户 `/enter` → 带当次 launch token 进主站，dsh web 签出原生会话
-cookie（此后直到 cookie 过期都直达，重启不影响）→
-浏览器直接访问 `https://portal.<domain>/me` 拿到自己的 union_id →
-写 `data/mappings/access-control.yaml`（格式见同目录 `.example`；gitignored，
-部署不动它）→ 再 `sudo systemctl restart bridgeflow`。
+cookie（此后直到 cookie 过期都直达，重启不影响）。
+
+授权不再登记逐人名单：把五个知识库（四部门 + 总经办）的 space_id 与角色策略写进
+`data/mappings/access-control.yaml`（格式见同目录 `.example`；已 gitignored——
+此前本节声称忽略但 `.gitignore` 实际未含该文件，#204 已补上并仍要求部署不动它）→
+再 `sudo systemctl restart bridgeflow`。飞书侧前提：应用已发版带
+`wiki:member:retrieve`，且应用本体已加为每个知识库成员。
 
 文件缺失时数据面是 503「未配置」，这是设计的中间态（fail-closed），不是故障。
+放行前跑侦察脚本确认五个库的成员可读——脚本只认 shell 导出的凭据，先 `source env.sh`
+（其中必须有 `FEISHU_APP_ID` 与 `FEISHU_APP_SECRET`，缺了脚本会报 `not_configured`）：
+
+```bash
+source env.sh   # 导出 FEISHU_APP_ID / FEISHU_APP_SECRET
+python scripts/feishu_membership_check.py
+```
 
 ---
 

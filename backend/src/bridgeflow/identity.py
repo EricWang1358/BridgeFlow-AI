@@ -27,6 +27,9 @@ JWKS_CACHE_SECONDS = 300
 _cache_url = ""
 _cache_at = 0.0
 _cache_keys: list[dict] = []
+# union_id -> open_id pairs observed from portal tokens. Feishu's wiki membership
+# answers with open_ids; this bridge is how access resolution recognizes them.
+_open_ids: dict[str, str] = {}
 
 
 @dataclass(frozen=True)
@@ -36,6 +39,7 @@ class UserIdentity:
     sub: str
     name: str
     email: str
+    open_id: str = ""
 
 
 async def _fetch_jwks(url: str) -> list[dict]:
@@ -69,6 +73,17 @@ def reset_cache() -> None:
     """Tests and key rotation both need to drop the cached JWKS."""
     global _cache_url, _cache_at, _cache_keys
     _cache_url, _cache_at, _cache_keys = "", 0.0, []
+    _open_ids.clear()
+
+
+def open_id_for(union_id: str) -> str:
+    """The open_id the portal observed for a union_id, if this process has seen one.
+
+    Unknown means "" — never a guess. The pair lasts only as long as the process;
+    a resolution that needs it after a restart fails closed until the person
+    signs in again.
+    """
+    return _open_ids.get(union_id, "")
 
 
 async def require_user(request: Request) -> UserIdentity | None:
@@ -93,5 +108,8 @@ async def require_user(request: Request) -> UserIdentity | None:
         raise HTTPException(401, "Portal token is invalid or expired") from exc
     if not isinstance(claims.get("sub"), str) or not claims["sub"].strip():
         raise HTTPException(401, "Portal token carries no identity")
+    open_id = claims.get("open_id")
+    if isinstance(open_id, str) and open_id.strip():
+        _open_ids[str(claims["sub"])] = open_id
     return UserIdentity(sub=str(claims["sub"]), name=str(claims.get("name", "")),
-                        email=str(claims.get("email", "")))
+                        email=str(claims.get("email", "")), open_id=str(open_id or ""))
