@@ -39,6 +39,9 @@
 未声明步骤、他月文件、单期趋势）。当前 **31/31 通过**，报告带生成时间与年龄，红行写明认领的 issue。
 生成物副本：`docs/evidence/observability/acceptance-2026-09-20.{txt,json}`。
 
+界面形态与设计稿（含可观测那块）一致，画板在 <https://claude.ai/artifact/MMeAdd9m4M6Eo4PdvfUZCx>，
+说明见 [15 一之二](docs/15-plugin-design.md)。
+
 ### 第 6 项第二轮：链路接到模型侧
 
 `exec.rootCallId` 就是「一次模型请求所拥有的整棵调用树」，也就是人说的「一次运行」。工具层把它连同
