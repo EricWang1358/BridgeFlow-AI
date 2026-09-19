@@ -88,7 +88,9 @@ async def decision_journal(request: Request, call_next):
         status, reason = exc.status_code, str(exc.detail)
         raise
     finally:
-        facts = journal.subject_of(request.url.path) | dict(getattr(request.state, "journal", {}) or {})
+        facts = (journal.subject_of(request.url.path)
+                 | journal.trace_facts(request.headers)
+                 | dict(getattr(request.state, "journal", {}) or {}))
         for key in ("batch_id", "period", "report_id"):
             if key not in facts and key in request.query_params:
                 facts[key] = request.query_params[key]

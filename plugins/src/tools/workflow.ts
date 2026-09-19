@@ -154,7 +154,7 @@ export function workflowCatalogue(config: BackendConfig): ProductTool {
       }],
     },
     async execute(_args, exec) {
-      return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-catalogue', {}, exec.signal)
+      return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-catalogue', {}, exec)
     },
   }), { kind: 'read' })
 }
@@ -166,7 +166,7 @@ export function workflowDraft(config: BackendConfig): ProductTool {
     parameters: { artifact_id: { type: 'string', required: true, description: 'Draft id from workflow_record' } },
     output: { schema: draftSchema, render: (_args, value) => renderDraft(value) },
     async execute(args, exec) {
-      return callBackend<WorkflowDraft>(config, '/tools/workflow-draft', { artifact_id: args.artifact_id }, exec.signal)
+      return callBackend<WorkflowDraft>(config, '/tools/workflow-draft', { artifact_id: args.artifact_id }, exec)
     },
   }), { kind: 'read' })
 }
@@ -186,7 +186,7 @@ export function workflowBoard(config: BackendConfig): ProductTool {
       },
     },
     async execute(_args, exec) {
-      return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-board', {}, exec.signal)
+      return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-board', {}, exec)
     },
   }), { kind: 'read' })
 }
@@ -209,7 +209,7 @@ export function workflowRecord(config: BackendConfig, receipts: ApprovalReceipts
     async execute(args, exec) {
       const path = args.artifact_id ? '/tools/workflow-answer' : '/tools/workflow-receive'
       return callBackend<WorkflowDraft>(
-        config, path, recordBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec.signal,
+        config, path, recordBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec,
         receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   }), {
@@ -236,7 +236,7 @@ export function workflowApproveSubmit(config: BackendConfig, receipts: ApprovalR
     async execute(args, exec) {
       return callBackend<WorkflowDraft>(
         config, '/tools/workflow-approve-submit', approveBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId),
-        exec.signal, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+        exec, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   }), {
     kind: 'approval',
@@ -269,7 +269,7 @@ export function workflowHandoff(config: BackendConfig, receipts: ApprovalReceipt
     },
     async execute(args, exec) {
       return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-handoff',
-        handoffBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec.signal,
+        handoffBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec,
         receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   }), {
@@ -291,7 +291,7 @@ export function workflowGuidance(config: BackendConfig): ProductTool {
       render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }],
     },
     async execute(args, exec) {
-      return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-guidance', { stage: args.stage }, exec.signal)
+      return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-guidance', { stage: args.stage }, exec)
     },
   }), { kind: 'read' })
 }

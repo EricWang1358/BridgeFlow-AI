@@ -42,7 +42,10 @@ _SHAPES = (
 MAX_REASON = 300
 #: What a request may add to its own entry. Anything else is dropped: the journal is a record
 #: of decisions, not a place to smuggle data past the tool contract.
-FACT_KEYS = ("batch_id", "period", "report_id", "declaration", "counts", "outcome_detail")
+FACT_KEYS = ("batch_id", "period", "report_id", "declaration", "counts", "outcome_detail",
+             # The agent's own identifiers, sent by the tool layer: the call, the model-requested
+             # call that owns the whole tree (one "run"), which agent asked, and which tool.
+             "call_id", "run", "agent", "tool")
 
 
 def _folder():
@@ -68,6 +71,24 @@ def shape(path: str) -> str:
     for pattern, replacement in _SHAPES:
         path = pattern.sub(replacement, path)
     return path
+
+
+#: The headers the tool layer sends, mapped to the facts they become. Read here rather than
+#: parsed out of bodies: a header costs nothing and cannot smuggle a data row.
+TRACE_HEADERS = {"x-bridgeflow-call": "call_id", "x-bridgeflow-root": "run",
+                 "x-bridgeflow-agent": "agent", "x-bridgeflow-tool": "tool",
+                 # A tool's subject lives in its body, which this seam never reads; the tool
+                 # layer therefore states it, and only these two keys are accepted.
+                 "x-bridgeflow-batch": "batch_id", "x-bridgeflow-period": "period"}
+
+
+def trace_facts(headers) -> dict[str, str]:
+    found = {}
+    for header, key in TRACE_HEADERS.items():
+        value = headers.get(header)
+        if value:
+            found[key] = str(value)[:120]
+    return found
 
 
 def subject_of(path: str) -> dict[str, str]:
@@ -159,6 +180,42 @@ def _days() -> list[str]:
     if not folder.is_dir():
         return []
     return sorted((p.stem for p in folder.glob("*.jsonl")), reverse=True)[:14]
+
+
+def runs(*, day: str = "", limit: int = 20) -> dict[str, Any]:
+    """The journal grouped into agent runs.
+
+    A run is one model-requested call and everything underneath it: the captain's step and
+    every department subagent's tool call carry the same root, so grouping by it is what a
+    person means by "one run". Requests with no run id are the browser's own reads and are
+    left out — this view answers "what did the agent do", not "what did somebody look at".
+    """
+    day = day or datetime.now(UTC).strftime("%Y-%m-%d")
+    read_back = read(day=day, limit=10_000)
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for item in read_back["entries"]:
+        run = (item.get("facts") or {}).get("run")
+        if run:
+            grouped.setdefault(run, []).append(item)
+    found = []
+    for run, steps in grouped.items():
+        ordered = sorted(steps, key=lambda s: s.get("at", ""))
+        agents = list(dict.fromkeys(s.get("facts", {}).get("agent", "") for s in ordered if s.get("facts", {}).get("agent")))
+        refusals = [s for s in ordered if s.get("outcome") == "refused"]
+        found.append({
+            "run": run, "started_at": ordered[0].get("at", ""), "ended_at": ordered[-1].get("at", ""),
+            "steps": len(ordered), "agents": agents, "refused": len(refusals),
+            "ms": round(sum(s.get("ms", 0) for s in ordered), 1),
+            "batch_id": next((s.get("facts", {}).get("batch_id", "") for s in ordered
+                              if s.get("facts", {}).get("batch_id")), ""),
+            "tools": list(dict.fromkeys(s.get("facts", {}).get("tool", "") or s.get("surface", "") for s in ordered)),
+            "timeline": [{"at": s.get("at", ""), "agent": s.get("facts", {}).get("agent", ""),
+                          "tool": s.get("facts", {}).get("tool", "") or s.get("surface", ""),
+                          "outcome": s.get("outcome", ""), "ms": s.get("ms", 0),
+                          "reason": s.get("reason", ""), "trace": s.get("trace", "")} for s in ordered],
+        })
+    found.sort(key=lambda r: r["started_at"], reverse=True)
+    return {"day": day, "total": len(found), "runs": found[:limit], "days": read_back["days"]}
 
 
 def prune(keep_days: int = 14) -> int:

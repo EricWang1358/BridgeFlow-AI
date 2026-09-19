@@ -67,7 +67,7 @@ export function listMetrics(config: BackendConfig) {
       },
     },
     async execute(args, exec) {
-      const value = await callBackend<MetricCatalogue>(config, '/tools/list-metrics', args, exec.signal)
+      const value = await callBackend<MetricCatalogue>(config, '/tools/list-metrics', args, exec)
       // The Python catalogue also carries private evaluator settings. The tool's
       // public contract deliberately exposes only the declared metric interface.
       return { metrics: value.metrics.map(({ name, unit, formula, requires }) => ({ name, unit, formula, requires })) }

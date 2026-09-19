@@ -121,7 +121,7 @@ export function aggregateMetric(config: BackendConfig) {
         config,
         '/tools/aggregate-metric',
         { metric: args.metric, period: args.period, entity: args.entity ?? null, batch_id: args.batch_id ?? null },
-        exec.signal,
+        exec,
       )
     },
   }), { kind: 'read' })

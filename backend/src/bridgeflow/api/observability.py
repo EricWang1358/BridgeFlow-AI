@@ -34,6 +34,13 @@ async def decision_journal(user: Annotated[UserIdentity | None, Depends(require_
     return journal.read(day=day, outcome=outcome, surface=surface, batch_id=batch_id, limit=limit)
 
 
+@router.get("/journal/runs")
+async def decision_runs(user: Annotated[UserIdentity | None, Depends(require_user)],
+                        day: str = "", limit: Annotated[int, Query(ge=1, le=50)] = 20) -> dict:
+    """The same journal, grouped into agent runs: one model-requested call and its tree."""
+    return journal.runs(day=day, limit=limit)
+
+
 @router.get("/eval/report")
 async def eval_report(user: Annotated[UserIdentity | None, Depends(require_user)]) -> dict:
     """The generated acceptance report, with how old it is."""

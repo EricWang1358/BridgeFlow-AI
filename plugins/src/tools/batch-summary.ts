@@ -36,7 +36,7 @@ export function batchSummary(config: BackendConfig) {
       presentationMeta: (_args, value) => value,
     },
     async execute(args, exec) {
-      const summary = await callBackend<Record<string, unknown>>(config, '/tools/batch-summary', args, exec.signal)
+      const summary = await callBackend<Record<string, unknown>>(config, '/tools/batch-summary', args, exec)
       // JSON null means "absent" here; the declared schema has no null type.
       return Object.fromEntries(Object.entries(summary).filter(([, value]) => value !== null)) as never
     },

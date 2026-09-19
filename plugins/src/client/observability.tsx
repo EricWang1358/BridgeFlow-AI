@@ -23,6 +23,86 @@ type Report = { generated_at: string; passed?: number; total?: number
 
 const OUTCOMES = ['', 'refused', 'wrote', 'served'] as const
 
+type Step = { at: string; agent: string; tool: string; outcome: string; ms: number; reason: string; trace: string }
+type Run = { run: string; started_at: string; ended_at: string; steps: number; agents: string[]
+  refused: number; ms: number; batch_id: string; tools: string[]; timeline: Step[] }
+
+/**
+ * One agent run, drawn as lanes (E13/E14 evidence, rubric: observability).
+ *
+ * A run is one model-requested call and everything under it, so the captain's step and each
+ * department subagent's calls share a root and belong on the same picture. The lane is the
+ * agent, the mark is a tool call, and a refusal is marked by shape and word — never by colour
+ * alone. Duration is drawn to scale within the run, because "which step took the time" is the
+ * question a reader actually has.
+ */
+function RunLanes({ run }: { run: Run }) {
+  const { t } = useUI()
+  const lanes = run.agents.length ? run.agents : ['']
+  const span = Math.max(run.timeline.reduce((total, step) => total + step.ms, 0), 1)
+  let elapsed = 0
+  const placed = run.timeline.map(step => {
+    const left = (elapsed / span) * 100
+    elapsed += step.ms
+    return { step, left, width: Math.max((step.ms / span) * 100, 2) }
+  })
+  return <div className="bf-run-lanes">
+    {lanes.map(agent => <div className="bf-run-lane" key={agent || 'unnamed'}>
+      <span className="bf-run-lane-name">{agent ? t(`agent_${agent}`) === `agent_${agent}` ? agent : t(`agent_${agent}`) : t('agentUnknown')}</span>
+      <span className="bf-run-lane-track">
+        {placed.filter(({ step }) => (step.agent || '') === agent).map(({ step, left, width }) => <button
+          key={step.trace} className="bf-run-mark" data-outcome={step.outcome}
+          style={{ left: `${left}%`, width: `${width}%` }}
+          title={`${step.tool} · ${step.ms} ms${step.reason ? ` · ${step.reason}` : ''}`}>
+          <span className="bf-run-mark-label">{step.outcome === 'refused' ? '✕ ' : ''}{step.tool}</span>
+        </button>)}
+      </span>
+    </div>)}
+  </div>
+}
+
+export function AgentRuns({ batchId }: { batchId: string }) {
+  const { t } = useUI()
+  const [runs, setRuns] = useState<Run[] | null>(null), [error, setError] = useState('')
+  const [open, setOpen] = useState('')
+  useEffect(() => {
+    const controller = new AbortController()
+    setRuns(null); setError('')
+    void api<{ runs: Run[] }>('/journal/runs', { signal: controller.signal })
+      .then(value => setRuns(value.runs)).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
+    return () => controller.abort()
+  }, [batchId])
+  if (error) return <p role="alert" className="bf-error">{error}</p>
+  if (!runs) return <p role="status" className="bf-loading">{t('loading')}</p>
+  return <section className="bf-runs" aria-label={t('agentRuns')}>
+    <h4>{t('agentRuns')}</h4>
+    <p className="bf-hint">{t('agentRunsHelp')}</p>
+    {!runs.length && <p className="bf-hint">{t('agentRunsEmpty')}</p>}
+    <ol className="bf-run-list">{runs.map(run => <li key={run.run}>
+      <button className="bf-run-head" aria-expanded={open === run.run}
+        onClick={() => setOpen(open === run.run ? '' : run.run)}>
+        <span className="bf-run-when">{run.started_at.slice(11, 19)}</span>
+        <span className="bf-run-summary">
+          <strong>{run.steps} {t('runSteps')}</strong>
+          <span className="bf-hint"> · {run.agents.length} {t('runAgents')} · {Math.round(run.ms)} ms
+            {run.refused ? ` · ${run.refused} ${t('journal_refused')}` : ''}</span>
+        </span>
+        <span className="bf-run-tools bf-hint">{run.tools.slice(0, 3).join(' → ')}{run.tools.length > 3 ? ' …' : ''}</span>
+      </button>
+      {open === run.run && <div className="bf-run-detail">
+        <RunLanes run={run} />
+        <ol className="bf-run-steps">{run.timeline.map(step => <li key={step.trace} data-outcome={step.outcome}>
+          <span className="bf-mono">{step.agent || t('agentUnknown')}</span>
+          <span className="bf-mono">{step.tool}</span>
+          <span>{step.ms} ms</span>
+          <span>{t(`journal_${step.outcome}`)}</span>
+          {step.reason && <span className="bf-run-step-reason">{step.reason}</span>}
+        </li>)}</ol>
+      </div>}
+    </li>)}</ol>
+  </section>
+}
+
 export function DecisionJournal({ batchId }: { batchId: string }) {
   const { t } = useUI()
   const [journal, setJournal] = useState<Journal | null>(null), [error, setError] = useState('')

@@ -34,7 +34,7 @@ export function discoveryDecisionTools(config: BackendConfig, receipts: Approval
     } } }, output,
     async execute(args, exec) {
       return callBackend<Record<string, JsonValue>>(config, '/tools/discovery-decision-propose', decisionBody(args, '', exec.callId),
-        exec.signal, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+        exec, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   })
   const vote = defineTool({
@@ -44,7 +44,7 @@ export function discoveryDecisionTools(config: BackendConfig, receipts: Approval
     parameters: { ...common, choice: { type: 'string', required: true, enum: ['yes', 'no', 'abstain'] } }, output,
     async execute(args, exec) {
       return callBackend<Record<string, JsonValue>>(config, '/tools/discovery-decision-vote', decisionBody(args, '', exec.callId),
-        exec.signal, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+        exec, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   })
   const resolve = defineTool({
@@ -54,7 +54,7 @@ export function discoveryDecisionTools(config: BackendConfig, receipts: Approval
     parameters: { ...common, condition_id: { type: 'string', required: true }, references: { ...references, required: true } }, output,
     async execute(args, exec) {
       return callBackend<Record<string, JsonValue>>(config, '/tools/discovery-decision-resolve', decisionBody(args, '', exec.callId),
-        exec.signal, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+        exec, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   })
   const finalize = defineTool({
@@ -64,7 +64,7 @@ export function discoveryDecisionTools(config: BackendConfig, receipts: Approval
     parameters: { ...common, outcome: { type: 'string', required: true, enum: ['approve', 'reject'] } }, output,
     async execute(args, exec) {
       return callBackend<Record<string, JsonValue>>(config, '/tools/discovery-decision-finalize', decisionBody(args, '', exec.callId),
-        exec.signal, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+        exec, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   })
   return [

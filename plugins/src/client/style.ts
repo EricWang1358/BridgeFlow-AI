@@ -577,4 +577,46 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-journal-trace { grid-column: 1 / -1; font-size: 11px; opacity: .55 }
 
 .bf-eval { margin-top: 18px }
+
+/* ---- agent runs -------------------------------------------------------- */
+
+.bf-runs { margin-top: 18px }
+.bf-run-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px }
+.bf-run-list > li { border: 1px solid var(--bf-line); border-radius: var(--bf-radius); overflow: hidden }
+.bf-run-head {
+  width: 100%; display: grid; gap: 10px; align-items: baseline; text-align: left;
+  grid-template-columns: 4.5rem minmax(0, 1fr) minmax(0, 12rem);
+  background: none; border: 0; padding: 10px 12px; cursor: pointer; font-size: 13px;
+}
+.bf-run-head:hover { background: var(--bf-surface-2) }
+.bf-run-when { color: var(--bf-muted); font-variant-numeric: tabular-nums }
+.bf-run-tools { overflow-wrap: anywhere }
+.bf-run-detail { padding: 4px 12px 12px; border-top: 1px solid var(--bf-line) }
+
+.bf-run-lanes { display: grid; gap: 6px; margin: 10px 0 12px }
+.bf-run-lane { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 10px; align-items: center }
+.bf-run-lane-name { font-size: 12px; color: var(--bf-muted); overflow-wrap: anywhere }
+.bf-run-lane-track {
+  position: relative; display: block; height: 26px; border-radius: 6px;
+  background: var(--bf-surface-2); box-shadow: inset 0 0 0 1px var(--bf-line);
+}
+.bf-run-mark {
+  position: absolute; top: 3px; bottom: 3px; min-width: 14px; padding: 0 6px;
+  border: 1px solid var(--bf-accent); border-radius: 5px; background: var(--bf-accent-soft);
+  color: var(--bf-text); font: inherit; font-size: 11px; line-height: 18px; cursor: help;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+/* A refusal is marked by shape as well as colour: dashed border, and a ✕ in the label. */
+.bf-run-mark[data-outcome=refused] { border-style: dashed; border-color: var(--bf-danger); background: var(--bf-danger-bg) }
+.bf-run-mark[data-outcome=wrote] { border-color: var(--bf-warn); background: var(--bf-warn-bg) }
+.bf-run-mark-label { pointer-events: none }
+
+.bf-run-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px }
+.bf-run-steps > li {
+  display: grid; gap: 8px; align-items: baseline; font-size: 12px; padding: 4px 6px; border-radius: 6px;
+  grid-template-columns: 7rem minmax(6rem, 1fr) 4rem 3.5rem;
+}
+.bf-run-steps > li:nth-child(odd) { background: var(--bf-surface-2) }
+.bf-run-steps > li[data-outcome=refused] { box-shadow: inset 2px 0 var(--bf-danger) }
+.bf-run-step-reason { grid-column: 2 / -1; color: var(--bf-text); line-height: 1.5 }
 `

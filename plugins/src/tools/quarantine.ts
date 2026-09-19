@@ -38,7 +38,7 @@ export function quarantineList(config: BackendConfig): ProductTool {
           .map(e => `${e.department}#${e.index}: ${e.decision || (e.failing_checks.join('; ') || 'releasable')}${e.shift_suggestion ? ` (passes if shifted ${e.shift_suggestion})` : ''}`).join(' | ') }]
     } },
     async execute(args, exec) {
-      return callBackend<Record<string, Json>>(config, '/tools/quarantine-list', { batch_id: args.batch_id }, exec.signal)
+      return callBackend<Record<string, Json>>(config, '/tools/quarantine-list', { batch_id: args.batch_id }, exec)
     },
   }), { kind: 'read' })
 }
@@ -60,7 +60,7 @@ export function quarantineDecide(config: BackendConfig, receipts: ApprovalReceip
     output: { ...anyObject, render: (_args, value) => [{ type: 'text', text: String((value as { next_step?: string }).next_step ?? 'Recorded.') }] },
     async execute(args, exec) {
       return callBackend<Record<string, Json>>(config, '/tools/quarantine-decide', decideBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId),
-        exec.signal, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+        exec, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   }), {
     kind: 'approval',
@@ -81,7 +81,7 @@ export function quarantineApply(config: BackendConfig, receipts: ApprovalReceipt
     } },
     async execute(args, exec) {
       return callBackend<Record<string, Json>>(config, '/tools/quarantine-apply', applyBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId),
-        exec.signal, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+        exec, receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   }), {
     kind: 'approval',

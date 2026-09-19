@@ -26,7 +26,7 @@ export function integrationSummary(config: BackendConfig): ProductTool {
       },
     },
     async execute(args, exec) {
-      return callBackend<Record<string, Json>>(config, '/tools/integration-summary', { batch_id: args.batch_id }, exec.signal)
+      return callBackend<Record<string, Json>>(config, '/tools/integration-summary', { batch_id: args.batch_id }, exec)
     },
   }), { kind: 'read' })
 }

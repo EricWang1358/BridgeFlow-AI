@@ -43,7 +43,7 @@ export function discoveryGraphSave(config: BackendConfig, receipts: ApprovalRece
     output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }] },
     async execute(args, exec) {
       return callBackend<Record<string, JsonValue>>(config, '/tools/discovery-graph-save',
-        graphBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec.signal,
+        graphBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec,
         receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
     },
   }), { kind: 'approval', reason: 'Save this exact flow draft, including uncertain edges and evidence. This does not execute the workflow.',

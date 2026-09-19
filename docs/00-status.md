@@ -22,6 +22,20 @@
 反向验证 **2** 处（取消阈值判定、保留期间维度），均被测试抓到。
 Python **629 passed**（新增 `test_comparison.py` 8 条）；TS typecheck、build、**71 passed**；浏览器旅程新增跨期对比一段并通过，截图 `docs/evidence/round1-e13-e14/brief-comparison.png`，页面错误 **0**。
 
+## 可观测第二轮：把链路接到模型侧（2026-09-20）
+
+第一轮只覆盖 HTTP 决策，这一轮把 agent 的循环接进来，自评由 4.5 升到 4.6+。
+
+工具层把 `exec` 的上下文声明成 header（`x-bridgeflow-root` 取 `rootCallId`——dsh 里「这一次模型请求
+所拥有的整棵调用树」），后端那条缝仍然不解析任何 body。调用点的改动是每处一个词（`exec.signal` → `exec`），
+共 **34** 处；`callBackend` 只接受 `batch_id` 与 `period` 两个键作为主语 header，别的 body 字段进不来（TS 测试锁死）。
+
+实测（浏览器旅程里的脚本化四角色研判）：一次运行 **7** 步、**5** 个代理泳道（队长 + 四部门），
+逐步耗时与拒绝原话都在展开清单里；浏览器自己的读取没有根，不计入运行（有测试断言）。
+展现形式为泳道时间线：泳道 = 代理，标记 = 工具调用，宽度 = 耗时占比，拒绝用虚线边框加 ✕ 标出，不靠颜色表意。
+Python **695 passed**（`test_journal.py` 增至 12 条）；TS **74 passed**（新增 `backend-trace.test.ts` 3 条）；
+浏览器旅程新增运行时间线一段并通过，截图 `docs/evidence/round1-e13-e14/agent-run.png`，页面错误 **0**。
+
 ## 可观测与评测：决策日志与两半验收（2026-09-20）
 
 按评审 rubric 第 6 项补的一轮，自评由 3.0 升到 4.5（逐项自评写在 HANDOFF）。

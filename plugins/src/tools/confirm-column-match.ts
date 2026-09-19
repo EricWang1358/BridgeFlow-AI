@@ -75,7 +75,7 @@ export function confirmColumnMatch(config: BackendConfig, receipts: ApprovalRece
         config,
         '/tools/confirm-column-match',
         columnMatchBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId),
-        exec.signal,
+        exec,
         receipts.take(JSON.stringify([exec.agent?.id, exec.callId])),
       )
     },

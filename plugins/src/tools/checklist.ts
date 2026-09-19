@@ -28,7 +28,7 @@ export function checklistTool(config: BackendConfig): ProductTool {
         : `${result.period}: ${open.length} step(s) outstanding — ` + open.map(s => `${s.id} (${s.state}${s.count ? ` ×${s.count}` : ''}, ${s.owner_role || 'unassigned'})`).join(' | ') }]
     } },
     async execute(args, exec) {
-      return callBackend<Record<string, Json>>(config, '/tools/monthly-checklist', { period: args.period }, exec.signal)
+      return callBackend<Record<string, Json>>(config, '/tools/monthly-checklist', { period: args.period }, exec)
     },
   }), { kind: 'read' })
 }
@@ -56,7 +56,7 @@ export function inboxTool(config: BackendConfig): ProductTool {
     } },
     async execute(args, exec) {
       return callBackend<Record<string, Json>>(config, '/tools/monthly-inbox',
-        { period: args.period, department: args.department ?? '', kind: args.kind ?? '' }, exec.signal)
+        { period: args.period, department: args.department ?? '', kind: args.kind ?? '' }, exec)
     },
   }), { kind: 'read' })
 }

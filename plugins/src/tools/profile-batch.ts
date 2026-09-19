@@ -129,7 +129,7 @@ export function profileBatch(config: BackendConfig) {
       }),
     },
     async execute(args, exec) {
-      return callBackend<BatchProfile>(config, '/tools/profile-batch', { batch_id: args.batch_id }, exec.signal)
+      return callBackend<BatchProfile>(config, '/tools/profile-batch', { batch_id: args.batch_id }, exec)
     },
   }), { kind: 'read' })
 }

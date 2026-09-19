@@ -68,7 +68,7 @@ export function lookupFieldDictionary(config: BackendConfig) {
         config,
         '/tools/lookup-field-dictionary',
         { department: args.department, column: args.column },
-        exec.signal,
+        exec,
       )
     },
   }), { kind: 'read' })
