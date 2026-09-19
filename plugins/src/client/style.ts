@@ -415,6 +415,11 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-grade[data-grade=G3] { color: var(--bf-warn); background: var(--bf-warn-bg) }
 .bf-grade[data-grade=G4] { color: var(--bf-muted) }
 .bf-grade[data-grade=missing] { color: var(--bf-danger); background: var(--bf-danger-bg) }
+/* Period-on-period change (E13-UC02): direction is never colour alone; the sign carries it. */
+.bf-change { margin-left: 8px; font-size: 11px; font-weight: 600; white-space: nowrap }
+.bf-change[data-state=up] { color: var(--bf-ok) }
+.bf-change[data-state=down] { color: var(--bf-warn) }
+.bf-change[data-state=flat], .bf-change[data-state=none] { color: var(--bf-muted); font-weight: 500 }
 /* One-page monthly brief (E13-UC01). */
 .bf-brief h4 { margin: 18px 0 8px; font-size: 13px }
 .bf-brief-headline { font-size: 14px; margin: 8px 0 }

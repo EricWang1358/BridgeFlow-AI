@@ -95,6 +95,23 @@ class Rollup(_Strict):
     recompute: list[str] = Field(default_factory=list)
 
 
+class ComparisonThreshold(_Strict):
+    """When a period-on-period change is worth a reader's attention (E13-UC02)."""
+    relative_below: float | None = None
+    relative_above: float | None = None
+
+
+class ComparisonDecl(_Strict):
+    """What may be compared across periods, and when a change needs attention.
+
+    `additive` lists the fields that may be summed across entities: quantities and
+    amounts. A unit price or a ratio is not additive, so totalling it would produce a
+    number with no meaning; those stay per entity.
+    """
+    additive: list[str] = Field(default_factory=list)
+    thresholds: dict[str, ComparisonThreshold] = Field(default_factory=dict)
+
+
 class DepartmentDecl(_Strict):
     label: str
     template: str
@@ -113,6 +130,7 @@ class IntegrationSpec(_Strict):
     classifications: dict[str, Classification] = Field(default_factory=dict)
     rollup: dict[str, Rollup] = Field(default_factory=dict)
     checks: list[Check] = Field(default_factory=list)
+    comparison: ComparisonDecl = Field(default_factory=ComparisonDecl)
     #: Gaps filled by convention, keyed by constant, field, or `rollup.<department>`.
     assumptions: dict[str, str] = Field(default_factory=dict)
     undeclared_rules: dict[str, str] = Field(default_factory=dict)
@@ -150,6 +168,11 @@ class IntegrationSpec(_Strict):
                          if n not in self.derived and n not in self.classifications]
             problems += [f"rollup.{department} cannot roll up grain field {n}" for n in policy.sum + policy.concat + policy.recompute
                          if n in self.grain]
+        for name in self.comparison.additive:
+            if self.fields.get(name) is None or self.fields[name].type != "number":
+                problems.append(f"comparison additive {name} is not a declared number field")
+        problems += [f"comparison threshold {n} is not listed as additive" for n in self.comparison.thresholds
+                     if n not in self.comparison.additive]
         known = set(self.constants) | set(self.fields) | {f"rollup.{d}" for d in self.rollup}
         problems += [f"assumption {k} names nothing declared" for k in self.assumptions if k not in known]
         for check in self.checks:
