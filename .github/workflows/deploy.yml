@@ -175,3 +175,16 @@ jobs:
             echo "portal health returned $pcode (expected 200)"
             exit 1
           fi
+
+      # The deploy's own acceptance pass, against the tree this job just
+      # deployed: seat units, claims consistency, memory fences, swap, TLS and
+      # the /verify gate. A red step here means "deployed but not healthy" —
+      # the one state a human must not be left to discover by hand later.
+      # preflight.sh exits nonzero on any FAIL, and ssh-action propagates it.
+      - name: Preflight on instance
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: cd "$HOME/Hackathon2026/BridgeFlow-AI" && bash deploy/preflight.sh ${{ vars.PUBLIC_DOMAIN }}
