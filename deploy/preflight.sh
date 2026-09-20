@@ -104,7 +104,10 @@ roles = structure()[\"roles\"].values()
 sys.exit(0 if any(CONSOLE_OPERATION in (r.get(\"operations\") or []) for r in roles) else 1)"'
 # 127.0.0.53/54:53 are systemd-resolved's DNS stubs — loopback like any other
 # 127.x, so the whole range is private, not just 127.0.0.1.
-check "nothing but ssh and caddy listens publicly" bash -c '! ss -tlnH | awk "{print \$4}" | grep -vE "^(127\.|\[::1\]):" | grep -vE ":(22|80|443)$"'
+# Loopback is the whole 127/8 (ss prints the resolved stubs as 127.0.0.53%lo,
+# so the host part may carry a %scope). A listener anywhere else that is not
+# ssh/caddy is exposed: [^:]* keeps the match honest to the colon-delimited port.
+check "nothing but ssh and caddy listens publicly" bash -c '! ss -tlnH | awk "{print \$4}" | grep -vE "^(127\.[^:]*|\[::1\]):" | grep -vE ":(22|80|443)$"'
 # The anonymous-answer expectation differs by shape (docs/35 §3): a seat
 # deployment redirects the apex to the portal (3xx), the legacy shape answers
 # dsh's own 401 through forward_auth.
