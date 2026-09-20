@@ -35,6 +35,11 @@ data/mappings/field-dictionary.yaml
 # access-control.yaml is deliberately NOT ignored: it declares only wiki space_ids
 # and role policy — no credentials — and it is the file that most needs review.
 # It ships with the code so a policy change is a PR, not an SSH session (docs/22 §5b).
+# Seat instance state (docs/35): homes and first-come-first-served claims are
+# per-instance facts, never reviewed in a PR; seats.yaml (the capacity list,
+# no person in it) stays tracked.
+data/homes/
+data/seats-assigned.json
 *.xlsx
 *.xls
 !data/samples/*.csv
