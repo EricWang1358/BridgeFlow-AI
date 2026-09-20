@@ -70,6 +70,7 @@
 | [`31-feishu-wiki.md`](31-feishu-wiki.md) | 权威 | 中 | 开发 | 飞书知识库读写实施计划：wiki_token/obj_token 双轨、先落 Drive 再挂载的两步写回、scope 与人工前置项 |
 | [`32-feishu-sheets-bitable-read.md`](32-feishu-sheets-bitable-read.md) | 权威 | 中 | 开发 | 在线表格/多维表格读取需求规格：合理性、接口面、FR-1~7、复杂字段降级与 20 万行纪律 |
 | [`33-feishu-sheets-bitable-impl.md`](33-feishu-sheets-bitable-impl.md) | 权威 | 中 | 开发 | 在线表格/多维表格读取实施计划：复用面锚点、六个设计决策、四步落地与验收对照 |
+| [`34-web-refactor-plan.md`](34-web-refactor-plan.md) | 权威 | 中 | 开发、运维 | 全 Web 化与单租户部署实施计划：复用面锚点、六步落地、验收对照与文档同步（形态决策见 issue #227） |
 
 两份 README 是同一套图文操作指引的中英版本（顶部可切换）：[`../README.md`](../README.md)（English）
 与 [`../README.zh.md`](../README.zh.md)（简体中文）。截图是 `../docs/images/` 里的稳定副本，
@@ -83,7 +84,7 @@
 ## 语言规则
 
 对外可读或在台上讲的用英文：`01` `02` `03` `04` `10` `12`，以及根 README 与插件 README。
-内部工程与决策记录用中文：`00` `06`–`09` `11` `13`–`26`，以及 `CLAUDE.md`、`HANDOFF.md`。
+内部工程与决策记录用中文：`00` `06`–`09` `11` `13`–`26` `34`，以及 `CLAUDE.md`、`HANDOFF.md`。
 代码、注释、commit message、issue 标题一律英文。新增文档先定读者，再定语言。
 
 ## 写作约定
