@@ -82,22 +82,22 @@ export function DataView({ batchId, summary, sources, onImport, onRefresh }: {
         <h4>{t('batchQuality')}</h4>
         <ul>
           <li><button onClick={() => navigate({ batch: batchId, view: 'integration' })}>
-            <span>{t('masterOpenQuestions')}</span><span className="bf-badge">{masterIssues}</span></button></li>
+            <span>{t('item_master_disagreement')}</span><span className="bf-badge" data-open={masterIssues > 0}>{masterIssues}</span></button></li>
           <li><button onClick={() => navigate({ batch: batchId, view: 'quarantine' })}>
-            <span>{t('quarantine')}</span><span className="bf-badge">{kinds.quarantined_row ?? 0}</span></button></li>
+            <span>{t('quarantine')}</span><span className="bf-badge" data-open={(kinds.quarantined_row ?? 0) > 0}>{kinds.quarantined_row ?? 0}</span></button></li>
           <li><button onClick={() => navigate({ batch: batchId, view: 'columns' })}>
-            <span>{t('pendingColumnQuestions')}</span><span className="bf-badge">{kinds.column_question ?? 0}</span></button></li>
+            <span>{t('pendingColumnQuestions')}</span><span className="bf-badge" data-open={(kinds.column_question ?? 0) > 0}>{kinds.column_question ?? 0}</span></button></li>
           <li><button onClick={() => navigate({ batch: batchId, view: 'integration' })}>
-            <span>{t('item_missing_provenance')}</span><span className="bf-badge">{kinds.missing_provenance ?? 0}</span></button></li>
+            <span>{t('item_missing_provenance')}</span><span className="bf-badge" data-open={(kinds.missing_provenance ?? 0) > 0}>{kinds.missing_provenance ?? 0}</span></button></li>
         </ul>
         <div className="bf-actions">
           <button className="bf-primary" data-tour-id="master-open" disabled={!summary.master_rows}
             onClick={() => { navigate({ batch: batchId, view: 'integration' }); window.dispatchEvent(new Event('bridgeflow:master-opened')) }}>
             {t('integrationMaster')}</button>
-          <button onClick={() => navigate({ batch: batchId, view: 'master' })}>{t('master')}</button>
+          <button className="bf-quiet" onClick={() => navigate({ batch: batchId, view: 'master' })}>{t('master')}</button>
         </div>
         <p className="bf-hint">{t('batchQualityHint')}</p>
-        <p className="bf-hint">{t('masterCompleteRows')}：{summary.master_rows} · {t('dictionaryInForce')} <code className="bf-mono">{summary.dictionary}</code></p>
+        <p className="bf-hint">{summary.master_rows} {t('masterCompleteRows')} · {t('dictionaryInForce')} <code className="bf-mono">{summary.dictionary}</code></p>
       </aside>
     </div>
   </section>

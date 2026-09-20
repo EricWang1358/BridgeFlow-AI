@@ -44,6 +44,17 @@ function Shell({ ctx }: { ctx: Context }) {
   const [panel, setPanel] = useState(''), [copied, setCopied] = useState(false)
   const navigation = useNativeSidebar(ctx), notebook = useNotebook(ctx, selected, batchId)
   const [expanded, setExpanded] = useState(false)
+  // These pages were drawn at a working width; the studio column is 300–460px. A reader who
+  // says "wide" once should not have to say it again, so the choice is remembered — and it
+  // stays off by default, because the expanded panel covers the captain's conversation.
+  const [wide, setWide] = useState(() => {
+    try { return localStorage.getItem('bridgeflow.wide-reading') === 'on' } catch { return false }
+  })
+  function setWideReading(value: boolean) {
+    setWide(value)
+    try { localStorage.setItem('bridgeflow.wide-reading', value ? 'on' : 'off') } catch { /* private window */ }
+    if (value) { setExpanded(true); viewer.current?.showModal() } else { viewer.current?.close() }
+  }
   const [hiddenSources, setHiddenSources] = useState(false), [hiddenStudio, setHiddenStudio] = useState(false)
   const viewport = useSyncExternalStore(viewportSubscribe, () => window.innerWidth)
   useEffect(() => {
@@ -99,7 +110,11 @@ function Shell({ ctx }: { ctx: Context }) {
     return () => controller.abort()
   }, [batchId, selected.source, selected.report, selected.view, offset, revision])
   const viewing = ['discovery', 'quotation', 'handoff', 'integration', 'brief', 'source', 'artifact', 'tasks', 'data', 'records'].includes(selected.view ?? '')
-  useEffect(() => { if (viewing) { setPanel('studio'); setHiddenStudio(false); ctx.layout.closeDetails() } else viewer.current?.close() }, [viewing, selected.source, selected.report, selected.view, ctx])
+  useEffect(() => {
+    if (!viewing) { viewer.current?.close(); return }
+    setPanel('studio'); setHiddenStudio(false); ctx.layout.closeDetails()
+    if (wide && !viewer.current?.open) { setExpanded(true); viewer.current?.showModal() }
+  }, [viewing, selected.source, selected.report, selected.view, ctx, wide])
   const openSource = (source: Source) => { setError(''); navigate({ batch: batchId, view: 'source', source: source.id }) }
   const closePreview = () => { viewer.current?.close(); navigate({ ...(batchId ? { batch: batchId } : {}), kind:notebook.kind }) }
   const previewContent = selected.view === 'tasks' && batchId
@@ -177,7 +192,13 @@ function Shell({ ctx }: { ctx: Context }) {
         </div>
         {!summary && <p className="bf-hint">{t('studioStartHelp')}</p>}
         {(error || notebook.error) && <p role="alert" className="bf-error">{error || notebook.error}{notebook.error && <button onClick={notebook.retry}>{t('refresh')}</button>}</p>}
-        {viewing && <section className="bf-inline-preview" aria-label={t('preview')}><header><h3>{t('preview')}</h3><button onClick={() => { setExpanded(true); viewer.current?.showModal() }}>{t('expandPreview')}</button><button onClick={closePreview}>{t('close')}</button></header>{previewContent}</section>}
+        {viewing && <section className="bf-inline-preview" aria-label={t('preview')}><header><h3>{t('preview')}</h3>
+          <button aria-pressed={wide} title={t('wideReadingHelp')} onClick={() => setWideReading(!wide)}>{t('wideReading')}</button>
+          <button onClick={() => { setExpanded(true); viewer.current?.showModal() }}>{t('expandPreview')}</button>
+          <button onClick={closePreview}>{t('close')}</button></header>
+          {expanded && viewer.current?.open
+            ? <p className="bf-hint" role="status">{t('shownWide')} <button onClick={() => viewer.current?.close()}>{t('backToColumn')}</button></p>
+            : previewContent}</section>}
         <section data-tour-id="artifacts" className="bf-artifacts" aria-label={t('artifacts')}><header><h3>{t('artifacts')} <span className="bf-badge">{artifactTotal + (summary?.master_rows ? 1 : 0)}</span></h3>{artifacts.length > 0 && <button aria-label={t('feishuUpload')} title={t('feishuUpload')} onClick={() => { setFeishuNotice(''); feishuUploader.current?.showModal() }}>⇪</button>}<button aria-label={t('refreshArtifacts')} onClick={() => setRevision(n => n + 1)}>↻</button></header>
           {feishuNotice && <p className="bf-hint" role="status">{feishuNotice}</p>}
           {!!summary?.master_rows && <button className="bf-artifact" data-kind="master" onClick={() => navigate({ batch: batchId, view: 'master' })}><span aria-hidden="true">▦</span><span><strong>{summary.period} · {t('master')}</strong><small>{summary.master_rows} {t('rows')}</small><Chip status={summary.status}/></span><span aria-hidden="true">↗</span></button>}

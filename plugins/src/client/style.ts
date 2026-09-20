@@ -507,33 +507,51 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
   display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px;
 }
 .bf-data-steps li {
-  display: flex; gap: 8px; align-items: center;
-  border: 1px solid var(--bf-line); border-radius: var(--bf-radius); padding: 8px 10px;
+  display: flex; gap: 8px; align-items: flex-start;
+  border: 1px solid var(--bf-line); border-radius: var(--bf-radius); padding: 9px 11px;
+  background: color-mix(in srgb, var(--bf-text) 3%, transparent);
 }
 .bf-data-steps li > span:first-child {
-  flex: 0 0 auto; width: 22px; height: 22px; border-radius: 999px;
-  background: var(--bf-accent-soft); color: var(--bf-accent);
-  display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+  flex: 0 0 auto; width: 20px; height: 20px; border-radius: 999px; margin-top: 1px;
+  background: color-mix(in srgb, var(--bf-accent) 18%, transparent); color: var(--bf-text);
+  display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;
 }
-.bf-data-steps strong { display: block; font-size: 13px }
+.bf-data-steps strong { display: block; font-size: 13px; line-height: 1.35 }
 .bf-data-steps small { display: block; font-size: 11px; color: var(--bf-muted); line-height: 1.5 }
 
 .bf-data-split { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start }
 .bf-data-files { flex: 3 1 380px; min-width: 0 }
 .bf-data-quality { flex: 1 1 260px; min-width: 0 }
 .bf-data-files { display: grid; gap: 10px; align-content: start }
-.bf-data-row { border: 1px solid var(--bf-line); border-radius: var(--bf-radius); padding: 10px 12px }
+.bf-data-row { border: 1px solid var(--bf-line); border-radius: var(--bf-radius); padding: 11px 12px }
+.bf-data-row + .bf-data-row { margin-top: 0 }
 .bf-data-row[data-state=missing] { border-style: dashed }
-.bf-data-row-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap }
-.bf-data-row-head > strong { min-width: 5em }
-.bf-data-row-head .bf-hint { flex: 1 1 12em; min-width: 0 }
-.bf-data-row .bf-resupply { margin-top: 8px }
+.bf-data-row-head { display: flex; gap: 6px 10px; align-items: baseline; flex-wrap: wrap }
+.bf-data-row-head > strong { flex: 0 0 auto; font-size: 13px }
+.bf-data-row-head .bf-hint { flex: 1 1 12em; min-width: 0; font-size: 11.5px }
+.bf-data-row-head .bf-chip { order: 2; margin-left: auto }
+/* The row's actions sit on their own line when the meta is long, instead of squeezing the
+   filename into two characters. */
+.bf-data-row-head .bf-actions { order: 3; flex: 1 1 100%; margin: 4px 0 0; gap: 6px }
+.bf-data-row-head .bf-actions button { font-size: 12px; padding: 5px 10px }
+.bf-data-row .bf-resupply { margin-top: 8px; border-top: 1px dashed var(--bf-line); padding-top: 8px }
+.bf-data-row .bf-resupply > summary { font-size: 12px; color: var(--bf-muted); cursor: pointer; list-style: none }
+.bf-data-row .bf-resupply > summary::-webkit-details-marker { display: none }
+.bf-data-row .bf-resupply > summary::before { content: '＋ '; opacity: .7 }
+.bf-data-row .bf-resupply[open] > summary::before { content: '－ ' }
 .bf-data-row .bf-template-download { display: inline-flex; align-items: center; gap: 8px }
 
 .bf-data-quality ul { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px }
+.bf-data-quality { border: 1px solid var(--bf-line); border-radius: var(--bf-radius); padding: 12px 14px }
+.bf-data-quality h4 { margin: 0 0 4px; font-size: 13px }
 .bf-data-quality li > button {
   width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  background: transparent; box-shadow: inset 0 0 0 1px var(--bf-line); font-size: 12.5px;
 }
+.bf-data-quality li > button:hover { background: color-mix(in srgb, var(--bf-text) 6%, transparent) }
+/* A zero is not news: the rows that still hold something are the ones that should catch the eye. */
+.bf-data-quality li > button .bf-badge { opacity: .45 }
+.bf-data-quality li > button .bf-badge[data-open=true] { opacity: 1; background: var(--bf-danger-bg); color: var(--bf-danger) }
 
 .bf-records-list { list-style: none; margin: 6px 0 14px; padding: 0; display: grid; gap: 8px }
 .bf-records-list li {

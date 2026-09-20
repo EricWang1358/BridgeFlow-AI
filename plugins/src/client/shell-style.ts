@@ -96,19 +96,30 @@ body[data-bf-notebook] [data-slot="root"] > [data-details-collapsed] > div:has(>
 .bf-existing form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px }
 .bf-existing input { min-width: 0; width: 100%; background: transparent; color: inherit; border: 1px solid var(--bf-shell-border); border-radius: 8px; padding: 8px }
 .bf-studio-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px }
-.bf-studio-tools button { display: grid; grid-template-columns: 1fr auto; text-align: left; gap: 10px; align-content: space-between; min-height: 78px; border: 0; border-radius: 12px; padding: 12px; font-size: 12px }
-.bf-studio-tools button > span:first-child { grid-column: 1 / -1; font-size: 15px }
-.bf-studio-tools [data-tone=blue] { background: color-mix(in srgb, #859feb 20%, var(--bf-shell-pane)) }
-.bf-studio-tools [data-tone=gold] { background: color-mix(in srgb, #c4b66b 20%, var(--bf-shell-pane)) }
-.bf-studio-tools [data-tone=green] { background: color-mix(in srgb, #809f83 20%, var(--bf-shell-pane)) }
-.bf-studio-tools [data-tone=pink] { background: color-mix(in srgb, #b58cae 20%, var(--bf-shell-pane)) }
-.bf-studio-tools [data-tone=teal] { background: color-mix(in srgb, #6f9fa6 20%, var(--bf-shell-pane)) }
-/* Four destinations carry the work. The other workspaces are reachable, not competing: one
-   row each, quiet, under a label that spans the grid. */
-.bf-studio-tools .bf-studio-group { grid-column: 1 / -1; margin: 12px 2px 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .65 }
-.bf-studio-tools button[data-secondary=true] { grid-column: 1 / -1; min-height: 0; grid-template-columns: auto 1fr auto; align-items: center; padding: 9px 12px; background: transparent; box-shadow: inset 0 0 0 1px var(--bf-shell-border) }
-.bf-studio-tools button[data-secondary=true] > span:first-child { grid-column: auto; font-size: 13px }
-.bf-inline-preview { margin-top: 4px }
+/* Four destinations, one visual language: an icon line, a name, and the count that matters.
+   Five different hues made the pane look like a sticker sheet and said nothing; the tone now
+   only marks which one is open. */
+.bf-studio-tools button {
+  display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto;
+  gap: 2px 8px; align-items: center; text-align: left; min-height: 70px;
+  border: 0; box-shadow: inset 0 0 0 1px var(--bf-shell-border);
+  border-radius: 12px; padding: 11px 12px; font-size: 13px;
+  background: color-mix(in srgb, var(--bf-shell-text) 4%, transparent);
+}
+.bf-studio-tools button:hover { background: color-mix(in srgb, var(--bf-shell-text) 9%, transparent) }
+.bf-studio-tools button > span:first-child { grid-row: 1; font-size: 15px; opacity: .75 }
+.bf-studio-tools button > span:nth-child(2) { grid-row: 2; grid-column: 1 / -1; font-size: 13px; font-weight: 600 }
+/* The chevron sits on the icon line, so a long name can never push it onto its own row. */
+.bf-studio-tools button > span:last-child { grid-row: 1; grid-column: 3; opacity: .45; font-size: 12px }
+.bf-studio-tools button .bf-badge { grid-row: 1; grid-column: 2; justify-self: end; margin: 0 }
+.bf-studio-tools .bf-studio-group { grid-column: 1 / -1; margin: 14px 2px 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .55 }
+.bf-studio-tools button[data-secondary=true] {
+  grid-column: 1 / -1; grid-template-columns: auto 1fr auto; grid-template-rows: auto;
+  min-height: 0; padding: 9px 12px; background: transparent;
+}
+.bf-studio-tools button[data-secondary=true] > span:first-child { grid-row: 1; font-size: 13px }
+.bf-studio-tools button[data-secondary=true] > span:nth-child(2) { grid-row: 1; grid-column: 2; justify-self: start; font-weight: 400 }
+.bf-studio-tools button[data-secondary=true] > span:last-child { grid-row: 1 }
 .bf-shell-pane button:disabled { opacity: .5; cursor: default }
 .bf-artifacts { border-top: 1px solid var(--bf-shell-border); margin-top: 18px; padding-top: 16px }
 .bf-artifacts > header, .bf-inline-preview > header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px }
@@ -140,7 +151,11 @@ body[data-bf-notebook] .bf-drawer { top: var(--bf-shell-top-height); right: 12px
 .bf-shell-top button:focus-visible, .bf-shell-pane button:focus-visible { outline: 2px solid #7ea8ef; outline-offset: 3px }
 .bf-shell-top button[aria-expanded=true], .bf-shell-top button[aria-pressed=true] { background: #d8e5ff; color: #244c8b; border-color: #8caade; box-shadow: inset 0 0 0 1px #8caade }
 body[data-ds-dark-theme] .bf-shell-top button[aria-expanded=true] { background: #334b70; color: #e2edff; border-color: #7d9dcd }
-.bf-shell-pane .bf-studio-tools button[aria-pressed=true] { box-shadow: inset 0 0 0 2px #6f94cb; background: color-mix(in srgb, #7ea8ef 32%, var(--bf-shell-pane)) }
+.bf-shell-pane .bf-studio-tools button[aria-pressed=true] {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, #7ea8ef 70%, transparent);
+  background: color-mix(in srgb, #7ea8ef 16%, transparent);
+}
+.bf-shell-pane .bf-studio-tools button[aria-pressed=true] > span:first-child { opacity: 1 }
 .bf-shell-top .bf-notebook-title { width: clamp(120px, 15vw, 260px); min-width: 70px; background: transparent; border: 1px solid transparent; border-radius: 6px; color: inherit; padding: 5px; font: inherit; font-size: 13px }
 .bf-notebook-title:hover, .bf-notebook-title:focus { border-color: var(--bf-shell-border) }
 .bf-save-state { font-size: 11px; white-space: nowrap; color: var(--bf-shell-muted) }
