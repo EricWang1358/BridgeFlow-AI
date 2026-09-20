@@ -33,6 +33,33 @@ uv pip install -e "backend[dsh,dev]" -e portal --python "$VENV"
   corepack pnpm run build
 )
 
+# Unit files used to ship only via bootstrap, so a unit change merged later
+# never reached a running instance. Install them on every deploy the same way
+# bootstrap does (bridgeflow.service carries a <domain> placeholder), diff-
+# guarded so an unchanged fleet costs nothing and daemon-reload runs only
+# when something moved. The domain: explicit arg, PUBLIC_DOMAIN, or whatever
+# env.sh's seat base domain says.
+units_domain="${2:-${PUBLIC_DOMAIN:-$(bash -c '. ./env.sh 2>/dev/null && printf %s "${PORTAL_SEAT_BASE_DOMAIN:-}"')}}"
+units_changed=0
+if [ -n "$units_domain" ]; then
+  rendered=$(sed "s#<domain>#$units_domain#" deploy/bridgeflow.service)
+  if [ "$rendered" != "$(sudo cat /etc/systemd/system/bridgeflow.service 2>/dev/null || true)" ]; then
+    printf '%s\n' "$rendered" | sudo tee /etc/systemd/system/bridgeflow.service >/dev/null
+    units_changed=1
+  fi
+  for pair in "portal.service:bridgeflow-portal.service" "bridgeflow-dsh.slice:bridgeflow-dsh.slice" \
+              "bridgeflow-dsh@.service:bridgeflow-dsh@.service"; do
+    src="deploy/${pair%%:*}" dst="/etc/systemd/system/${pair##*:}"
+    if ! sudo diff -q "$src" "$dst" >/dev/null 2>&1; then
+      sudo cp "$src" "$dst"
+      units_changed=1
+    fi
+  done
+else
+  echo "unit install skipped: no domain known (pass it as arg 2 or set PUBLIC_DOMAIN)" >&2
+fi
+[ "$units_changed" = 1 ] && sudo systemctl daemon-reload
+
 sudo systemctl restart bridgeflow bridgeflow-portal
 # Seat consoles load the host-side plugin and the client bundle at their own
 # boot; without this they keep serving the previous deploy's code until an
