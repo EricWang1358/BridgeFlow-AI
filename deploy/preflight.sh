@@ -82,7 +82,9 @@ PY
   check "each seat captured its launch token" bash -c 'for seat in '"$seat_names"'; do test -s "data/homes/$seat/.web-launch-token" || exit 1; done'
   check "each seat listens on its loopback port" bash -c "for port in $seat_ports; do ss -tlnH | grep -q \"127.0.0.1:\$port \" || exit 1; done"
   check "each seat subdomain is gated (cookie-less curl is 401)" bash -c 'for seat in '"$seat_names"'; do test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 "https://$seat.console.$DOMAIN/")" = 401 || exit 1; done'
-  check "swap is at least 2G (idle seat pages page out, docs/35 §3)" bash -c 'test "$(awk "/SwapTotal/{print \$2}" /proc/meminfo)" -ge 2097151'
+  # mkswap keeps one header page, so a 2G file reports 2097148 kB: demand
+  # 2G minus a megabyte, not a byte-exact bar that can never be met.
+  check "swap is at least 2G (idle seat pages page out, docs/35 §3)" bash -c 'test "$(awk "/SwapTotal/{print \$2}" /proc/meminfo)" -ge 2096128'
 fi
 check "portal is configured (feishu credentials + signing key loaded)" bash -c 'curl -fsS --max-time 5 http://127.0.0.1:8100/health | grep -q "\"feishu\": *true" && curl -fsS --max-time 5 http://127.0.0.1:8100/health | grep -q "\"signer\": *true"'
 # The console gate refuses whoever holds no console_access grant, so enabling it
