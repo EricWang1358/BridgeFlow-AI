@@ -297,3 +297,53 @@ def test_review_notes_require_identity_write_grant_and_scope(client):
     assert client.post("/tools/review-note", json=body, headers=auth(make_token())).status_code == 200
     assert notes(batch_id, report_id)[0].author == "ou_alice"
     assert (folder / f"{report_id}.json").read_text() == '{}'
+
+
+# --- The console grant (#229) ------------------------------------------------------------
+# Reaching dsh web's console is one shared dsh identity, so "may I get in at all" is a
+# declared operation rather than a consequence of having signed in. The portal asks this
+# route from its own /verify.
+
+
+def test_console_access_answers_only_for_a_declared_grant(client):
+    edit_role("ou_alice", "operations", ["batch_import"])
+    first = client.get("/identity/console-access", headers=auth(make_token()))
+    assert first.status_code == 200
+    assert first.json()["allowed"] is False
+    assert first.json()["operation"] == "console_access"
+    edit_role("ou_alice", "operations", ["batch_import", "console_access"])
+    second = client.get("/identity/console-access", headers=auth(make_token()))
+    assert second.json()["allowed"] is True
+    assert second.json()["roles"] == ["master_office_member"]
+
+
+def test_console_access_refuses_a_missing_or_forged_token(client):
+    assert client.get("/identity/console-access").status_code == 401
+    assert client.get("/identity/console-access",
+                      headers=auth(make_token(key=OTHER_PRIVATE))).status_code == 401
+    assert client.get("/identity/console-access",
+                      headers=auth(make_token(aud="other-app"))).status_code == 401
+
+
+def test_console_access_is_unavailable_rather_than_permissive_when_identity_is_off(monkeypatch):
+    """A portal asking while this service verifies nothing is half-configured: 503, not True."""
+    monkeypatch.setattr(settings, "field_dictionary_path", str(CASES / "dictionary.yaml"))
+    monkeypatch.setattr(settings, "portal_base_url", "")
+    with TestClient(app) as plain:
+        response = plain.get("/identity/console-access")
+        assert response.status_code == 503
+        assert "PORTAL_BASE_URL" in response.json()["detail"]
+
+
+def test_console_access_withholds_when_feishu_cannot_be_reached(client, monkeypatch):
+    """Unreachable membership must not read as "not granted" — 503, never allowed=False."""
+    from bridgeflow.feishu import FeishuError
+
+    edit_role("ou_alice", "operations", ["console_access"])
+    access_resolver.reset_cache()
+
+    def unreachable(space_id):
+        raise FeishuError("simulated outage")
+
+    monkeypatch.setattr(access_resolver, "fetch_space_members", unreachable)
+    assert client.get("/identity/console-access", headers=auth(make_token())).status_code == 503

@@ -7,9 +7,36 @@
 「每个数字都量过、可追溯」是本项目对评委的核心叙事，评委抓到一处对不上，整个叙事就打折。
 所以改数字只改这一处。
 
-最后更新：2026-09-19。新增一轮时照第三节的格式写，并附上复现命令。
+最后更新：2026-09-20。新增一轮时照第三节的格式写，并附上复现命令。
 
 ---
+
+## 全 Web 化第 1 步：控制台操作员角色门（2026-09-20，#229）
+
+离线实现与验证，未调用模型、未接真实飞书租户。计划见 [`34`](34-web-refactor-plan.md) 第 1 步。
+
+门禁默认关闭：未设 `PORTAL_CONSOLE_CHECK_URL` 时 `/verify` 只答登录问题，行为与从前逐字节相同（有测试断言一次都没问过应用）。
+开启后三种结局各有测试：有 `console_access` 授权放行 **200**；已登录但没有该授权 **403**（页面不出现「重新登录」——重登修不好缺授权）；
+授权无法确认 **503**（页面写明「这不是拒绝」）。判定不在门户重写一份：门户用自己刚签的用户令牌问后端
+`/identity/console-access`，后端按 JWKS 验签后走既有 `access_resolver`，角色规则仍只在 `access-control.yaml` 一处。
+
+实现中定下的两处边界：① 答案缓存 **60** 秒、失败**不**缓存（否则一次故障会粘在会话上，有测试数调用次数：两次放行只问 **1** 次，两次失败问 **2** 次）；
+② 应用回 503、回非布尔值、回空体一律读成「无法确认」而不是「已许可」（三种畸形答复各一条断言）。
+`/identity/console-access` 是唯一不挂 `require_host` 的路由——门户不持有宿主凭证，也不该持有（理由写在 `api/console.py` 模块注释）。
+
+复现：
+
+```bash
+(cd backend && ../../.venv/bin/python -m pytest -q)        # 699 passed
+(cd portal  && ../../.venv/bin/python -m pytest -q)        # 32 passed
+(cd backend && ../../.venv/bin/python -m ruff check src tests)
+(cd portal  && ../../.venv/bin/python -m ruff check src tests)
+```
+
+Python 后端 **699 passed**（`test_identity.py` 新增 4 条）、门户 **32 passed**（新增 7 条），两处 ruff 全过。
+
+**未验**：真实飞书租户下的端到端（真人尚未加入知识库，见 HANDOFF）；Caddy `forward_auth` 对 403/503 的透传形态只读代码确认，没起真实 Caddy 跑过；
+本轮没有前端改动，也没有浏览器旅程证据。离线通过不等于部署可用。
 
 ## E13 第二轮：跨期对比与差异分解（2026-09-19，#191）
 

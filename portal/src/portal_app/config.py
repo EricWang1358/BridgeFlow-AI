@@ -56,6 +56,17 @@ class Settings(BaseSettings):
     # /enter 502s while it is missing (dsh web still booting or token capture off).
     dsh_token_file: str = Field(default_factory=_default_dsh_token_file)
 
+    # Where /verify asks whether this person may reach the agent console
+    # (the backend's /identity/console-access). Empty = the gate is OFF and
+    # /verify answers the login question alone, exactly as before — the same
+    # off-by-default posture the backend uses for PORTAL_BASE_URL. Turning it on
+    # is a deployment step, because a role nobody declared yet locks everyone out.
+    console_check_url: str = ""
+    # How long an allow/deny answer is reused. The backend caches Feishu
+    # membership for minutes; this only keeps /verify from asking on every
+    # single request. Failures are never cached.
+    console_check_ttl_seconds: int = 60
+
     host: str = "127.0.0.1"
     port: int = 8100
 

@@ -6,7 +6,9 @@ against the JWKS published here. The portal never sees app data, and apps
 never see Feishu credentials — decoupling in both directions.
 
 /verify exists for the reverse proxy's forward_auth: it is how the main site
-asks "does this browser hold a signed-in session?" before serving anything.
+asks "does this browser hold a signed-in session?" before serving anything —
+and, once PORTAL_CONSOLE_CHECK_URL is set, "may this person reach the agent
+console?" as well (issue #229, docs/34 §二 第 1 步).
 
 Run:  uvicorn portal_app.main:app --port 8100   (after sourcing env.sh)
 """
@@ -40,8 +42,19 @@ STATE_TTL_SECONDS = 600
 #: expired) — only these justify sending the browser back through login (401).
 #: Rate limits (429) and every other refusal are transient upstream trouble (502).
 _DEAD_GRANT_CODES = {20037}
+#: Cached console decisions are small, but the map is still bounded so a long-lived
+#: portal cannot accumulate one entry per person who ever signed in.
+_DECISION_CACHE_MAX = 256
 
 logger = logging.getLogger("portal_app")
+
+
+class ConsoleUnavailable(Exception):
+    """The console grant could not be established — distinct from "not granted".
+
+    Withholding is not refusing: the browser must be told which of the two
+    happened, because only one of them is fixed by waiting or by an admin.
+    """
 
 
 def load_registry(path: str) -> dict[str, dict]:
@@ -68,7 +81,8 @@ def load_registry(path: str) -> dict[str, dict]:
     return registry
 
 
-def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
+def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
+               check_transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
     registry = load_registry(cfg.apps_path)
     signer = Signer(cfg.key_path) if cfg.key_path else None
     origins = sorted({o for entry in registry.values() for o in entry["origins"]})
@@ -112,9 +126,64 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
     def error(status: int, title: str, detail: str) -> HTMLResponse:
         return HTMLResponse(pages.error_page(title, detail), status_code=status)
 
+    def user_claims(app_name: str, session: dict) -> dict:
+        now = int(time.time())
+        return {"iss": cfg.external_base_url, "aud": registry[app_name]["audience"],
+                "iat": now, "exp": now + cfg.app_token_ttl_seconds,
+                **{k: session[k] for k in ("sub", "open_id", "name", "email")}}
+
+    # subject -> (expires_at, allowed). Only answers land here; a failure is
+    # re-asked on the next request, so an outage never sticks to a session.
+    console_decisions: dict[str, tuple[float, bool]] = {}
+
+    async def console_allowed(session: dict) -> bool:
+        """Ask the app whether this person may reach its console (#229).
+
+        The question travels as a token this portal just signed, which the app
+        verifies against the JWKS it already trusts — no new credential, and the
+        role rules stay where they are declared (`access-control.yaml`), not
+        copied into the portal.
+        """
+        now = time.monotonic()
+        cached = console_decisions.get(session["sub"])
+        if cached is not None and cached[0] > now:
+            return cached[1]
+        name = resolve_app("")
+        if name is None:
+            raise ConsoleUnavailable("门户没有默认应用，无法判断控制台授权（apps.yaml）。")
+        if signer is None:
+            raise ConsoleUnavailable("门户签名密钥未配置（PORTAL_KEY_PATH），无法向应用提问。")
+        try:
+            async with httpx.AsyncClient(transport=check_transport, timeout=10) as client:
+                response = await client.get(cfg.console_check_url,
+                                            headers={"x-bridgeflow-user": signer.sign(user_claims(name, session))})
+        except httpx.HTTPError as exc:
+            raise ConsoleUnavailable(f"应用暂时不可达：{exc}") from exc
+        if response.status_code != 200:
+            detail = ""
+            try:
+                body = response.json()
+                detail = body.get("detail", "") if isinstance(body, dict) else ""
+            except ValueError:
+                detail = ""
+            raise ConsoleUnavailable(detail or f"应用返回 HTTP {response.status_code}。")
+        try:
+            allowed = response.json()["allowed"]
+        except (ValueError, KeyError, TypeError) as exc:
+            raise ConsoleUnavailable("应用的授权答复无法解析。") from exc
+        if not isinstance(allowed, bool):
+            raise ConsoleUnavailable("应用的授权答复不是布尔值。")
+        if len(console_decisions) >= _DECISION_CACHE_MAX:
+            console_decisions.clear()
+        console_decisions[session["sub"]] = (now + cfg.console_check_ttl_seconds, allowed)
+        return allowed
+
     @app.get("/health")
     async def health() -> dict:
-        return {"status": "ok", "feishu": bool(cfg.feishu_app_id), "signer": signer is not None}
+        return {"status": "ok", "feishu": bool(cfg.feishu_app_id), "signer": signer is not None,
+                # Whether /verify enforces the console grant, so preflight can see
+                # the gate's state without reading the deploy's environment.
+                "console_gate": bool(cfg.console_check_url)}
 
     # response_model=None: the union return annotation is not a Pydantic field type.
     @app.get("/", response_model=None)
@@ -173,17 +242,44 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
 
     @app.get("/verify", response_model=None)
     async def verify(request: Request) -> Response:
-        """Caddy forward_auth target: 200 lets the request through, 401 blocks it.
+        """Caddy forward_auth target: 200 lets the request through, anything else blocks it.
 
-        Browsers (Accept: text/html) get a page that steers them to the portal;
-        API callers get plain JSON.
+        Two questions, in order: is this browser signed in (401 if not), and —
+        while PORTAL_CONSOLE_CHECK_URL is set — may this person reach the console
+        (403 if not granted, 503 if the answer could not be obtained).
+
+        503 withholds the whole site rather than the console alone, and that is
+        the intended reading: everything behind forward_auth *is* the app shell
+        (docs/22 §7 routes one site to dsh web), so there is no read-only surface
+        being taken away here that would otherwise survive.
+
+        Browsers (Accept: text/html) get a page; API callers get plain JSON.
         """
         session = read_session(request)
-        if session is not None:
+        if session is None:
+            if "text/html" in request.headers.get("accept", ""):
+                return HTMLResponse(pages.login_required(cfg.external_base_url), status_code=401)
+            return JSONResponse({"detail": "Sign in through the portal first"}, status_code=401)
+        if not cfg.console_check_url:
             return JSONResponse({"ok": True, "sub": session["sub"]})
-        if "text/html" in request.headers.get("accept", ""):
-            return HTMLResponse(pages.login_required(cfg.external_base_url), status_code=401)
-        return JSONResponse({"detail": "Sign in through the portal first"}, status_code=401)
+
+        def blocked(status: int, title: str, detail: str) -> Response:
+            if "text/html" in request.headers.get("accept", ""):
+                return HTMLResponse(pages.console_blocked(title, detail, cfg.external_base_url),
+                                    status_code=status)
+            return JSONResponse({"detail": detail}, status_code=status)
+
+        try:
+            allowed = await console_allowed(session)
+        except ConsoleUnavailable as exc:
+            logger.warning("console access undetermined for %s: %s", session["sub"], exc)
+            return blocked(503, "暂时无法确认你的访问范围",
+                           f"{exc} 这不是拒绝：系统没能确认你的授权，稍后重试或联系管理员。")
+        if not allowed:
+            return blocked(403, "没有控制台授权",
+                           "你已登录，但没有被授予进入 AI 控制台的权限。授权由管理员在访问配置的"
+                           "角色上声明，需要时请联系总经办管理员。")
+        return JSONResponse({"ok": True, "sub": session["sub"]})
 
     @app.get("/enter", response_model=None)
     async def enter(request: Request, app: Annotated[str, Query()] = "") -> HTMLResponse | RedirectResponse:
@@ -233,11 +329,7 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
             raise HTTPException(404, f"Unknown application: {app!r}")
         if signer is None:
             raise HTTPException(503, "Portal signing key is not configured: set PORTAL_KEY_PATH")
-        now = int(time.time())
-        claims = {"iss": cfg.external_base_url, "aud": registry[app]["audience"],
-                  "iat": now, "exp": now + cfg.app_token_ttl_seconds,
-                  **{k: session[k] for k in ("sub", "open_id", "name", "email")}}
-        return {"token": signer.sign(claims), "token_type": "Bearer",
+        return {"token": signer.sign(user_claims(app, session)), "token_type": "Bearer",
                 "expires_in": cfg.app_token_ttl_seconds}
 
     @app.get("/.well-known/jwks.json")

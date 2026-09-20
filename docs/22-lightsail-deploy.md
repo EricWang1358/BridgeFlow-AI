@@ -386,6 +386,31 @@ cookie（此后直到 cookie 过期都直达，重启不影响）。
 部署自动带上，实例侧不需要手动创建，改它走 PR 而不是 SSH。飞书侧前提：应用已发版带
 `wiki:member:retrieve`，且应用本体已加为每个知识库成员。
 
+### 9d 开启控制台门禁（#229，可选但建议）
+
+默认关闭时任何已登录员工都能到达代理控制台，而控制台是共用的一个 dsh 身份。开启前先在
+`access-control.yaml` 里给该进控制台的角色加上 `console_access` 操作（本仓库的示例配置只给了
+`master_office_admin`），**顺序不能反**：先开门禁后加授权会把所有人锁在门外。
+
+`env.sh` 追加，然后重启门户：
+
+```bash
+export PORTAL_CONSOLE_CHECK_URL="http://127.0.0.1:8000/identity/console-access"
+```
+
+**验证（按顺序）**
+
+```bash
+curl -fsS http://127.0.0.1:8100/health                    # console_gate 为 true
+curl -sI https://<domain>/                                # 无会话仍是 401（登录问题先答）
+# 带一个有授权的会话 cookie 访问 → 200；换一个没有 console_access 的账号 → 403
+# 停掉后端再访问 → 503，页面写「暂时无法确认你的访问范围 … 这不是拒绝」
+sudo systemctl restart bridgeflow                         # 恢复后回到 200
+```
+
+403 与 503 都经由 Caddy `forward_auth` 透传给浏览器；这一跳的真实形态尚未在实例上验过
+（[`00`](00-status.md) 记为未验），放行前自己点一遍。
+
 文件缺失时数据面是 503「未配置」，这是设计的中间态（fail-closed），不是故障。
 放行前跑侦察脚本确认五个库的成员可读——脚本只认 shell 导出的凭据，先 `source env.sh`
 （其中必须有 `FEISHU_APP_ID` 与 `FEISHU_APP_SECRET`，缺了脚本会报 `not_configured`）：

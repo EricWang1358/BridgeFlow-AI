@@ -72,7 +72,11 @@ roles:
     departments: [production, procurement, finance, marketing]
     workflow_departments: [生产部, 物资部, 财务部, 市场部]
     # convention_decide 只给总表管理者：口径是跨部门的总表声明，不属于任何单一部门。
-    operations: [batch_import, review_note, confirm_mapping, confirm_column_match,
+    # console_access 同理只给这里（#229）：AI 控制台是共用的一个 dsh 身份，进去的人
+    # 彼此的会话、笔记本与待审批互相可见，所以「进得去」必须是被声明的授权，而不是
+    # 登录的副作用。省略即无权，其他角色需要时逐个声明。门户未设
+    # PORTAL_CONSOLE_CHECK_URL 时这一项不生效（门禁关闭，行为与从前一致）。
+    operations: [console_access, batch_import, review_note, confirm_mapping, confirm_column_match,
                  convention_decide, risk_disposition, quarantine_decide, quarantine_apply, workflow_record, workflow_approve_submit,
                  workflow_handoff, feishu_import, feishu_upload_report, discovery_propose,
                  discovery_upload, discovery_register, discovery_graph_save, discovery_score_save,

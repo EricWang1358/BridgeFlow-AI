@@ -166,7 +166,8 @@ def test_a_signed_in_user_sees_every_app_when_several_exist(tmp_path):
         assert client.get("/login", params={"app": "other"}).headers["location"] == "http://other.test/"
 
 
-def make_portal(tmp_path, entry_extra: dict | None = None, **cfg_overrides):
+def make_portal(tmp_path, entry_extra: dict | None = None, check_transport=None, key=True,
+                **cfg_overrides):
     """A second portal instance with its own registry/config, for one-off scenarios."""
     tokens.generate_keypair(tmp_path / "portal.pem")
     entry = {"audience": "bridgeflow", "redirect_uri": "http://web.test/after-login",
@@ -174,10 +175,11 @@ def make_portal(tmp_path, entry_extra: dict | None = None, **cfg_overrides):
     apps = tmp_path / "apps.yaml"
     apps.write_text(yaml.safe_dump({"apps": {"bridgeflow": entry}}), encoding="utf-8")
     cfg = Settings(feishu_app_id="cli_test", feishu_app_secret="secret",
-                   feishu_base_url="https://feishu.test", key_path=str(tmp_path / "portal.pem"),
+                   feishu_base_url="https://feishu.test",
+                   key_path=str(tmp_path / "portal.pem") if key else "",
                    session_secret="s" * 32, external_base_url="http://portal.test",
                    apps_path=str(apps), **cfg_overrides)
-    return create_app(cfg, transport=httpx.MockTransport(Tenant()))
+    return create_app(cfg, transport=httpx.MockTransport(Tenant()), check_transport=check_transport)
 
 
 def test_enter_hands_a_signed_in_browser_to_the_app(tmp_path):
@@ -383,3 +385,111 @@ def test_user_token_endpoint_refreshes_and_rotates(tmp_path):
         refreshed = json.loads(tokens.unseal_secret(
             tokens.unseal(replacement.get(SESSION_COOKIE), "s" * 32)["feishu"], "s" * 32))
         assert refreshed["refresh_token"] == "r-2"
+
+
+# --- The console grant (#229) ------------------------------------------------------------
+# /verify answers two questions once PORTAL_CONSOLE_CHECK_URL is set: signed in, and
+# granted the console. The app answers the second one; the portal never keeps role rules.
+
+CHECK_URL = "http://app.test/identity/console-access"
+
+
+class Gate:
+    """A fake /identity/console-access: records the tokens it was asked with."""
+
+    def __init__(self, allowed=True, status=200, boom: Exception | None = None, body=None):
+        self.allowed, self.status, self.boom, self.body = allowed, status, boom, body
+        self.tokens: list[str] = []
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.tokens.append(request.headers.get("x-bridgeflow-user", ""))
+        if self.boom is not None:
+            raise self.boom
+        if self.body is not None:
+            return httpx.Response(self.status, json=self.body)
+        return httpx.Response(self.status, json={"allowed": self.allowed})
+
+
+def gated(tmp_path, gate: Gate, **overrides):
+    return make_portal(tmp_path, check_transport=httpx.MockTransport(gate),
+                       console_check_url=CHECK_URL, **overrides)
+
+
+def test_the_console_gate_is_off_until_it_is_configured(tmp_path):
+    """No PORTAL_CONSOLE_CHECK_URL = /verify behaves exactly as before. A grant nobody
+    has declared yet would otherwise lock out the whole company on deploy."""
+    gate = Gate(allowed=False)
+    with TestClient(make_portal(tmp_path, check_transport=httpx.MockTransport(gate)),
+                    follow_redirects=False) as client:
+        login(client)
+        assert client.get("/verify").status_code == 200
+        assert gate.tokens == []  # nothing was asked
+        assert client.get("/health").json()["console_gate"] is False
+
+
+def test_the_console_gate_admits_a_granted_person_and_asks_with_a_portal_token(tmp_path):
+    gate = Gate(allowed=True)
+    with TestClient(gated(tmp_path, gate), follow_redirects=False) as client:
+        login(client)
+        assert client.get("/verify").status_code == 200
+        assert client.get("/health").json()["console_gate"] is True
+        claims = decode(client, gate.tokens[0])
+        assert claims["sub"] == UNION_ID and claims["aud"] == "bridgeflow"
+
+
+def test_a_signed_in_person_without_the_grant_is_told_so_not_sent_to_log_in_again(tmp_path):
+    gate = Gate(allowed=False)
+    with TestClient(gated(tmp_path, gate), follow_redirects=False) as client:
+        login(client)
+        assert client.get("/verify").status_code == 403
+        page = client.get("/verify", headers={"accept": "text/html"})
+        assert page.status_code == 403
+        assert "没有控制台授权" in page.text
+        # Signing in again cannot fix a missing grant, so that must not be the offer.
+        assert "重新登录" not in page.text
+
+
+def test_an_unanswerable_grant_withholds_the_site_and_says_it_is_not_a_refusal(tmp_path):
+    gate = Gate(boom=httpx.ConnectError("app down"))
+    with TestClient(gated(tmp_path, gate), follow_redirects=False) as client:
+        login(client)
+        assert client.get("/verify").status_code == 503
+        page = client.get("/verify", headers={"accept": "text/html"})
+        assert page.status_code == 503
+        assert "暂时无法确认" in page.text and "这不是拒绝" in page.text
+
+
+def test_an_answer_is_cached_but_a_failure_is_not(tmp_path):
+    """The allow/deny answer rides a short TTL so forward_auth does not ask per request;
+    a failure must be re-asked, or one outage would stick to the session."""
+    gate = Gate(allowed=True)
+    with TestClient(gated(tmp_path, gate), follow_redirects=False) as client:
+        login(client)
+        assert client.get("/verify").status_code == 200
+        assert client.get("/verify").status_code == 200
+        assert len(gate.tokens) == 1
+
+    failing = Gate(boom=httpx.ConnectError("app down"))
+    with TestClient(gated(tmp_path, failing), follow_redirects=False) as client:
+        login(client)
+        assert client.get("/verify").status_code == 503
+        assert client.get("/verify").status_code == 503
+        assert len(failing.tokens) == 2
+
+
+def test_a_refusal_or_nonsense_answer_from_the_app_is_not_read_as_permission(tmp_path):
+    for gate in (Gate(status=503, body={"detail": "Access control is not configured"}),
+                 Gate(status=200, body={"allowed": "yes"}),
+                 Gate(status=200, body={})):
+        with TestClient(gated(tmp_path, gate), follow_redirects=False) as client:
+            login(client)
+            assert client.get("/verify").status_code == 503
+
+
+def test_the_gate_cannot_be_enforced_without_a_signing_key(tmp_path):
+    """No key means no question can be asked; that is unavailable, not permitted."""
+    gate = Gate(allowed=True)
+    with TestClient(gated(tmp_path, gate, key=False), follow_redirects=False) as client:
+        login(client)
+        assert client.get("/verify").status_code == 503
+        assert gate.tokens == []
