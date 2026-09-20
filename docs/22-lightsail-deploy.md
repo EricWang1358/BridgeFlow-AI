@@ -353,6 +353,13 @@ export PORTAL_APPS_PATH="$HOME/Hackathon2026/portal-apps.yaml"
 export PORTAL_BASE_URL="https://portal.<domain>"
 ```
 
+`BRIDGEFLOW_SERVICE_TOKEN`（拆分模式必填）必须是**粘贴的字面量**，绝不能写
+`$(python …)` 之类的命令替换——每次 source 都会重新生成，各单元在不同时刻
+source 就各拿一个值，席位对后端全线 401（2026-09-20 事故即是此行）。生成
+一次贴进来：`python3 -c "import secrets; print(secrets.token_urlsafe(32))"`。
+preflight 的「stable service token / backend accepts / 进程持有」三检查盯住
+这一类漂移。
+
 `~/Hackathon2026/portal-apps.yaml`（实例文件，不进仓库；仓库里的
 `portal/apps.yaml` 保留给本地开发）：
 
