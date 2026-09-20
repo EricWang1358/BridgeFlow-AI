@@ -130,6 +130,17 @@ try {
   await studio('Data').click()
   await page.locator('.bf-data-row').first().waitFor()
   await shot('data-timeline')
+
+  // The pages are drawn at a working width: turning on 宽屏 opens them in the full-width
+  // panel, and the choice is remembered for the next destination.
+  await page.locator('.bf-inline-preview > header button', { hasText: 'Wide' }).click()
+  const widePanel = page.locator('dialog[open].bf-expanded-preview')
+  await widePanel.locator('.bf-data-row').first().waitFor()
+  assert.ok((await widePanel.locator('.bf-data-split').boundingBox()).width > 700, 'the page gets its working width')
+  await shot('wide-reading')
+  await widePanel.locator('header button', { hasText: 'Close' }).click()
+  // Back to the column for the rest of the journey, and the preference goes with it.
+  await page.locator('.bf-inline-preview > header button[aria-pressed=true]', { hasText: 'Wide' }).click()
   await target('master-open').click(); await target('master-status').waitFor()
   await target('master-evidence-open').click()
   await page.locator('.bf-cell-evidence .bf-grade').waitFor()
