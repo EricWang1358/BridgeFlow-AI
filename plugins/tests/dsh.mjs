@@ -24,6 +24,18 @@ const PINNED_VERSION = '0.1.2-rc.1'
 const INSTALL_HINT = 'Install the native CLI: npm install -g @deepseek-ai/dsh@0.1.2-rc.1; ' +
   'or set BRIDGEFLOW_DSH to its executable. Web and SDK must use this same installation.'
 
+/**
+ * Launch options shared by every harness here.
+ *
+ * A machine that cannot fetch Playwright's own bundled build can borrow an installed
+ * browser instead — `BRIDGEFLOW_BROWSER_CHANNEL=chrome node plugins/tests/…`. Unset,
+ * this is exactly the `{ headless: true }` these scripts always passed.
+ */
+export function browserOptions() {
+  const channel = process.env.BRIDGEFLOW_BROWSER_CHANNEL
+  return { headless: true, ...(channel ? { channel } : {}) }
+}
+
 let resolved
 export function resolveDsh() {
   if (resolved) return resolved

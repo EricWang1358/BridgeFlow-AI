@@ -1,5 +1,5 @@
 import { coldReload } from './cold-reload.mjs'
-import { assertClientModulesServed, resolveDsh } from './dsh.mjs'
+import { assertClientModulesServed, browserOptions, resolveDsh } from './dsh.mjs'
 import { assertDefaultEnglish, switchLanguage } from './locale.mjs'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
@@ -120,7 +120,7 @@ try {
   // #97: a partial client graph only surfaces as a locator timeout inside the
   // browser; catch it here, where the cause is still nameable.
   await assertClientModulesServed(match[1])
-  browser = await chromium.launch({ headless: true })
+  browser = await chromium.launch(browserOptions())
   page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: 'zh-CN' })
   if (employeeMode) await page.addInitScript(token => {
     // Cold-reload verification navigates through a document without a storage origin.

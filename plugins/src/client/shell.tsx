@@ -41,6 +41,7 @@ function Shell({ ctx }: { ctx: Context }) {
   const [error, setError] = useState<unknown>(''), [revision, setRevision] = useState(0), [busy, setBusy] = useState(false)
   const [preview, setPreview] = useState<Preview | null>(null), [report, setReport] = useState<Review | null>(null), [offset, setOffset] = useState(0)
   const [panel, setPanel] = useState(''), [copied, setCopied] = useState(false)
+  const [menu, setMenu] = useState(false), menuBox = useRef<HTMLDetailsElement>(null)
   const navigation = useNativeSidebar(ctx), notebook = useNotebook(ctx, selected, batchId)
   const showState = selected.view === 'state'
   const [expanded, setExpanded] = useState(false)
@@ -55,15 +56,29 @@ function Shell({ ctx }: { ctx: Context }) {
   const [feishuNotice, setFeishuNotice] = useState('')
   useEffect(() => {
     document.body.toggleAttribute('data-bf-nav', navigation.open)
-    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') { navigation.close(); setPanel('') } }
+    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') { navigation.close(); setPanel(''); setMenu(false) } }
     window.addEventListener('keydown', escape)
     return () => { document.body.removeAttribute('data-bf-nav'); window.removeEventListener('keydown', escape) }
   }, [navigation.open])
+  // A menu that only closes on its own trigger is a menu that stays open over the work.
+  useEffect(() => {
+    if (!menu) return
+    const away = (e: MouseEvent) => { if (!menuBox.current?.contains(e.target as Node)) setMenu(false) }
+    document.addEventListener('pointerdown', away)
+    return () => document.removeEventListener('pointerdown', away)
+  }, [menu])
   useEffect(() => {
     const open = () => importer.current?.showModal()
     window.addEventListener('bridgeflow:add-sources', open)
     return () => window.removeEventListener('bridgeflow:add-sources', open)
   }, [])
+  // The blank-session card offers the sample too; it cannot see whether the notebook is
+  // ready, so the guard stays here with the state it guards.
+  useEffect(() => {
+    const open = () => { if (!notebook.busy && notebook.loaded) notebook.sample() }
+    window.addEventListener('bridgeflow:open-sample', open)
+    return () => window.removeEventListener('bridgeflow:open-sample', open)
+  }, [notebook])
   useEffect(() => { setOffset(0); setPreview(null); setReport(null); }, [batchId, selected.source, selected.report])
   useEffect(() => { setArtifactOffset(0); setCopied(false); setFeishuNotice('') }, [batchId])
   useEffect(() => {
@@ -110,15 +125,27 @@ function Shell({ ctx }: { ctx: Context }) {
     </details>
   </section> : report ? <BusinessReview key={report.report_id} report={report} /> : <p role="status">{t(error || !batchId || selected.view === 'source' && !selected.source || selected.view === 'artifact' && !selected.report ? 'previewUnavailable' : 'loading')}</p>
   return <>
-    <header className="bf-shell-top"><div className="bf-shell-brand"><span aria-hidden="true">B</span><strong>BridgeFlow</strong>
+    {/* S01: the bar names the notebook and its state, and nothing else. The four
+        notebook operations live behind ≡ rather than beside each other, because eight
+        equally-weighted buttons said nothing about which one you wanted and became a
+        horizontal scroller below 1100px. */}
+    <header className="bf-shell-top"><div className="bf-shell-brand">
+      <details className="bf-shell-menu" open={menu} onToggle={e => setMenu(e.currentTarget.open)} ref={menuBox}>
+        <summary aria-label={t('notebookMenu')} title={t('notebookMenu')}><span aria-hidden="true">≡</span></summary>
+        <div className="bf-shell-menu-list">
+          <button disabled={notebook.busy || !notebook.loaded} onClick={() => { setMenu(false); notebook.create() }}>{t('newNotebook')}</button>
+          <button data-tour-id="notebook-save" disabled={notebook.busy || !session || !notebook.loaded || !notebook.title.trim()} onClick={() => { setMenu(false); notebook.save() }}>{t('saveNotebook')}</button>
+          <button disabled={notebook.busy} onClick={() => { setMenu(false); notebook.openHistory() }}>{t('notebooks')}</button>
+          <button disabled={notebook.busy || !session || !notebook.loaded} onClick={() => { setMenu(false); notebook.exit() }}>{t('exitNotebook')}</button>
+        </div>
+      </details>
       <input data-tour-id="notebook-name" onFocus={e => { e.currentTarget.dataset.initialTitle = e.currentTarget.value }} onBlur={e => { if (e.currentTarget.value.trim() && e.currentTarget.value !== e.currentTarget.dataset.initialTitle) tourEvent('named', batchId) }} className="bf-notebook-title" aria-label={t('notebookName')} value={notebook.title} placeholder={t('untitledNotebook')} maxLength={120} disabled={!session || !notebook.loaded} onChange={e=>notebook.setTitle(e.target.value)}/>
       {session && notebook.loaded && <span className="bf-save-state" role="status" data-dirty={notebook.dirty}>{t(notebook.dirty?'unsavedNotebook':notebook.persisted?'savedNotebook':'draftNotebook')}</span>}
     </div>
       <nav aria-label={t('notebooks')}>
-        <button disabled={notebook.busy || !notebook.loaded} onClick={notebook.create}>{t('newNotebook')}</button>
-        <button data-tour-id="notebook-save" disabled={notebook.busy || !session || !notebook.loaded || !notebook.title.trim()} onClick={notebook.save}>{t('saveNotebook')}</button>
-        <button disabled={notebook.busy} onClick={notebook.openHistory}>{t('notebooks')}</button>
-        <button disabled={notebook.busy || !session || !notebook.loaded} onClick={notebook.exit}>{t('exitNotebook')}</button>
+        {/* The purpose reads here and is changed in Sources, where the help text that
+            explains what it does has room to sit beside it. */}
+        {notebook.loaded && <span className="bf-purpose-chip">{t(notebookPurposes[notebook.kind].label)}</span>}
         <button aria-expanded={viewport > 760 ? !hiddenSources : panel === 'sources'} onClick={() => viewport > 760 ? setHiddenSources(!hiddenSources) : setPanel(panel === 'sources' ? '' : 'sources')}>{t('sources')}</button>
         <button aria-expanded={viewport > 1100 ? !hiddenStudio : panel === 'studio'} onClick={() => viewport > 1100 ? setHiddenStudio(!hiddenStudio) : setPanel(panel === 'studio' ? '' : 'studio')}>{t('studio')}</button>
         <button aria-expanded={navigation.open} onClick={navigation.toggle}>{t('sessionsSettings')}</button>
@@ -126,7 +153,7 @@ function Shell({ ctx }: { ctx: Context }) {
       </nav>
     </header>
     <TourDriver session={session ?? ''} batch={batchId} sample={summary?.demo_case === 'mock-company-2024-07'} ready={notebook.loaded && !notebook.busy && !notebook.error && !error}
-      reveal={pane => { if (pane === 'sources') { setHiddenSources(false); setPanel('sources') } if (pane === 'studio') { setHiddenStudio(false); setPanel('studio') } }}/>
+      reveal={(pane, openMenu) => { if (pane === 'sources') { setHiddenSources(false); setPanel('sources') } if (pane === 'studio') { setHiddenStudio(false); setPanel('studio') } if (openMenu) setMenu(true) }}/>
     <TourLayer/>
     <PanelResizers hiddenSources={hiddenSources} hiddenStudio={hiddenStudio}/>
     {notebook.dialogs}

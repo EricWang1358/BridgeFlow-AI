@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { notebookWalkthrough } from './notebook-walkthrough.mjs'
-import { assertClientModulesServed, resolveDsh } from './dsh.mjs'
+import { assertClientModulesServed, browserOptions, resolveDsh } from './dsh.mjs'
 import { assertDefaultEnglish, switchLanguage } from './locale.mjs'
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
@@ -71,7 +71,7 @@ try {
   // #97: a partial client graph only surfaces as a locator timeout inside the
   // browser; catch it here, where the cause is still nameable.
   await assertClientModulesServed(match[1])
-  browser = await chromium.launch({ headless: true })
+  browser = await chromium.launch(browserOptions())
   page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: 'zh-CN' })
   const errors = []
   const createResponses = []
@@ -213,6 +213,7 @@ with DeepSeekHarness(dsh_bin=native_command(), profile="sdk-minimal", initialize
   for (const name of ['dsh-persona','dsh-tool-ask-user']) {
     assert((await lstat(`${env.DSH_HOME}/profiles/node_modules/@deepseek-ai/${name}`)).isSymbolicLink(), 'SDK must preserve native module fallback links')
   }
+  await page.locator('.bf-shell-top .bf-shell-menu > summary').click()
   await page.locator('.bf-shell-top').getByRole('button',{name:'新建笔记本',exact:true}).click()
   await page.getByRole('dialog',{name:'离开前保存笔记本？'}).getByRole('button',{name:'不保存并继续'}).click()
   await page.waitForFunction(() => document.querySelectorAll('.bf-resource-list li').length === 0)

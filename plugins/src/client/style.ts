@@ -303,6 +303,10 @@ a.bf-linkbtn {
 }
 .bf-hero li b { font-weight: 620 }
 .bf-hero li span { color: var(--bf-muted) }
+/* Open on the blank session (02-shell S02), the hint belongs under its step rather than
+   trailing the title on one long line. Numbering and the accent circle above already
+   say what a step is; this list does not need a second set of them. */
+.bf-hero-steps li span { display: block; margin-top: 3px }
 
 /* ---- the decision card ------------------------------------------------- */
 

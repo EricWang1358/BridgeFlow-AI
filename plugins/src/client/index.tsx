@@ -47,12 +47,20 @@ function Orientation({ session, input }: InputZone) {
   // Anything drafted, queued or in flight means they have started.
   const started = !session.blank || input.draft.trim() || input.queue.length || input.phase !== 'plain'
   if (started) return null
+  // S02 shows the four steps open. They were behind a <details> whose summary read
+  // "how to start a monthly review" — which is the one question this screen exists to
+  // answer, so making it a click was charging for the answer at the door.
   return <aside className="bf-hero" aria-label={t('heroTitle')}>
     <h3>{t('heroTitle')}</h3>
     <p className="bf-lead bf-hint">{t('heroLead')}</p>
-    <details><summary>{t('monthlySteps')}</summary><ol>{steps.map(n => <li key={n}><b>{t(`heroStep${n}`)}</b> <span>· {t(`heroStep${n}Hint`)}</span></li>)}</ol></details>
+    <ol className="bf-hero-steps" aria-label={t('monthlySteps')}>{steps.map(n => <li key={n}><b>{t(`heroStep${n}`)}</b><span>{t(`heroStep${n}Hint`)}</span></li>)}</ol>
     <div className="bf-actions" style={{ marginBottom: 0 }}>
-      <button className="bf-primary" onClick={() => window.dispatchEvent(new Event('bridgeflow:add-sources'))}>{t('heroOpen')}</button><QuotationButton />
+      <button className="bf-primary" onClick={() => window.dispatchEvent(new Event('bridgeflow:add-sources'))}>{t('heroOpen')}</button>
+      <QuotationButton />
+      {/* The sample is the cheapest way to see what this does, and it lived only in the
+          Sources pane — one pane away from the screen that asks you to start. The shell
+          owns the notebook, so ask it rather than reaching for its state from here. */}
+      <button className="bf-quiet" onClick={() => window.dispatchEvent(new Event('bridgeflow:open-sample'))}>{t('sampleNotebook')}</button>
     </div>
   </aside>
 }

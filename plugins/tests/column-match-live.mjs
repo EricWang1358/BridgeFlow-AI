@@ -5,10 +5,11 @@
 // only after it checks that the proposed target is a declared candidate.
 import { chromium } from '@playwright/test'
 import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { browserOptions } from './dsh.mjs'
 
 const [url, dshHome, batch, out] = process.argv.slice(2)
 const began = Date.now()
-const browser = await chromium.launch({ headless: true })
+const browser = await chromium.launch(browserOptions())
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: 'zh-CN' })
 const errors = []; page.on('pageerror', e => errors.push(String(e)))
 page.setDefaultTimeout(240_000)

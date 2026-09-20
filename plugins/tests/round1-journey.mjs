@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from '@playwright/test'
-import { resolveDsh, assertClientModulesServed } from './dsh.mjs'
+import { assertClientModulesServed, browserOptions, resolveDsh } from './dsh.mjs'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const scratch = await mkdtemp(`${tmpdir()}/bridgeflow-round1-`)
 const evidence = resolve(root, 'docs/evidence/round1-e13-e14')
@@ -35,7 +35,7 @@ try {
     await new Promise(r => setTimeout(r, 100))
   }
   await assertClientModulesServed(match[1])
-  browser = await chromium.launch({ headless: true })
+  browser = await chromium.launch(browserOptions())
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'en-US', reducedMotion: 'reduce', locale: process.env.SHOT_LOCALE ?? 'en-US' })
   page = await context.newPage(); page.setDefaultTimeout(20000)
   const errors = [], prompts = []; let imports = 0, saves = 0

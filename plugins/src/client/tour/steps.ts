@@ -1,5 +1,7 @@
 export type Track = 'core' | 'review' | 'quotation'
-export type Step = { id: string; target: string; event?: string; pane?: 'sources' | 'studio'; view?: 'integration' | 'source' | 'quotation' }
+/** `menu` opens the shellbar's notebook menu: a target folded behind ≡ has no box to
+ *  spotlight while the menu is shut, so the step would time out pointing at nothing. */
+export type Step = { id: string; target: string; event?: string; pane?: 'sources' | 'studio'; view?: 'integration' | 'source' | 'quotation'; menu?: true }
 export const tours: Record<Track, Step[]> = {
   core: [
     { id: 'sample', target: 'sample', event: 'sample', pane: 'sources' },
@@ -13,7 +15,7 @@ export const tours: Record<Track, Step[]> = {
     { id: 'sourceVerified', target: 'source-provenance', pane: 'studio', view: 'source' },
     { id: 'download', target: 'master-download', event: 'download', pane: 'studio', view: 'integration' },
     { id: 'named', target: 'notebook-name', event: 'named' },
-    { id: 'saved', target: 'notebook-save', event: 'saved' },
+    { id: 'saved', target: 'notebook-save', event: 'saved', menu: true },
   ],
   review: [
     { id: 'reviewIntro', target: 'review-start', pane: 'studio' },

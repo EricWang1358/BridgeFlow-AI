@@ -8,7 +8,7 @@ import { tourStyle } from './style.ts'
 const tabbable = 'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,a[href],[tabindex="0"]'
 function visible(el: Element): el is HTMLElement { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden' }
 function activeModal() { return Array.from(document.querySelectorAll<HTMLDialogElement>('dialog[open]')).filter(visible).at(-1) }
-export function TourDriver({ session, batch, sample, ready, reveal }: { session: string; batch: string; sample: boolean; ready: boolean; reveal: (pane?: 'sources' | 'studio') => void }) {
+export function TourDriver({ session, batch, sample, ready, reveal }: { session: string; batch: string; sample: boolean; ready: boolean; reveal: (pane?: 'sources' | 'studio', menu?: boolean) => void }) {
   const state = useSyncExternalStore(tourSubscribe, tourSnapshot)
   const [authorized, setAuthorized] = useState(false)
   const revealRef = useRef(reveal); revealRef.current = reveal
@@ -21,7 +21,7 @@ export function TourDriver({ session, batch, sample, ready, reveal }: { session:
   useEffect(() => {
     if (state.mode !== 'active') return
     const step = tours[state.progress.track][state.progress.index]!
-    revealRef.current(step.pane)
+    revealRef.current(step.pane, step.menu)
     // Reading an already-existing view is safe. Action entry steps never navigate for the user.
     if (step.view && state.progress.batch === batch && !activeModal()) {
       const current = route()

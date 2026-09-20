@@ -20,7 +20,7 @@ import { createServer } from 'node:net'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from '@playwright/test'
-import { assertClientModulesServed, resolveDsh } from './dsh.mjs'
+import { assertClientModulesServed, browserOptions, resolveDsh } from './dsh.mjs'
 import { switchLanguage } from './locale.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -64,7 +64,7 @@ try {
   }
   if (!m) throw new Error('not ready:\n' + logs.slice(-3000))
   await assertClientModulesServed(m[1])
-  browser = await chromium.launch({ headless: true })
+  browser = await chromium.launch(browserOptions())
   const page = await browser.newPage({ viewport: { width: 1440, height: 950 }, locale: 'zh-CN' })
   page.on('console', x => { if (x.type() === 'error') logs += '\nCONSOLE: ' + x.text() })
   page.on('pageerror', e => logs += '\nPAGEERROR: ' + e.message)

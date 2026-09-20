@@ -19,6 +19,7 @@ const labels = {
   notebookPurposeHelp: ['选择用途可调整状态指引；月度对账和报价保持独立。', 'Purpose tailors the status guidance; monthly review and quotation remain separate.'],
   untitledNotebook: ['未命名笔记本', 'Untitled notebook'], notebookName: ['笔记本名称', 'Notebook name'],
   notebooks: ['笔记本', 'Notebooks'], saveNotebook: ['保存笔记本', 'Save notebook'], exitNotebook: ['退出笔记本', 'Exit notebook'],
+  notebookMenu: ['笔记本操作', 'Notebook actions'],
   leaveNotebook: ['离开前保存笔记本？', 'Save this notebook before leaving?'],
   noPendingApproval: ['当前没有待处理审批。需要您确认时，会在对话中提示。', 'No approval is pending. Chat will prompt you when a decision is needed.'],
   saveNotebookHelp: ['保存名称和来源选择，之后可从笔记本列表重新打开。不保存仅放弃本次名称和来源选择；已记录的对话、已上传文件和报告仍保留。', 'Save the name and source selection to reopen from Notebooks. Discard only drops these edits; recorded conversations, uploaded files and reports remain.'],
