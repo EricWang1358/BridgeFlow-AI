@@ -80,6 +80,11 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
             workspaceId: workspace.id,
             portalUrl: process.env.PORTAL_BASE_URL ?? '',
             maxUploadBytes: Math.min(Number(process.env.BRIDGEFLOW_MAX_UPLOAD_BYTES) || 25 * 1024 * 1024, 25 * 1024 * 1024),
+            // The row cap belongs beside the import button, not inside the error you get
+            // for exceeding it (design 03-intake). Same env var and same default as
+            // `bridgeflow_max_batch_rows` in backend/src/bridgeflow/config.py, so the two
+            // stay in step: pydantic-settings reads that field from this exact name.
+            maxBatchRows: Number(process.env.BRIDGEFLOW_MAX_BATCH_ROWS) || 200_000,
             maxRequestBytes: 26 * 1024 * 1024, noteLimit: 240, decisionTimeoutMs,
           }))
           return

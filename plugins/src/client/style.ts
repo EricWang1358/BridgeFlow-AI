@@ -160,6 +160,9 @@ a.bf-linkbtn {
   display: grid; place-items: center;
 }
 .bf-step > h3 { margin: 2px 0 8px }
+/* A month is six characters. Stretched to the panel width it reads as the widest and
+   therefore most important field on a screen whose point is the four files below it. */
+.bf-step input[type=month] { max-width: 200px }
 
 /* A file row that shows the chosen filename instead of the browser's own English
    "No file chosen", which is the single most out-of-place string in the product. */
@@ -176,6 +179,29 @@ a.bf-linkbtn {
 .bf-file-name { display: block; font-size: 12px; color: var(--bf-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .bf-file[data-filled=true] .bf-file-name { color: var(--bf-ok) }
 .bf-file:focus-within { outline: 2px solid var(--bf-accent); outline-offset: 2px }
+
+/* The per-file table position (03-intake I02). Collapsed, and when open it reads as two
+   named fields with a sentence explaining what the header row does to the rows above it
+   — not two bare boxes whose only label was a placeholder that vanishes on typing. */
+.bf-layout > summary { cursor: pointer; font-size: 12px; color: var(--bf-muted); padding: 5px 2px }
+.bf-layout > summary:hover { color: var(--bf-text) }
+.bf-layout[open] > summary { margin-bottom: 6px }
+/* 120px, not 150: this grid sits inside one file's column of the .bf-files grid, and at
+   150 the two fields stacked in a cell wide enough to hold them side by side. */
+.bf-field-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)) }
+.bf-field-grid input { width: 100%; box-sizing: border-box }
+.bf-layout .bf-hint { margin: 7px 0 2px }
+
+/* ---- the self-check result (03-intake I03) ------------------------------ */
+
+/* Grouped by what has to be done about it, so the three headings are the three jobs.
+   The callout rules already carry the tones; this only gives the findings a readable list. */
+.bf-selfcheck { margin: 18px 0 0 }
+.bf-selfcheck .bf-card-head { margin-bottom: 2px }
+.bf-selfcheck .bf-callout ul { margin: 6px 0 0; padding-left: 17px }
+.bf-selfcheck .bf-callout li, .bf-selfcheck .bf-callout p { font-size: 13px; line-height: 1.6; margin: 3px 0 }
+.bf-selfcheck > .bf-hint { margin: 8px 0 0 }
+
 
 /* ---- callouts: a state and what to do about it -------------------------- */
 
@@ -206,10 +232,17 @@ a.bf-linkbtn {
 
 .bf-band { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 0 0 2px }
 .bf-band .bf-period { font-size: 22px; font-weight: 660; letter-spacing: -.02em }
-.bf-stats { display: flex; gap: 20px; flex-wrap: wrap; margin: 14px 0 }
-.bf-stat { min-width: 74px }
-.bf-stat b { display: block; font-size: 21px; font-weight: 640; line-height: 1.2 }
-.bf-stat span { font-size: 12px; color: var(--bf-muted) }
+/* The per-department breakdown, as I04's metric cards. The loose figure-over-caption
+   strip this replaces ran the department name, its corrections and its quarantined rows
+   together on one 12px line, so the only part you could read at a glance was a row count
+   with nothing beside it saying whose. */
+.bf-metrics { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); margin: 16px 0 0; padding: 0 }
+.bf-metric { background: var(--bf-surface-2); border-radius: var(--bf-radius); padding: 10px 13px }
+.bf-metric dt { font-size: 12px; color: var(--bf-muted) }
+.bf-metric dd { margin: 3px 0 0 }
+.bf-metric dd b { font-size: 19px; font-weight: 640; letter-spacing: -.01em }
+.bf-metric dd small { font-size: 11px; color: var(--bf-muted); margin-left: 3px }
+.bf-metric dd small.bf-metric-note { display: block; margin: 3px 0 0 }
 
 /* ---- tabs -------------------------------------------------------------- */
 

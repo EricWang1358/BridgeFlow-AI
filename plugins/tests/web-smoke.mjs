@@ -157,7 +157,12 @@ try {
   page.off('request', countUpload)
   await page.locator('dialog[open] input[name=production]').setInputFiles({ name: 'production.csv', mimeType: 'text/csv', buffer: Buffer.from('sku,output_qty\nSKU-A1,17\n') })
   await page.getByRole('button', { name: '导入并检查', exact: true }).click()
-  await page.getByText('主表 1 行 · 待确认映射 0 条').waitFor()
+  // The master row count and the pending mappings used to sit on a summary line above
+  // the tabs that open them. They are read off the tabs now (design 03-intake I04);
+  // the two numbers asserted are the same two.
+  const tabs = page.locator('dialog[open] .bf-tabs button')
+  await tabs.filter({ hasText: '主表' }).getByText('1', { exact: true }).waitFor()
+  assert.equal((await tabs.filter({ hasText: '待确认映射' }).innerText()).replace(/\s+/g, ' ').trim(), '待确认映射 0')
   await page.getByRole('cell', { name: '17', exact: true }).waitFor()
   await page.screenshot({ path: `${scratch}/data-workspace.png`, fullPage: true })
   const data = await page.evaluate(async () => {

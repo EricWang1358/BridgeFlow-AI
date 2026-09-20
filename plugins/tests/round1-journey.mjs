@@ -89,9 +89,12 @@ try {
   await dialog.locator('input[name=marketing]').setInputFiles(`${root}/data/mock_business/monthly/2024-07-模拟留出/市场部.xlsx`)
   await dialog.locator('input[name=finance]').setInputFiles(`${root}/data/mock_business/monthly/2024-07-模拟留出/财务部.xlsx`)
   await dialog.getByRole('button', { name: 'Check first', exact: true }).click()
-  await dialog.locator('.bf-callout[data-tone="warn"]').filter({ hasText: '市场_可争取' }).waitFor()
+  // Grouped by severity now, not by department (design 03-intake I03). A must-fix
+  // finding lands in the danger bucket; it used to sit in a per-department callout
+  // painted amber, which said "worth a look" about something that blocks the import.
+  await dialog.locator('.bf-callout[data-tone="danger"]').filter({ hasText: '市场_可争取' }).waitFor()
   await dialog.locator('.bf-callout[data-tone="ok"]').filter({ hasText: 'Ready to submit' }).waitFor()
-  await dialog.locator('.bf-callout[data-tone="warn"]').scrollIntoViewIfNeeded()
+  await dialog.locator('.bf-selfcheck .bf-callout[data-tone="danger"]').scrollIntoViewIfNeeded()
   await shot('self-check')
   assert.deepEqual(errors, [])
   console.log(JSON.stringify({ status: 'passed', batch, attention: items, evidence }))

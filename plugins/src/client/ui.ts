@@ -175,11 +175,17 @@ const labels = {
   files: ['部门文件', 'Department files'], submitted: ['意见已提交到队长会话', 'Note submitted to captain session'], audit: ['当前会话审计', 'Current session audit'], loadedWindow: ['仅统计已加载的会话事件，可加载更早记录。', 'Counts cover loaded events only; older events may be loaded.'], loadOlder: ['加载更早记录', 'Load older events'], stateHelp: ['图为静态规则；高亮与计数来自当前批次和原生会话记录。点击节点筛选，下方可打开原始视图。', 'The diagram shows fixed rules. Highlights and counts come from the selected batch and native session records. Select a node to filter, then open its source view.'],
   data: ['导入与数据', 'Import & data'], workspace: ['BridgeFlow 数据工作区', 'BridgeFlow data workspace'], close: ['关闭', 'Close'],
   title: ['批次数据与业务研判', 'Batch data & business review'], intro: ['把四部门数据放在一起', 'Bring four departments together'],
-  newBatch: ['导入新批次', 'Import a new batch'], uploadHelp: ['CSV 或 XLSX；多工作表或表头不在第 1 行时，按提示填写表格位置。每次导入保留独立批次。', 'CSV or XLSX; for several sheets or a header below row 1, fill in the table position when asked. Each import keeps an independent batch.'],
+  newBatch: ['导入新批次', 'Import a new batch'], uploadHelp: ['CSV 或 XLSX。', 'CSV or XLSX.'],
   sheetLayout: ['表格位置（可选）', 'Table position (optional)'], sheetName: ['工作表名', 'Sheet name'], headerRow: ['表头行号', 'Header row'],
+  // I02: the block stays collapsed because most files never need it, and the people who
+  // do need it are otherwise left editing their file into a shape the system likes.
+  sheetLayoutHint: ['表头行号以上的行不进入数据；留空按第 1 行读。改动只影响这一次导入。', 'Rows above the header row are excluded from the data; blank reads row 1. The setting affects this import only.'],
   month: ['业务月份', 'Business month'], production: ['生产', 'Production'], procurement: ['采购', 'Procurement'], finance: ['财务', 'Finance'], marketing: ['市场', 'Marketing'],
   import: ['导入并检查', 'Import & check'], busy: ['正在处理…', 'Processing…'], loading: ['正在加载…', 'Loading…'],
-  saved: ['批次已保存。清洗和聚合由规则执行，未调用模型。', 'Batch saved. Rules cleaned and aggregated the data; no model call.'],
+  // I04's first sentence after an import finishes says what the rules did and did not do.
+  // It was a transient status line, which is the one place a claim like this cannot be read.
+  batchSaved: ['批次已保存', 'Batch saved'],
+  rulesOnly: ['清洗和聚合由规则执行，未调用模型。', 'Rules cleaned and aggregated the data; no model call.'],
   existing: ['打开已有批次', 'Open an existing batch'], batchId: ['批次编号', 'Batch ID'], open: ['打开', 'Open'], copyId: ['复制批次编号', 'Copy batch ID'], copied: ['已复制', 'Copied'],
   startReview: ['发起研判', 'Start the review'],
   startReviewHint: ['直接把研判请求发到当前会话，不用复制粘贴。没有会话就新建一个。',
@@ -207,7 +213,7 @@ const labels = {
   optionalReason: ['拒绝理由（可选，最多 240 字符）', 'Rejection reason (optional, up to 240 characters)'], noteHelp: ['批准才写映射；拒绝不写入，以后仍可能询问。', 'Only approval writes the mapping. Rejection writes nothing; later imports may ask again.'],
   noteFail: ['理由未保存，尚未提交决定。重试或清空理由后拒绝。', 'Reason was not saved; no decision submitted. Retry or clear it to reject.'], expired: ['审批已结束或备注通道不可用', 'Approval ended or notes unavailable'],
   timeout: ['审批期限', 'Approval deadline'], seconds: ['秒', 'seconds'], inspect: ['查看调用轨迹', 'Inspect native trace'], details: ['查看摘要', 'Show summary'], failed: ['失败 / 已拒绝', 'Failed / rejected'], completed: ['已完成', 'Completed'],
-  limits: ['文件上限', 'File limit'], transport: ['请求上限', 'Request limit'], invalidUpload: ['请选择至少一个 CSV/XLSX，文件总大小不得超过上限。', 'Select at least one CSV/XLSX; total size must fit the limit.'],
+  invalidUpload: ['请选择至少一个 CSV/XLSX，文件总大小不得超过上限。', 'Select at least one CSV/XLSX; total size must fit the limit.'],
   // --- orientation on a blank session ---------------------------------------
   // A judge or an operator opening this sees the host's own "explore the unknown"
   // hero, which says nothing about what this product does or what to do first.
@@ -266,7 +272,20 @@ const labels = {
   selfCheck: ['先自检', 'Check first'], selfCheckHelp: ['用与正式导入相同的规则检查所选文件，不创建批次。', 'Checks the chosen files with the same rules as import, without creating a batch.'],
   selfCheckMustFix: ['必须修改', 'Must fix'], selfCheckReview: ['建议核对', 'Review'], selfCheckAccepted: ['可以提交', 'Ready to submit'],
   selfCheckNeedsPeriod: ['请先选择业务月份。', 'Choose the business month first.'],
-  stepGoHint: ['导入不调用模型，也不覆盖已有批次。', 'Import makes no model call and never overwrites an existing batch.'],
+  // I03 groups by severity, not by department: "must fix" and "worth checking" are two
+  // different jobs for the person holding the files, and four per-department cards left
+  // that sort to the reader.
+  selfCheckResult: ['自检结果', 'Self-check result'], noBatchCreated: ['未创建批次', 'No batch created'],
+  // Trails a list of departments, so the English cannot use a verb: "Finance pass" and
+  // "Finance and Marketing passes" are each wrong for the other count.
+  selfCheckPassedAll: ['通过全部声明检查。', '— no declared check failed.'],
+  selfCheckQuarantineHint: ['「必须修改」项在导入时会被隔离，不会进入计算。', 'Must-fix items are quarantined at import and never reach the arithmetic.'],
+  selfCheckRunning: ['正在自检', 'Checking'],
+  atRow: ['第', 'row'], atRowSuffix: [' 行', ''],
+  stepGoHint: ['导入不调用模型，也不覆盖已有批次。每次导入保留独立批次。', 'Import makes no model call, never overwrites an existing batch, and each import keeps its own.'],
+  // The two caps a person can actually hit, in the units they think in, beside the button
+  // that enforces them (design 03-intake lead).
+  perUpload: ['单次上传', 'per upload'], perBatch: ['单批次', 'per batch'],
   chooseFile: ['选择文件', 'Choose a file'],
   noFile: ['尚未选择', 'None selected'],
   batchIdShort: ['批次', 'Batch'],
@@ -287,7 +306,6 @@ const labels = {
   arg_relation: ['关系', 'Relation'], arg_accepted: ['决定', 'Decision'],
   arg_evidence: ['决定时展示的依据', 'Evidence shown when deciding'], arg_period: ['业务期间', 'Period'],
   acceptMapping: ['接受映射', 'Accept mapping'], rejectMapping: ['拒绝映射', 'Reject mapping'],
-  countSuffix: [' 条', ''],
 } as const
 /** Language outside React: slot labels are callbacks, not components. */
 export function currentLanguage(): 'zh' | 'en' { return current() }

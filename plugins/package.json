@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "node build.mjs",
+    "build": "tsc --noEmit && node build.mjs",
     "test": "tsx --test tests/*.test.ts",
     "smoke:web": "node tests/web-smoke.mjs",
     "smoke:business": "node tests/business-smoke.mjs",

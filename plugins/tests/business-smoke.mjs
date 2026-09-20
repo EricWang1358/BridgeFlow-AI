@@ -92,7 +92,9 @@ try {
     await page.locator(`dialog[open] input[name=${role}]`).setInputFiles(file)
   }
   await page.getByRole('button', { name: '导入并检查', exact: true }).click()
-  await page.getByText('批次已保存。清洗和聚合由规则执行，未调用模型。', { exact: true }).waitFor()
+  // The claim is a callout now (design 03-intake I04), so the heading and the sentence
+  // are two elements. The sentence is the part that has to be on screen.
+  await page.getByText('清洗和聚合由规则执行，未调用模型。', { exact: true }).waitFor()
   const batchId = await page.locator('dialog[open] code').innerText()
   await page.screenshot({ path: `${scratch}/business-upload.png`, fullPage: true })
   await page.getByRole('button', { name: '关闭', exact: true }).click()
