@@ -1,6 +1,7 @@
 """Portal flow, tested against a simulated Feishu — no real tenant, no network."""
 
 import json
+from pathlib import Path
 
 import httpx
 import jwt
@@ -503,81 +504,135 @@ def test_the_gate_cannot_be_enforced_without_a_signing_key(tmp_path):
         assert gate.tokens == []
 
 
-# --- Seat routing and subdomain binding (docs/35) -------------------------------
+# --- Seat fleet: first come first served (docs/35) -------------------------------
 
 SEAT_DOMAIN = "example.test"
-ALICE_HOST = f"alice.console.{SEAT_DOMAIN}"
-BOB_HOST = f"bob.console.{SEAT_DOMAIN}"
+SEAT1_HOST = f"seat-1.console.{SEAT_DOMAIN}"
+SEAT2_HOST = f"seat-2.console.{SEAT_DOMAIN}"
 
 
-def seat_portal(tmp_path):
-    """A portal with two provisioned seats: alice owns UNION_ID, bob owns user 2."""
+def seat_portal(tmp_path, capacity: int = 2):
+    """A portal with a fleet of generic seats and an empty claims file."""
     tokens.generate_keypair(tmp_path / "portal.pem")
     apps = tmp_path / "apps.yaml"
     apps.write_text(yaml.safe_dump({"apps": {"bridgeflow": {
         "audience": "bridgeflow", "redirect_uri": "http://web.test/after-login",
         "origins": ["http://web.test"]}}}), encoding="utf-8")
     homes = tmp_path / "homes"
-    for seat, launch in (("alice", "seat-token-alice"), ("bob", "seat-token-bob")):
-        home = homes / seat
+    fleet = []
+    for index in range(1, capacity + 1):
+        name = f"seat-{index}"
+        home = homes / name
         home.mkdir(parents=True)
-        (home / ".web-launch-token").write_text(launch + "\n", encoding="utf-8")
+        (home / ".web-launch-token").write_text(f"seat-token-{index}\n", encoding="utf-8")
+        fleet.append({"name": name, "port": 3100 + index, "home": str(home)})
     seats = tmp_path / "seats.yaml"
-    seats.write_text(yaml.safe_dump({"seats": [
-        {"name": "alice", "sub": UNION_ID, "port": 3101, "home": str(homes / "alice")},
-        {"name": "bob", "sub": OTHER_PROFILE["union_id"], "port": 3102, "home": str(homes / "bob")},
-    ]}), encoding="utf-8")
+    seats.write_text(yaml.safe_dump({"seats": fleet}), encoding="utf-8")
+    claims = tmp_path / "seats-assigned.json"
+    claims.write_text("{}", encoding="utf-8")
     cfg = Settings(feishu_app_id="cli_test", feishu_app_secret="secret",
                    feishu_base_url="https://feishu.test", key_path=str(tmp_path / "portal.pem"),
                    session_secret="s" * 32, external_base_url="http://portal.test",
-                   apps_path=str(apps), seats_path=str(seats), seat_base_domain=SEAT_DOMAIN)
+                   apps_path=str(apps), seats_path=str(seats), seat_base_domain=SEAT_DOMAIN,
+                   seat_assignments_path=str(claims))
     tenant = Tenant(users={"code-good": PROFILE, "code-other": OTHER_PROFILE,
                            "code-nobody": NOBODY_PROFILE})
     return create_app(cfg, transport=httpx.MockTransport(tenant))
 
 
-def test_a_seat_holder_is_handed_to_their_own_console(tmp_path):
+def claims_path(tmp_path) -> str:
+    return str(tmp_path / "seats-assigned.json")
+
+
+def test_the_first_authorized_person_claims_the_first_seat(tmp_path):
     with TestClient(seat_portal(tmp_path), follow_redirects=False) as client:
         login(client)
         response = client.get("/enter")
         assert response.status_code == 200
-        assert ALICE_HOST in response.text
-        assert "seat-token-alice" in response.text
-        assert BOB_HOST not in response.text
+        assert SEAT1_HOST in response.text
+        assert "seat-token-1" in response.text
+        assert SEAT2_HOST not in response.text
+    # The claim persists in the state file the portal re-reads per request.
+    import json as _json
+    assert _json.loads(Path(claims_path(tmp_path)).read_text()) == {UNION_ID: "seat-1"}
 
 
-def test_a_signed_in_person_without_a_seat_is_refused(tmp_path):
+def switch_user(client, code: str) -> None:
+    """A second login on the same client: /login skips Feishu when a session
+    already exists, so end it first or the state param never appears."""
+    client.post("/logout")
+    login(client, code=code)
+
+
+def test_a_claim_is_reused_not_doubled_on_later_entries(tmp_path):
     with TestClient(seat_portal(tmp_path), follow_redirects=False) as client:
-        login(client, code="code-nobody")
+        login(client)
+        client.get("/enter")
+        second = client.get("/enter")
+        assert second.status_code == 200
+        assert SEAT1_HOST in second.text
+        # A second person takes the NEXT seat, never the same one.
+        switch_user(client, "code-other")
+        other = client.get("/enter")
+        assert other.status_code == 200
+        assert SEAT2_HOST in other.text
+
+
+def test_a_full_fleet_refuses_the_next_person(tmp_path):
+    with TestClient(seat_portal(tmp_path, capacity=1), follow_redirects=False) as client:
+        login(client)
+        assert client.get("/enter").status_code == 200
+        switch_user(client, "code-other")
         response = client.get("/enter")
         assert response.status_code == 403
-        assert "席位" in response.text
+        assert "席位已满" in response.text
 
 
-def test_verify_admits_a_seat_owner_on_their_own_subdomain(tmp_path):
+def test_verify_admits_the_claimer_on_their_own_subdomain(tmp_path):
     with TestClient(seat_portal(tmp_path), follow_redirects=False) as client:
         login(client)
-        assert client.get("/verify", headers={"host": ALICE_HOST}).status_code == 200
+        client.get("/enter")  # claims seat-1
+        assert client.get("/verify", headers={"host": SEAT1_HOST}).status_code == 200
 
 
-def test_verify_refuses_someone_elses_seat_subdomain(tmp_path):
+def test_verify_refuses_someone_elses_and_unclaimed_seats(tmp_path):
     with TestClient(seat_portal(tmp_path), follow_redirects=False) as client:
         login(client)
-        response = client.get("/verify", headers={"host": BOB_HOST})
-        assert response.status_code == 403
+        client.get("/enter")  # claims seat-1; seat-2 stays unclaimed
+        assert client.get("/verify", headers={"host": SEAT2_HOST}).status_code == 403
+        # The claimer of seat-1 cannot pass as the owner of seat-2 either.
+        response = client.get("/verify", headers={"host": SEAT2_HOST})
         assert "席位" in response.json()["detail"]
+
+
+def test_an_ops_release_takes_effect_without_a_portal_restart(tmp_path):
+    import json as _json
+    with TestClient(seat_portal(tmp_path), follow_redirects=False) as client:
+        login(client)
+        client.get("/enter")  # claims seat-1
+        Path(claims_path(tmp_path)).write_text("{}", encoding="utf-8")  # ops release
+        assert client.get("/verify", headers={"host": SEAT1_HOST}).status_code == 403
+        again = client.get("/enter")  # re-claims the first free seat
+        assert again.status_code == 200
+        assert SEAT1_HOST in again.text
+        assert _json.loads(Path(claims_path(tmp_path)).read_text()) == {UNION_ID: "seat-1"}
 
 
 def test_verify_ignores_non_seat_hosts_when_seats_are_configured(tmp_path):
     with TestClient(seat_portal(tmp_path), follow_redirects=False) as client:
         login(client)
+        client.get("/enter")
         assert client.get("/verify", headers={"host": "portal.test"}).status_code == 200
         assert client.get("/verify").status_code == 200
 
 
-def test_health_reports_the_seat_count(tmp_path):
-    with TestClient(seat_portal(tmp_path)) as client:
-        assert client.get("/health").json()["seats"] == 2
+def test_health_reports_the_fleet_and_claim_counts(tmp_path):
+    with TestClient(seat_portal(tmp_path), follow_redirects=False) as client:
+        health = client.get("/health").json()
+        assert health["seats"] == 2 and health["seats_assigned"] == 0
+        login(client)
+        client.get("/enter")
+        assert client.get("/health").json()["seats_assigned"] == 1
 
 
 def test_a_broken_seat_registry_does_not_boot(tmp_path):
@@ -585,18 +640,57 @@ def test_a_broken_seat_registry_does_not_boot(tmp_path):
 
     broken = tmp_path / "seats.yaml"
     broken.write_text(yaml.safe_dump({"seats": [
-        {"name": "alice", "sub": UNION_ID, "port": 3101, "home": "/tmp/a"},
-        {"name": "alice-clone", "sub": UNION_ID, "port": 3102, "home": "/tmp/b"},
+        {"name": "seat-1", "port": 3101, "home": "/tmp/a"},
+        {"name": "seat-1", "port": 3102, "home": "/tmp/b"},
     ]}), encoding="utf-8")
-    with pytest.raises(RuntimeError, match="sub"):
+    with pytest.raises(RuntimeError, match="name"):
         load_seats(str(broken), SEAT_DOMAIN, "https")
 
     relative = tmp_path / "relative.yaml"
     relative.write_text(yaml.safe_dump({"seats": [
-        {"name": "alice", "sub": UNION_ID, "port": 3101, "home": "data/homes/alice"},
+        {"name": "seat-1", "port": 3101, "home": "data/homes/seat-1"},
     ]}), encoding="utf-8")
     with pytest.raises(RuntimeError, match="absolute"):
         load_seats(str(relative), SEAT_DOMAIN, "https")
 
     with pytest.raises(RuntimeError, match="cannot be read"):
         load_seats(str(tmp_path / "no-such-registry.yaml"), SEAT_DOMAIN, "https")
+
+
+def test_a_seat_fleet_without_an_assignments_file_does_not_boot(tmp_path):
+    tokens.generate_keypair(tmp_path / "portal.pem")
+    apps = tmp_path / "apps.yaml"
+    apps.write_text(yaml.safe_dump({"apps": {"bridgeflow": {
+        "audience": "bridgeflow", "redirect_uri": "http://web.test/after-login",
+        "origins": ["http://web.test"]}}}), encoding="utf-8")
+    seats = tmp_path / "seats.yaml"
+    seats.write_text(yaml.safe_dump({"seats": [
+        {"name": "seat-1", "port": 3101, "home": "/tmp/seat-1"}]}), encoding="utf-8")
+    cfg = Settings(feishu_app_id="cli_test", feishu_app_secret="secret",
+                   feishu_base_url="https://feishu.test", key_path=str(tmp_path / "portal.pem"),
+                   session_secret="s" * 32, external_base_url="http://portal.test",
+                   apps_path=str(apps), seats_path=str(seats), seat_base_domain=SEAT_DOMAIN)
+    with pytest.raises(RuntimeError, match="PORTAL_SEAT_ASSIGNMENTS"):
+        create_app(cfg, transport=httpx.MockTransport(Tenant()))
+
+
+def test_with_the_gate_on_an_unauthorized_person_claims_nothing(tmp_path):
+    """First-come-first-served applies among the authorized, not to everyone."""
+    homes = tmp_path / "homes"
+    homes.mkdir()
+    fleet = [{"name": "seat-1", "port": 3101, "home": str(homes / "seat-1")}]
+    seats = tmp_path / "seats.yaml"
+    seats.write_text(yaml.safe_dump({"seats": fleet}), encoding="utf-8")
+    claims = tmp_path / "seats-assigned.json"
+    claims.write_text("{}", encoding="utf-8")
+    gate = Gate(allowed=False)
+    app = gated(tmp_path, gate,
+                seats_path=str(seats), seat_base_domain=SEAT_DOMAIN,
+                seat_assignments_path=str(claims))
+    with TestClient(app, follow_redirects=False) as client:
+        login(client)
+        response = client.get("/enter")
+        assert response.status_code == 403
+        assert "没有控制台授权" in response.text
+    # Nothing was claimed: the denial did not consume capacity.
+    assert claims.read_text(encoding="utf-8") == "{}"

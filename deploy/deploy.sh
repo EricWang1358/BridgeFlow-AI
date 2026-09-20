@@ -16,20 +16,10 @@ VENV="$HOME/Hackathon2026/.venv/bin/python"
 
 cd "$ROOT"
 git fetch origin main
-# The seat registry is tracked AND instance state: provisioning edits it in
-# place (scripts/provision_seat.sh) and the PR that copies it back may lag a
-# deploy. Same survival rule as env.sh — stash, reset, restore.
-SEATS_FILE="data/mappings/seats.yaml"
-SEATS_KEEP=""
-if [ -f "$SEATS_FILE" ]; then
-  SEATS_KEEP="$(mktemp)"
-  cp "$SEATS_FILE" "$SEATS_KEEP"
-fi
+# The seat fleet (data/mappings/seats.yaml) is static capacity committed via PR,
+# so reset --hard is safe for it; the runtime claims (data/seats-assigned.json)
+# are untracked instance state and survive every reset untouched.
 git reset --hard "${1:-origin/main}"
-if [ -n "$SEATS_KEEP" ]; then
-  cp "$SEATS_KEEP" "$SEATS_FILE"
-  rm -f "$SEATS_KEEP"
-fi
 
 # Dependencies and the client bundle are rebuilt every deploy: both are
 # cached and take seconds, and the rebuild keeps dist/client.js newer than

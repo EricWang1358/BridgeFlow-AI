@@ -85,24 +85,27 @@ wiki 成员接口返回 open_id，与登录用的 union_id 不同源；桥是门
 这一步不是按人隔离：控制台仍然共用，同时在里面的人互相可见。按人隔离已按
 [`35`](35-seat-isolation.md) 落地为席位方案，见下节。
 
-## 席位路由与子域名绑定（2026-09-20，docs/35）
+## 席位认领与子域名绑定（2026-09-20，docs/35；同日改为先到先得）
 
-按人隔离的形态是一人一个 dsh 实例（席位），门户是唯一入口，两处行为随
-`PORTAL_SEATS_PATH`（指向 `data/mappings/seats.yaml`，配 `PORTAL_SEAT_BASE_DOMAIN`）
-开启；未配置时门户行为与从前完全相同：
+按人隔离的形态是**固定容量的通用席位**（一人一个 dsh 实例），先到先得认领——配置文件里
+不出现任何人名。门户两处行为随 `PORTAL_SEATS_PATH`（容量声明 `data/mappings/seats.yaml`）、
+`PORTAL_SEAT_BASE_DOMAIN`、`PORTAL_SEAT_ASSIGNMENTS`（认领状态 `data/seats-assigned.json`，
+untracked 实例状态）开启；未配置时门户行为与从前完全相同：
 
-- **`/enter` 按登录人路由**：会话 `sub` 在注册表里 → 交接到 `https://<seat>.console.<domain>/`
-  并带上该席位自己 `DSH_HOME` 里的 launch token；不在注册表里 → 403「没有为你开通席位」，
-  绝不落到别人的实例。
-- **`/verify` 的席位绑定校验**（在门禁之前、且独立于门禁）：请求 Host 是某个席位子域名而
-  登录人不是该席位所有者 → 403「这是他人的工作区席位」。这是路由层事实，不是角色问题，
-  所以门禁关闭的部署上它同样成立。Caddy `forward_auth` 保留原始 Host（备用读
-  `X-Forwarded-Host`），这一点在实例上的实测记在 [`35`](35-seat-isolation.md) §7。
-- `/health` 上报 `"seats": <N>`，preflight 据此核对注册表与运行态一致。
+- **`/enter` 认领或复用**：已有认领 → 交接到自己席位 `https://<seat>.console.<domain>/`
+  并带该席位 home 的 launch token；无认领 → 先过 `console_access` 门禁（无授权者不消耗
+  容量），通过即认领第一个空位；满员 → 403「席位已满」。认领文件逐请求重读，运维释放
+  即时生效、无需重启门户。
+- **`/verify` 的席位绑定校验**（在门禁之前、且独立于门禁）：请求 Host 的席位认领人 ==
+  登录人才放行；他人席位与**未认领席位**一律 403。这是路由层事实，门禁关闭的部署上它
+  同样成立。Caddy `forward_auth` 保留原始 Host（备用读 `X-Forwarded-Host`）。
+- `/health` 上报 `"seats": <容量>` 与 `"seats_assigned": <认领数>`，preflight 据此核对
+  两份文件与运行态一致。
 
-角色事实不因席位而变：谁能拥有席位仍是 `access-control.yaml` 的 `console_access`，
-注册表只回答「这个 sub 的席位在哪个端口、哪个 home」。飞书与 Lark 的 `union_id`
-不同源，同一个人在两个平台就是两个主体、两个席位——拍板记录在 [`35`](35-seat-isolation.md) §0。
+角色事实不因先到先得而变：**能否认领**仍由 `access-control.yaml` 的 `console_access`
+决定（#229），先到先得只在获授权者之间进行；腾出席位是显式运维动作
+（`provision_seat.sh --release`，home 归档不丢数据）。飞书与 Lark 的 `union_id` 不同源，
+同一个人在两个平台就是两个主体、可各自认领——拍板记录在 [`35`](35-seat-isolation.md) §0。
 
 ## 可见性规则（本期粒度：按部门过滤批次）
 

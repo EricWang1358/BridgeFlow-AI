@@ -4,8 +4,9 @@
 
 ## 席位化隔离落地（2026-09-20，docs/35）
 
-#230 从「推后的评估」升级为**已实施的 7 席位静态方案**：一人一个常驻 dsh 实例（各自
-`DSH_HOME`、回环端口、子域名），方案、拍板与运行手册全在 [docs/35](docs/35-seat-isolation.md)。
+#230 从「推后的评估」升级为**已实施的 7 席位方案（先到先得）**：固定容量通用席位
+（seat-1…7，各自 `DSH_HOME`、回环端口、子域名），获授权者先到先得认领、认领即绑定；
+方案、拍板与运行手册全在 [docs/35](docs/35-seat-isolation.md)。
 本机已验证：`start_web.py --backend-only/--web-only` 三模式、共享 token 探活、
 全新 home 首启自建（闲时 RSS 224–289MB，过门线 300MB，**7 席位 ≈2.0GB 贴 slice 预算线**，
 Linux 实测 >280MB 就减席位或升配）、门户 `/enter` 按人路由与 `/verify` 子域名绑定（39/39
@@ -15,17 +16,20 @@ Linux 实测 >280MB 就减席位或升配）、门户 `/enter` 按人路由与 `
 `env.sh.example`；文档同步 00/22/27/34/35。
 
 **实例侧待人工（部署时做，清单顺序即依赖顺序）**：① env.sh 写入共享 `BRIDGEFLOW_SERVICE_TOKEN`
-（32+ 字符）；② 重跑 `bootstrap.sh`（装 slice/单元模板/swap/重渲 Caddy）；③ 逐席位
-`BRIDGEFLOW_DOMAIN=<domain> scripts/provision_seat.sh <name> <union_id>` + 每席位一条
-DNS A 记录；④ 核对每位席位所有者的角色声明了 `console_access`；⑤ `preflight.sh` 全绿；
-⑥ 两人实测：进错子域名收 403、会话互不可见、重启席位历史仍在。原「全 Web 化四件人做的事」
-（真人入库、开门禁、Caddy 透传、真实模型归属）仍要做——席位化不替代门禁，两者叠加。
+（32+ 字符）；② 重跑 `bootstrap.sh`（装 slice/单元模板/swap/重渲 Caddy）；③
+`BRIDGEFLOW_DOMAIN=<domain> scripts/provision_seat.sh --init 7` 建席位舰队（**先到先得**：
+配置里没有人名，获 `console_access` 授权者第一个进入即认领）+ 每席位一条 DNS A 记录
+（seat-1..seat-7.console.<域名>）；④ `preflight.sh` 全绿；⑤ 双人实测：各认领各的席位、
+进错/未认领子域名收 403、会话互不可见、重启席位历史在、第 8 人收「席位已满」。
+原「全 Web 化四件人做的事」（真人入库、开门禁、Caddy 透传、真实模型归属）仍要做——
+席位化不替代门禁，两者叠加；门禁（`console_access`）是认领的前置。腾位用
+`provision_seat.sh --release <union_id>`（home 归档、即时生效）。
 
-**部署流水线已适配（合并前已改并本地全绿）**：`deploy.sh` 三处——席位注册表
-`data/mappings/seats.yaml` 在 `git reset --hard` 前后保留（实例状态，同 env.sh 家族）；
-每次部署顺带重启全部 `bridgeflow-dsh@*` 单元（席位加载的插件与 bundle 才会更新）；
-web 活性检查按部署形态分流（`--backend-only` 时查席位单元，一个都没开通则跳过并告警，
-3080 只在旧形态检查）。CI test job 补装并跑 `portal/tests`（席位路由与绑定校验从此有门禁）。
+**部署流水线已适配（合并前已改并本地全绿）**：`deploy.sh` 两处——每次部署顺带重启全部
+`bridgeflow-dsh@*` 单元（席位加载的插件与 bundle 才会更新）；web 活性检查按部署形态分流
+（`--backend-only` 时查席位单元，一个都没开通则跳过并告警，3080 只在旧形态检查）。
+认领文件 `data/seats-assigned.json` 是 untracked 实例状态，`git reset --hard` 天然不碰。
+CI test job 补装并跑 `portal/tests`（席位认领与绑定校验从此有门禁）。
 **注意合并即切换**：主单元变 backend-only 后、席位开通前，公网控制台不可用且 CI 公开活性
 检查会红（apex 仍指向已死的 3080）——这是预期的过渡窗口，开通完席位即恢复；不接受窗口就
 拆两个 PR（先落机制保留旧单元，开通后再切换单元文件）。

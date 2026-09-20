@@ -33,7 +33,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from portal_app import pages
 from portal_app.config import Settings, settings
 from portal_app.feishu import FeishuError, FeishuOAuth, NotConfigured
-from portal_app.seats import Seats, load_seats
+from portal_app.seats import Assignments, Seats, load_seats
 from portal_app.tokens import Signer, seal, seal_secret, unseal, unseal_secret
 
 SESSION_COOKIE = "portal_session"
@@ -96,7 +96,19 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
     if cfg.seats_path:
         scheme = "https" if cfg.external_base_url.startswith("https") else "http"
         seats = load_seats(cfg.seats_path, cfg.seat_base_domain, scheme)
-        logger.info("portal seats: %s", seats.names())
+        if not cfg.seat_assignments_path:
+            raise RuntimeError("PORTAL_SEAT_ASSIGNMENTS is required when PORTAL_SEATS_PATH is set "
+                               "(scripts/provision_seat.sh --init writes it into env.sh)")
+        # One validating read at boot; requests re-read so an ops release lands
+        # without a portal restart.
+        def seat_state() -> Assignments:
+            return Assignments(cfg.seat_assignments_path)
+
+        logger.info("portal seats: %s capacity, %s claimed",
+                    len(seats), len(seat_state().as_map()))
+    else:
+        def seat_state() -> Assignments:  # pragma: no cover - unreachable without seats
+            raise RuntimeError("seat state requested without a seat fleet")
 
     app = FastAPI(title="BridgeFlow login portal", version="0.2.0")
     app.add_middleware(
@@ -191,8 +203,10 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
                 # Whether /verify enforces the console grant, so preflight can see
                 # the gate's state without reading the deploy's environment.
                 "console_gate": bool(cfg.console_check_url),
-                # Seat routing (docs/35): 0 = single-console behaviour.
-                "seats": len(seats) if seats is not None else 0}
+                # Seat fleet (docs/35): 0 = single-console behaviour; with a
+                # fleet, assigned counts the first-come-first-served claims.
+                "seats": len(seats) if seats is not None else 0,
+                "seats_assigned": len(seat_state().as_map()) if seats is not None else 0}
 
     # response_model=None: the union return annotation is not a Pydantic field type.
     @app.get("/", response_model=None)
@@ -288,11 +302,17 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
             host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "")
             host = host.split(":", 1)[0]
             seat = seats.for_host(host)
-            if seat is not None and seat.sub != session["sub"]:
-                logger.warning("seat %s denied to subject %s", seat.name, session["sub"])
-                return blocked(403, "这是他人的工作区席位",
-                               "每个席位属于一个人，你登录的身份不是这个席位的所有者。"
-                               "进入你自己的工作区请从门户首页进入；需要开通席位请联系总经办管理员。")
+            if seat is not None:
+                # Binding is a fact about the claim state, re-read per request:
+                # an ops release takes effect on the very next request, not at
+                # the next portal restart. An unclaimed seat belongs to nobody.
+                owner = seat_state().sub_for_seat(seat.name)
+                if owner != session["sub"]:
+                    logger.warning("seat %s (owner=%s) denied to subject %s",
+                                   seat.name, owner or "unclaimed", session["sub"])
+                    return blocked(403, "这是他人的工作区席位",
+                                   "每个席位属于第一个认领它的人，你登录的身份不是这个席位的所有者。"
+                                   "进入你自己的工作区请从门户首页进入；席位已满或需要释放请联系总经办管理员。")
 
         if not cfg.console_check_url:
             return JSONResponse({"ok": True, "sub": session["sub"]})
@@ -335,10 +355,10 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
     async def enter(request: Request, app: Annotated[str, Query()] = "") -> HTMLResponse | RedirectResponse:
         """Hand a signed-in browser over to the app's own session.
 
-        Seat deployments (docs/35) route by the signed-in person: the registry
-        says whose console this is, and a person without a seat is told so
-        instead of being handed to somebody else's instance. Without a seat
-        registry the single-console behaviour is unchanged.
+        Seat deployments (docs/35) are first come first served: the first
+        authorized person to enter claims a free seat and keeps it; later
+        entries reuse the claim. Without a seat fleet the single-console
+        behaviour is unchanged.
 
         dsh web mints its native session only from the launch token it prints
         once per boot; start_web.py captures that token into the seat's own
@@ -354,11 +374,34 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
             # domain (docs/22 §9b), where "/" is the app, not the portal.
             return RedirectResponse(cfg.external_base_url.rstrip("/") + "/", status_code=302)
         if seats is not None:
-            seat = seats.for_sub(session["sub"])
+            # First come first served (docs/35): an authorized person claims a
+            # free seat on first entry and keeps it — their sessions live in
+            # that seat's home. Release is an ops act (provision_seat.sh
+            # --release), never a request the portal serves.
+            state = seat_state()
+            seat_name = state.seat_for(session["sub"])
+            if seat_name is None:
+                if cfg.console_check_url:
+                    try:
+                        allowed = await console_allowed(session)
+                    except ConsoleUnavailable as exc:
+                        return error(503, "暂时无法确认你的访问范围",
+                                     f"{exc} 这不是拒绝：系统没能确认你的授权，稍后重试或联系管理员。")
+                    if not allowed:
+                        return error(403, "没有控制台授权",
+                                     "你已登录，但没有被授予进入 AI 控制台的权限。授权由管理员在访问配置的"
+                                     "角色上声明，需要时请联系总经办管理员。")
+                seat_name = state.claim(session["sub"], seats.names())
+                if seat_name is None:
+                    return error(403, "席位已满",
+                                 f"当前 {len(seats)} 个席位都已有人认领。请管理员释放空闲席位"
+                                 "（scripts/provision_seat.sh --release <union_id>）后再试。")
+                logger.info("seat %s claimed by subject %s", seat_name, session["sub"])
+            seat = seats.seat(seat_name)
             if seat is None:
-                return error(403, "没有为你开通席位",
-                             "你已登录，但席位注册表中没有你的工作区。席位由管理员经 "
-                             "scripts/provision_seat.sh 开通（docs/35），需要请联系总经办管理员。")
+                return error(503, "席位配置不一致",
+                             f"认领记录指向不存在的席位 {seat_name!r}；请检查 seats.yaml 与"
+                             " seats-assigned.json 是否被手工改动过。")
             return handover(seats.url(seat), str(seat.token_file), f"seat {seat.name} home")
         name = resolve_app(app)
         if name is None:

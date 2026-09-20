@@ -289,15 +289,19 @@ ss -tlnp                                # 公网监听仅 sshd 与 caddy
 
 ```bash
 # bootstrap.sh 已自动装单元/slice/swap(2G, swappiness=10)并按 seats.yaml 渲染 Caddy；
-# 开通一个席位（名字 + 该人的 union_id）：
-BRIDGEFLOW_DOMAIN=<domain> scripts/provision_seat.sh gm1 on_xxxxxxxx
+# 建 7 席位舰队（一次性，通用席位、先到先得认领，配置里没有任何人名）：
+BRIDGEFLOW_DOMAIN=<domain> scripts/provision_seat.sh --init 7
+# 状态 / 腾位：
+BRIDGEFLOW_DOMAIN=<domain> scripts/provision_seat.sh --status
+BRIDGEFLOW_DOMAIN=<domain> scripts/provision_seat.sh --release <union_id>
 ```
 
-Caddy 由 `deploy/render_caddy.py` 从 `data/mappings/seats.yaml` 渲染：无注册表时与
-§7 旧形态逐字节相同（apex 即控制台）；有注册表时 apex 永久重定向到门户，每个席位
-一个显式子域名站点块（`<seat>.console.<domain>`，forward_auth → 门户 /verify，
+Caddy 由 `deploy/render_caddy.py` 从 `data/mappings/seats.yaml` 渲染：无容量文件时与
+§7 旧形态逐字节相同（apex 即控制台）；有容量时 apex 永久重定向到门户，每个席位一个
+显式子域名站点块（`<seat>.console.<domain>`，forward_auth → 门户 /verify，
 reverse_proxy → 127.0.0.1:<port>）。**每个席位需要一条 DNS A 记录**；Caddy 对显式
-主机名各自取证书，7 席位不需要泛域名。
+主机名各自取证书，7 席位不需要泛域名。认领状态在 `data/seats-assigned.json`（untracked，
+每次部署天然幸存）；部署会顺带重启全部席位单元。
 
 席位模式检查已进 `preflight.sh`（单元/token/端口/子域名 401/slice 围栏/swap/席位数 ≤7），
 未配置注册表时全部静默。运行手册（开通、撤销归档、升级重启顺序）见 [`35`](35-seat-isolation.md) §8。

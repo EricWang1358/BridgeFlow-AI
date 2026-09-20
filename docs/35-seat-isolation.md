@@ -11,8 +11,9 @@ M0 spike 数字在 [`00`](00-status.md)；门户行为有测试（`portal/tests/
 | --- | --- |
 | 一人一个**常驻** dsh 实例，静态供给，不做按需拉起/空闲回收 | 本轮讨论，2026-09-20 |
 | 席位数 7；服务器 4GB（Lightsail，Ubuntu 24.04） | 本轮讨论 |
-| 注册表按门户 `sub`（union_id）直接键路由，**不做**规范 ID 间接层 | 「飞书/Lark 是两个工作区」拍板 |
-| `access-control.yaml` 仍是角色/操作唯一事实来源；席位持有者必须有 `console_access` | 沿用 #229 |
+| **先到先得（2026-09-20 追加拍板）**：席位是固定容量的通用实例（seat-1…seat-7），配置文件里**不出现任何人名**；有 `console_access` 的登录者第一个进入即认领、认领即长期绑定。释放是运维动作（`provision_seat.sh --release`） | 本轮讨论 |
+| 认领状态不做规范 ID 间接层；飞书/Lark 是两个工作区，同一人跨平台=两个主体=两次认领 | 「飞书/Lark 是两个工作区」拍板 |
+| `access-control.yaml` 仍是角色/操作唯一事实来源；**能否认领席位由 `console_access` 决定**，先到先得只在获授权者之间进行 | 沿用 #229 |
 | 不做：跨实例审批总线、会话 DB 审计层（后续叠加）、多节点 | docs/34 拍板延续 |
 
 ## 1 · 目标与非目标
@@ -47,7 +48,7 @@ M0 spike 数字在 [`00`](00-status.md)；门户行为有测试（`portal/tests/
             │
           Caddy（每席位一块：forward_auth → 门户 /verify；reverse_proxy → 127.0.0.1:310x）
             │
-          /verify：① 会话有效 ② console_access ③ Host 的席位 == 登录人 sub   ← 新增③
+          /verify：① 会话有效 ② console_access ③ Host 席位的认领人 == 登录人 sub   ← 新增③
             │
    ┌────────┴──────────────────────────────────────────┐
    │ bridgeflow.service（改后端专用）: uvicorn :8000    │  全局唯一 backend
@@ -57,18 +58,30 @@ M0 spike 数字在 [`00`](00-status.md)；门户行为有测试（`portal/tests/
    └───────────────────────────────────────────────────┘
 ```
 
-**席位注册表 `data/mappings/seats.yaml`**（随 git 走 PR，与 access-control.yaml 同纪律）：
+**两份席位文件，纪律不同**：
 
-```yaml
-seats:
-  - name: gm1            # 子域名标签 + 单元实例名 + home 目录名
-    sub: "oun_xxxxxxxx"  # 门户 subject（飞书 union_id）
-    port: 3101           # 3101–3107
-```
+- **`data/mappings/seats.yaml` = 容量声明**（随 git 走 PR，与 access-control.yaml 同纪律）。
+  只写席位本身，**不出现任何人名**：
+  ```yaml
+  seats:
+    - {name: seat-1, port: 3101, home: "<repo>/data/homes/seat-1"}
+    # … seat-2 … seat-7
+  ```
+- **`data/seats-assigned.json` = 认领状态**（untracked 实例状态，`git reset --hard` 天然不碰，
+  deploy 也不需要任何保护逻辑）。门户是唯一写入方，每次认领原子重写：
+  ```json
+  {"oun_xxx…": "seat-1"}
+  ```
+
+**认领语义**：`/enter` 时按请求重读认领文件——已有认领 → 复用（会话历史跟着席位走）；
+无认领且门禁通过 → 认领第一个空位；满员 → 403「席位已满」。门禁（#229 `console_access`）
+在**首次认领前**检查：无授权者不消耗容量。运维释放（`--release <sub>`：除名 + home 归档 +
+新 home + 重启单元）在下一个请求即生效，无需重启门户。
 
 **校验链**（谁也绕不过去的三层）：进子域名 → Caddy forward_auth 问 `/verify` →
-门户查会话 + console_access + `Host`↔`sub` 绑定；直连他人端口不可达（dsh web 只绑
-127.0.0.1）；拿到子域名但无对方 launch token/session cookie → dsh 自身凭据栅栏拒绝。
+门户查会话 + console_access + 该席位认领人 == 登录人（未认领的席位对所有人 403）；直连
+他人端口不可达（dsh web 只绑 127.0.0.1）；拿到子域名但无对方 launch token/session cookie →
+dsh 自身凭据栅栏拒绝。
 
 **内存预算（4GB）**：地板 ~850MB + backend ~350MB（尖峰预留 1.2GB，靠 `MemoryMax` 兜住）
 + 7 席位 × 250MB ≈ 1.75GB 常驻；并发研判 ≤3 个的峰值 ≈ 2.2GB；2GB swap 吸收闲置页。
@@ -82,14 +95,16 @@ seats:
 | 2 | `deploy/bridgeflow.service` | `ExecStart` 改 `--backend-only`；加 `MemoryHigh=1G`、`MemoryMax=1.3G`（摄取尖峰伤不到席位） |
 | 3 | `deploy/bridgeflow-dsh@.service`（新增） | 模板单元：`EnvironmentFile=data/homes/%i/seat.env`（`DSH_SEAT_PORT`），`ExecStart=bash -c 'source env.sh && export DSH_HOME=<repo>/data/homes/%i && python scripts/start_web.py --web-only --host 127.0.0.1 --port $DSH_SEAT_PORT --trusted-host %i.console.<domain>'`；`Slice=bridgeflow-dsh.slice`、`MemoryMax=512M`、`Restart=on-failure` |
 | 4 | `deploy/bridgeflow-dsh.slice`（新增） | `MemoryHigh=1.6G`、`MemoryMax=2.0G` |
-| 5 | `data/mappings/seats.yaml`（新增） | §3 的注册表；`console_access` 与席位的对应关系在 PR review 时人工核对 |
-| 6 | `portal/src/portal_app/main.py` | ① `/enter`：加载 seats.yaml，按会话 `sub` 查席位 → 目标 `https://<seat>.console.<domain>/`、token 文件取 `data/homes/<seat>/.web-launch-token`；无注册表时保持现有单实例行为（开发机兼容）。② `/verify`：新增席位绑定校验——`Host` 匹配 `*.console.<domain>` 时，要求 `session.sub == 该席位.sub`，否则 403；非席位 Host 走现有逻辑 |
-| 7 | `portal/` 配置 | 新增 `PORTAL_SEAT_BASE_DOMAIN`、`PORTAL_SEATS_PATH`（缺省沿用旧行为）；`PORTAL_COOKIE_DOMAIN` 必须是父域（`.example.com`），覆盖席位子域名 |
-| 8 | `deploy/bootstrap.sh` | 渲染 Caddy 时按 seats.yaml 生成每席位站点块（显式子域名，逐个自动 HTTPS）；新增 2GB swapfile + `vm.swappiness=10` 持久化 |
-| 9 | `scripts/provision_seat.sh`（新增） | 开通一个席位：按 M0 定稿的初始化清单建 `data/homes/<seat>/` → 写 `seat.env` → 追加 seats.yaml → 渲染 Caddy 并 reload → `systemctl enable --now bridgeflow-dsh@<seat>`。撤销为其逆操作（停单元、home 归档到备份、注册表移除、Caddy 重渲） |
-| 10 | `deploy/preflight.sh` | 席位模式开启时新增检查：注册表可解析、席位数 ≤7（容量口径。注意 MemoryMax 是**封顶不是预留**，各席位封顶之和可超 slice，这是设计而非错误）、门户上报的席位数与注册表一致、slice 围栏生效（MemoryMax=2147483648）、每席位单元 active / token 文件非空 / 回环端口在听 / 子域名无 cookie 访问收 401、swap ≥2G。无注册表时全部静默跳过 |
-| 11 | `portal/tests/` | `/verify` 绑定校验单测（sub↔Host 三种组合）；`/enter` 按注册表路由的单测 |
-| 12 | 文档 | 本文档 + [`00`](00-status.md)（spike 数字）、[`22`](22-lightsail-deploy.md)（单元/Caddy/swap 小节）、[`27`](27-login-portal.md)（/enter 席位路由、/verify 第三层校验）、[`34`](34-web-refactor-plan.md)（#230 条目指向本文）、`../HANDOFF.md` 同步 |
+| 5 | `data/mappings/seats.yaml`（新增） | §3 的容量声明（无任何个人信息）；`--init N` 生成，PR 只 review 容量 |
+| 6 | `portal/src/portal_app/seats.py`（新增） | `Seats`（容量加载与校验）+ `Assignments`（认领状态：读/幂等认领/原子写） |
+| 7 | `portal/src/portal_app/main.py` | ① `/enter`：已有认领→复用；无认领→门禁（#229）通过后认领第一个空位，满员 403「席位已满」；认领文件按请求重读（运维释放即时生效）。② `/verify`：席位绑定校验——该席位的认领人 == 登录人，未认领席位对所有人 403。③ `/health` 上报 `seats`/`seats_assigned`。无 `PORTAL_SEATS_PATH` 时行为与从前完全一致 |
+| 8 | `portal/` 配置 | 新增 `PORTAL_SEATS_PATH`、`PORTAL_SEAT_BASE_DOMAIN`、`PORTAL_SEAT_ASSIGNMENTS`（三项一起生效，缺认领路径 fail-fast）；`PORTAL_COOKIE_DOMAIN` 必须是父域（`.example.com`），覆盖席位子域名 |
+| 9 | `deploy/bootstrap.sh` | 渲染 Caddy 时按 seats.yaml 生成每席位站点块（显式子域名，逐个自动 HTTPS）；新增 2GB swapfile + `vm.swappiness=10` 持久化 |
+| 10 | `scripts/provision_seat.sh`（新增） | `--init N`：生成容量文件 + 各席位 home/seat.env + 单元 + Caddy + env.sh 三项导出（有认领时禁止缩容）；`--release <sub>`：除名 + home 归档（客户资产，#232 保留纪律）+ 新 home + 重启单元；`--status`：席位/认领/单元一览 |
+| 11 | `deploy/preflight.sh` | 席位模式开启时新增检查：容量可解析、认领文件与舰队一致（指向存在、不重复、不超容）、门户上报数与两份文件一致、席位数 ≤7（MemoryMax 是**封顶不是预留**，封顶之和可超 slice，设计如此）、slice 围栏生效、每席位单元 active / token 非空 / 端口在听 / 子域名无 cookie 访问 401、swap ≥2G。无注册表时全部静默跳过 |
+| 12 | `portal/tests/` | 认领/复用/满员/绑定/未认领 403/门禁拦截不耗容量/运维释放即时生效/坏配置 fail-fast（12 项） |
+| 13 | `deploy/deploy.sh` | 部署后顺带重启全部席位单元（否则席位继续跑旧插件代码）；web 活性按部署形态分流（`--backend-only` 查席位单元，无席位则跳过并告警）；认领文件 untracked 天然幸存，无需暂存逻辑 |
+| 14 | 文档 | 本文档 + [`00`](00-status.md)（spike 数字）、[`22`](22-lightsail-deploy.md)（单元/Caddy/swap 小节）、[`27`](27-login-portal.md)（/enter 认领、/verify 第三层校验）、[`34`](34-web-refactor-plan.md)（#230 条目指向本文）、`../HANDOFF.md` 同步 |
 
 不动的：`access-control.yaml` 语义、backend 全部 API、`plugins/src/actor.ts`（#231 一人一
 进程后归属自动无歧义，零改动）、审批面（原生审批留在本人控制台，跨人审批走 backend 队列）。
@@ -109,14 +124,18 @@ seats:
 
 ## 6 · 验收清单
 
-1. 7 席位在线；每人经门户只被送进自己的子域名；手输他人子域名收 403（/verify 绑定校验）。
+1. 7 席位在线；两个已授权者先后进入，各认领各的席位、只被送进自己的子域名；手输他人
+   或未认领的子域名收 403（/verify 绑定校验）。
 2. 任意两席位：会话、笔记本、待审批互不可见（物理隔离，非过滤）。
-3. 席位单元 `systemctl restart` 后历史会话仍在（home 在盘上）。
-4. 归属：单席位内模型触发的读取带正确的 `x-bridgeflow-user`（#231 无歧义）。
-5. `bridgeflow-dsh.slice` 2.0G、单元 512M、backend 1.3G 围栏在 `systemctl show` 可见；swap 2G 激活。
-6. `deploy/preflight.sh` 在实例全绿；spike 数字在 [`00`](00-status.md)。
-7. 开发机 `start_web.py` 默认单进程流行为不变（回归项）。
-8. 对外口径更新：「控制台按人隔离」可以讲；「席位成本封顶」仍不可讲（静态方案无弹性）。
+3. 席位单元 `systemctl restart` 后历史会话仍在（home 在盘上）；再次进入复用同一席位。
+4. 第 8 个获授权者进入收 403「席位已满」，不消耗任何容量；`--release` 后下一个进入者
+   认领该席位，且得到的是全新空 home。
+5. 归属：单席位内模型触发的读取带正确的 `x-bridgeflow-user`（#231 无歧义）。
+6. `bridgeflow-dsh.slice` 2.0G、单元 512M、backend 1.3G 围栏在 `systemctl show` 可见；swap 2G 激活。
+7. `deploy/preflight.sh` 在实例全绿；spike 数字在 [`00`](00-status.md)。
+8. 开发机 `start_web.py` 默认单进程流行为不变（回归项）。
+9. 对外口径更新：「控制台按人隔离、席位先到先得」可以讲；「席位成本封顶」仍不可讲
+   （静态方案无弹性）。
 
 ## 7 · 风险与对策
 
@@ -124,16 +143,23 @@ seats:
 | --- | --- |
 | 实测 RSS 超规划（>300MB 闲时） | M0 是门；先垂直升配 8GB，不硬塞 4GB |
 | Caddy `forward_auth` 未按预期透传 Host | M3 首项验证；不行改用 `X-Forwarded-Host`（Caddy 显式 `header_up`），属小改 |
-| 全新 `DSH_HOME` 初始化踩坑（profiles/credentials 缺失） | M0 定稿清单前不开工；供给脚本逐项复制模板内容并校验 |
+| 全新 `DSH_HOME` 初始化踩坑 | M0 已定稿：零仓库内容、dsh 首启自建（[`00`](00-status.md)） |
+| 先到先得被「占坑」：早到的低频用户长期占席位 | 接受（拍板）；需要腾位时 `--release` 是显式运维动作，home 归档不丢数据 |
 | 月尖峰：多单上传 + 多人研判叠加 | backend `MemoryMax` 优先保 backend；并发重研判 ≤3 写进运维手册；swap 兜闲置页 |
 | 7 席位 ×512M 触 slice 上限被杀 | 这就是设计：OOM 只死一个席位，preflight 提示扩容/升配 |
 | `env.sh` 内 `DSH_HOME` 导出与席位覆盖打架 | 席位单元 `source env.sh` 后**再** `export DSH_HOME=...` 覆盖，写进模板注释与测试 |
+| 认领文件被手工改坏 | 逐请求重读时 fail-fast（明确报错，不猜测）；preflight 有一致性检查 |
 
 ## 8 · 运维手册（上线后常态操作）
 
-- **开通席位**：`scripts/provision_seat.sh <name> <sub>` → 核对该 `sub` 的角色已声明
-  `console_access` → 交付子域名地址。
-- **撤销席位**：逆操作 + home 归档进备份（home 是客户资产，与 #232 的保留策略合并执行）。
-- **升级**：`deploy.sh` 照旧；重启顺序 backend → 席位单元（全停 30 秒窗口，单租户可接受，
-  写进 SLA 预期）。
-- **排障**：`journalctl -u bridgeflow-dsh@<seat>`；跨席位问题先看 `/verify` 的 403 日志。
+- **建舰队**（一次性）：`BRIDGEFLOW_DOMAIN=<domain> scripts/provision_seat.sh --init 7` →
+  每席位一条 DNS A 记录 → 获授权者自然先到先得。有认领时禁止缩容，先 `--release`。
+- **看状态**：`scripts/provision_seat.sh --status`（舰队、认领、单元）；门户 `/health` 的
+  `seats` / `seats_assigned` 同口径。
+- **腾出席位**：`scripts/provision_seat.sh --release <union_id>`——除名、home 归档进
+  `_archive/`（客户资产，#232 保留纪律）、新 home、重启单元；原主人下一次请求即被
+  /verify 拒绝，下一个进入者认领到全新席位。
+- **升级**：`deploy.sh` 照旧（会顺带重启全部席位单元）；全停 30 秒窗口，单租户可接受，
+  写进 SLA 预期。
+- **排障**：`journalctl -u bridgeflow-dsh@<seat>`；跨席位问题先看 `/verify` 的 403 日志；
+  认领对不上看 `data/seats-assigned.json`。
