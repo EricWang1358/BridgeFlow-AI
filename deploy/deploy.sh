@@ -16,7 +16,20 @@ VENV="$HOME/Hackathon2026/.venv/bin/python"
 
 cd "$ROOT"
 git fetch origin main
+# The seat registry is tracked AND instance state: provisioning edits it in
+# place (scripts/provision_seat.sh) and the PR that copies it back may lag a
+# deploy. Same survival rule as env.sh — stash, reset, restore.
+SEATS_FILE="data/mappings/seats.yaml"
+SEATS_KEEP=""
+if [ -f "$SEATS_FILE" ]; then
+  SEATS_KEEP="$(mktemp)"
+  cp "$SEATS_FILE" "$SEATS_KEEP"
+fi
 git reset --hard "${1:-origin/main}"
+if [ -n "$SEATS_KEEP" ]; then
+  cp "$SEATS_KEEP" "$SEATS_FILE"
+  rm -f "$SEATS_KEEP"
+fi
 
 # Dependencies and the client bundle are rebuilt every deploy: both are
 # cached and take seconds, and the rebuild keeps dist/client.js newer than
@@ -31,21 +44,46 @@ uv pip install -e "backend[dsh,dev]" -e portal --python "$VENV"
 )
 
 sudo systemctl restart bridgeflow bridgeflow-portal
+# Seat consoles load the host-side plugin and the client bundle at their own
+# boot; without this they keep serving the previous deploy's code until an
+# unlucky per-unit restart (docs/35 §8: backend and portal first, then seats).
+SEAT_UNITS=()
+while IFS= read -r unit; do
+  [ -n "$unit" ] && SEAT_UNITS+=("$unit")
+done < <(systemctl list-units 'bridgeflow-dsh@*' --no-legend --plain 2>/dev/null | awk '{print $1}')
+if [ "${#SEAT_UNITS[@]}" -gt 0 ]; then
+  sudo systemctl restart "${SEAT_UNITS[@]}"
+fi
 
 ok=""
 for _ in $(seq 1 30); do
   sleep 2
   # Bounded curl: without --max-time a stalled request could outlast the
   # whole 30×2s retry budget.
-  # 3080 (dsh web) is the port Caddy actually serves for the main domain.
-  # It boots a few seconds after uvicorn, so skipping it here lets the CI
-  # liveness check race into a 502. Its session fence may answer non-200,
-  # so the bar is "someone answers" (status != 000), not 200.
-  web_code=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 \
-    http://127.0.0.1:3080/ || true)
-  if curl -fsS --connect-timeout 2 --max-time 5 http://127.0.0.1:8000/health >/dev/null 2>&1 \
+  #
+  # Web liveness depends on the deployed shape (docs/35): with --backend-only
+  # in bridgeflow.service the consoles live in bridgeflow-dsh@* units and 3080
+  # is legitimately dead. Between this deploy's arrival and the first
+  # provisioning there is no web surface at all — warn and pass; preflight
+  # owns that window. Legacy shape keeps the old bar on 3080: "someone
+  # answers" (status != 000), not 200 — its session fence may refuse.
+  web_ok=""
+  if grep -q -- "--backend-only" deploy/bridgeflow.service; then
+    for unit in "${SEAT_UNITS[@]}"; do
+      if systemctl is-active --quiet "$unit"; then web_ok=1; break; fi
+    done
+    if [ -z "$web_ok" ] && [ "${#SEAT_UNITS[@]}" -eq 0 ]; then
+      echo "seat mode deployed but no seat provisioned yet — web liveness skipped (bootstrap + provision_seat, docs/35 §8)" >&2
+      web_ok=1
+    fi
+  else
+    web_code=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 \
+      http://127.0.0.1:3080/ || true)
+    [ "$web_code" != "000" ] && web_ok=1
+  fi
+  if [ -n "$web_ok" ] \
+     && curl -fsS --connect-timeout 2 --max-time 5 http://127.0.0.1:8000/health >/dev/null 2>&1 \
      && curl -fsS --connect-timeout 2 --max-time 5 http://127.0.0.1:8100/health >/dev/null 2>&1 \
-     && [ "$web_code" != "000" ] \
      && systemctl is-active --quiet bridgeflow \
      && systemctl is-active --quiet bridgeflow-portal; then
     ok=1

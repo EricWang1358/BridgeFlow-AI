@@ -143,12 +143,11 @@ def main() -> None:
         check_client_build(ROOT)
     dsh = web_command() if run_web else ""
     env = dict(os.environ)
-    if backend_only or web_only:
+    if (backend_only or web_only) and len(os.environ.get("BRIDGEFLOW_SERVICE_TOKEN", "")) < 32:
         # Split deployments share this credential across processes; minting a
         # fresh random one here would lock every other process out.
-        if len(os.environ.get("BRIDGEFLOW_SERVICE_TOKEN", "")) < 32:
-            raise SystemExit("Split mode requires BRIDGEFLOW_SERVICE_TOKEN (32+ chars) in the "
-                             "launching environment — set it in env.sh, shared by backend and seats")
+        raise SystemExit("Split mode requires BRIDGEFLOW_SERVICE_TOKEN (32+ chars) in the "
+                         "launching environment — set it in env.sh, shared by backend and seats")
     env.setdefault("BRIDGEFLOW_SERVICE_TOKEN", secrets.token_urlsafe(32))
     env["BRIDGEFLOW_ENABLE_LEGACY_CONSOLE"] = "false"
     env["BRIDGEFLOW_ENABLE_LEGACY_PIPELINE"] = "false"

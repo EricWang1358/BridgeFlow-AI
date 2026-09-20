@@ -53,6 +53,15 @@ jobs:
         working-directory: backend
         run: ../.venv/bin/pytest -q
 
+      # The portal grew real behaviour (seat routing, /verify binding, #229
+      # gate, #231 binding flow) — its tests must gate deploys like the
+      # backend's do, in the same venv.
+      - name: Install portal (tests)
+        run: uv pip install -e "portal[dev]" --python .venv/bin/python
+
+      - name: Portal pytest
+        run: .venv/bin/python -m pytest portal/tests -q
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
