@@ -7,6 +7,10 @@
 set -uo pipefail
 
 DOMAIN="${1:?usage: bash deploy/preflight.sh <domain>}"
+# Exported on purpose: several checks expand $DOMAIN inside `bash -c` children
+# (the seat-subdomain loop), where an unexported shell variable arrives empty
+# and the curl targets "https://seat-1.console./" — a self-inflicted 000.
+export DOMAIN
 ROOT="$HOME/Hackathon2026/BridgeFlow-AI"
 failed=0
 check() {  # check <description> <command...>
@@ -37,6 +41,19 @@ check "portal env is complete (env.sh)" bash -c 'source env.sh && [[ -n "${PORTA
 check "portal registry sends logins through /enter" bash -c 'source env.sh && grep -qE "redirect_uri: *\"?[^\"]*/enter/?\"? *$" "${PORTAL_APPS_PATH:-portal/apps.yaml}"'
 # shellcheck disable=SC1091
 check "portal registry names app_uri" bash -c 'source env.sh && grep -qE "^ *app_uri: *\"?https?://" "${PORTAL_APPS_PATH:-portal/apps.yaml}"'
+# The shared host credential must be ONE FIXED LITERAL in env.sh. A $(...)
+# mint inside the quotes looks fine and is fatal in split mode: every unit
+# sources env.sh at its own restart moment, each source re-mints, and the
+# seats 401 against the backend (the 2026-09-20 outage was exactly that
+# line). Silent when the variable is unset: the single-process default mints
+# its own internally and that is supported.
+token_first=$(bash -c 'source env.sh && printf %s "${BRIDGEFLOW_SERVICE_TOKEN:-}"')
+token_second=$(bash -c 'source env.sh && printf %s "${BRIDGEFLOW_SERVICE_TOKEN:-}"')
+if [ -n "$token_first" ]; then
+  check "env.sh hands out one stable service token" test "$token_first" = "$token_second"
+  # shellcheck disable=SC1091
+  check "backend accepts the token env.sh hands out" bash -c 'source env.sh && test "$(curl -s -o /dev/null -w %{http_code} --max-time 5 -H "authorization: Bearer $BRIDGEFLOW_SERVICE_TOKEN" -H "content-type: application/json" -d "{}" http://127.0.0.1:8000/tools/list-metrics)" = 200'
+fi
 # start_web.py captures dsh web's launch token by regex; an empty file means the
 # capture missed and first-time browsers will meet dsh's own 401. A seat
 # deployment has no shared console — each seat's own file is checked instead.
@@ -81,6 +98,17 @@ PY
   check "each seat unit is active" bash -c 'for seat in '"$seat_names"'; do systemctl is-active --quiet "bridgeflow-dsh@$seat" || exit 1; done'
   check "each seat captured its launch token" bash -c 'for seat in '"$seat_names"'; do test -s "data/homes/$seat/.web-launch-token" || exit 1; done'
   check "each seat listens on its loopback port" bash -c "for port in $seat_ports; do ss -tlnH | grep -q \"127.0.0.1:\$port \" || exit 1; done"
+  # The backend and every seat were launched by units that each sourced env.sh
+  # at their own restart: their process environments must still hold the token
+  # env.sh hands out NOW, or a rotated env.sh left running processes split
+  # into two trust domains (401s) until the next restart.
+  check "backend and every seat run env.sh's current token" bash -c '
+    want=$(source env.sh && printf %s "$BRIDGEFLOW_SERVICE_TOKEN")
+    for pid in "$(systemctl show -p MainPID --value bridgeflow)" $(for seat in '"$seat_names"'; do systemctl show -p MainPID --value "bridgeflow-dsh@$seat"; done); do
+      [ -n "$pid" ] || exit 1
+      got=$(tr "\0" "\n" < "/proc/$pid/environ" 2>/dev/null | sed -n "s/^BRIDGEFLOW_SERVICE_TOKEN=//p")
+      [ "$got" = "$want" ] || exit 1
+    done'
   check "each seat subdomain is gated (cookie-less curl is 401)" bash -c 'for seat in '"$seat_names"'; do test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 "https://$seat.console.$DOMAIN/")" = 401 || exit 1; done'
   # mkswap keeps one header page, so a 2G file reports 2097148 kB: demand
   # 2G minus a megabyte, not a byte-exact bar that can never be met.

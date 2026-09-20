@@ -48,11 +48,15 @@ def test_the_unit_runs_the_launcher_that_exists():
     assert command.endswith("/BridgeFlow-AI/run.sh") and (REPO_ROOT / "run.sh").stat().st_mode & 0o111
 
 
-def test_the_health_path_deploy_waits_for_is_a_route():
-    routes = {getattr(r, "path", "") for r in app.routes}
+def test_the_backend_paths_the_scripts_probe_are_routes():
+    # app.openapi() flattens every included router; iterating app.routes does
+    # not, because this FastAPI wraps includes as _IncludedRouter with no .path
+    # — a blindness that hid every /tools/* route until preflight started
+    # probing one.
+    paths = set(app.openapi()["paths"])
     for script in ("deploy.sh", "preflight.sh"):
         for path in re.findall(r"http://127\.0\.0\.1:8000(/[\w/-]+)", (DEPLOY / script).read_text(encoding="utf-8")):
-            assert path in routes, (script, path)
+            assert path in paths, (script, path)
 
 
 def test_ci_deploys_stay_off_until_a_person_enables_them():
