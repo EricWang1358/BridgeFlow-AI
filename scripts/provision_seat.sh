@@ -17,13 +17,17 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DOMAIN="${BRIDGEFLOW_DOMAIN:?set BRIDGEFLOW_DOMAIN=<your apex domain>, e.g. example.com}"
 SEATS="$ROOT/data/mappings/seats.yaml"
 CLAIMS="${PORTAL_SEAT_ASSIGNMENTS:-$ROOT/data/seats-assigned.json}"
 HOMES="$ROOT/data/homes"
 VENV_PY="$ROOT/../.venv/bin/python"
 
 die() { echo "provision_seat: $*" >&2; exit 1; }
+
+# Only --init/--release need the domain (seat.env hosts, Caddy rendering);
+# --status works without it, so demanding it there just gets in the way.
+DOMAIN="${BRIDGEFLOW_DOMAIN:-}"
+need_domain() { [[ -n "$DOMAIN" ]] || die "set BRIDGEFLOW_DOMAIN=<your apex domain>, e.g. example.com"; }
 
 fleet_names()  { "$VENV_PY" - "$SEATS" << 'PY'
 import sys, yaml
@@ -70,6 +74,7 @@ ensure_portal_env() {
 }
 
 init_fleet() {
+  need_domain
   local count="${1:?usage: provision_seat.sh --init <N>}"
   [[ "$count" =~ ^[1-9][0-9]*$ ]] || die "N must be a positive integer (got: $count)"
   [[ "$count" -le 16 ]] || die "refusing >16 seats on one box — revisit the capacity plan (docs/35 §3)"
@@ -119,6 +124,7 @@ EOF
 }
 
 release_seat() {
+  need_domain
   local sub="${1:?usage: provision_seat.sh --release <union_id>}"
   [[ -f "$CLAIMS" ]] || die "no claims file at $CLAIMS"
   local name

@@ -1,0 +1,22 @@
+seats:
+- name: seat-1
+  port: 3101
+  home: /home/ubuntu/Hackathon2026/BridgeFlow-AI/data/homes/seat-1
+- name: seat-2
+  port: 3102
+  home: /home/ubuntu/Hackathon2026/BridgeFlow-AI/data/homes/seat-2
+- name: seat-3
+  port: 3103
+  home: /home/ubuntu/Hackathon2026/BridgeFlow-AI/data/homes/seat-3
+- name: seat-4
+  port: 3104
+  home: /home/ubuntu/Hackathon2026/BridgeFlow-AI/data/homes/seat-4
+- name: seat-5
+  port: 3105
+  home: /home/ubuntu/Hackathon2026/BridgeFlow-AI/data/homes/seat-5
+- name: seat-6
+  port: 3106
+  home: /home/ubuntu/Hackathon2026/BridgeFlow-AI/data/homes/seat-6
+- name: seat-7
+  port: 3107
+  home: /home/ubuntu/Hackathon2026/BridgeFlow-AI/data/homes/seat-7

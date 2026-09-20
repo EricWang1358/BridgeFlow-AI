@@ -694,3 +694,11 @@ def test_with_the_gate_on_an_unauthorized_person_claims_nothing(tmp_path):
         assert "没有控制台授权" in response.text
     # Nothing was claimed: the denial did not consume capacity.
     assert claims.read_text(encoding="utf-8") == "{}"
+
+
+def test_the_seat_assignments_env_name_is_the_one_the_scripts_write(tmp_path, monkeypatch):
+    """The portal once crashed on a live deploy because the field spelled its
+    env var PORTAL_SEAT_ASSIGNMENTS_PATH while provision_seat.sh (and every
+    doc) writes PORTAL_SEAT_ASSIGNMENTS. The alias is the contract — pin it."""
+    monkeypatch.setenv("PORTAL_SEAT_ASSIGNMENTS", "/tmp/claims.json")
+    assert Settings().seat_assignments_path == "/tmp/claims.json"
