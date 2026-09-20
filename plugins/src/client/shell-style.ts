@@ -103,6 +103,12 @@ body[data-bf-notebook] [data-slot="root"] > [data-details-collapsed] > div:has(>
 .bf-studio-tools [data-tone=green] { background: color-mix(in srgb, #809f83 20%, var(--bf-shell-pane)) }
 .bf-studio-tools [data-tone=pink] { background: color-mix(in srgb, #b58cae 20%, var(--bf-shell-pane)) }
 .bf-studio-tools [data-tone=teal] { background: color-mix(in srgb, #6f9fa6 20%, var(--bf-shell-pane)) }
+/* Four destinations carry the work. The other workspaces are reachable, not competing: one
+   row each, quiet, under a label that spans the grid. */
+.bf-studio-tools .bf-studio-group { grid-column: 1 / -1; margin: 12px 2px 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .65 }
+.bf-studio-tools button[data-secondary=true] { grid-column: 1 / -1; min-height: 0; grid-template-columns: auto 1fr auto; align-items: center; padding: 9px 12px; background: transparent; box-shadow: inset 0 0 0 1px var(--bf-shell-border) }
+.bf-studio-tools button[data-secondary=true] > span:first-child { grid-column: auto; font-size: 13px }
+.bf-inline-preview { margin-top: 4px }
 .bf-shell-pane button:disabled { opacity: .5; cursor: default }
 .bf-artifacts { border-top: 1px solid var(--bf-shell-border); margin-top: 18px; padding-top: 16px }
 .bf-artifacts > header, .bf-inline-preview > header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px }
