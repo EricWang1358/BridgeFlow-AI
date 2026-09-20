@@ -44,27 +44,47 @@ done < <(systemctl list-units 'bridgeflow-dsh@*' --no-legend --plain 2>/dev/null
 if [ "${#SEAT_UNITS[@]}" -gt 0 ]; then
   sudo systemctl restart "${SEAT_UNITS[@]}"
 fi
+# A seat's loopback port, keyed by seat name — the readiness loop below waits
+# for each unit's own port, not just "a port somewhere".
+declare -A SEAT_PORTS=()
+if [ -f data/mappings/seats.yaml ]; then
+  while IFS= read -r pair; do
+    SEAT_PORTS["${pair%%:*}"]="${pair##*:}"
+  done < <("$VENV" -c "import yaml
+for s in (yaml.safe_load(open('data/mappings/seats.yaml')) or {}).get('seats') or []:
+    print(f\"{s['name']}:{s['port']}\")" 2>/dev/null)
+fi
 
 ok=""
-for _ in $(seq 1 30); do
+for _ in $(seq 1 45); do
   sleep 2
   # Bounded curl: without --max-time a stalled request could outlast the
   # whole 30×2s retry budget.
   #
   # Web liveness depends on the deployed shape (docs/35): with --backend-only
   # in bridgeflow.service the consoles live in bridgeflow-dsh@* units and 3080
-  # is legitimately dead. Between this deploy's arrival and the first
-  # provisioning there is no web surface at all — warn and pass; preflight
-  # owns that window. Legacy shape keeps the old bar on 3080: "someone
-  # answers" (status != 000), not 200 — its session fence may refuse.
+  # is legitimately dead. "is-active" only means the wrapper process started —
+  # a seat is really serving once its launch token landed AND its loopback port
+  # answers; CI's preflight runs seconds after this script, so "still booting"
+  # must hold the loop, not fail the deploy. Between this deploy's arrival and
+  # the first provisioning there is no web surface at all — warn and pass;
+  # preflight owns that window. Legacy shape keeps the old bar on 3080:
+  # "someone answers" (status != 000), not 200 — its session fence may refuse.
   web_ok=""
   if grep -q -- "--backend-only" deploy/bridgeflow.service; then
-    for unit in "${SEAT_UNITS[@]}"; do
-      if systemctl is-active --quiet "$unit"; then web_ok=1; break; fi
-    done
-    if [ -z "$web_ok" ] && [ "${#SEAT_UNITS[@]}" -eq 0 ]; then
+    if [ "${#SEAT_UNITS[@]}" -eq 0 ]; then
       echo "seat mode deployed but no seat provisioned yet — web liveness skipped (bootstrap + provision_seat, docs/35 §8)" >&2
       web_ok=1
+    else
+      web_ok=1
+      for unit in "${SEAT_UNITS[@]}"; do
+        seat="${unit#bridgeflow-dsh@}"
+        port="${SEAT_PORTS[$seat]:-}"
+        systemctl is-active --quiet "$unit" || { web_ok=""; break; }
+        [ -s "data/homes/$seat/.web-launch-token" ] || { web_ok=""; break; }
+        [ -n "$port" ] || { web_ok=""; break; }
+        ss -tlnH | grep -q "127.0.0.1:$port " || { web_ok=""; break; }
+      done
     fi
   else
     web_code=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 \
