@@ -224,7 +224,8 @@ sudo apt update && sudo apt install -y caddy
 `/etc/caddy/Caddyfile`（实例文件，**不进仓库**）——两个站点，门户站点
 必须在门户进程起来之前就位也行，Caddy 会各自签证书。主站带
 `forward_auth`：每个请求先问门户 `/verify`，没有登录会话的浏览器拿到
-401 引导页，被送去门户登录——AI 对话页面本身也在门后：
+401 引导页，被送去门户登录——AI 对话页面本身也在门后。开了控制台门禁（§9d）之后
+这一跳还会答 403（已登录但无授权）与 503（授权无法确认），Caddyfile 本身不用改：
 
 ```caddyfile
 <domain> {
@@ -408,8 +409,11 @@ curl -sI https://<domain>/                                # 无会话仍是 401�
 sudo systemctl restart bridgeflow                         # 恢复后回到 200
 ```
 
-403 与 503 都经由 Caddy `forward_auth` 透传给浏览器；这一跳的真实形态尚未在实例上验过
-（[`00`](00-status.md) 记为未验），放行前自己点一遍。
+403 与 503 都经由 Caddy `forward_auth` 透传给浏览器（§7 的配置不用改）；这一跳的真实形态
+尚未在实例上验过（[`00`](00-status.md) 记为未验），放行前自己点一遍。
+
+`deploy/preflight.sh` 会挡住上面那个顺序错误：门禁已开而没有任何角色声明 `console_access` 时
+它报 FAIL。门禁关闭时这条检查沉默——关闭是受支持的默认值，不是待办。
 
 文件缺失时数据面是 503「未配置」，这是设计的中间态（fail-closed），不是故障。
 放行前跑侦察脚本确认五个库的成员可读——脚本只认 shell 导出的凭据，先 `source env.sh`

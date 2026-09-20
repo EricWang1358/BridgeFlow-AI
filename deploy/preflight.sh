@@ -42,6 +42,21 @@ check "portal registry names app_uri" bash -c 'source env.sh && grep -qE "^ *app
 # shellcheck disable=SC1091
 check "dsh launch token was captured" bash -c 'source env.sh && test -s "${PORTAL_DSH_TOKEN_FILE:-$DSH_HOME/.web-launch-token}"'
 check "portal is configured (feishu credentials + signing key loaded)" bash -c 'curl -fsS --max-time 5 http://127.0.0.1:8100/health | grep -q "\"feishu\": *true" && curl -fsS --max-time 5 http://127.0.0.1:8100/health | grep -q "\"signer\": *true"'
+# The console gate refuses whoever holds no console_access grant, so enabling it
+# before any role declares that operation locks every employee out of the whole
+# site (docs/22 §9d). Asked through the app's own loader, not a grep, so the
+# answer cannot drift from what /verify will decide — and so an unparseable ACL
+# fails here too. Silent when the gate is off: that is the supported default.
+# shellcheck disable=SC1091
+check "console gate, when on, has a role that can pass it" bash -c '
+  curl -fsS --max-time 5 http://127.0.0.1:8100/health | grep -q "\"console_gate\": *true" || exit 0
+  source env.sh
+  "$HOME/Hackathon2026/.venv/bin/python" -c "
+import sys
+from bridgeflow.access import CONSOLE_OPERATION
+from bridgeflow.access_resolver import structure
+roles = structure()[\"roles\"].values()
+sys.exit(0 if any(CONSOLE_OPERATION in (r.get(\"operations\") or []) for r in roles) else 1)"'
 check "nothing but ssh and caddy listens publicly" bash -c '! ss -tlnH | awk "{print \$4}" | grep -vE "^(127\.0\.0\.1|\[::1\]):" | grep -vE ":(22|80|443)$"'
 # forward_auth gates the main site, so a cookie-less curl is *supposed* to be
 # refused: 401 is the healthy answer here, 200 only if the gate is off.

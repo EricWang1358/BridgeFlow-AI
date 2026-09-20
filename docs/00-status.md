@@ -60,7 +60,12 @@
 
 Python 后端 **699 passed**（`test_identity.py` 新增 4 条）、门户 **32 passed**（新增 7 条），两处 ruff 全过。
 
+收口时补了一条部署预检（`deploy/preflight.sh`）：门禁已开而没有任何角色声明 `console_access` 时报 FAIL——顺序反了会把所有人锁在门外（[`22`](22-lightsail-deploy.md) §9d）。
+判定调 `access_resolver.structure()` 自己的加载器，不用 grep（YAML 注释里也写着这个词，grep 会误判）。两条分支各跑过一次：现行 `access-control.yaml` 只有
+`master_office_admin` 一个角色声明它，退出码 **0**；抹掉那一处授权的副本退出码 **1**。门禁关闭时该检查沉默。
+
 **未验**：真实飞书租户下的端到端（真人尚未加入知识库，见 HANDOFF）；Caddy `forward_auth` 对 403/503 的透传形态只读代码确认，没起真实 Caddy 跑过；
+上面那条预检只在开发机上按两条分支验过逻辑，没在实例上完整跑过 `preflight.sh`（其余检查需要 systemd 与真实域名）；
 本轮没有前端改动，也没有浏览器旅程证据。离线通过不等于部署可用。
 
 ## E13 第二轮：跨期对比与差异分解（2026-09-19，#191）
