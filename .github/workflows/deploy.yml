@@ -70,9 +70,10 @@ jobs:
           pnpm --dir plugins test
 
   deploy:
-    # Temporarily gated off: the Lightsail instance isn't provisioned yet.
-    # Re-enable without a commit by adding repo variable DEPLOY_ENABLED=true
-    # (Settings → Secrets and variables → Actions → Variables).
+    # Live since 2026-09-14: the instance is provisioned and DEPLOY_ENABLED=true,
+    # so every merge to main really deploys. The variable stays as the kill
+    # switch — unset it (Settings → Secrets and variables → Actions → Variables)
+    # to stop deploying without touching this file.
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.DEPLOY_ENABLED == 'true'
     needs: test
     runs-on: ubuntu-latest
