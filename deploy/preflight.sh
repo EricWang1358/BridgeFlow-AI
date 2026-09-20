@@ -100,9 +100,16 @@ from bridgeflow.access import CONSOLE_OPERATION
 from bridgeflow.access_resolver import structure
 roles = structure()[\"roles\"].values()
 sys.exit(0 if any(CONSOLE_OPERATION in (r.get(\"operations\") or []) for r in roles) else 1)"'
-check "nothing but ssh and caddy listens publicly" bash -c '! ss -tlnH | awk "{print \$4}" | grep -vE "^(127\.0\.0\.1|\[::1\]):" | grep -vE ":(22|80|443)$"'
-# forward_auth gates the main site, so a cookie-less curl is *supposed* to be
-# refused: 401 is the healthy answer here, 200 only if the gate is off.
-check "main site is gated by the portal on https://$DOMAIN" bash -c 'test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 https://'"$DOMAIN"'/)" = 401'
+# 127.0.0.53/54:53 are systemd-resolved's DNS stubs — loopback like any other
+# 127.x, so the whole range is private, not just 127.0.0.1.
+check "nothing but ssh and caddy listens publicly" bash -c '! ss -tlnH | awk "{print \$4}" | grep -vE "^(127\.|\[::1\]):" | grep -vE ":(22|80|443)$"'
+# The anonymous-answer expectation differs by shape (docs/35 §3): a seat
+# deployment redirects the apex to the portal (3xx), the legacy shape answers
+# dsh's own 401 through forward_auth.
+if bash -c 'source env.sh && [[ -n "${PORTAL_SEATS_PATH:-}" ]]'; then
+  check "main site redirects to the portal on https://$DOMAIN" bash -c 'code=$(curl -s -o /dev/null -w %{http_code} --max-time 10 "https://'"$DOMAIN"'/"); case "$code" in 301|302|307|308) exit 0;; *) exit 1;; esac'
+else
+  check "main site is gated by the portal on https://$DOMAIN" bash -c 'test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 https://'"$DOMAIN"'/)" = 401'
+fi
 check "portal health answers on https://portal.$DOMAIN" curl -fsS --max-time 10 "https://portal.$DOMAIN/health"
 exit $failed
