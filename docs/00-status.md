@@ -11,6 +11,31 @@
 
 ---
 
+## 席位化隔离 M0 spike：全新 DSH_HOME 与单实例内存（2026-09-20，#230 落地）
+
+开发机（macOS, arm64）实测，方案与门槛见 [`35`](35-seat-isolation.md) §5 M0。三项结论：
+
+- **全新 `DSH_HOME` 零仓库内容即可首启自建**。`dsh web --patch dsh/enterprise.patch.yml`
+  启动时从仓库 cwd 注入全部接线（persona 走 `./dsh/presets`、插件走 `../plugins/src/index.ts`、
+  backendUrl 固定 `127.0.0.1:8000`），首启在 home 内自建：`.credentials.yaml`、
+  `profiles/{node_modules,web}`、`storages/workspace.json`；home 的用户 patch 层为空（`[]`）。
+  席位供给脚本不需要复制任何模板内容，建目录即可。
+- **单实例闲时 RSS ≈ 224MB 裸起 / ≈ 289MB 经 start_web.py 完整路径**（`ps -o rss`，node
+  单进程、无子进程；macOS 数字，Linux 实例上由 preflight 复核）。均低于 300MB 过门线；
+  按完整路径口径 7 席位 ≈ 2.0GB，**贴着 slice 2.0GB 预算线**——若 Linux 实测 RSS >280MB，
+  先减为 6 席位或升配 8GB（docs/35 §7 风险表），不硬撑。
+- **冷启动 ≈ 1s**（全新 home，从拉起到 launch token 行出现；1 秒粒度）。
+
+未测：真实模型运行下的研判峰值 RSS（MemoryMax=512M 围栏兜底，上线后以 `systemctl status`
+实测回填）。复现：
+
+```bash
+DSH_HOME=$(mktemp -d) dsh web --patch dsh/enterprise.patch.yml --no-open --host 127.0.0.1 --port 3091
+ps -o rss= -p <pid>   # 等 30s 后读
+```
+
+---
+
 ## 全 Web 化第 3 步：模型发起的读取归属到人（2026-09-20，#231）
 
 离线实现与验证，未调用模型、未接真实飞书租户。设计与边界见 [`27`](27-login-portal.md) 末节，计划见 [`34`](34-web-refactor-plan.md) 第 3 步。

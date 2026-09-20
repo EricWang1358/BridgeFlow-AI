@@ -10,8 +10,16 @@
 # appear nowhere here). start_web.py supervises both children and its SIGTERM
 # handler stops them cleanly, so Restart=on-failure covers the whole chain.
 #
-# --host 127.0.0.1 keeps dsh web loopback-only; Caddy is the only public
-# listener. The backend uvicorn is hardcoded to 127.0.0.1:8000.
+# --host 127.0.0.1 keeps the loopback-only rule: backend uvicorn is hardcoded
+# to 127.0.0.1:8000 and no seat port is public; Caddy is the only public
+# listener.
+#
+# --backend-only (docs/35): this unit is now the ONE shared backend; per-user
+# consoles live in bridgeflow-dsh@<seat>.service instances. Dev machines keep
+# the default two-child mode of scripts/start_web.py. Split mode requires
+# BRIDGEFLOW_SERVICE_TOKEN in env.sh, the same value in every seat unit (the
+# approval-receipt HMAC keys on it). Memory fences: an ingest spike (25MB xlsx
+# × pandas amplification, #228) may not eat the seats' budget.
 #
 # --trusted-host admits the public authority into dsh web's /api
 # browser-trust fence. Which exact form the fence matches (host vs
@@ -19,7 +27,7 @@
 # fails, pass both: --trusted-host <domain> --trusted-host <domain>:443
 
 [Unit]
-Description=BridgeFlow native DSH Web + domain service
+Description=BridgeFlow shared domain service (backend only)
 After=network-online.target
 Wants=network-online.target
 
@@ -27,9 +35,11 @@ Wants=network-online.target
 Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/Hackathon2026/BridgeFlow-AI
-ExecStart=/home/ubuntu/Hackathon2026/BridgeFlow-AI/run.sh --host 127.0.0.1 --port 3080 --trusted-host <domain>
+ExecStart=/home/ubuntu/Hackathon2026/BridgeFlow-AI/run.sh --backend-only --host 127.0.0.1 --port 3080 --trusted-host <domain>
 Restart=on-failure
 RestartSec=5
+MemoryHigh=1G
+MemoryMax=1.3G
 NoNewPrivileges=true
 
 [Install]

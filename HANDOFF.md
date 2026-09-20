@@ -2,6 +2,25 @@
 
 更新：2026-09-20。**当前阶段是「全 Web 化 → Lark 接入」，顺序不可颠倒，见下面同名小节。** 该小节之外的内容属于此前已暂停的 14x 需求交付阶段，仍然有效但不是当前工作面；不要因那些旧实施计划或自动续跑继续增加功能。任何「已完成」都不代表企业验收。
 
+## 席位化隔离落地（2026-09-20，docs/35）
+
+#230 从「推后的评估」升级为**已实施的 7 席位静态方案**：一人一个常驻 dsh 实例（各自
+`DSH_HOME`、回环端口、子域名），方案、拍板与运行手册全在 [docs/35](docs/35-seat-isolation.md)。
+本机已验证：`start_web.py --backend-only/--web-only` 三模式、共享 token 探活、
+全新 home 首启自建（闲时 RSS 224–289MB，过门线 300MB，**7 席位 ≈2.0GB 贴 slice 预算线**，
+Linux 实测 >280MB 就减席位或升配）、门户 `/enter` 按人路由与 `/verify` 子域名绑定（39/39
+测试绿）、Caddy 双形态渲染、默认单进程流回归。改动清单：`scripts/start_web.py`、
+`deploy/{bridgeflow.service,bridgeflow-dsh@.service,bridgeflow-dsh.slice,bootstrap.sh,preflight.sh,render_caddy.py}`、
+`portal/src/portal_app/{seats.py,main.py,config.py}`、`scripts/provision_seat.sh`、
+`env.sh.example`；文档同步 00/22/27/34/35。
+
+**实例侧待人工（部署时做，清单顺序即依赖顺序）**：① env.sh 写入共享 `BRIDGEFLOW_SERVICE_TOKEN`
+（32+ 字符）；② 重跑 `bootstrap.sh`（装 slice/单元模板/swap/重渲 Caddy）；③ 逐席位
+`BRIDGEFLOW_DOMAIN=<domain> scripts/provision_seat.sh <name> <union_id>` + 每席位一条
+DNS A 记录；④ 核对每位席位所有者的角色声明了 `console_access`；⑤ `preflight.sh` 全绿；
+⑥ 两人实测：进错子域名收 403、会话互不可见、重启席位历史仍在。原「全 Web 化四件人做的事」
+（真人入库、开门禁、Caddy 透传、真实模型归属）仍要做——席位化不替代门禁，两者叠加。
+
 ## 评审 rubric 自评（2026-09-20）
 
 按主办方七项打分，逐条写明**证据在哪**。自评不是宣传：能指到文件与实测数字的才给分，指不到的直接说没有。

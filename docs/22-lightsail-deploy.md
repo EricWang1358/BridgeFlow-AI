@@ -278,6 +278,32 @@ ss -tlnp                                # 公网监听仅 sshd 与 caddy
 
 ---
 
+## 8b 席位化多用户隔离（2026-09-20，docs/35）
+
+主单元 `bridgeflow.service` 在席位部署里只起**共享 backend**（`--backend-only`）；
+每个授权者一个 `bridgeflow-dsh@<seat>.service` 实例（`--web-only`，各自 `DSH_HOME`
+在 `data/homes/<seat>/`，回环端口 3101+），全部归入 `bridgeflow-dsh.slice`
+（MemoryHigh=1.6G / MemoryMax=2.0G；单实例 MemoryMax=512M）。拆分模式下
+`BRIDGEFLOW_SERVICE_TOKEN` 必须在 env.sh 显式设置并由 backend 与所有席位共享
+（审批回执 HMAC 也以它为钥）。
+
+```bash
+# bootstrap.sh 已自动装单元/slice/swap(2G, swappiness=10)并按 seats.yaml 渲染 Caddy；
+# 开通一个席位（名字 + 该人的 union_id）：
+BRIDGEFLOW_DOMAIN=<domain> scripts/provision_seat.sh gm1 on_xxxxxxxx
+```
+
+Caddy 由 `deploy/render_caddy.py` 从 `data/mappings/seats.yaml` 渲染：无注册表时与
+§7 旧形态逐字节相同（apex 即控制台）；有注册表时 apex 永久重定向到门户，每个席位
+一个显式子域名站点块（`<seat>.console.<domain>`，forward_auth → 门户 /verify，
+reverse_proxy → 127.0.0.1:<port>）。**每个席位需要一条 DNS A 记录**；Caddy 对显式
+主机名各自取证书，7 席位不需要泛域名。
+
+席位模式检查已进 `preflight.sh`（单元/token/端口/子域名 401/slice 围栏/swap/席位数 ≤7），
+未配置注册表时全部静默。运行手册（开通、撤销归档、升级重启顺序）见 [`35`](35-seat-isolation.md) §8。
+
+---
+
 ## 9 登录门户（飞书 OAuth）
 
 门户是第二个常驻进程（`portal/`，127.0.0.1:8100），与主服务同机部署。

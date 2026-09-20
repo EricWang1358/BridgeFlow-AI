@@ -1,0 +1,36 @@
+# Seat unit template: one resident dsh web per authorized person (docs/35).
+# Install both this file and bridgeflow-dsh.slice as /etc/systemd/system/, then
+# provision with scripts/provision_seat.sh, which creates:
+#
+#   data/homes/<seat>/seat.env   DSH_SEAT_PORT (3101+) and DSH_SEAT_HOST
+#                                (<seat>.console.<domain>, for --trusted-host)
+#
+# env.sh exports a global DSH_HOME; each seat overrides it to its own home AFTER
+# sourcing (the override order is load-bearing — see the ExecStart line).
+# --web-only keeps start_web.py from spawning a second backend: the seat talks
+# to the one shared backend on 127.0.0.1:8000 started by bridgeflow.service.
+# BRIDGEFLOW_SERVICE_TOKEN comes from env.sh and must be the same value for
+# backend and every seat (approval-receipt HMAC keys on it).
+#
+#   sudo systemctl enable --now bridgeflow-dsh@gm1
+
+[Unit]
+Description=BridgeFlow seat console %i (per-user dsh web)
+After=network-online.target bridgeflow.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Hackathon2026/BridgeFlow-AI
+EnvironmentFile=/home/ubuntu/Hackathon2026/BridgeFlow-AI/data/homes/%i/seat.env
+# --trusted-host in both forms: host and host:port (see bridgeflow.service header)
+ExecStart=/bin/bash -c 'source env.sh && export DSH_HOME="$PWD/data/homes/%i" && exec ../.venv/bin/python scripts/start_web.py --web-only --host 127.0.0.1 --port "$DSH_SEAT_PORT" --trusted-host "$DSH_SEAT_HOST" --trusted-host "$DSH_SEAT_HOST:443"'
+Restart=on-failure
+RestartSec=5
+Slice=bridgeflow-dsh.slice
+MemoryMax=512M
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

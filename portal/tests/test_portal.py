@@ -15,6 +15,10 @@ from portal_app.main import SESSION_COOKIE, create_app
 UNION_ID = "ou_test_user_1"
 PROFILE = {"union_id": UNION_ID, "open_id": "o-1", "name": "测试用户",
            "email": "u@example.com", "avatar_url": ""}
+OTHER_PROFILE = {"union_id": "ou_test_user_2", "open_id": "o-2", "name": "另一位",
+                 "email": "o@example.com", "avatar_url": ""}
+NOBODY_PROFILE = {"union_id": "ou_nobody", "open_id": "o-3", "name": "无席位者",
+                  "email": "n@example.com", "avatar_url": ""}
 
 
 class Tenant:
@@ -22,6 +26,9 @@ class Tenant:
 
     def __init__(self, users: dict[str, dict] | None = None):
         self.users = users or {"code-good": PROFILE}
+        # Which profile /user_info answers with: the one whose code was just
+        # exchanged (every exchange mints the same "u-1" access token).
+        self.profile = next(iter(self.users.values()))
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -31,12 +38,13 @@ class Tenant:
             code = json.loads(request.content)["code"]
             if code not in self.users:
                 return httpx.Response(400, json={"code": 20003, "msg": "invalid code"})
+            self.profile = self.users[code]
             return httpx.Response(200, json={"code": 0, "data": {"access_token": "u-1", "refresh_token": "r-1",
                                                                  "expires_in": 7200, "refresh_expires_in": 2592000}})
         if path.endswith("/user_info"):
             if request.headers.get("authorization") != "Bearer u-1":
                 return httpx.Response(401, json={"code": 99991663, "msg": "invalid token"})
-            return httpx.Response(200, json={"code": 0, "data": self.users["code-good"]})
+            return httpx.Response(200, json={"code": 0, "data": self.profile})
         return httpx.Response(404, json={"code": 404, "msg": "unknown"})
 
 
@@ -67,11 +75,11 @@ def decode(client, token: str) -> dict:
                       issuer="http://portal.test")
 
 
-def login(client) -> None:
+def login(client, code: str = "code-good") -> None:
     """Drive the whole Feishu round-trip; the session cookie lands on the client."""
     redirect = client.get("/login", params={"app": "bridgeflow"})
     state = httpx.URL(redirect.headers["location"]).params["state"]
-    client.get("/callback", params={"code": "code-good", "state": state})
+    client.get("/callback", params={"code": code, "state": state})
 
 
 def test_login_redirects_to_feishu_with_a_signed_state(portal):
@@ -493,3 +501,102 @@ def test_the_gate_cannot_be_enforced_without_a_signing_key(tmp_path):
         login(client)
         assert client.get("/verify").status_code == 503
         assert gate.tokens == []
+
+
+# --- Seat routing and subdomain binding (docs/35) -------------------------------
+
+SEAT_DOMAIN = "example.test"
+ALICE_HOST = f"alice.console.{SEAT_DOMAIN}"
+BOB_HOST = f"bob.console.{SEAT_DOMAIN}"
+
+
+def seat_portal(tmp_path):
+    """A portal with two provisioned seats: alice owns UNION_ID, bob owns user 2."""
+    tokens.generate_keypair(tmp_path / "portal.pem")
+    apps = tmp_path / "apps.yaml"
+    apps.write_text(yaml.safe_dump({"apps": {"bridgeflow": {
+        "audience": "bridgeflow", "redirect_uri": "http://web.test/after-login",
+        "origins": ["http://web.test"]}}}), encoding="utf-8")
+    homes = tmp_path / "homes"
+    for seat, launch in (("alice", "seat-token-alice"), ("bob", "seat-token-bob")):
+        home = homes / seat
+        home.mkdir(parents=True)
+        (home / ".web-launch-token").write_text(launch + "\n", encoding="utf-8")
+    seats = tmp_path / "seats.yaml"
+    seats.write_text(yaml.safe_dump({"seats": [
+        {"name": "alice", "sub": UNION_ID, "port": 3101, "home": str(homes / "alice")},
+        {"name": "bob", "sub": OTHER_PROFILE["union_id"], "port": 3102, "home": str(homes / "bob")},
+    ]}), encoding="utf-8")
+    cfg = Settings(feishu_app_id="cli_test", feishu_app_secret="secret",
+                   feishu_base_url="https://feishu.test", key_path=str(tmp_path / "portal.pem"),
+                   session_secret="s" * 32, external_base_url="http://portal.test",
+                   apps_path=str(apps), seats_path=str(seats), seat_base_domain=SEAT_DOMAIN)
+    tenant = Tenant(users={"code-good": PROFILE, "code-other": OTHER_PROFILE,
+                           "code-nobody": NOBODY_PROFILE})
+    return create_app(cfg, transport=httpx.MockTransport(tenant))
+
+
+def test_a_seat_holder_is_handed_to_their_own_console(tmp_path):
+    with TestClient(seat_portal(tmp_path), follow_redirects=False) as client:
+        login(client)
+        response = client.get("/enter")
+        assert response.status_code == 200
+        assert ALICE_HOST in response.text
+        assert "seat-token-alice" in response.text
+        assert BOB_HOST not in response.text
+
+
+def test_a_signed_in_person_without_a_seat_is_refused(tmp_path):
+    with TestClient(seat_portal(tmp_path), follow_redirects=False) as client:
+        login(client, code="code-nobody")
+        response = client.get("/enter")
+        assert response.status_code == 403
+        assert "席位" in response.text
+
+
+def test_verify_admits_a_seat_owner_on_their_own_subdomain(tmp_path):
+    with TestClient(seat_portal(tmp_path), follow_redirects=False) as client:
+        login(client)
+        assert client.get("/verify", headers={"host": ALICE_HOST}).status_code == 200
+
+
+def test_verify_refuses_someone_elses_seat_subdomain(tmp_path):
+    with TestClient(seat_portal(tmp_path), follow_redirects=False) as client:
+        login(client)
+        response = client.get("/verify", headers={"host": BOB_HOST})
+        assert response.status_code == 403
+        assert "席位" in response.json()["detail"]
+
+
+def test_verify_ignores_non_seat_hosts_when_seats_are_configured(tmp_path):
+    with TestClient(seat_portal(tmp_path), follow_redirects=False) as client:
+        login(client)
+        assert client.get("/verify", headers={"host": "portal.test"}).status_code == 200
+        assert client.get("/verify").status_code == 200
+
+
+def test_health_reports_the_seat_count(tmp_path):
+    with TestClient(seat_portal(tmp_path)) as client:
+        assert client.get("/health").json()["seats"] == 2
+
+
+def test_a_broken_seat_registry_does_not_boot(tmp_path):
+    from portal_app.seats import load_seats
+
+    broken = tmp_path / "seats.yaml"
+    broken.write_text(yaml.safe_dump({"seats": [
+        {"name": "alice", "sub": UNION_ID, "port": 3101, "home": "/tmp/a"},
+        {"name": "alice-clone", "sub": UNION_ID, "port": 3102, "home": "/tmp/b"},
+    ]}), encoding="utf-8")
+    with pytest.raises(RuntimeError, match="sub"):
+        load_seats(str(broken), SEAT_DOMAIN, "https")
+
+    relative = tmp_path / "relative.yaml"
+    relative.write_text(yaml.safe_dump({"seats": [
+        {"name": "alice", "sub": UNION_ID, "port": 3101, "home": "data/homes/alice"},
+    ]}), encoding="utf-8")
+    with pytest.raises(RuntimeError, match="absolute"):
+        load_seats(str(relative), SEAT_DOMAIN, "https")
+
+    with pytest.raises(RuntimeError, match="cannot be read"):
+        load_seats(str(tmp_path / "no-such-registry.yaml"), SEAT_DOMAIN, "https")

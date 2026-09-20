@@ -67,6 +67,14 @@ class Settings(BaseSettings):
     # single request. Failures are never cached.
     console_check_ttl_seconds: int = 60
 
+    # Seat registry (docs/35): one console instance per person. Empty path =
+    # single-console behaviour, unchanged. Set together with seat_base_domain;
+    # seats.yaml carries each seat's name/sub/port/home and is provisioned by
+    # scripts/provision_seat.sh.
+    seats_path: str = ""
+    # Parent domain the seat subdomains hang off: <seat>.console.<domain>.
+    seat_base_domain: str = ""
+
     host: str = "127.0.0.1"
     port: int = 8100
 

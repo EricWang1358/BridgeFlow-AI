@@ -33,6 +33,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from portal_app import pages
 from portal_app.config import Settings, settings
 from portal_app.feishu import FeishuError, FeishuOAuth, NotConfigured
+from portal_app.seats import Seats, load_seats
 from portal_app.tokens import Signer, seal, seal_secret, unseal, unseal_secret
 
 SESSION_COOKIE = "portal_session"
@@ -90,6 +91,12 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
     # (docs/22 §9b) — say it out loud at boot, not after a bug report.
     logger.info("portal registry: %s",
                 {name: entry["redirect_uri"] for name, entry in registry.items()})
+    # Seats share the portal's URL scheme: an https portal fronts https seats.
+    seats: Seats | None = None
+    if cfg.seats_path:
+        scheme = "https" if cfg.external_base_url.startswith("https") else "http"
+        seats = load_seats(cfg.seats_path, cfg.seat_base_domain, scheme)
+        logger.info("portal seats: %s", seats.names())
 
     app = FastAPI(title="BridgeFlow login portal", version="0.2.0")
     app.add_middleware(
@@ -183,7 +190,9 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
         return {"status": "ok", "feishu": bool(cfg.feishu_app_id), "signer": signer is not None,
                 # Whether /verify enforces the console grant, so preflight can see
                 # the gate's state without reading the deploy's environment.
-                "console_gate": bool(cfg.console_check_url)}
+                "console_gate": bool(cfg.console_check_url),
+                # Seat routing (docs/35): 0 = single-console behaviour.
+                "seats": len(seats) if seats is not None else 0}
 
     # response_model=None: the union return annotation is not a Pydantic field type.
     @app.get("/", response_model=None)
@@ -244,9 +253,15 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
     async def verify(request: Request) -> Response:
         """Caddy forward_auth target: 200 lets the request through, anything else blocks it.
 
-        Two questions, in order: is this browser signed in (401 if not), and —
-        while PORTAL_CONSOLE_CHECK_URL is set — may this person reach the console
-        (403 if not granted, 503 if the answer could not be obtained).
+        Three questions, in order: is this browser signed in (401 if not);
+        when PORTAL_SEATS_PATH is set, is the requested host this person's own
+        seat (403 if the subdomain belongs to someone else — docs/35); and —
+        while PORTAL_CONSOLE_CHECK_URL is set — may this person reach the
+        console (403 if not granted, 503 if the answer could not be obtained).
+
+        The seat binding runs before the console gate and independently of it:
+        it is a local fact about routing, not a role question, and it must hold
+        even on a deployment that has not turned the gate on yet.
 
         503 withholds the whole site rather than the console alone, and that is
         the intended reading: everything behind forward_auth *is* the app shell
@@ -260,14 +275,27 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
             if "text/html" in request.headers.get("accept", ""):
                 return HTMLResponse(pages.login_required(cfg.external_base_url), status_code=401)
             return JSONResponse({"detail": "Sign in through the portal first"}, status_code=401)
-        if not cfg.console_check_url:
-            return JSONResponse({"ok": True, "sub": session["sub"]})
 
         def blocked(status: int, title: str, detail: str) -> Response:
             if "text/html" in request.headers.get("accept", ""):
                 return HTMLResponse(pages.console_blocked(title, detail, cfg.external_base_url),
                                     status_code=status)
             return JSONResponse({"detail": detail}, status_code=status)
+
+        if seats is not None:
+            # The original Host is preserved through Caddy's forward_auth; the
+            # forwarded variant is read as a fallback for other front doors.
+            host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "")
+            host = host.split(":", 1)[0]
+            seat = seats.for_host(host)
+            if seat is not None and seat.sub != session["sub"]:
+                logger.warning("seat %s denied to subject %s", seat.name, session["sub"])
+                return blocked(403, "这是他人的工作区席位",
+                               "每个席位属于一个人，你登录的身份不是这个席位的所有者。"
+                               "进入你自己的工作区请从门户首页进入；需要开通席位请联系总经办管理员。")
+
+        if not cfg.console_check_url:
+            return JSONResponse({"ok": True, "sub": session["sub"]})
 
         try:
             allowed = await console_allowed(session)
@@ -281,46 +309,65 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
                            "角色上声明，需要时请联系总经办管理员。")
         return JSONResponse({"ok": True, "sub": session["sub"]})
 
+    def read_token_file(path: str) -> str:
+        try:
+            return Path(path).read_text(encoding="utf-8").strip()
+        except OSError:
+            return ""
+
+    def handover(target: str, token_path: str, token_source: str) -> HTMLResponse:
+        """The entering page: navigate the browser to the console with its launch token.
+
+        A missing token is not a dead end. A browser that already holds dsh's
+        session cookie only needs the address; a first-time one pays a single
+        401 it can retry. Failing closed here locked everybody out instead.
+        """
+        token = read_token_file(token_path) if token_path else ""
+        url = httpx.URL(target)
+        if token:
+            url = url.copy_add_param("token", token)
+        else:
+            logger.warning("dsh launch token unavailable (%s): entering %s without one",
+                           token_source, target)
+        return HTMLResponse(pages.entering(str(url)), headers={"cache-control": "no-store"})
+
     @app.get("/enter", response_model=None)
     async def enter(request: Request, app: Annotated[str, Query()] = "") -> HTMLResponse | RedirectResponse:
         """Hand a signed-in browser over to the app's own session.
 
+        Seat deployments (docs/35) route by the signed-in person: the registry
+        says whose console this is, and a person without a seat is told so
+        instead of being handed to somebody else's instance. Without a seat
+        registry the single-console behaviour is unchanged.
+
         dsh web mints its native session only from the launch token it prints
-        once per boot; start_web.py captures that token into cfg.dsh_token_file.
-        The browser detours through the app's URL with the token attached, then
-        never needs it again — the session cookie survives restarts (the signing
-        secret persists in dsh's credentials store).
+        once per boot; start_web.py captures that token into the seat's own
+        DSH_HOME (per seat) or cfg.dsh_token_file (single console).
 
         The handover is a PAGE, not a redirect: dsh's cookie is SameSite=Strict
         and this navigation started at Feishu, so a 302 from here would land the
         browser on the app without its cookie (see pages.entering).
         """
-        if read_session(request) is None:
+        session = read_session(request)
+        if session is None:
             # Absolute, not "/": Caddy may serve this route on the app's own
             # domain (docs/22 §9b), where "/" is the app, not the portal.
             return RedirectResponse(cfg.external_base_url.rstrip("/") + "/", status_code=302)
+        if seats is not None:
+            seat = seats.for_sub(session["sub"])
+            if seat is None:
+                return error(403, "没有为你开通席位",
+                             "你已登录，但席位注册表中没有你的工作区。席位由管理员经 "
+                             "scripts/provision_seat.sh 开通（docs/35），需要请联系总经办管理员。")
+            return handover(seats.url(seat), str(seat.token_file), f"seat {seat.name} home")
         name = resolve_app(app)
         if name is None:
             return error(404, "未知应用", f"应用 {app!r} 未在门户注册。")
         target = registry[name]["app_uri"]
         if not target:
             return error(503, "应用入口未配置", f"应用 {name!r} 缺少 app_uri（docs/22 §9b）。")
-        token = ""
-        if cfg.dsh_token_file:
-            try:
-                token = Path(cfg.dsh_token_file).read_text(encoding="utf-8").strip()
-            except OSError:
-                token = ""
-        # A missing token is not a dead end. A browser that already holds dsh's
-        # session cookie only needs the address; a first-time one pays a single
-        # 401 it can retry. Failing closed here locked everybody out instead.
-        url = httpx.URL(target)
-        if token:
-            url = url.copy_add_param("token", token)
-        else:
-            logger.warning("dsh launch token unavailable (%s): entering %s without one",
-                           cfg.dsh_token_file or "PORTAL_DSH_TOKEN_FILE unset", name)
-        return HTMLResponse(pages.entering(str(url)), headers={"cache-control": "no-store"})
+        return handover(target, cfg.dsh_token_file,
+                        cfg.dsh_token_file or "PORTAL_DSH_TOKEN_FILE unset")
 
     @app.get("/token")
     async def token(app: Annotated[str, Query()], session: Annotated[dict, Depends(current_session)]) -> dict:
