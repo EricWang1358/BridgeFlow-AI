@@ -81,6 +81,18 @@ if [ -f data/mappings/seats.yaml ]; then
 for s in (yaml.safe_load(open('data/mappings/seats.yaml')) or {}).get('seats') or []:
     print(f\"{s['name']}:{s['port']}\")" 2>/dev/null)
 fi
+# systemctl names units with the .service suffix, seats.yaml does not: strip
+# it once here, and refuse to run the 90s loop against a fleet file that
+# cannot answer for a provisioned unit (a silent empty port maps to a timeout
+# that looks like a dead seat — the 2026-09-20 14:03 deploy died exactly
+# there while every service was healthy).
+for unit in "${SEAT_UNITS[@]}"; do
+  seat="${unit#bridgeflow-dsh@}"; seat="${seat%.service}"
+  if [ -z "${SEAT_PORTS[$seat]:-}" ]; then
+    echo "seat $seat is provisioned but has no port in data/mappings/seats.yaml" >&2
+    exit 1
+  fi
+done
 
 ok=""
 for _ in $(seq 1 45); do
@@ -105,7 +117,7 @@ for _ in $(seq 1 45); do
     else
       web_ok=1
       for unit in "${SEAT_UNITS[@]}"; do
-        seat="${unit#bridgeflow-dsh@}"
+        seat="${unit#bridgeflow-dsh@}"; seat="${seat%.service}"
         port="${SEAT_PORTS[$seat]:-}"
         systemctl is-active --quiet "$unit" || { web_ok=""; break; }
         [ -s "data/homes/$seat/.web-launch-token" ] || { web_ok=""; break; }
