@@ -80,21 +80,37 @@ fi
 step "client bundle"
 (cd plugins && corepack pnpm install --frozen-lockfile && corepack pnpm run build)
 
+step "swap (2G) — idle seat pages page out instead of OOM (docs/35 §3)"
+if ! sudo swapon --show | grep -q .; then
+  sudo fallocate -l 2G /swapfile
+  sudo chmod 600 /swapfile
+  sudo mkswap /swapfile >/dev/null
+  sudo swapon /swapfile
+  grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab >/dev/null
+fi
+echo 'vm.swappiness=10' | sudo tee /etc/sysctl.d/99-bridgeflow.conf >/dev/null
+sudo sysctl -p /etc/sysctl.d/99-bridgeflow.conf >/dev/null
+
 step "Caddy"
 if ! command -v caddy >/dev/null; then
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
   sudo apt-get update -y && sudo apt-get install -y caddy
 fi
-if ! sudo grep -q "^$DOMAIN {" /etc/caddy/Caddyfile 2>/dev/null; then
-  sed -e "s#__DOMAIN__#$DOMAIN#g" -e "s#__WEB_PORT__#$WEB_PORT#" -e "s#__PORTAL_PORT__#$PORTAL_PORT#" \
-    deploy/Caddyfile.template | grep -v '^#' | sudo tee /etc/caddy/Caddyfile >/dev/null
+# Rendered from the template plus the seat registry (deploy/render_caddy.py):
+# without data/mappings/seats.yaml this is exactly the legacy file.
+cd "$ROOT"
+rendered="$("$VENV/bin/python" deploy/render_caddy.py "$DOMAIN")"
+if [[ "$rendered" != "$(sudo cat /etc/caddy/Caddyfile 2>/dev/null || true)" ]]; then
+  printf '%s\n' "$rendered" | sudo tee /etc/caddy/Caddyfile >/dev/null
   sudo systemctl reload caddy
 fi
 
 step "systemd units"
 sed "s#<domain>#$DOMAIN#" deploy/bridgeflow.service | sudo tee /etc/systemd/system/bridgeflow.service >/dev/null
 sudo cp deploy/portal.service /etc/systemd/system/bridgeflow-portal.service
+sudo cp deploy/bridgeflow-dsh.slice /etc/systemd/system/
+sudo cp "deploy/bridgeflow-dsh@.service" "/etc/systemd/system/bridgeflow-dsh@.service"
 sudo systemctl daemon-reload
 sudo systemctl enable --now bridgeflow bridgeflow-portal
 

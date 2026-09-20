@@ -14,6 +14,7 @@ from bridgeflow.api.approvals import router as approvals_router
 from bridgeflow.api.batches import router as batches_router
 from bridgeflow.api.checklist import router as checklist_router
 from bridgeflow.api.conclusions import router as conclusions_router
+from bridgeflow.api.console import router as console_router
 from bridgeflow.api.conventions import router as conventions_router
 from bridgeflow.api.discovery import router as discovery_router
 from bridgeflow.api.discovery import tools_router as discovery_tools_router
@@ -135,6 +136,11 @@ app.include_router(conventions_router, dependencies=[Depends(require_host)])
 app.include_router(checklist_router, dependencies=[Depends(require_host)])
 app.include_router(dispositions_router, dependencies=[Depends(require_host)])
 app.include_router(observability_router, dependencies=[Depends(require_host)])
+
+# The one router with no host dependency, on purpose: the login portal calls it from
+# its own forward_auth target, and the portal holds no host credential (api/console.py
+# says why). Its own authentication is the portal signature it verifies through JWKS.
+app.include_router(console_router)
 
 orchestrator = Orchestrator()
 

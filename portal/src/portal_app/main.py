@@ -6,7 +6,9 @@ against the JWKS published here. The portal never sees app data, and apps
 never see Feishu credentials — decoupling in both directions.
 
 /verify exists for the reverse proxy's forward_auth: it is how the main site
-asks "does this browser hold a signed-in session?" before serving anything.
+asks "does this browser hold a signed-in session?" before serving anything —
+and, once PORTAL_CONSOLE_CHECK_URL is set, "may this person reach the agent
+console?" as well (issue #229, docs/34 §二 第 1 步).
 
 Run:  uvicorn portal_app.main:app --port 8100   (after sourcing env.sh)
 """
@@ -31,6 +33,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from portal_app import pages
 from portal_app.config import Settings, settings
 from portal_app.feishu import FeishuError, FeishuOAuth, NotConfigured
+from portal_app.seats import Assignments, Seats, load_seats
 from portal_app.tokens import Signer, seal, seal_secret, unseal, unseal_secret
 
 SESSION_COOKIE = "portal_session"
@@ -40,8 +43,19 @@ STATE_TTL_SECONDS = 600
 #: expired) — only these justify sending the browser back through login (401).
 #: Rate limits (429) and every other refusal are transient upstream trouble (502).
 _DEAD_GRANT_CODES = {20037}
+#: Cached console decisions are small, but the map is still bounded so a long-lived
+#: portal cannot accumulate one entry per person who ever signed in.
+_DECISION_CACHE_MAX = 256
 
 logger = logging.getLogger("portal_app")
+
+
+class ConsoleUnavailable(Exception):
+    """The console grant could not be established — distinct from "not granted".
+
+    Withholding is not refusing: the browser must be told which of the two
+    happened, because only one of them is fixed by waiting or by an admin.
+    """
 
 
 def load_registry(path: str) -> dict[str, dict]:
@@ -68,7 +82,8 @@ def load_registry(path: str) -> dict[str, dict]:
     return registry
 
 
-def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
+def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
+               check_transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
     registry = load_registry(cfg.apps_path)
     signer = Signer(cfg.key_path) if cfg.key_path else None
     origins = sorted({o for entry in registry.values() for o in entry["origins"]})
@@ -76,6 +91,24 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
     # (docs/22 §9b) — say it out loud at boot, not after a bug report.
     logger.info("portal registry: %s",
                 {name: entry["redirect_uri"] for name, entry in registry.items()})
+    # Seats share the portal's URL scheme: an https portal fronts https seats.
+    seats: Seats | None = None
+    if cfg.seats_path:
+        scheme = "https" if cfg.external_base_url.startswith("https") else "http"
+        seats = load_seats(cfg.seats_path, cfg.seat_base_domain, scheme)
+        if not cfg.seat_assignments_path:
+            raise RuntimeError("PORTAL_SEAT_ASSIGNMENTS is required when PORTAL_SEATS_PATH is set "
+                               "(scripts/provision_seat.sh --init writes it into env.sh)")
+        # One validating read at boot; requests re-read so an ops release lands
+        # without a portal restart.
+        def seat_state() -> Assignments:
+            return Assignments(cfg.seat_assignments_path)
+
+        logger.info("portal seats: %s capacity, %s claimed",
+                    len(seats), len(seat_state().as_map()))
+    else:
+        def seat_state() -> Assignments:  # pragma: no cover - unreachable without seats
+            raise RuntimeError("seat state requested without a seat fleet")
 
     app = FastAPI(title="BridgeFlow login portal", version="0.2.0")
     app.add_middleware(
@@ -112,9 +145,68 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
     def error(status: int, title: str, detail: str) -> HTMLResponse:
         return HTMLResponse(pages.error_page(title, detail), status_code=status)
 
+    def user_claims(app_name: str, session: dict) -> dict:
+        now = int(time.time())
+        return {"iss": cfg.external_base_url, "aud": registry[app_name]["audience"],
+                "iat": now, "exp": now + cfg.app_token_ttl_seconds,
+                **{k: session[k] for k in ("sub", "open_id", "name", "email")}}
+
+    # subject -> (expires_at, allowed). Only answers land here; a failure is
+    # re-asked on the next request, so an outage never sticks to a session.
+    console_decisions: dict[str, tuple[float, bool]] = {}
+
+    async def console_allowed(session: dict) -> bool:
+        """Ask the app whether this person may reach its console (#229).
+
+        The question travels as a token this portal just signed, which the app
+        verifies against the JWKS it already trusts — no new credential, and the
+        role rules stay where they are declared (`access-control.yaml`), not
+        copied into the portal.
+        """
+        now = time.monotonic()
+        cached = console_decisions.get(session["sub"])
+        if cached is not None and cached[0] > now:
+            return cached[1]
+        name = resolve_app("")
+        if name is None:
+            raise ConsoleUnavailable("门户没有默认应用，无法判断控制台授权（apps.yaml）。")
+        if signer is None:
+            raise ConsoleUnavailable("门户签名密钥未配置（PORTAL_KEY_PATH），无法向应用提问。")
+        try:
+            async with httpx.AsyncClient(transport=check_transport, timeout=10) as client:
+                response = await client.get(cfg.console_check_url,
+                                            headers={"x-bridgeflow-user": signer.sign(user_claims(name, session))})
+        except httpx.HTTPError as exc:
+            raise ConsoleUnavailable(f"应用暂时不可达：{exc}") from exc
+        if response.status_code != 200:
+            detail = ""
+            try:
+                body = response.json()
+                detail = body.get("detail", "") if isinstance(body, dict) else ""
+            except ValueError:
+                detail = ""
+            raise ConsoleUnavailable(detail or f"应用返回 HTTP {response.status_code}。")
+        try:
+            allowed = response.json()["allowed"]
+        except (ValueError, KeyError, TypeError) as exc:
+            raise ConsoleUnavailable("应用的授权答复无法解析。") from exc
+        if not isinstance(allowed, bool):
+            raise ConsoleUnavailable("应用的授权答复不是布尔值。")
+        if len(console_decisions) >= _DECISION_CACHE_MAX:
+            console_decisions.clear()
+        console_decisions[session["sub"]] = (now + cfg.console_check_ttl_seconds, allowed)
+        return allowed
+
     @app.get("/health")
     async def health() -> dict:
-        return {"status": "ok", "feishu": bool(cfg.feishu_app_id), "signer": signer is not None}
+        return {"status": "ok", "feishu": bool(cfg.feishu_app_id), "signer": signer is not None,
+                # Whether /verify enforces the console grant, so preflight can see
+                # the gate's state without reading the deploy's environment.
+                "console_gate": bool(cfg.console_check_url),
+                # Seat fleet (docs/35): 0 = single-console behaviour; with a
+                # fleet, assigned counts the first-come-first-served claims.
+                "seats": len(seats) if seats is not None else 0,
+                "seats_assigned": len(seat_state().as_map()) if seats is not None else 0}
 
     # response_model=None: the union return annotation is not a Pydantic field type.
     @app.get("/", response_model=None)
@@ -173,58 +265,152 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
 
     @app.get("/verify", response_model=None)
     async def verify(request: Request) -> Response:
-        """Caddy forward_auth target: 200 lets the request through, 401 blocks it.
+        """Caddy forward_auth target: 200 lets the request through, anything else blocks it.
 
-        Browsers (Accept: text/html) get a page that steers them to the portal;
-        API callers get plain JSON.
+        Three questions, in order: is this browser signed in (401 if not);
+        when PORTAL_SEATS_PATH is set, is the requested host this person's own
+        seat (403 if the subdomain belongs to someone else — docs/35); and —
+        while PORTAL_CONSOLE_CHECK_URL is set — may this person reach the
+        console (403 if not granted, 503 if the answer could not be obtained).
+
+        The seat binding runs before the console gate and independently of it:
+        it is a local fact about routing, not a role question, and it must hold
+        even on a deployment that has not turned the gate on yet.
+
+        503 withholds the whole site rather than the console alone, and that is
+        the intended reading: everything behind forward_auth *is* the app shell
+        (docs/22 §7 routes one site to dsh web), so there is no read-only surface
+        being taken away here that would otherwise survive.
+
+        Browsers (Accept: text/html) get a page; API callers get plain JSON.
         """
         session = read_session(request)
-        if session is not None:
+        if session is None:
+            if "text/html" in request.headers.get("accept", ""):
+                return HTMLResponse(pages.login_required(cfg.external_base_url), status_code=401)
+            return JSONResponse({"detail": "Sign in through the portal first"}, status_code=401)
+
+        def blocked(status: int, title: str, detail: str) -> Response:
+            if "text/html" in request.headers.get("accept", ""):
+                return HTMLResponse(pages.console_blocked(title, detail, cfg.external_base_url),
+                                    status_code=status)
+            return JSONResponse({"detail": detail}, status_code=status)
+
+        if seats is not None:
+            # The original Host is preserved through Caddy's forward_auth; the
+            # forwarded variant is read as a fallback for other front doors.
+            host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "")
+            host = host.split(":", 1)[0]
+            seat = seats.for_host(host)
+            if seat is not None:
+                # Binding is a fact about the claim state, re-read per request:
+                # an ops release takes effect on the very next request, not at
+                # the next portal restart. An unclaimed seat belongs to nobody.
+                owner = seat_state().sub_for_seat(seat.name)
+                if owner != session["sub"]:
+                    logger.warning("seat %s (owner=%s) denied to subject %s",
+                                   seat.name, owner or "unclaimed", session["sub"])
+                    return blocked(403, "这是他人的工作区席位",
+                                   "每个席位属于第一个认领它的人，你登录的身份不是这个席位的所有者。"
+                                   "进入你自己的工作区请从门户首页进入；席位已满或需要释放请联系总经办管理员。")
+
+        if not cfg.console_check_url:
             return JSONResponse({"ok": True, "sub": session["sub"]})
-        if "text/html" in request.headers.get("accept", ""):
-            return HTMLResponse(pages.login_required(cfg.external_base_url), status_code=401)
-        return JSONResponse({"detail": "Sign in through the portal first"}, status_code=401)
+
+        try:
+            allowed = await console_allowed(session)
+        except ConsoleUnavailable as exc:
+            logger.warning("console access undetermined for %s: %s", session["sub"], exc)
+            return blocked(503, "暂时无法确认你的访问范围",
+                           f"{exc} 这不是拒绝：系统没能确认你的授权，稍后重试或联系管理员。")
+        if not allowed:
+            return blocked(403, "没有控制台授权",
+                           "你已登录，但没有被授予进入 AI 控制台的权限。授权由管理员在访问配置的"
+                           "角色上声明，需要时请联系总经办管理员。")
+        return JSONResponse({"ok": True, "sub": session["sub"]})
+
+    def read_token_file(path: str) -> str:
+        try:
+            return Path(path).read_text(encoding="utf-8").strip()
+        except OSError:
+            return ""
+
+    def handover(target: str, token_path: str, token_source: str) -> HTMLResponse:
+        """The entering page: navigate the browser to the console with its launch token.
+
+        A missing token is not a dead end. A browser that already holds dsh's
+        session cookie only needs the address; a first-time one pays a single
+        401 it can retry. Failing closed here locked everybody out instead.
+        """
+        token = read_token_file(token_path) if token_path else ""
+        url = httpx.URL(target)
+        if token:
+            url = url.copy_add_param("token", token)
+        else:
+            logger.warning("dsh launch token unavailable (%s): entering %s without one",
+                           token_source, target)
+        return HTMLResponse(pages.entering(str(url)), headers={"cache-control": "no-store"})
 
     @app.get("/enter", response_model=None)
     async def enter(request: Request, app: Annotated[str, Query()] = "") -> HTMLResponse | RedirectResponse:
         """Hand a signed-in browser over to the app's own session.
 
+        Seat deployments (docs/35) are first come first served: the first
+        authorized person to enter claims a free seat and keeps it; later
+        entries reuse the claim. Without a seat fleet the single-console
+        behaviour is unchanged.
+
         dsh web mints its native session only from the launch token it prints
-        once per boot; start_web.py captures that token into cfg.dsh_token_file.
-        The browser detours through the app's URL with the token attached, then
-        never needs it again — the session cookie survives restarts (the signing
-        secret persists in dsh's credentials store).
+        once per boot; start_web.py captures that token into the seat's own
+        DSH_HOME (per seat) or cfg.dsh_token_file (single console).
 
         The handover is a PAGE, not a redirect: dsh's cookie is SameSite=Strict
         and this navigation started at Feishu, so a 302 from here would land the
         browser on the app without its cookie (see pages.entering).
         """
-        if read_session(request) is None:
+        session = read_session(request)
+        if session is None:
             # Absolute, not "/": Caddy may serve this route on the app's own
             # domain (docs/22 §9b), where "/" is the app, not the portal.
             return RedirectResponse(cfg.external_base_url.rstrip("/") + "/", status_code=302)
+        if seats is not None:
+            # First come first served (docs/35): an authorized person claims a
+            # free seat on first entry and keeps it — their sessions live in
+            # that seat's home. Release is an ops act (provision_seat.sh
+            # --release), never a request the portal serves.
+            state = seat_state()
+            seat_name = state.seat_for(session["sub"])
+            if seat_name is None:
+                if cfg.console_check_url:
+                    try:
+                        allowed = await console_allowed(session)
+                    except ConsoleUnavailable as exc:
+                        return error(503, "暂时无法确认你的访问范围",
+                                     f"{exc} 这不是拒绝：系统没能确认你的授权，稍后重试或联系管理员。")
+                    if not allowed:
+                        return error(403, "没有控制台授权",
+                                     "你已登录，但没有被授予进入 AI 控制台的权限。授权由管理员在访问配置的"
+                                     "角色上声明，需要时请联系总经办管理员。")
+                seat_name = state.claim(session["sub"], seats.names())
+                if seat_name is None:
+                    return error(403, "席位已满",
+                                 f"当前 {len(seats)} 个席位都已有人认领。请管理员释放空闲席位"
+                                 "（scripts/provision_seat.sh --release <union_id>）后再试。")
+                logger.info("seat %s claimed by subject %s", seat_name, session["sub"])
+            seat = seats.seat(seat_name)
+            if seat is None:
+                return error(503, "席位配置不一致",
+                             f"认领记录指向不存在的席位 {seat_name!r}；请检查 seats.yaml 与"
+                             " seats-assigned.json 是否被手工改动过。")
+            return handover(seats.url(seat), str(seat.token_file), f"seat {seat.name} home")
         name = resolve_app(app)
         if name is None:
             return error(404, "未知应用", f"应用 {app!r} 未在门户注册。")
         target = registry[name]["app_uri"]
         if not target:
             return error(503, "应用入口未配置", f"应用 {name!r} 缺少 app_uri（docs/22 §9b）。")
-        token = ""
-        if cfg.dsh_token_file:
-            try:
-                token = Path(cfg.dsh_token_file).read_text(encoding="utf-8").strip()
-            except OSError:
-                token = ""
-        # A missing token is not a dead end. A browser that already holds dsh's
-        # session cookie only needs the address; a first-time one pays a single
-        # 401 it can retry. Failing closed here locked everybody out instead.
-        url = httpx.URL(target)
-        if token:
-            url = url.copy_add_param("token", token)
-        else:
-            logger.warning("dsh launch token unavailable (%s): entering %s without one",
-                           cfg.dsh_token_file or "PORTAL_DSH_TOKEN_FILE unset", name)
-        return HTMLResponse(pages.entering(str(url)), headers={"cache-control": "no-store"})
+        return handover(target, cfg.dsh_token_file,
+                        cfg.dsh_token_file or "PORTAL_DSH_TOKEN_FILE unset")
 
     @app.get("/token")
     async def token(app: Annotated[str, Query()], session: Annotated[dict, Depends(current_session)]) -> dict:
@@ -233,11 +419,7 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None)
             raise HTTPException(404, f"Unknown application: {app!r}")
         if signer is None:
             raise HTTPException(503, "Portal signing key is not configured: set PORTAL_KEY_PATH")
-        now = int(time.time())
-        claims = {"iss": cfg.external_base_url, "aud": registry[app]["audience"],
-                  "iat": now, "exp": now + cfg.app_token_ttl_seconds,
-                  **{k: session[k] for k in ("sub", "open_id", "name", "email")}}
-        return {"token": signer.sign(claims), "token_type": "Bearer",
+        return {"token": signer.sign(user_claims(app, session)), "token_type": "Bearer",
                 "expires_in": cfg.app_token_ttl_seconds}
 
     @app.get("/.well-known/jwks.json")

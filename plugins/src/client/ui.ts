@@ -485,8 +485,31 @@ async function refreshPortalToken(): Promise<boolean> {
     const response = await fetch(`${base}/token?app=bridgeflow`, { credentials: 'include' })
     if (!response.ok) return false
     setPortalToken(String((await response.json()).token ?? ''))
-    return !!portalToken()
+    if (!portalToken()) return false
+    // The host is holding the token we just replaced. Re-claim, or the reads the model
+    // triggers would keep relaying an expired one until it fell out of the binding.
+    for (const sessionId of claimedSessions) void claimActor(sessionId)
+    return true
   } catch { return false }
+}
+
+/**
+ * Tell the host which person is driving this session (#231).
+ *
+ * Model-initiated reads have no browser behind them, so the host relays this token on
+ * them and the backend verifies it per request. Best effort on purpose: a failure costs
+ * attribution on those reads — the journal records them as the host's, as it did before
+ * — and must never block the page or provoke a login prompt.
+ */
+const claimedSessions = new Set<string>()
+export async function claimActor(sessionId: string): Promise<void> {
+  const token = portalToken()
+  if (!sessionId || !token) return
+  claimedSessions.add(sessionId)
+  try {
+    await fetch(`/bridgeflow/actor?session_id=${encodeURIComponent(sessionId)}`,
+                { method: 'POST', headers: { 'x-portal-token': token }, credentials: 'same-origin' })
+  } catch { /* Attribution is not worth a broken view. */ }
 }
 
 /**

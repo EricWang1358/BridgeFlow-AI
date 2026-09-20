@@ -224,7 +224,8 @@ sudo apt update && sudo apt install -y caddy
 `/etc/caddy/Caddyfile`（实例文件，**不进仓库**）——两个站点，门户站点
 必须在门户进程起来之前就位也行，Caddy 会各自签证书。主站带
 `forward_auth`：每个请求先问门户 `/verify`，没有登录会话的浏览器拿到
-401 引导页，被送去门户登录——AI 对话页面本身也在门后：
+401 引导页，被送去门户登录——AI 对话页面本身也在门后。开了控制台门禁（§9d）之后
+这一跳还会答 403（已登录但无授权）与 503（授权无法确认），Caddyfile 本身不用改：
 
 ```caddyfile
 <domain> {
@@ -274,6 +275,36 @@ systemctl status bridgeflow            # active (running)
 journalctl -u bridgeflow -n 50 --no-pager   # 见字典路径与 dsh web 带凭证 URL
 ss -tlnp                                # 公网监听仅 sshd 与 caddy
 ```
+
+---
+
+## 8b 席位化多用户隔离（2026-09-20，docs/35）
+
+主单元 `bridgeflow.service` 在席位部署里只起**共享 backend**（`--backend-only`）；
+每个授权者一个 `bridgeflow-dsh@<seat>.service` 实例（`--web-only`，各自 `DSH_HOME`
+在 `data/homes/<seat>/`，回环端口 3101+），全部归入 `bridgeflow-dsh.slice`
+（MemoryHigh=1.6G / MemoryMax=2.0G；单实例 MemoryMax=512M）。拆分模式下
+`BRIDGEFLOW_SERVICE_TOKEN` 必须在 env.sh 显式设置并由 backend 与所有席位共享
+（审批回执 HMAC 也以它为钥）。
+
+```bash
+# bootstrap.sh 已自动装单元/slice/swap(2G, swappiness=10)并按 seats.yaml 渲染 Caddy；
+# 建 7 席位舰队（一次性，通用席位、先到先得认领，配置里没有任何人名）：
+BRIDGEFLOW_DOMAIN=<domain> scripts/provision_seat.sh --init 7
+# 状态 / 腾位：
+BRIDGEFLOW_DOMAIN=<domain> scripts/provision_seat.sh --status
+BRIDGEFLOW_DOMAIN=<domain> scripts/provision_seat.sh --release <union_id>
+```
+
+Caddy 由 `deploy/render_caddy.py` 从 `data/mappings/seats.yaml` 渲染：无容量文件时与
+§7 旧形态逐字节相同（apex 即控制台）；有容量时 apex 永久重定向到门户，每个席位一个
+显式子域名站点块（`<seat>.console.<domain>`，forward_auth → 门户 /verify，
+reverse_proxy → 127.0.0.1:<port>）。**每个席位需要一条 DNS A 记录**；Caddy 对显式
+主机名各自取证书，7 席位不需要泛域名。认领状态在 `data/seats-assigned.json`（untracked，
+每次部署天然幸存）；部署会顺带重启全部席位单元。
+
+席位模式检查已进 `preflight.sh`（单元/token/端口/子域名 401/slice 围栏/swap/席位数 ≤7），
+未配置注册表时全部静默。运行手册（开通、撤销归档、升级重启顺序）见 [`35`](35-seat-isolation.md) §8。
 
 ---
 
@@ -385,6 +416,34 @@ cookie（此后直到 cookie 过期都直达，重启不影响）。
 `data/mappings/access-control.yaml`。这份文件**跟踪在仓库里**（理由与通道见 §5b），
 部署自动带上，实例侧不需要手动创建，改它走 PR 而不是 SSH。飞书侧前提：应用已发版带
 `wiki:member:retrieve`，且应用本体已加为每个知识库成员。
+
+### 9d 开启控制台门禁（#229，可选但建议）
+
+默认关闭时任何已登录员工都能到达代理控制台，而控制台是共用的一个 dsh 身份。开启前先在
+`access-control.yaml` 里给该进控制台的角色加上 `console_access` 操作（本仓库的示例配置只给了
+`master_office_admin`），**顺序不能反**：先开门禁后加授权会把所有人锁在门外。
+
+`env.sh` 追加，然后重启门户：
+
+```bash
+export PORTAL_CONSOLE_CHECK_URL="http://127.0.0.1:8000/identity/console-access"
+```
+
+**验证（按顺序）**
+
+```bash
+curl -fsS http://127.0.0.1:8100/health                    # console_gate 为 true
+curl -sI https://<domain>/                                # 无会话仍是 401（登录问题先答）
+# 带一个有授权的会话 cookie 访问 → 200；换一个没有 console_access 的账号 → 403
+# 停掉后端再访问 → 503，页面写「暂时无法确认你的访问范围 … 这不是拒绝」
+sudo systemctl restart bridgeflow                         # 恢复后回到 200
+```
+
+403 与 503 都经由 Caddy `forward_auth` 透传给浏览器（§7 的配置不用改）；这一跳的真实形态
+尚未在实例上验过（[`00`](00-status.md) 记为未验），放行前自己点一遍。
+
+`deploy/preflight.sh` 会挡住上面那个顺序错误：门禁已开而没有任何角色声明 `console_access` 时
+它报 FAIL。门禁关闭时这条检查沉默——关闭是受支持的默认值，不是待办。
 
 文件缺失时数据面是 503「未配置」，这是设计的中间态（fail-closed），不是故障。
 放行前跑侦察脚本确认五个库的成员可读——脚本只认 shell 导出的凭据，先 `source env.sh`

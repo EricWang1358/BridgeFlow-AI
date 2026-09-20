@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { DEFAULT_BINDING_MS, actors } from './actor.ts'
 import { notebookDomain, parseNotebook, readNotebook, saveNotebook } from './notebooks.ts'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type { Context } from '@deepseek-ai/cordis'
@@ -42,6 +43,47 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           const id=url.searchParams.get('session_id')
           const rows=[...noteTable.entries()].map(([,value])=>value).filter(value=>value.sessionId===id).sort((a,b)=>b.time-a.time)
           res.writeHead(200,{'content-type':'application/json','cache-control':'no-store'}).end(JSON.stringify({total:rows.length,notes:rows.slice(0,50)}))
+          return
+        }
+        if (path === '/actor' && req.method === 'POST') {
+          // The browser says "this session is mine, here is my portal token" (#231).
+          // The host never takes that on faith: the backend verifies the signature and
+          // reports the subject, and only then is the token bound and later relayed on
+          // the reads the model triggers. No token, or a token the backend refuses,
+          // releases the binding — attribution goes absent rather than stale.
+          res.setHeader('content-type', 'application/json')
+          res.setHeader('cache-control', 'no-store')
+          const id = url.searchParams.get('session_id') ?? ''
+          if (!/^[a-zA-Z0-9_-]{1,160}$/.test(id)) { res.writeHead(422).end('{}'); return }
+          if (typeof portalToken !== 'string' || !portalToken) {
+            actors.release(id)
+            res.writeHead(401).end(JSON.stringify({ detail: 'No portal token to bind' }))
+            return
+          }
+          try {
+            const checked = await fetch(`${backend.baseUrl}/identity/me`, {
+              headers: { 'x-bridgeflow-user': portalToken },
+              signal: AbortSignal.timeout(backend.timeoutMs),
+            })
+            if (!checked.ok) {
+              actors.release(id)
+              res.writeHead(checked.status === 401 ? 401 : 503)
+                 .end(JSON.stringify({ detail: 'Portal token could not be verified' }))
+              return
+            }
+            const subject = String(((await checked.json()) as {subject?: unknown}).subject ?? '')
+            if (!subject) {
+              actors.release(id)
+              res.writeHead(503).end(JSON.stringify({ detail: 'Identity service named no subject' }))
+              return
+            }
+            actors.bind(id, { token: portalToken, subject, expiresAt: Date.now() + DEFAULT_BINDING_MS })
+            res.writeHead(200).end(JSON.stringify({ subject }))
+          } catch (error) {
+            actors.release(id)
+            ctx.logger.warn('Actor binding failed for session %s: %s', id, String(error))
+            res.writeHead(503).end(JSON.stringify({ detail: 'Identity service is unreachable' }))
+          }
           return
         }
         if (path === '/notebook' && (req.method === 'GET' || req.method === 'POST')) {
@@ -144,7 +186,7 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
             if (['session_id', 'call_id', 'ticket', 'note'].some(key => typeof data[key] !== 'string')) {
               res.writeHead(422).end('{}'); return
             }
-            const saved = await notes.record(data.session_id, data.call_id, data.ticket, data.note, entry=>noteTable.put(noteKey(entry.sessionId,entry.callId),entry))
+            const saved = await notes.record(data.session_id, data.call_id, data.ticket, data.note, entry=>noteTable.put(noteKey(entry.sessionId,entry.callId),entry), actors.subjectForSession(data.session_id))
             res.writeHead(saved ? 200 : 409).end(JSON.stringify(saved ? { saved: true } : { detail: 'Note too long or approval expired; decision not submitted' }))
           } catch (error) { ctx.logger.warn('Approval note persistence failed: %s', String(error)); res.writeHead(422).end(JSON.stringify({ detail: 'Could not record approval note' })) }
           return

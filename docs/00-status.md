@@ -7,9 +7,91 @@
 「每个数字都量过、可追溯」是本项目对评委的核心叙事，评委抓到一处对不上，整个叙事就打折。
 所以改数字只改这一处。
 
-最后更新：2026-09-19。新增一轮时照第三节的格式写，并附上复现命令。
+最后更新：2026-09-20。新增一轮时照第三节的格式写，并附上复现命令。
 
 ---
+
+## 席位化隔离 M0 spike：全新 DSH_HOME 与单实例内存（2026-09-20，#230 落地）
+
+开发机（macOS, arm64）实测，方案与门槛见 [`35`](35-seat-isolation.md) §5 M0。三项结论：
+
+- **全新 `DSH_HOME` 零仓库内容即可首启自建**。`dsh web --patch dsh/enterprise.patch.yml`
+  启动时从仓库 cwd 注入全部接线（persona 走 `./dsh/presets`、插件走 `../plugins/src/index.ts`、
+  backendUrl 固定 `127.0.0.1:8000`），首启在 home 内自建：`.credentials.yaml`、
+  `profiles/{node_modules,web}`、`storages/workspace.json`；home 的用户 patch 层为空（`[]`）。
+  席位供给脚本不需要复制任何模板内容，建目录即可。
+- **单实例闲时 RSS ≈ 224MB 裸起 / ≈ 289MB 经 start_web.py 完整路径**（`ps -o rss`，node
+  单进程、无子进程；macOS 数字，Linux 实例上由 preflight 复核）。均低于 300MB 过门线；
+  按完整路径口径 7 席位 ≈ 2.0GB，**贴着 slice 2.0GB 预算线**——若 Linux 实测 RSS >280MB，
+  先减为 6 席位或升配 8GB（docs/35 §7 风险表），不硬撑。
+- **冷启动 ≈ 1s**（全新 home，从拉起到 launch token 行出现；1 秒粒度）。
+
+未测：真实模型运行下的研判峰值 RSS（MemoryMax=512M 围栏兜底，上线后以 `systemctl status`
+实测回填）。复现：
+
+```bash
+DSH_HOME=$(mktemp -d) dsh web --patch dsh/enterprise.patch.yml --no-open --host 127.0.0.1 --port 3091
+ps -o rss= -p <pid>   # 等 30s 后读
+```
+
+---
+
+## 全 Web 化第 3 步：模型发起的读取归属到人（2026-09-20，#231）
+
+离线实现与验证，未调用模型、未接真实飞书租户。设计与边界见 [`27`](27-login-portal.md) 末节，计划见 [`34`](34-web-refactor-plan.md) 第 3 步。
+
+`BRIDGEFLOW_SERVICE_TOKEN` 退回传输凭证；身份改由浏览器交出的门户令牌承担，宿主先经后端 `/identity/me` 验签一次才存，
+之后模型触发的读取原样转发，后端逐请求验签。审计主体三种从此分得开：`user:<摘要>` / `host` / `anonymous`。
+
+两条限制各有测试：过期绑定直接丢掉，不转发；同时有 **2** 个人绑定时什么都不挂（错的名字比没有名字更糟），
+而同一个人在多个会话里仍算无歧义，另一个绑定过期后歧义自动解除。审批备注 `author` 有绑定时记人。
+
+复现：
+
+```bash
+(cd backend && ../../.venv/bin/python -m pytest -q)        # 701 passed
+(cd plugins && corepack pnpm exec node --test --experimental-strip-types tests/actor.test.ts)
+(cd plugins && corepack pnpm typecheck && corepack pnpm build)
+```
+
+后端 **701 passed**（`test_identity.py` 再增 2 条，合计 36）；插件 **83 tests / 82 passed**，
+唯一失败是 `dsh-preflight.test.ts` 的 macOS `/private/var` 符号链接断言，与本改动无关（该文件不涉及 actor/identity/portal）；
+新增 `tests/actor.test.ts` **8** 条；typecheck 与 build 过。
+
+**未验**：真实模型运行下的端到端归属（本轮没有调用模型，也没有浏览器旅程证据）；两人并发绑定只在单元测试里构造过，没有真实双人会话验证。
+**未做**：无归属时拒绝读取——模型读取的授权仍是主机级，这一步只解决归属，不解决授权。
+
+## 全 Web 化第 1 步：控制台操作员角色门（2026-09-20，#229）
+
+离线实现与验证，未调用模型、未接真实飞书租户。计划见 [`34`](34-web-refactor-plan.md) 第 1 步。
+
+门禁默认关闭：未设 `PORTAL_CONSOLE_CHECK_URL` 时 `/verify` 只答登录问题，行为与从前逐字节相同（有测试断言一次都没问过应用）。
+开启后三种结局各有测试：有 `console_access` 授权放行 **200**；已登录但没有该授权 **403**（页面不出现「重新登录」——重登修不好缺授权）；
+授权无法确认 **503**（页面写明「这不是拒绝」）。判定不在门户重写一份：门户用自己刚签的用户令牌问后端
+`/identity/console-access`，后端按 JWKS 验签后走既有 `access_resolver`，角色规则仍只在 `access-control.yaml` 一处。
+
+实现中定下的两处边界：① 答案缓存 **60** 秒、失败**不**缓存（否则一次故障会粘在会话上，有测试数调用次数：两次放行只问 **1** 次，两次失败问 **2** 次）；
+② 应用回 503、回非布尔值、回空体一律读成「无法确认」而不是「已许可」（三种畸形答复各一条断言）。
+`/identity/console-access` 是唯一不挂 `require_host` 的路由——门户不持有宿主凭证，也不该持有（理由写在 `api/console.py` 模块注释）。
+
+复现：
+
+```bash
+(cd backend && ../../.venv/bin/python -m pytest -q)        # 699 passed
+(cd portal  && ../../.venv/bin/python -m pytest -q)        # 32 passed
+(cd backend && ../../.venv/bin/python -m ruff check src tests)
+(cd portal  && ../../.venv/bin/python -m ruff check src tests)
+```
+
+Python 后端 **699 passed**（`test_identity.py` 新增 4 条）、门户 **32 passed**（新增 7 条），两处 ruff 全过。
+
+收口时补了一条部署预检（`deploy/preflight.sh`）：门禁已开而没有任何角色声明 `console_access` 时报 FAIL——顺序反了会把所有人锁在门外（[`22`](22-lightsail-deploy.md) §9d）。
+判定调 `access_resolver.structure()` 自己的加载器，不用 grep（YAML 注释里也写着这个词，grep 会误判）。两条分支各跑过一次：现行 `access-control.yaml` 只有
+`master_office_admin` 一个角色声明它，退出码 **0**；抹掉那一处授权的副本退出码 **1**。门禁关闭时该检查沉默。
+
+**未验**：真实飞书租户下的端到端（真人尚未加入知识库，见 HANDOFF）；Caddy `forward_auth` 对 403/503 的透传形态只读代码确认，没起真实 Caddy 跑过；
+上面那条预检只在开发机上按两条分支验过逻辑，没在实例上完整跑过 `preflight.sh`（其余检查需要 systemd 与真实域名）；
+本轮没有前端改动，也没有浏览器旅程证据。离线通过不等于部署可用。
 
 ## E13 第二轮：跨期对比与差异分解（2026-09-19，#191）
 

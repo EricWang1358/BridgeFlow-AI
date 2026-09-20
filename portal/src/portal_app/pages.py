@@ -107,6 +107,21 @@ def error_page(title: str, detail: str) -> str:
 <a class="again" href="/">返回首页重新登录 →</a>""")
 
 
+def console_blocked(title: str, detail: str, portal_url: str) -> str:
+    """The body forward_auth hands a signed-in browser that may not pass (#229).
+
+    Deliberately not error_page: that one offers "sign in again", and neither of
+    these failures is fixed by signing in again — one is a missing grant, the
+    other is a scope this portal could not confirm. The wording must not say the
+    person was refused when the truth is that nobody could check.
+    """
+    home = html.escape(portal_url.rstrip("/") + "/", quote=True)
+    return _layout(title, f"""<p class="subtitle">统一登录门户</p>
+<p class="error-title">{html.escape(title)}</p>
+<p class="error-detail">{html.escape(detail)}</p>
+<a class="again" href="{home}">返回门户首页 →</a>""")
+
+
 def login_required(portal_url: str) -> str:
     """The 401 body Caddy forward_auth hands to anonymous browsers.
 

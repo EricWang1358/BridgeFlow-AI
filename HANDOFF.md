@@ -1,6 +1,38 @@
 # 开发交接 / Development handoff
 
-更新：2026-09-17（按用户要求提交 PR、验证 CI/CD 并合并；功能开发仍暂停）。**用户已要求本阶段停止开发，整理交接后留给下一阶段。不要因旧实施计划或自动续跑继续增加功能。** 下列未完成项是后续任务，不代表本阶段已完成全项目目标。
+更新：2026-09-20。**当前阶段是「全 Web 化 → Lark 接入」，顺序不可颠倒，见下面同名小节。** 该小节之外的内容属于此前已暂停的 14x 需求交付阶段，仍然有效但不是当前工作面；不要因那些旧实施计划或自动续跑继续增加功能。任何「已完成」都不代表企业验收。
+
+## 席位化隔离落地（2026-09-20，docs/35）
+
+#230 从「推后的评估」升级为**已实施的 7 席位方案（先到先得）**：固定容量通用席位
+（seat-1…7，各自 `DSH_HOME`、回环端口、子域名），获授权者先到先得认领、认领即绑定；
+方案、拍板与运行手册全在 [docs/35](docs/35-seat-isolation.md)。
+本机已验证：`start_web.py --backend-only/--web-only` 三模式、共享 token 探活、
+全新 home 首启自建（闲时 RSS 224–289MB，过门线 300MB，**7 席位 ≈2.0GB 贴 slice 预算线**，
+Linux 实测 >280MB 就减席位或升配）、门户 `/enter` 按人路由与 `/verify` 子域名绑定（39/39
+测试绿）、Caddy 双形态渲染、默认单进程流回归。改动清单：`scripts/start_web.py`、
+`deploy/{bridgeflow.service,bridgeflow-dsh@.service,bridgeflow-dsh.slice,bootstrap.sh,preflight.sh,render_caddy.py}`、
+`portal/src/portal_app/{seats.py,main.py,config.py}`、`scripts/provision_seat.sh`、
+`env.sh.example`；文档同步 00/22/27/34/35。
+
+**实例侧待人工（部署时做，清单顺序即依赖顺序）**：① env.sh 写入共享 `BRIDGEFLOW_SERVICE_TOKEN`
+（32+ 字符）；② 重跑 `bootstrap.sh`（装 slice/单元模板/swap/重渲 Caddy）；③
+`BRIDGEFLOW_DOMAIN=<domain> scripts/provision_seat.sh --init 7` 建席位舰队（**先到先得**：
+配置里没有人名，获 `console_access` 授权者第一个进入即认领）+ 每席位一条 DNS A 记录
+（seat-1..seat-7.console.<域名>）；④ `preflight.sh` 全绿；⑤ 双人实测：各认领各的席位、
+进错/未认领子域名收 403、会话互不可见、重启席位历史在、第 8 人收「席位已满」。
+原「全 Web 化四件人做的事」（真人入库、开门禁、Caddy 透传、真实模型归属）仍要做——
+席位化不替代门禁，两者叠加；门禁（`console_access`）是认领的前置。腾位用
+`provision_seat.sh --release <union_id>`（home 归档、即时生效）。
+
+**部署流水线已适配（合并前已改并本地全绿）**：`deploy.sh` 两处——每次部署顺带重启全部
+`bridgeflow-dsh@*` 单元（席位加载的插件与 bundle 才会更新）；web 活性检查按部署形态分流
+（`--backend-only` 时查席位单元，一个都没开通则跳过并告警，3080 只在旧形态检查）。
+认领文件 `data/seats-assigned.json` 是 untracked 实例状态，`git reset --hard` 天然不碰。
+CI test job 补装并跑 `portal/tests`（席位认领与绑定校验从此有门禁）。
+**注意合并即切换**：主单元变 backend-only 后、席位开通前，公网控制台不可用且 CI 公开活性
+检查会红（apex 仍指向已死的 3080）——这是预期的过渡窗口，开通完席位即恢复；不接受窗口就
+拆两个 PR（先落机制保留旧单元，开通后再切换单元文件）。
 
 ## 评审 rubric 自评（2026-09-20）
 
@@ -62,6 +94,84 @@
 3. **演示锚点**：七项各准备一个 30 秒画面（第 5 项就演「把提示注入写进单元格，工具在碰 Python 之前就拒」，
    第 6 项演「记录页的拒绝排行 + 生成的验收表」），别让评委自己在文档里找。
 
+
+## 全 Web 化 → Lark 接入（当前阶段，2026-09-20）
+
+形态决策见 issue #227，落地计划与逐步退出条件见 [docs/34](docs/34-web-refactor-plan.md)，
+所有实测数字见 [docs/00](docs/00-status.md)。本小节只管「做到哪了、接下来怎么做」，不复述那三处。
+
+### 为什么先 Web 化再 Lark
+
+Lark（#234）要动的是门户的多提供方抽象、`/verify` 与 `apps.yaml`——正是 Web 化第 1 步刚改过的同一片代码。
+先做 Lark 等于在一个还会变形的接缝上加第二个提供方，两次都要改同一处且冲突叠加。反过来，
+Web 化收口之后，Lark 只是「再注册一个 provider」，判定与门禁不必再动。
+
+顺序还有一条现实理由：Web 化剩下的是判断与验证（#230 只产结论，几项未验需要真人与真实租户），
+而 Lark 是纯实现。把需要等外部条件的事排在前面，等待期正好用来写 Lark。
+
+### 已完成（都在分支 `feature/web-based-refactor-20260920`，4 个提交，已推远端、**无 PR、CI 一次没跑过**）
+
+流水线只在 push main 与针对 main 的 PR 上触发，所以推分支不触发任何检查：这 4 个提交至今只在开发机上验过。
+上线路径是「开 PR（跑 test job）→ 合 main（触发 deploy job）→ 上实例改 `env.sh` 开门禁」，最后那步流水线做不了，
+见下面「需要人去操作的」。
+
+| | 内容 | 关键边界 |
+| --- | --- | --- |
+| 第 0 步 | 六项业务拍板 | 目标为评审（Web 化动机是「更新只需一处、用户不必手动升级」）；飞书不可达扣下整站；控制台 10 人以内；真实批次多在 10 MB 以内；本期不做本地部署；成本护栏与重启空窗留 TODO |
+| 第 1 步 #229 | 控制台操作员角色门（`f7893c8`） | **默认关闭**，尚未在任何部署开启。开启后「无 `console_access` 授权」403、「授权无法确认」503，措辞分开——重登修不好缺授权，所以那一页不提供「重新登录」 |
+| 第 3 步 #231 | 模型发起读取归属到人（`8ec17ce`） | `BRIDGEFLOW_SERVICE_TOKEN` 退回传输凭证；浏览器 `POST /bridgeflow/actor` 交出门户令牌，宿主经 `/identity/me` 验签后在模型触发的读取上原样转发，后端逐请求验签。有歧义就等于没有：两人同时绑定时不挂任何身份 |
+
+两条必须一起记住的限制：**归属不是授权**——缺归属时读取照样执行，模型读取的授权仍是主机级；
+第 1 步也不是按人隔离——控制台仍共用一个 dsh 身份，进去的人彼此可见。
+
+### 后续工作流程（每一步都照这条流水走）
+
+1. 读 [docs/34](docs/34-web-refactor-plan.md) 对应步骤的「退出条件」，不要从 issue 标题反推范围。
+2. 写代码与测试。离线测试是本项目的默认验收形态，真实模型与真实租户另算。
+3. 跑四条：`(cd backend && ../../.venv/bin/python -m pytest -q)`、`ruff check src tests`、
+   `(cd portal && … pytest -q)`、`(cd plugins && corepack pnpm typecheck && corepack pnpm test && corepack pnpm build)`。
+   插件套件里 `dsh-preflight.test.ts` 在 macOS 上因 `/private/var` 符号链接必然失败一条，与业务代码无关。
+4. 数字只写进 [docs/00](docs/00-status.md)，并写明「未验」与「未做」；设计边界写进对应专题文档（门户身份进 docs/27）；
+   进度写回本小节。三处不重复，冲突以 docs/34 为准。
+5. 一步一提交，commit 标题带 issue 号。
+
+### 已拍板推后（2026-09-20，不阻塞演示）
+
+1. **模型读取缺归属时维持照读**，审计如实记 `host`；两人同时绑定时归属为空也维持现状。改成拒绝会让超过
+   15 分钟与无人值守的运行在令牌过期后停住，而演示要走的正是这条路径。这是一条被知道的缺口：对外只能说
+   「读取能归属到人」，不能说「无归属的读取进不来」。
+2. **#230（按人隔离的评估）推后**，连判断也不在演示前产出——六问都需要真实并发数字才有意义。
+   能力边界本身没等它：「dsh 没有内建的多用户归属」已记进 [docs/13 第四节](docs/13-golden-standard.md)。
+
+两条都不产生代码动作，所以 **Web 化的代码面到此收口**（第 1、3 步落地并关闭，#232／#228／#233／#230 等演示后）。
+剩下的只有下面「需要人去操作的」四件，做完就进 Lark（#234）。
+
+### PR #235（门户改版）暂不合并 —— 2026-09-20 拍板
+
+`feature/ui-refactor-20260919` 与 main 冲突较多，且不涉及核心功能重构，**MVP 演示完成后再考虑合并**。
+在那之前它不影响本阶段：本分支基于 `origin/main`，第 1 步的 `console_blocked()` 用的正是 main 上现有的
+`error-title`／`error-detail`／`again` 三个类，样式成立，无需改动。
+
+合并那天有两件必须一起做的事，先记在这里免得丢：
+
+1. **样式**：#235 把 `pages.py` 整篇换成 CDS 记号与 `.callout`，上面三个类一个不剩。`console_blocked()` 要改成
+   `.callout` 形态，否则 403／503 两页掉样式（内容仍对）。
+2. **冲突与增强**：`pages.py` 与 `portal/.../main.py` 必然冲突（两边都改了 `error()`、`/verify`、`create_app` 签名）。
+   合并后顺手用 #235 带来的 `x-bridgeflow-reason` 把第 1 步的 503 细分成「不可达／未配置」——现在只能给一个 503。
+   本分支 3 个提交是线性的、不含合并提交，普通 rebase 安全。
+
+### 需要人去操作的（做不了代码替代）
+
+- 真人加入飞书知识库 → 登录与角色判定端到端（各库现仍只有应用本体，见下文 #204 条目）
+- 开启控制台门禁：`env.sh` 加 `PORTAL_CONSOLE_CHECK_URL`。**先在 ACL 给角色加 `console_access`，再开门禁**，顺序反了会把所有人锁在门外（docs/22 §9d）。开完跑一次 `bash deploy/preflight.sh <domain>`：它现在会在「门禁已开、无人有授权」时报 FAIL，这是唯一被脚本挡住的那个失误，其余三件仍得人自己点
+- Caddy 对 403/503 的 `forward_auth` 透传实测（目前只有读码确认）
+- 真实模型运行下的归属验证（本阶段未调用模型）
+
+### 一处与下文记录不符
+
+本分支基于 `origin/main`，不含 `feature/ui-refactor-20260919` 的门户改版（`failure.tsx`、`describeFailure`、
+`x-bridgeflow-reason` 都不在这条线上，未丢失，现已进 PR #235）。下文 2026-09-19 的三条记录描述的是那条分支，
+不是本分支的状态。
 
 ## 接手先看
 
