@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { Context } from '@deepseek-ai/cordis'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
@@ -47,4 +48,21 @@ test('approval gate uses the new action contract without mapping-specific branch
   assert.match(requests[0]!.reason, /Release the selected document/)
   assert.match(result.reason, /The document remains a draft/)
   assert.doesNotMatch(result.reason, /remembered for next month/)
+})
+
+/**
+ * One thing, one entry (2026-09-20). The studio's own toolbar is the only navigation into a
+ * batch: four destinations plus the other workspaces. Anything that reappears as a second
+ * top-level entry has to be a deliberate change, not a slot somebody added twice.
+ */
+test('the studio injects no second entry into a batch', async () => {
+  const source = await readFile(new URL('../src/client/index.tsx', import.meta.url), 'utf8')
+  for (const gone of ['DataWorkspaceButton', 'FileDrawer', 'FileButton']) {
+    assert.ok(!source.includes(gone), `${gone} was a second way into the same data; it is retired`)
+  }
+  const workspace = await readFile(new URL('../src/client/workspace.tsx', import.meta.url), 'utf8')
+  // The tables panel keeps the tables; starting a review and the version chain live in the
+  // destinations that own them.
+  assert.ok(!workspace.includes('startReview('), 'starting a review belongs to 本月任务')
+  assert.ok(!workspace.includes('superseded_by'), 'the version chain belongs to 记录 and the facts rail')
 })

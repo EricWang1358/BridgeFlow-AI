@@ -114,6 +114,7 @@ const labels = {
   dataHelp: ['一条时间线：取模板 → 提交前自检 → 导入成批次 → 修问题。每个部门一行，这个月能对它做的事都在那一行上。',
     'One timeline: take the template, self-check, import, fix. Each department owns a row carrying everything that can happen to its file this month.'],
   records: ['记录', 'Records'],
+  batchTables: ['批次数据表', 'Batch tables'],
   agentRuns: ['代理运行', 'Agent runs'],
   agentRunsHelp: ['一次运行 = 一次模型请求及其整棵调用树：队长那一步与各部门子代理的调用带同一个根，所以它们画在同一张图上。泳道是代理，标记是工具调用，拒绝按形状与文字标出，宽度按耗时占比——「哪一步花掉了时间」才是读者真正的问题。',
     'A run is one model-requested call and its whole tree: the captain\u2019s step and each department subagent\u2019s calls share a root, so they belong on one picture. The lane is the agent, the mark is a tool call, a refusal is marked by shape and word, and width is its share of the time — because “which step took it” is the real question.'],

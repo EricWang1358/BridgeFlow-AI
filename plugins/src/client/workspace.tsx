@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { BusinessReview, type Review } from './review.tsx'
-import { api, cellText, columnLabel, navigate, route, reviewRequest, startDiagnosis, startReview, useUI, type Summary, describeError } from './ui.ts'
+import { api, cellText, columnLabel, navigate, route, useUI, type Summary, describeError } from './ui.ts'
 export const departments = ['production', 'procurement', 'finance', 'marketing'] as const
 export const sections = ['master', 'corrections', 'mappings', 'columns', 'quarantine', 'review'] as const
 export function Chip({ status }: { status: string }) { const { t } = useUI(); return <span className="bf-chip" data-status={status}>{t(status.replaceAll('-', '_'))}</span> }
@@ -138,23 +138,14 @@ function FileRow({ name }: { name: string }) {
 }
 type View = { total: number; offset: number; rows: Record<string, unknown>[] }
 
-/** Which action the batch's own status implies. A state with no next step leaves
- *  the reader stuck holding a label. */
-const NEXT_STEP: Record<string, string> = {
-  needs_configuration: 'next_needs_configuration',
-  needs_review: 'next_needs_review',
-  ready: 'next_ready',
-  empty: 'next_empty',
-}
-const NEXT_TONE: Record<string, string> = {
-  needs_configuration: 'danger', needs_review: 'warn', ready: 'info', empty: 'warn',
-}
-export function DataWorkspaceButton({ wide }: { wide: boolean }) {
-  const { t } = useUI()
-  return <button className="bf-open" onClick={() => window.dispatchEvent(new Event('bridgeflow:open-data'))} title={t('data')}>{wide ? t('data') : t('master')}</button>
-}
-
-/** Keep the modal in shell.overlay: a collapsed sidebar must never hide a modal that makes the page inert. */
+/**
+ * The row-level tables of one batch: cleaned rows, corrections, pending mappings, column
+ * questions, quarantined rows, the saved review.
+ *
+ * It is deliberately not a workspace any more. Everything it used to duplicate — starting a
+ * review, the next step, the version chain, the batch's counts — has a home in one of the four
+ * destinations, and this panel is reached only from there. It has no entry of its own.
+ */
 export function DataWorkspace() {
   const { t } = useUI(), dialog = useRef<HTMLDialogElement>(null)
   const [batch, setBatch] = useState<Summary | null>(null), [batchId, setBatchId] = useState('')
@@ -211,10 +202,10 @@ export function DataWorkspace() {
     corrections: batch.departments.reduce((n, d) => n + d.corrections, 0), columns: batch.column_questions ?? 0, quarantine: batch.departments.reduce((n, d) => n + d.quarantined, 0), review: review ? `${review.roles.filter(r => r.status === 'validated').length}/4` : '—' } : {}
   function tab(key: string) { setSection(key); setOffset(0); if (batch) navigate({ batch: batch.batch_id, view: key, ...(key === 'review' && reportId ? { report: reportId } : {}) }) }
   return <>
-    <dialog className="bf-panel" ref={dialog} onCancel={close} aria-label={t('workspace')}>
+    <dialog className="bf-panel" ref={dialog} onCancel={close} aria-label={t('batchTables')}>
       <header className="bf-panel-head">
         <div>
-          <h2>{t(batch ? 'title' : 'intro')}</h2>
+          <h2>{t('batchTables')}</h2>
           {batch
             ? <p className="bf-lead bf-hint">{t('batchIdShort')} <code className="bf-mono">{batch.batch_id}</code>{' '}
                 <button className="bf-quiet" onClick={() => void copy(batch.batch_id, t('copied'))}>{t('copyId')}</button></p>
@@ -223,9 +214,6 @@ export function DataWorkspace() {
         <button className="bf-quiet" onClick={close}>{t('close')}</button>
       </header>
       <div className="bf-panel-body">
-      <details open={!batch}><summary>{t('newBatch')}</summary><ImportForm onSaved={result => { pendingBatch.current?.abort(); setReportId(''); setView(null); setReview(null); currentBatch.current = result; setBatch(result); setBatchId(result.batch_id); setOffset(0); setSection('master'); setNotice(t('saved')); selectBatch(result.batch_id) }} /></details>
-      <details><summary>{t('existing')}</summary><label>{t('batchId')} <input value={batchId} onChange={e => setBatchId(e.target.value)} /></label>
-        <button disabled={busy || !/^[a-f0-9]{32}$/.test(batchId)} onClick={() => selectBatch(batchId)}>{t('open')}</button></details>
       <p role="status">{notice}</p>{error && <p role="alert" className="bf-error">{error}</p>}
       {batch && <section>
         <div className="bf-band">
@@ -233,25 +221,6 @@ export function DataWorkspace() {
         </div>
         <p className="bf-hint" style={{ margin: 0 }}>{t('master')} {batch.master_rows} {t('rows')} · {t('mappings')} {batch.unresolved}{t('countSuffix')}</p>
 
-        {/* A status is only actionable next to the step it implies. */}
-        {NEXT_STEP[batch.status] && <div className="bf-callout" data-tone={NEXT_TONE[batch.status] ?? 'info'}>
-          <h3>{t('nextTitle')}</h3><p>{t(NEXT_STEP[batch.status]!)}</p>
-          {/* A blocked batch must not end in a sentence. The operator is holding four
-              sheets and the same question the machine could not answer; leaving them
-              to work it out alone is the thing this product exists to remove. */}
-          {batch.status === 'needs_configuration' && <>
-            <p className="bf-hint" style={{ marginTop: 8 }}>
-              {batch.column_questions ? <><b>{batch.column_questions}</b> {t('columnQuestions')}。</> : null}{t('askCaptainHint')}
-            </p>
-            <div className="bf-actions" style={{ marginBottom: 0 }}>
-              <button className="bf-primary" disabled={busy} onClick={async () => {
-                setError(''); setBusy(true)
-                try { await startDiagnosis(batch.batch_id, batch.period); close() }
-                catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
-              }}>{t(busy ? 'busy' : 'askCaptain')}</button>
-            </div>
-          </>}
-        </div>}
         {/* The refusal is the most important sentence on the panel; it used to be
             ordinary red body copy sandwiched between two counts. */}
         {batch.refusal && <div className="bf-callout" data-tone="danger">
@@ -279,29 +248,10 @@ export function DataWorkspace() {
           <p className="bf-mono">{batch.dropped_columns.map(c => `${t(c.department)}.${c.column}（${c.field_type}）`).join(' · ')}</p>
         </div>}
 
-        {!!batch.superseded_by?.length && <div className="bf-callout" data-tone="warn">
-          <h3>{t('superseded')}</h3><p>{t('supersededHint')}</p>
-          <div className="bf-actions" style={{ marginBottom: 0 }}>
-            <button onClick={() => selectBatch(batch.superseded_by!.at(-1)!)}>{t('openNewest')}</button>
-          </div>
-        </div>}
-        {batch.derived_from && <p className="bf-hint">{t('derivedFrom')}: <code className="bf-mono">{batch.derived_from}</code></p>}
-        <div className="bf-stats">{batch.departments.map(d => <div className="bf-stat" key={d.department}>
-          <b>{d.rows}</b><span>{t(d.department)} · {d.corrections} {t('corrections')} / {d.quarantined} {t('quarantine')}</span>
-        </div>)}</div>
-
         <div className="bf-actions">
-          {/* One button, doing the thing. Copy stays as the escape hatch for a
-              reviewer who wants to edit the request before sending it. */}
-          <button className="bf-primary" disabled={busy} onClick={async () => {
-            setError(''); setBusy(true)
-            try { await startReview(batch.batch_id, batch.period); close() }
-            catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
-          }}>{t(busy ? 'busy' : 'startReview')}</button>
-          <button onClick={() => void copy(reviewRequest(batch.batch_id, batch.period), t('copiedRequest'))}>{t('copy')}</button>
+          <button onClick={() => navigate({ batch: batch.batch_id, view: 'data' })}>{t('dataWorkspace')}</button>
           <button onClick={() => setRevision(r => r + 1)}>{t('refresh')}</button>
         </div>
-        <p className="bf-hint">{t('startReviewHint')}</p>
         <nav className="bf-tabs" aria-label={t('tabs')}>{sections.map(key => <button key={key} aria-label={t(key)} aria-pressed={section === key} onClick={() => tab(key)}>{t(key)} <span className="bf-badge">{counts[key]}</span></button>)}</nav>
         {section === 'mappings' && <p className="bf-hint">{t('mappingHelp')}</p>}{section === 'columns' && <p className="bf-hint">{t('columnsHelp')}</p>}{section === 'quarantine' && <p className="bf-hint">{t('quarantineHelp')}</p>}
         {section === 'review' ? review ? <BusinessReview report={review} /> : !error && <p role="status" className="bf-loading">{t('loading')}</p> : view ? <>

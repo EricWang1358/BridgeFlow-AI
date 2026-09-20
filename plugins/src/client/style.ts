@@ -552,20 +552,20 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 /* ---- decision journal and acceptance report ---------------------------- */
 
 .bf-journal { margin-top: 18px }
-.bf-journal-summary { grid-template-columns: auto 1fr auto 1fr }
+.bf-journal-summary { grid-template-columns: auto minmax(2rem, 1fr) }
 .bf-journal-reasons { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px }
 .bf-journal-reasons li { display: flex; gap: 10px; align-items: baseline; font-size: 12px }
 .bf-journal-reasons li > span:first-child { flex: 1 1 auto; min-width: 0 }
 
 .bf-journal-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 2px }
 .bf-journal-list li {
-  display: grid; align-items: baseline; gap: 8px;
-  grid-template-columns: 4.5rem 4.5rem minmax(8rem, 1fr) 4rem;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px;
   padding: 5px 6px; border-radius: 6px; font-size: 12px;
 }
+.bf-journal-surface { flex: 1 1 9rem; min-width: 0 }
 .bf-journal-list li:nth-child(odd) { background: var(--bf-surface-2) }
 /* A refusal is the interesting line, so it gets the whole row and the accent. */
-.bf-journal-list li[data-outcome=refused] { grid-template-columns: 4.5rem 4.5rem minmax(8rem, 1fr) 4rem; box-shadow: inset 2px 0 var(--bf-danger) }
+.bf-journal-list li[data-outcome=refused] { box-shadow: inset 2px 0 var(--bf-danger) }
 .bf-journal-time, .bf-journal-ms, .bf-journal-trace { color: var(--bf-muted); font-variant-numeric: tabular-nums }
 .bf-journal-ms { text-align: right }
 .bf-journal-outcome { font-weight: 640 }
@@ -573,8 +573,8 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-journal-outcome[data-outcome=wrote] { color: var(--bf-warn) }
 .bf-journal-outcome[data-outcome=served] { color: var(--bf-muted) }
 .bf-journal-surface { overflow-wrap: anywhere }
-.bf-journal-reason { grid-column: 2 / -1; color: var(--bf-text); line-height: 1.5 }
-.bf-journal-trace { grid-column: 1 / -1; font-size: 11px; opacity: .55 }
+.bf-journal-reason { flex: 1 1 100%; color: var(--bf-text); line-height: 1.5 }
+.bf-journal-trace { flex: 1 1 100%; font-size: 11px; opacity: .55 }
 
 .bf-eval { margin-top: 18px }
 
@@ -584,16 +584,20 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-run-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px }
 .bf-run-list > li { border: 1px solid var(--bf-line); border-radius: var(--bf-radius); overflow: hidden }
 .bf-run-head {
-  width: 100%; display: grid; gap: 10px; align-items: baseline; text-align: left;
-  grid-template-columns: 4.5rem minmax(0, 1fr) minmax(0, 12rem);
+  width: 100%; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; text-align: left;
   background: none; border: 0; padding: 10px 12px; cursor: pointer; font-size: 13px;
 }
+.bf-run-summary { flex: 1 1 12rem; min-width: 0 }
+.bf-run-tools { flex: 1 1 100%; }
 .bf-run-head:hover { background: var(--bf-surface-2) }
 .bf-run-when { color: var(--bf-muted); font-variant-numeric: tabular-nums }
 .bf-run-tools { overflow-wrap: anywhere }
 .bf-run-detail { padding: 4px 12px 12px; border-top: 1px solid var(--bf-line) }
 
-.bf-run-lanes { display: grid; gap: 6px; margin: 10px 0 12px }
+/* The lanes need room to stay readable; in a narrow pane they scroll rather than shrink
+   the marks into unlabelled slivers. */
+.bf-run-lanes { display: grid; gap: 6px; margin: 10px 0 12px; overflow-x: auto; padding-bottom: 4px }
+.bf-run-lane { min-width: 460px }
 .bf-run-lane { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 10px; align-items: center }
 .bf-run-lane-name { font-size: 12px; color: var(--bf-muted); overflow-wrap: anywhere }
 .bf-run-lane-track {
@@ -613,10 +617,12 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 
 .bf-run-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px }
 .bf-run-steps > li {
-  display: grid; gap: 8px; align-items: baseline; font-size: 12px; padding: 4px 6px; border-radius: 6px;
-  grid-template-columns: 7rem minmax(6rem, 1fr) 4rem 3.5rem;
+  display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: 12px;
+  padding: 5px 6px; border-radius: 6px;
 }
+.bf-run-steps > li > span:nth-child(2) { flex: 1 1 8rem; min-width: 0; font-weight: 600 }
+.bf-run-steps > li > span:nth-child(3), .bf-run-steps > li > span:nth-child(4) { color: var(--bf-muted) }
 .bf-run-steps > li:nth-child(odd) { background: var(--bf-surface-2) }
 .bf-run-steps > li[data-outcome=refused] { box-shadow: inset 2px 0 var(--bf-danger) }
-.bf-run-step-reason { grid-column: 2 / -1; color: var(--bf-text); line-height: 1.5 }
+.bf-run-step-reason { flex: 1 1 100%; color: var(--bf-text); line-height: 1.5 }
 `
