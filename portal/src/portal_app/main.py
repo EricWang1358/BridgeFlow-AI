@@ -106,6 +106,12 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
 
         logger.info("portal seats: %s capacity, %s claimed",
                     len(seats), len(seat_state().as_map()))
+        # Seat pages fetch the portal cross-origin with credentials (the
+        # browser trades its session cookie for an app token) and Caddy puts
+        # no portal route on seat hosts, so every seat origin must be in the
+        # CORS list — derived from the fleet, not hand-kept in the registry.
+        origins = sorted({*origins, *(seats.url(s) for name in seats.names()
+                                      if (s := seats.seat(name)))})
     else:
         def seat_state() -> Assignments:  # pragma: no cover - unreachable without seats
             raise RuntimeError("seat state requested without a seat fleet")

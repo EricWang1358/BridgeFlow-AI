@@ -371,6 +371,10 @@ apps:
       - "https://<domain>"
 ```
 
+席位模式下 redirect_uri 填 `https://portal.<domain>/enter`；`*.console.<domain>`
+各席位源**不用**写进 `origins`——门户按 seats.yaml 在启动时自动并入 CORS 白名单
+（席位页面跨域换取 app token 必须带 cookie）。
+
 token 文件不需要配置：`start_web.py` 从 dsh web 的 stdout 捕获当次 token
 写到 `$DSH_HOME/.web-launch-token`（0600），门户默认读同一路径
 （`PORTAL_DSH_TOKEN_FILE` 可覆盖）。dsh 会话 cookie 跨重启有效（签名密钥

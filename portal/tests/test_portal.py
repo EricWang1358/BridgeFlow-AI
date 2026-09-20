@@ -544,6 +544,19 @@ def claims_path(tmp_path) -> str:
     return str(tmp_path / "seats-assigned.json")
 
 
+def test_seat_origins_join_the_cors_list_without_registry_edits(tmp_path):
+    """Seat pages trade their session cookie for an app token cross-origin, so
+    the fleet itself — not a hand-kept origins list — decides what CORS allows.
+    The fixture's portal is http, so the derived seat origins are http too."""
+    with TestClient(seat_portal(tmp_path)) as client:
+        seat = client.get("/health", headers={"Origin": f"http://{SEAT1_HOST}"})
+        assert seat.headers["access-control-allow-origin"] == f"http://{SEAT1_HOST}"
+        outsider = client.get("/health", headers={"Origin": "https://evil.test"})
+        assert "access-control-allow-origin" not in outsider.headers
+        listed = client.get("/health", headers={"Origin": "http://web.test"})
+        assert listed.headers["access-control-allow-origin"] == "http://web.test"
+
+
 def test_the_first_authorized_person_claims_the_first_seat(tmp_path):
     with TestClient(seat_portal(tmp_path), follow_redirects=False) as client:
         login(client)
