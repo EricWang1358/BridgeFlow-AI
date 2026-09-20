@@ -81,7 +81,10 @@ step "client bundle"
 (cd plugins && corepack pnpm install --frozen-lockfile && corepack pnpm run build)
 
 step "swap (2G) — idle seat pages page out instead of OOM (docs/35 §3)"
-if ! sudo swapon --show | grep -q .; then
+# Not "any swap" but "at least the capacity plan": an instance that already
+# carries a token swap must still get topped up, or preflight rightly fails.
+swap_kb=$(awk '/SwapTotal/{print $2}' /proc/meminfo)
+if [ "${swap_kb:-0}" -lt 2097152 ]; then
   sudo fallocate -l 2G /swapfile
   sudo chmod 600 /swapfile
   sudo mkswap /swapfile >/dev/null
