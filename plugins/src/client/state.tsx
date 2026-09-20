@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventSource, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import { api, formatTime, labelText, navigate, route, useUI, type Summary, describeError } from './ui.ts'
+import { api, claimActor, formatTime, labelText, navigate, route, useUI, type Summary, describeError } from './ui.ts'
 import { QuotationProgress } from './quotation-progress.tsx'
 import { Notebook } from './notebook.tsx'
 import { BusinessReview, type Review } from './review.tsx'
@@ -107,6 +107,9 @@ export function mountState(ctx: Context) {
     inject: sessionId => {
       const binding = sessions.binding(sessionId)
       if (!binding) throw new Error('Native session binding unavailable')
+      // Opening a session's view is the moment this browser starts driving it, and the
+      // only place the client holds both the session id and its portal token (#231).
+      void claimActor(sessionId)
       return { source: binding.eventSource, loadOlder: () => binding.session.loadOlder() }
     },
   }, BusinessState))

@@ -347,3 +347,30 @@ def test_console_access_withholds_when_feishu_cannot_be_reached(client, monkeypa
 
     monkeypatch.setattr(access_resolver, "fetch_space_members", unreachable)
     assert client.get("/identity/console-access", headers=auth(make_token())).status_code == 503
+
+
+def test_me_answers_identity_only_after_verifying_the_signature(client):
+    """The host binds a browser's token only once this route has verified it (#231)."""
+    assert client.get("/identity/me").status_code == 401
+    assert client.get("/identity/me", headers=auth(make_token(key=OTHER_PRIVATE))).status_code == 401
+    body = client.get("/identity/me", headers=auth(make_token())).json()
+    assert body == {"subject": "ou_alice", "name": "测试", "email": "t@example.com"}
+    # Identity only: grants are a different question with different failure modes.
+    assert "roles" not in body and "allowed" not in body
+
+
+def test_a_model_initiated_read_is_attributed_when_the_host_relays_a_token(client):
+    """The relayed token is verified per request, so the journal names a person
+    rather than the host. Without it the read still happens and stays the host's."""
+    from bridgeflow import journal
+
+    batch_id = upload(client, auth(make_token()))
+    assert client.get(f"/batches/{batch_id}", headers=auth(make_token())).status_code == 200
+    entries = journal.read(limit=50)["entries"]
+    reads = [entry for entry in entries if entry.get("method") == "GET"]
+    assert reads and reads[0]["actor"].startswith("user:"), reads[:1]
+    # The three kinds stay distinguishable: a named person, an unattributed host read
+    # (what every model-initiated call looked like before this issue), and no caller.
+    assert journal.actor_of("ou_alice", host=True).startswith("user:")
+    assert journal.actor_of(None, host=True) == "host"
+    assert journal.actor_of("", host=False) == "anonymous"

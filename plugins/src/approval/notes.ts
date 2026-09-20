@@ -41,11 +41,17 @@ export class ApprovalNotes {
   permit(sessionId: string, callId: string): string | undefined {
     return this.#pending.get(this.key(sessionId, callId))?.permit
   }
-  async record(sessionId: string, callId: string, ticket: string, note: string, persist: (entry:ApprovalNote)=>Promise<void>): Promise<boolean> {
+  /**
+   * `author` is the portal subject bound to this session when there is one (#231).
+   * Falling back to the old literal is honest rather than tidy: it says the note came
+   * from whoever held the shared dsh session, which is all the host knew before the
+   * browser started handing over a verified token.
+   */
+  async record(sessionId: string, callId: string, ticket: string, note: string, persist: (entry:ApprovalNote)=>Promise<void>, author = 'dsh-authenticated-session'): Promise<boolean> {
     const pending = this.#pending.get(this.key(sessionId, callId))
     if (!pending || pending.ticket !== ticket || note.length > 240) return false
     const normalized = note.replace(/\s+/g, ' ').trim()
-    await persist({sessionId,callId,note:normalized,author:'dsh-authenticated-session',time:Date.now(),status:'draft'})
+    await persist({sessionId,callId,note:normalized,author:author || 'dsh-authenticated-session',time:Date.now(),status:'draft'})
     if (this.#pending.get(this.key(sessionId,callId)) !== pending) return false
     pending.note = normalized
     return true

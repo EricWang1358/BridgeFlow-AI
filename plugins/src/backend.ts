@@ -7,6 +7,8 @@
  * and where the rules-compute work of issue #13 belongs.
  */
 
+import { actors } from './actor.ts'
+
 /** Where the Python side listens. Configurable because two deployments differ. */
 export interface BackendConfig {
   /** Base URL of the BridgeFlow FastAPI service. */
@@ -99,10 +101,17 @@ export async function callBackend<T>(
       method: 'POST',
       headers: {
         'content-type': 'application/json',
+        // Transport credential: it proves the call comes from this host process. It is
+        // no longer the identity — that rides in x-bridgeflow-user below and is verified
+        // per request by the backend (issue #231, src/actor.ts).
         authorization: `Bearer ${process.env.BRIDGEFLOW_SERVICE_TOKEN ?? ''}`,
         ...(approvalReceipt ? { 'x-bridgeflow-approval': approvalReceipt } : {}),
         ...traceHeaders(execution),
         ...subjectHeaders(body),
+        // Whose turn this read belongs to, when that is unambiguous. Absent when
+        // nobody is bound, everybody's token expired, or two people are bound at
+        // once — a wrong name is worse than no name (src/actor.ts).
+        ...actors.header(),
       },
       body: JSON.stringify(body),
       signal: combined,

@@ -44,3 +44,17 @@ async def console_access(user: Annotated[UserIdentity | None, Depends(require_us
             "roles": sorted(resolved.roles),
             "operation": access.CONSOLE_OPERATION,
             "audience": settings.portal_audience}
+
+
+@router.get("/me")
+async def me(user: Annotated[UserIdentity | None, Depends(require_user)]) -> dict:
+    """Who this token says its bearer is, after signature verification (issue #231).
+
+    The host calls this before binding a browser's token to a session, so that it
+    never stores or relays a token it has not seen verified once. It deliberately
+    answers identity only — no grants, no scope: a caller that needs those asks
+    the route that resolves them, and gets that answer's own failure modes.
+    """
+    if user is None:
+        raise HTTPException(503, "Portal identity is not configured on this service: set PORTAL_BASE_URL")
+    return {"subject": user.sub, "name": user.name, "email": user.email}

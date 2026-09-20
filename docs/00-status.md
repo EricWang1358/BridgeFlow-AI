@@ -11,6 +11,31 @@
 
 ---
 
+## 全 Web 化第 3 步：模型发起的读取归属到人（2026-09-20，#231）
+
+离线实现与验证，未调用模型、未接真实飞书租户。设计与边界见 [`27`](27-login-portal.md) 末节，计划见 [`34`](34-web-refactor-plan.md) 第 3 步。
+
+`BRIDGEFLOW_SERVICE_TOKEN` 退回传输凭证；身份改由浏览器交出的门户令牌承担，宿主先经后端 `/identity/me` 验签一次才存，
+之后模型触发的读取原样转发，后端逐请求验签。审计主体三种从此分得开：`user:<摘要>` / `host` / `anonymous`。
+
+两条限制各有测试：过期绑定直接丢掉，不转发；同时有 **2** 个人绑定时什么都不挂（错的名字比没有名字更糟），
+而同一个人在多个会话里仍算无歧义，另一个绑定过期后歧义自动解除。审批备注 `author` 有绑定时记人。
+
+复现：
+
+```bash
+(cd backend && ../../.venv/bin/python -m pytest -q)        # 701 passed
+(cd plugins && corepack pnpm exec node --test --experimental-strip-types tests/actor.test.ts)
+(cd plugins && corepack pnpm typecheck && corepack pnpm build)
+```
+
+后端 **701 passed**（`test_identity.py` 再增 2 条，合计 36）；插件 **83 tests / 82 passed**，
+唯一失败是 `dsh-preflight.test.ts` 的 macOS `/private/var` 符号链接断言，与本改动无关（该文件不涉及 actor/identity/portal）；
+新增 `tests/actor.test.ts` **8** 条；typecheck 与 build 过。
+
+**未验**：真实模型运行下的端到端归属（本轮没有调用模型，也没有浏览器旅程证据）；两人并发绑定只在单元测试里构造过，没有真实双人会话验证。
+**未做**：无归属时拒绝读取——模型读取的授权仍是主机级，这一步只解决归属，不解决授权。
+
 ## 全 Web 化第 1 步：控制台操作员角色门（2026-09-20，#229）
 
 离线实现与验证，未调用模型、未接真实飞书租户。计划见 [`34`](34-web-refactor-plan.md) 第 1 步。
