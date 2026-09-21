@@ -195,6 +195,9 @@ export const style = `
 
 .bf-band { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 0 0 2px }
 .bf-band .bf-period { font-size: 22px; font-weight: 660; letter-spacing: -.02em }
+/* The status's debt to its reader: the sentence under the chip and its one action (#244). */
+.bf-next { margin: 6px 0 0; padding: 8px 10px; border-left: 3px solid var(--bf-accent); background: var(--bf-accent-soft) }
+.bf-next .bf-actions { margin: 6px 0 0 }
 .bf-stats { display: flex; gap: 20px; flex-wrap: wrap; margin: 14px 0 }
 .bf-stat { min-width: 74px }
 .bf-stat b { display: block; font-size: 21px; font-weight: 640; line-height: 1.2 }

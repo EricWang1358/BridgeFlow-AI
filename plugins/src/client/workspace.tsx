@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { BusinessReview, type Review } from './review.tsx'
+import { NextStep } from './next-step.tsx'
 import { api, cellText, columnLabel, navigate, route, useUI, type Summary, describeError } from './ui.ts'
 export const departments = ['production', 'procurement', 'finance', 'marketing'] as const
 export const sections = ['master', 'corrections', 'mappings', 'columns', 'quarantine', 'review'] as const
@@ -219,6 +220,7 @@ export function DataWorkspace() {
         <div className="bf-band">
           <span className="bf-period">{batch.period}</span> <Chip status={batch.status} />
         </div>
+        <NextStep batch={batch} />
         <p className="bf-hint" style={{ margin: 0 }}>{t('master')} {batch.master_rows} {t('rows')} · {t('mappings')} {batch.unresolved}{t('countSuffix')}</p>
 
         {/* The refusal is the most important sentence on the panel; it used to be

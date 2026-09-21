@@ -13,6 +13,9 @@ export function batchSummary(config: BackendConfig) {
           batch_id: { type: 'string', required: true }, period: { type: 'string', required: true },
           master_rows: { type: 'number', required: true }, unresolved: { type: 'number', required: true },
           status: { type: 'string', required: true }, refusal: { type: 'string', required: true },
+          // The one action that moves the batch on (#244): lets the captain answer
+          // "what now" from the same facts the screen shows.
+          next_step: { type: 'string', required: true },
           // Every field the host returns is declared: a strict schema that lags the host
           // turns a correct answer into an invalid tool result, which only a real captain
           // ever hit (#41 live run). A contract test on the Python side keeps them in step.

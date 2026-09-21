@@ -480,6 +480,7 @@ test('batch_summary accepts the full host summary, including absent optional val
   ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
   t.mock.method(globalThis, 'fetch', async () => Response.json({
     demo_case: null, batch_id: 'a'.repeat(32), period: '2025-11', master_rows: 4, unresolved: 2, status: 'needs_review', refusal: '',
+    next_step: 'Settle 0 quarantined row(s) and confirm 2 pending mapping(s), then ask for the review.',
     departments: [{ department: 'finance', rows: 2, quarantined: 0, corrections: 0 }], dictionary: 'data/business_demo/dictionary.yaml',
     declared_entities: { finance: ['project'] }, matched_columns: ['finance.project_code → project'], stale_matches: [], column_questions: 0, derived_from: null,
   }))
