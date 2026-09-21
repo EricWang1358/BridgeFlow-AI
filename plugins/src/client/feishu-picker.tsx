@@ -73,6 +73,9 @@ function Browser({ row, currentFolder, extra }: {
   const jump = (index: number) => setTrail(trail.slice(0, index))
   return <div className="bf-feishu-browser">
     <nav className="bf-feishu-crumbs" aria-label={t('feishuRoot')}>
+      {/* The crumbs navigated, but nobody found them: entering a deep folder read as
+          one-way. The up button says the way out out loud, one level per click. */}
+      {trail.length > 0 && <button className="bf-feishu-up" onClick={() => jump(trail.length - 1)}>↑ {t('feishuUpOne')}</button>}
       <button aria-current={!trail.length ? 'true' : undefined} onClick={() => jump(0)}>{t('feishuRoot')}</button>
       {trail.map((item, i) => <button key={item.token} aria-current={i === trail.length - 1 ? 'true' : undefined} onClick={() => jump(i + 1)}>{item.name}</button>)}
     </nav>
@@ -134,6 +137,9 @@ function WikiBrowser({ row, currentLocation, extra }: {
   const back = () => { setSpace(null); setTrail([]); setPage(null) }
   return <div className="bf-feishu-browser">
     <nav className="bf-feishu-crumbs" aria-label={t('feishuWiki')}>
+      {/* Same affordance as the Drive browser: up pops one node level, and from a
+          space's top level it returns to the space list. */}
+      {space && <button className="bf-feishu-up" onClick={() => (trail.length ? setTrail(trail.slice(0, -1)) : back())}>↑ {t('feishuUpOne')}</button>}
       <button aria-current={!space ? 'true' : undefined} onClick={back}>{t('feishuSpaces')}</button>
       {space && <button aria-current={!trail.length ? 'true' : undefined} onClick={() => setTrail([])}>{space.name}</button>}
       {trail.map((node, i) => <button key={node.token} aria-current={i === trail.length - 1 ? 'true' : undefined} onClick={() => setTrail(trail.slice(0, i + 1))}>{node.title}</button>)}
@@ -219,6 +225,11 @@ export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void })
   // A pick is ready when its second question is answered; files are ready at once.
   const ready = (p: Picked) =>
     p.kind === 'file' || (p.kind === 'sheet' ? !!p.sheet_id && (p.header_row ?? 0) >= 1 : !!p.table_id)
+  // Partial cancel (#244): the pick used to exist only on its own row, in its own
+  // folder — leave that folder and it was invisible and unremovable. The chosen list
+  // is the single place every pick is visible, whatever folder the browser is in.
+  const remove = (dept: string) =>
+    setAssign(prev => { const next = { ...prev }; delete next[dept]; return next })
   async function run() {
     if (!period || !chosen.length) return
     setBusy(true); setError('')
@@ -262,8 +273,18 @@ export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void })
                                   kind: node.obj_type === 'sheet' ? 'sheet' : node.obj_type === 'bitable' ? 'bitable' : 'file' })}
       </span>
     }} />}
-    {chosen.filter(d => assign[d]!.kind !== 'file').map(d =>
-      <p key={d} className="bf-hint">{assign[d]!.name} · {t(d)} → {subSelect(d, assign[d]!)}</p>)}
+    {chosen.length > 0 && <div className="bf-feishu-chosen" aria-label={t('feishuChosen')}>
+      <h4>{t('feishuChosen')} <span className="bf-badge">{chosen.length}</span></h4>
+      <p className="bf-hint" style={{ margin: '0 0 6px' }}>{t('feishuChosenHelp')}</p>
+      <ul>
+        {chosen.map(d => <li key={d}>
+          <b>{t(d)}</b> <span className="bf-feishu-chosen-name">{assign[d]!.name}</span>
+          {assign[d]!.kind !== 'file' && subSelect(d, assign[d]!)}
+          <button className="bf-feishu-remove" aria-label={`${t('feishuCancelPick')} · ${t(d)} · ${assign[d]!.name}`}
+                  title={t('feishuCancelPick')} onClick={() => remove(d)}><span aria-hidden="true">✕</span></button>
+        </li>)}
+      </ul>
+    </div>}
     <div className="bf-feishu-go">
       <input type="month" aria-label={t('month')} value={period} onChange={e => setPeriod(e.target.value)} required />
       <button className="bf-primary" disabled={busy || !period || !chosen.length || chosen.some(d => !ready(assign[d]!))} onClick={() => void run()}>
