@@ -12,6 +12,19 @@ __DOMAIN__ {
     # the portal's own page, which steers browsers to the login flow.
     forward_auth 127.0.0.1:__PORTAL_PORT__ {
         uri /verify
+        # /verify is a plain HTTP endpoint. forward_auth copies the original
+        # request's headers into its subrequest, so a WebSocket upgrade arrives
+        # at uvicorn carrying Connection/Upgrade, uvicorn hands it to its
+        # WebSocket protocol, Starlette finds no ws route on /verify and closes
+        # with 403 — and forward_auth then rejects the whole upgrade. That kills
+        # wss://<host>/api/remote.mux, which is the ONE socket carrying every
+        # Typert Remote stream: the Workspace projection has no unary fallback,
+        # so the console lands with no workspace, no auto-session, and a
+        # composer that says "choose a workspace to start" (2026-09-21).
+        # Stripping the two hop-by-hop headers keeps /verify a normal GET; the
+        # original request still upgrades and still passes all three checks.
+        header_up -Connection
+        header_up -Upgrade
     }
     reverse_proxy 127.0.0.1:__WEB_PORT__
 }

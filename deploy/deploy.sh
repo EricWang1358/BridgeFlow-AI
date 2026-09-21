@@ -55,6 +55,20 @@ if [ -n "$units_domain" ]; then
       units_changed=1
     fi
   done
+  # The Caddyfile had the same defect the units had: only bootstrap.sh and
+  # provision_seat.sh ever rendered it, so a proxy change merged later sat in
+  # git while the instance kept the old file — which is exactly how the seats
+  # ran for a day with a forward_auth that ate every WebSocket upgrade
+  # (2026-09-21, docs/22). Same shape as above: render, diff, reload only on a
+  # change. Skipped when caddy is absent (a box bootstrap has not reached yet).
+  if command -v caddy >/dev/null; then
+    caddyfile=$("$VENV" deploy/render_caddy.py "$units_domain")
+    if [ "$caddyfile" != "$(sudo cat /etc/caddy/Caddyfile 2>/dev/null || true)" ]; then
+      printf '%s\n' "$caddyfile" | sudo tee /etc/caddy/Caddyfile >/dev/null
+      sudo systemctl reload caddy
+      echo "Caddyfile updated and caddy reloaded"
+    fi
+  fi
 else
   echo "unit install skipped: no domain known (pass it as arg 2 or set PUBLIC_DOMAIN)" >&2
 fi

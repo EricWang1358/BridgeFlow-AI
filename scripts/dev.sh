@@ -37,7 +37,11 @@ fi
 
 mkdir -p logs
 echo "==> portal :8100 (logs/portal.log)"
-(cd portal && PYTHONPATH=src "$PY" -m uvicorn portal_app.main:app --host 127.0.0.1 --port 8100) > logs/portal.log 2>&1 &
+# --ws none matches deploy/portal.service (the portal has no WebSocket route;
+# see that unit's header). Local dev has no forward_auth in front of it, so the
+# flag changes nothing here — which is the point: this bug survived because the
+# dev flow and the instance launched the same process differently.
+(cd portal && PYTHONPATH=src "$PY" -m uvicorn portal_app.main:app --host 127.0.0.1 --port 8100 --ws none) > logs/portal.log 2>&1 &
 PORTAL_PID=$!
 trap 'kill "$PORTAL_PID" 2>/dev/null || true' EXIT INT TERM
 

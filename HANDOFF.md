@@ -1,6 +1,25 @@
 # 开发交接 / Development handoff
 
-更新：2026-09-20。**当前阶段是「全 Web 化 → Lark 接入」，顺序不可颠倒，见下面同名小节。** 该小节之外的内容属于此前已暂停的 14x 需求交付阶段，仍然有效但不是当前工作面；不要因那些旧实施计划或自动续跑继续增加功能。任何「已完成」都不代表企业验收。
+更新：2026-09-21。**当前阶段是「全 Web 化 → Lark 接入」，顺序不可颠倒，见下面同名小节。** 该小节之外的内容属于此前已暂停的 14x 需求交付阶段，仍然有效但不是当前工作面；不要因那些旧实施计划或自动续跑继续增加功能。任何「已完成」都不代表企业验收。
+
+## 线上席位没有默认工作区 / 发不起对话（2026-09-21，已修待验证）
+
+现象：登录进席位后工作区是空的、菜单里也选不了，只能从 BridgeFlow 顶栏切笔记本才能对话。
+根因不在前端也不在 dsh：Caddy `forward_auth` 把原请求的 `Connection`/`Upgrade` 头带进了门户
+`/verify` 子请求，装了 `websockets` 的 uvicorn 把它当 WebSocket 握手、没有 ws 路由回 403，
+于是 `wss://<seat>.console.<domain>/api/remote.mux` 被认证层拒掉——dsh 所有 Remote **流**都在
+这条 socket 上，工作区投影没有 unary 回退，`watchNavigation` 因此静默不建会话。
+机理与判别式见 [docs/22](docs/22-lightsail-deploy.md) §7/§9b、[docs/35](docs/35-seat-isolation.md) §3，
+实测对照见 [docs/00](docs/00-status.md) 首节。
+
+改动：`deploy/{Caddyfile.template,render_caddy.py}` 每个站点块加 `header_up -Connection` /
+`-Upgrade`；`deploy/portal.service` 加 `--ws none`；`deploy/preflight.sh` 新增逐席位的升级握手
+检查（401 = 好，403 = 坏）；`deploy/deploy.sh` 每次部署按 diff 重渲 Caddyfile 并 reload
+（此前只有 bootstrap/provision 会渲染，改了没人装）。开发机已端到端复现并验证修复。
+
+**实例侧待人工**：部署后跑 `bash deploy/preflight.sh <domain>`，确认新检查为 401；
+顺带确认同一条 socket 上的**会话流**也恢复了——原生侧边栏会话树是否列出会话、模型回复是否
+流式出现（修复前这两项应同样是坏的，线上未逐项确认过）。
 
 ## 席位化隔离落地（2026-09-20，docs/35）
 
