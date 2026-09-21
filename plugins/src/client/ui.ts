@@ -367,8 +367,14 @@ const labels = {
   dictionaryInForce: ['本批次冻结的字典', 'Dictionary frozen into this batch'],
   declaresEntities: ['它为各部门声明的可连接列', 'Joinable columns it declares'],
   declaresNothing: ['未声明任何可连接列', 'declares none'],
-  next_needs_review: ['有行被扣下或有映射待确认。先看隔离行和待确认映射两个页签，再发起研判。',
-                      'Rows were held back or mappings are unconfirmed. Check the quarantine and pending-mapping tabs before asking for a review.'],
+  next_needs_review: ['{quarantined} 行被扣下、{unresolved} 条映射待确认。先处置隔离行、确认映射，再发起研判。',
+                      '{quarantined} row(s) held back, {unresolved} mapping(s) unconfirmed. Settle the quarantined rows and the mappings, then ask for a review.'],
+  nextStepTitle: ['下一步', 'Next step'],
+  goQuarantine: ['处理隔离行', 'Settle quarantined rows'], goMappings: ['确认待确认映射', 'Confirm pending mappings'],
+  copyReviewRequest: ['复制研判请求', 'Copy review request'],
+  // The inbox filter's label: named here only because the guard test proved the call
+  // had been rendering the raw key's English spelling in both locales (#244).
+  department: ['部门', 'Department'],
   next_ready: ['数据可用了。复制研判请求，粘贴到会话里发起四部门研判。',
                'The data is usable. Copy the review request and paste it into the conversation.'],
   next_empty: ['这一批没有可用数据。修正源文件后重新导入。', 'This batch has no usable data. Correct the source files and import again.'],
@@ -430,6 +436,8 @@ const labels = {
 } as const
 /** Language outside React: slot labels are callbacks, not components. */
 export function currentLanguage(): 'zh' | 'en' { return current() }
+/** Every defined label key. For the guard test that keeps copy from dying unwired (#244). */
+export function labelKeys(): string[] { return Object.keys(labels) }
 export function labelText(key: string): string {
   return labels[key as keyof typeof labels]?.[current() === 'zh' ? 0 : 1] ?? key
 }

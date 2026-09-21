@@ -9,6 +9,7 @@ import { QuotationProgress } from './quotation-progress.tsx'
 import { Notebook } from './notebook.tsx'
 import { BusinessReview, type Review } from './review.tsx'
 import { Chip, type Limits } from './workspace.tsx'
+import { NextStep } from './next-step.tsx'
 
 type Injected = { source: SessionEventSource; loadOlder: () => Promise<void> }
 import { projectAudit, selectReview, type AuditEvent } from './audit.ts'
@@ -64,6 +65,7 @@ function MonthlyState({ source, loadOlder, openView }: ConvViewProps & Injected)
     <p className="bf-band">{batch
       ? <><span className="bf-period">{batch.period}</span> <Chip status={batch.status} /> <span className="bf-hint">{batch.master_rows} {t('rows')} · <code className="bf-mono">{batch.batch_id}</code></span></>
       : <span className="bf-hint">{t('unknown')}</span>}</p>
+    {batch && <NextStep batch={batch} />}
     <nav><button disabled={!batch} onClick={() => navigate({ batch: batchId, view: node === 'needs_review' ? 'mappings' : node === 'needs_configuration' ? 'corrections' : 'master' })}>{t('data')} ↗</button>
       <button onClick={() => openView('trajectory', '')}>{t('inspect')} ↗</button>
       {report && <button onClick={() => navigate({ batch: batchId, view: 'review', report: report.report_id })}>{t('review')} ↗</button>}</nav>
