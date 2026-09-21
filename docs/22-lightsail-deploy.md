@@ -231,6 +231,8 @@ sudo apt update && sudo apt install -y caddy
 <domain> {
     forward_auth 127.0.0.1:8100 {
         uri /verify
+        header_up -Connection
+        header_up -Upgrade
     }
     reverse_proxy 127.0.0.1:3080
 }
@@ -240,7 +242,9 @@ portal.<domain> {
 }
 ```
 
-与 `deploy/Caddyfile.template` 一致；`bootstrap.sh` 渲染的就是它。
+与 `deploy/Caddyfile.template` 一致；`bootstrap.sh` 与 `deploy.sh` 渲染的就是它
+（`deploy.sh` 每次部署按 diff 重渲并 reload，单元文件同理——改了没人装是 2026-09-20
+与 09-21 各摔一次的同一个坑）。
 
 ```bash
 sudo systemctl reload caddy
@@ -248,6 +252,21 @@ sudo systemctl reload caddy
 
 Caddy 反代默认透传 `Host`、原生支持 WebSocket 升级、无请求体大小上限
 （约 26 MiB 的上传路径不受阻）。
+
+**那两行 `header_up -` 是功能性的，不是整洁。** `forward_auth` 的子请求会原样带上
+原请求的头，包括 `Connection: Upgrade` / `Upgrade: websocket`；门户是装了 `websockets`
+的 uvicorn，于是它把这个 `GET /verify` 交给 WebSocket 协议处理，`/verify` 没有 ws 路由
+→ **403**，`forward_auth` 据此拒掉整条升级。被拒的正是 `wss://<host>/api/remote.mux`：
+dsh 所有 Typert Remote **流**都跑在这一条 socket 上，而工作区投影**没有 unary 回退**
+（`dsh-api-workspace-controller` 客户端只订 `workspace.follow`）。于是控制台打开后没有
+工作区、原生落地策略（`watchNavigation` 要求 `workspace.phase === 'ready'`）静默不建会话、
+输入框显示「choose a workspace to start」——而目录选择器按企业策略禁用，菜单里连「添加」
+都没有。2026-09-21 线上就是这个现象；剥掉两个 hop-by-hop 头后 `/verify` 恢复成普通 GET，
+原请求照常升级，三层校验一层不少。门户侧另有一道 `--ws none`（§9）。
+
+判别式（数字见 [`00`](00-status.md)）：无 cookie 的升级握手，**401 = 好**（dsh 自己在拒
+未登录浏览器，说明升级穿过了认证层），**403 = 坏**（`forward_auth` 拒的，请求根本没到
+dsh）。`preflight.sh` 按席位逐个查这一条。
 
 **验证**
 
@@ -303,8 +322,13 @@ reverse_proxy → 127.0.0.1:<port>）。**每个席位需要一条 DNS A 记录*
 主机名各自取证书，7 席位不需要泛域名。认领状态在 `data/seats-assigned.json`（untracked，
 每次部署天然幸存）；部署会顺带重启全部席位单元。
 
-席位模式检查已进 `preflight.sh`（单元/token/端口/子域名 401/slice 围栏/swap/席位数 ≤7），
-未配置注册表时全部静默。运行手册（开通、撤销归档、升级重启顺序）见 [`35`](35-seat-isolation.md) §8。
+每个席位块同样带 §7 那两行 `header_up -Connection` / `-Upgrade`：没有它们，
+`wss://<seat>.console.<domain>/api/remote.mux` 被 `forward_auth` 403 掉，席位打开后
+没有工作区、发不起对话（2026-09-21）。
+
+席位模式检查已进 `preflight.sh`（单元/token/端口/子域名 401/**升级握手到 dsh 是 401 而不是
+forward_auth 的 403**/slice 围栏/swap/席位数 ≤7），未配置注册表时全部静默。
+运行手册（开通、撤销归档、升级重启顺序）见 [`35`](35-seat-isolation.md) §8。
 
 ---
 
@@ -401,6 +425,12 @@ sudo cp deploy/portal.service /etc/systemd/system/bridgeflow-portal.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now bridgeflow-portal
 ```
+
+单元里的 `--ws none` 别删。门户没有任何 WebSocket 路由，而装了 `websockets` 的 uvicorn
+会把**任何**带 `Connection: Upgrade` 的请求交给 WebSocket 协议处理、匹配不到 ws 路由就
+403。`forward_auth` 的子请求恰好会带着这两个头到 `/verify`，于是一个本该答 200 的授权
+问询变成了拒绝，把席位的 `/api/remote.mux` 一起带走（2026-09-21）。§7 的 `header_up -`
+从 Caddy 侧堵住同一个洞，两边都做：这一行说的是「本进程只答 HTTP，永远不升级」。
 
 **验证（按顺序，不过就停）**
 

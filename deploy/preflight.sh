@@ -110,6 +110,20 @@ PY
       [ "$got" = "$want" ] || exit 1
     done'
   check "each seat subdomain is gated (cookie-less curl is 401)" bash -c 'for seat in '"$seat_names"'; do test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 "https://$seat.console.$DOMAIN/")" = 401 || exit 1; done'
+  # The check above only proves plain HTTP reaches dsh. Half the console rides
+  # one WebSocket — /api/remote.mux carries EVERY Typert Remote stream, and the
+  # Workspace projection has no unary fallback — so an upgrade the auth layer
+  # eats leaves a seat that opens with no workspace, no auto-session and a
+  # composer that refuses to start (2026-09-21). The two answers are distinct,
+  # which is what makes this a test: 401 is dsh refusing a cookie-less browser
+  # (the upgrade got through), 403 is forward_auth refusing the upgrade itself
+  # (it never reached dsh — the Caddyfile is missing header_up -Connection
+  # / -Upgrade, or the portal is answering upgrades as a WebSocket again).
+  check "each seat passes websocket upgrades through to dsh (401, not forward_auth's 403)" bash -c 'for seat in '"$seat_names"'; do
+    test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 \
+      -H "Connection: Upgrade" -H "Upgrade: websocket" \
+      -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" -H "Sec-WebSocket-Version: 13" \
+      "https://$seat.console.$DOMAIN/api/remote.mux")" = 401 || exit 1; done'
   # mkswap keeps one header page, so a 2G file reports 2097148 kB: demand
   # 2G minus a megabyte, not a byte-exact bar that can never be met.
   check "swap is at least 2G (idle seat pages page out, docs/35 §3)" bash -c 'test "$(awk "/SwapTotal/{print \$2}" /proc/meminfo)" -ge 2096128'

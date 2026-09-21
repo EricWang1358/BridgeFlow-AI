@@ -7,7 +7,47 @@
 「每个数字都量过、可追溯」是本项目对评委的核心叙事，评委抓到一处对不上，整个叙事就打折。
 所以改数字只改这一处。
 
-最后更新：2026-09-20。新增一轮时照第三节的格式写，并附上复现命令。
+最后更新：2026-09-21。新增一轮时照第三节的格式写，并附上复现命令。
+
+---
+
+## 席位默认工作区失踪：forward_auth 吃掉 WebSocket 升级（2026-09-21）
+
+线上现象：登录进席位后没有 BridgeFlow 工作区、工作区菜单是空的（目录选择器按企业策略禁用，
+连「添加」都没有）、输入框写着「choose a workspace to start」，发不起对话；从 BridgeFlow 顶栏
+切笔记本就能用。开发机（macOS, arm64）用**线上同款 Caddy 配置 + 桩 `/verify`（FastAPI + uvicorn，
+venv 内已装 `websockets`）+ dsh web** 逐层复现，四项结论：
+
+- **带升级头的 `GET /verify` 被 uvicorn 当成握手**：普通 `GET /verify` → `200 OK`；
+  加 `Connection: Upgrade` / `Upgrade: websocket` / `Sec-WebSocket-*` → **403**，
+  日志为 `"WebSocket /verify" 403 connection rejected`。加 `--ws none` 后同一请求 → `200 OK`。
+- **端到端判别式**（无 cookie 的升级握手打到 `/api/remote.mux`）：现网形态 → **403**，
+  响应头 `Via: 1.1 Caddy`（请求没到 dsh）；`forward_auth` 加 `header_up -Connection` /
+  `-Upgrade` 后 → **401**（dsh 自己在拒未登录浏览器，升级穿过了认证层）。preflight 查的就是这一条。
+- **界面对照**（同一个 dsh web 实例，只换 Caddy 配置）：坏 → 浏览器 WS 探针 `error`，
+  chip 显示「Choose workspace」、点开空菜单、输入框禁用、**无 `/api/session/create`**；
+  好 → 探针 `open`，chip 回到「BridgeFlow」，输入框可用。
+- **为什么本地从来不复现**：`run.sh` / `dev.sh` 直连 `127.0.0.1:<port>`，没有 Caddy、
+  没有 forward_auth，WS 直通。
+
+机理与两侧修法见 [`22`](22-lightsail-deploy.md) §7/§9b 与 [`35`](35-seat-isolation.md) §3。复现：
+
+```bash
+# 桩门户（装了 websockets 的 uvicorn，等价于 portal.service 改 --ws none 之前）
+python -m uvicorn wsprobe:app --host 127.0.0.1 --port 8123
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8123/verify
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8123/verify \
+  -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
+  -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' -H 'Sec-WebSocket-Version: 13'
+
+# 端到端：caddy run 起一个 forward_auth → 8123、reverse_proxy → dsh web 的站点，然后
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8099/api/remote.mux \
+  -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
+  -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' -H 'Sec-WebSocket-Version: 13'
+```
+
+未测：实例上的真实数字（合并后由 `preflight.sh` 的新检查回填）；同一条 socket 上的会话流
+（侧边栏会话树、回合实时增量）在修复前应同样不通，线上未逐项确认。
 
 ---
 

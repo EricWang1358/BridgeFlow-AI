@@ -83,6 +83,18 @@ M0 spike 数字在 [`00`](00-status.md)；门户行为有测试（`portal/tests/
 他人端口不可达（dsh web 只绑 127.0.0.1）；拿到子域名但无对方 launch token/session cookie →
 dsh 自身凭据栅栏拒绝。
 
+**这条链必须对 WebSocket 同样成立，而且是「放行」而不是「拦掉」。** 控制台有一半跑在
+`wss://<seat>.console.<domain>/api/remote.mux` 上：dsh 所有 Typert Remote **流**共用这一条
+socket，工作区投影只订 `workspace.follow`、没有 unary 回退。`forward_auth` 会把原请求的
+`Connection`/`Upgrade` 头一并带进 `/verify` 子请求，装了 `websockets` 的 uvicorn 于是把它当
+握手处理、匹配不到 ws 路由回 403，整条升级被认证层吃掉——席位打开后没有工作区、
+`watchNavigation` 静默不建会话、输入框写着「choose a workspace to start」，而目录选择器
+按企业策略禁用，连「添加」都没有（2026-09-21 线上现象）。两侧各堵一次：Caddy 每个站点块
+`header_up -Connection` / `-Upgrade`（[`22`](22-lightsail-deploy.md) §7），门户单元
+`--ws none`（§9b）。不要改成「WS 跳过 forward_auth」——那等于让 WS 不过席位绑定校验，
+是本节校验链的倒退。preflight 逐席位查判别式：无 cookie 的升级握手 **401 = 好**（dsh 在拒，
+说明穿过了认证层），**403 = 坏**（forward_auth 在拒，根本没到 dsh）。
+
 **内存预算（4GB）**：地板 ~850MB + backend ~350MB（尖峰预留 1.2GB，靠 `MemoryMax` 兜住）
 + 7 席位 × 250MB ≈ 1.75GB 常驻；并发研判 ≤3 个的峰值 ≈ 2.2GB；2GB swap 吸收闲置页。
 **超线即触发 §0 的升配条件，不硬撑。**
@@ -101,7 +113,7 @@ dsh 自身凭据栅栏拒绝。
 | 8 | `portal/` 配置 | 新增 `PORTAL_SEATS_PATH`、`PORTAL_SEAT_BASE_DOMAIN`、`PORTAL_SEAT_ASSIGNMENTS`（三项一起生效，缺认领路径 fail-fast）；`PORTAL_COOKIE_DOMAIN` 必须是父域（`.example.com`），覆盖席位子域名 |
 | 9 | `deploy/bootstrap.sh` | 渲染 Caddy 时按 seats.yaml 生成每席位站点块（显式子域名，逐个自动 HTTPS）；新增 2GB swapfile + `vm.swappiness=10` 持久化 |
 | 10 | `scripts/provision_seat.sh`（新增） | `--init N`：生成容量文件 + 各席位 home/seat.env + 单元 + Caddy + env.sh 三项导出（有认领时禁止缩容）；`--release <sub>`：除名 + home 归档（客户资产，#232 保留纪律）+ 新 home + 重启单元；`--status`：席位/认领/单元一览 |
-| 11 | `deploy/preflight.sh` | 席位模式开启时新增检查：容量可解析、认领文件与舰队一致（指向存在、不重复、不超容）、门户上报数与两份文件一致、席位数 ≤7（MemoryMax 是**封顶不是预留**，封顶之和可超 slice，设计如此）、slice 围栏生效、每席位单元 active / token 非空 / 端口在听 / 子域名无 cookie 访问 401、swap ≥2G。无注册表时全部静默跳过 |
+| 11 | `deploy/preflight.sh` | 席位模式开启时新增检查：容量可解析、认领文件与舰队一致（指向存在、不重复、不超容）、门户上报数与两份文件一致、席位数 ≤7（MemoryMax 是**封顶不是预留**，封顶之和可超 slice，设计如此）、slice 围栏生效、每席位单元 active / token 非空 / 端口在听 / 子域名无 cookie 访问 401 / 无 cookie 的 WebSocket 升级握手也到得了 dsh（401 而不是 forward_auth 的 403，§3）、swap ≥2G。无注册表时全部静默跳过 |
 | 12 | `portal/tests/` | 认领/复用/满员/绑定/未认领 403/门禁拦截不耗容量/运维释放即时生效/坏配置 fail-fast（12 项） |
 | 13 | `deploy/deploy.sh` | 部署后顺带重启全部席位单元（否则席位继续跑旧插件代码）；web 活性按部署形态分流（`--backend-only` 查席位单元，无席位则跳过并告警）；认领文件 untracked 天然幸存，无需暂存逻辑 |
 | 14 | 文档 | 本文档 + [`00`](00-status.md)（spike 数字）、[`22`](22-lightsail-deploy.md)（单元/Caddy/swap 小节）、[`27`](27-login-portal.md)（/enter 认领、/verify 第三层校验）、[`34`](34-web-refactor-plan.md)（#230 条目指向本文）、`../HANDOFF.md` 同步 |

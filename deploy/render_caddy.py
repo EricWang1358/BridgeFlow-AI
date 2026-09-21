@@ -36,9 +36,21 @@ def render_legacy(template: str, domain: str, web_port: int, portal_port: int) -
 
 
 def seat_site(host: str, port: int, portal_port: int) -> str:
+    """One seat's site block.
+
+    `header_up -Connection` / `-Upgrade` are load-bearing, not tidying: see the
+    same two lines (and the full reasoning) in deploy/Caddyfile.template. Short
+    version — without them a WebSocket upgrade reaches /verify as an upgrade,
+    uvicorn answers 403 because the portal serves no ws route, forward_auth
+    rejects the connection, and `/api/remote.mux` never opens. That socket
+    carries every Remote stream, and the Workspace projection has no unary
+    fallback, so the seat opens with no workspace and no way to start a chat.
+    """
     return f"""{host} {{
     forward_auth 127.0.0.1:{portal_port} {{
         uri /verify
+        header_up -Connection
+        header_up -Upgrade
     }}
     reverse_proxy 127.0.0.1:{port}
 }}"""

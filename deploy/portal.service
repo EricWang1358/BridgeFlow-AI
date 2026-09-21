@@ -11,6 +11,14 @@
 #
 # The unit assumes `uv pip install -e portal` has put portal_app into the venv;
 # deploy.sh does that on every deploy.
+#
+# --ws none: the portal serves no WebSocket route at all, and with a ws library
+# installed uvicorn hands ANY request carrying Connection/Upgrade to its
+# WebSocket protocol — which then answers 403 because no ws route matches. That
+# turned Caddy's forward_auth subrequest for a console WebSocket into a denial
+# and took the seats' /api/remote.mux down with it (2026-09-21, docs/22).
+# Caddy no longer forwards those headers, and this says the same thing from the
+# other side: this process answers HTTP, never an upgrade.
 
 [Unit]
 Description=BridgeFlow unified login portal (Feishu OAuth, signs app tokens)
@@ -21,7 +29,7 @@ Wants=network-online.target
 Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/Hackathon2026/BridgeFlow-AI
-ExecStart=/bin/bash -c 'source env.sh && exec /home/ubuntu/Hackathon2026/.venv/bin/python -m uvicorn portal_app.main:app --host 127.0.0.1 --port 8100'
+ExecStart=/bin/bash -c 'source env.sh && exec /home/ubuntu/Hackathon2026/.venv/bin/python -m uvicorn portal_app.main:app --host 127.0.0.1 --port 8100 --ws none'
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true
