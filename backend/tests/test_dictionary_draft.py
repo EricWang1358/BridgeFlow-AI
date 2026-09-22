@@ -296,3 +296,29 @@ def test_drafting_without_uploads_is_refused(client):
     response = client.post("/tools/dictionary-draft", content=body, headers={
         "content-type": "application/json", "x-bridgeflow-approval": receipt(body)})
     assert response.status_code == 404
+
+
+# --- the join must follow the dictionary's declaration order -------------------------
+
+
+def test_primary_key_follows_dictionary_order_not_upload_column_order():
+    from bridgeflow.agents.sop_flow import EntityKey, _primary_key_column
+    from bridgeflow.agents.semantic_resolver import FieldDictionary
+    from bridgeflow.schemas import CleanTable, ColumnSpec
+
+    # The transcribed real dictionary declares 项目名称 (OA row 1) before 项目编号
+    # (row 3); the finance upload happens to carry 项目编号 first. The dictionary's
+    # priority decides — otherwise finance keys on 项目编号 while production, which
+    # has no such column, keys on 项目名称, and the master table never aligns.
+    dictionary = FieldDictionary({"columns": {"finance": {"项目名称": "project", "项目编号": "project_code"}}})
+    table = CleanTable(department="finance", period="2025-07",
+                       columns=[ColumnSpec(name="项目编号", dtype="string"),
+                                ColumnSpec(name="项目名称", dtype="string")],
+                       rows=[{"项目编号": "PRJ-001", "项目名称": "某项目"}])
+    assert _primary_key_column(table, dictionary) == EntityKey("项目名称", "project")
+
+    # A declared entity column the upload lacks is skipped, not fatal.
+    without_code = CleanTable(department="finance", period="2025-07",
+                              columns=[ColumnSpec(name="项目名称", dtype="string")],
+                              rows=[{"项目名称": "某项目"}])
+    assert _primary_key_column(without_code, dictionary) == EntityKey("项目名称", "project")
