@@ -71,6 +71,8 @@
 | [`32-feishu-sheets-bitable-read.md`](32-feishu-sheets-bitable-read.md) | 权威 | 中 | 开发 | 在线表格/多维表格读取需求规格：合理性、接口面、FR-1~7、复杂字段降级与 20 万行纪律 |
 | [`33-feishu-sheets-bitable-impl.md`](33-feishu-sheets-bitable-impl.md) | 权威 | 中 | 开发 | 在线表格/多维表格读取实施计划：复用面锚点、六个设计决策、四步落地与验收对照 |
 | [`34-web-refactor-plan.md`](34-web-refactor-plan.md) | 权威 | 中 | 开发、运维 | 全 Web 化与单租户部署实施计划：复用面锚点、六步落地、验收对照与文档同步（形态决策见 issue #227） |
+| [`35-seat-isolation.md`](35-seat-isolation.md) | 权威 | 中 | 开发、运维 | 按人隔离的席位化实施：7 席位静态方案、机理判别式、部署手册（#229/#230/#231） |
+| [`36-agent-readable-issues-plan.md`](36-agent-readable-issues-plan.md) | 权威 | 中 | 开发 | #245 实施计划：导入问题 agent 可读明细与受控单元格读取——八个设计判定、六阶段落地、验收对照与风险回退 |
 
 两份 README 是同一套图文操作指引的中英版本（顶部可切换）：[`../README.md`](../README.md)（English）
 与 [`../README.zh.md`](../README.zh.md)（简体中文）。截图是 `../docs/images/` 里的稳定副本，

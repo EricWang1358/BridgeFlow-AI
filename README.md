@@ -287,7 +287,10 @@ The batch modal is where you decide whether the data is fit to review:
 - **待确认映射 Mappings awaiting confirmation** — relations below the confidence threshold, waiting
   for a person. "Awaiting confirmation" is not "wrong".
 - **隔离行 Quarantined rows** — rows the system refused to guess at. A batch with quarantined rows
-  refuses to report totals; that is the amber 下一步 box in the screenshot.
+  refuses to report totals; that is the amber 下一步 box in the screenshot. You do not have to page
+  through alone: ask the captain in chat — it lists every open item (`batch_issues`), reads a held row
+  out with a proposed fix (`quarantine_row`, one row per call, logged), and you decide each proposal in
+  the approval before anything is applied.
 - Buttons: **发起研判 Start the review** sends the request into the current session;
   改一改再发（复制） copies it so you can edit first; 刷新 Refresh.
 

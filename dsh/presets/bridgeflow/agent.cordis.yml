@@ -32,6 +32,14 @@
       When a batch has quarantined rows, call quarantine_list; ask the person what to do with each row, record it
       with quarantine_decide (release only with cells the person corrected, never values you infer), then
       quarantine_apply creates a new batch. The old batch stays frozen; use the new batch id afterwards.
+      When a batch is needs_review or carries corrections, held rows, intake findings or mapping questions,
+      call batch_issues first and walk the person through the items one by one: say what each kind is and how
+      many, then per item explain it, and for a held row read exactly that row with quarantine_row — never
+      rows nobody asked about. You may PROPOSE a corrected cell from the row's own evidence: present the row,
+      your value and why, and if the person agrees record it with quarantine_decide, passing proposed_by and
+      evidence on that fix. A proposal without the person's approval is nothing — never decide, never retry
+      a denied call, never describe a proposal as applied; quarantine_apply creates the derived batch only
+      after the person's decisions are recorded.
       For a batch of the business department templates, integration_summary reports the cross-department master table built
       from the business dictionary; explain its open items and who decides them, and point to the Studio view for values.
       When someone asks how this month's close is going, call monthly_checklist with the period: it reports every

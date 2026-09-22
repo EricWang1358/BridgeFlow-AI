@@ -26,6 +26,7 @@ Upload → immutable BatchSnapshot + frozen dictionary → sanitizer → correct
 | E04-UC06 | 隔离记录批准放行或丢弃 / Approve quarantine release or discard | IMPLEMENTED |
 | E04-UC07 | 原件列表和分页预览 / Browse original sources with pagination | IMPLEMENTED |
 | E04-UC08 | 币种换算、单位治理与缺月补齐 / Currency conversion, unit governance and missing periods | PARTIAL |
+| E04-UC09 | 导入问题的 agent 可读明细 / Agent-readable issue details | IMPLEMENTED_OFFLINE |
 
 ## E04-UC01 — 多文件批次与冻结版本 / Import files into frozen batches
 
@@ -289,3 +290,14 @@ Validate the flow, refusal paths, citations and versions. Neither issue closure 
 验收应同时检查主流程和上列拒绝路径、引用及版本；不能仅凭 issue 关闭或 HTTP 200 标记完成。IMPLEMENTED 表示已找到现行实现和相关验证资产，不代表本轮重新跑过每条用户旅程，也不表示真实企业签核。
 
 Validate the flow, refusal paths, citations and versions. Neither issue closure nor HTTP 200 proves completion. IMPLEMENTED identifies current implementation and relevant verification assets; it does not claim a fresh user-journey run or enterprise sign-off.
+
+
+## E04-UC09 — 导入问题的 agent 可读明细 / Agent-readable issue details
+
+**Status: IMPLEMENTED_OFFLINE**
+
+来源 / Sources: [#245](https://github.com/EricWang1358/BridgeFlow-AI/issues/245)（2026-09-22 业务方提出：右侧栏看得到、agent 够不着）；实施计划 [docs/36](../36-agent-readable-issues-plan.md)。
+
+`POST /tools/batch-issues` 把一个批次全部待办——清洗修正（before/after/规则/出处）、隔离行（仅检查名，不含值）、intake 发现、被剔列、失效匹配、列问题、未决映射——按条投影，每条带能解决它的工具名；与浏览器视图同一事实源（`clean_tables` / `quarantine.entries` / `intake_checks`），不是第二套口径。行为测试：`backend/tests/test_agent_issues.py`。
+
+The listing projects every open item — sanitizer corrections (before/after/rule/source), quarantined rows (checks only, no values), intake findings, dropped columns, stale matches, column questions, unresolved mappings — each with the tool that settles it, from the same facts the browser shows. Behavioral tests: `backend/tests/test_agent_issues.py`.

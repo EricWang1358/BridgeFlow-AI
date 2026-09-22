@@ -26,6 +26,7 @@ import { listMetrics } from './tools/list-metrics.ts'
 import { profileBatch } from './tools/profile-batch.ts'
 import { lookupFieldDictionary } from './tools/lookup-field-dictionary.ts'
 import { dictionaryDecide, dictionaryDraft, dictionaryDraftView, dictionaryImport, dictionaryProfiles, dictionaryPublish } from './tools/dictionary.ts'
+import { batchIssues, quarantineRow } from './tools/issues.ts'
 import { batchSummary } from './tools/batch-summary.ts'
 import { ApprovalReceipts } from './approval/receipts.ts'
 import { PendingDetails } from './approval/detail.ts'
@@ -92,6 +93,8 @@ export function apply(ctx: Context, config: Config): void {
   }
   catalogue.register(ctx, dictionaryProfiles(backend))
   catalogue.register(ctx, dictionaryDraftView(backend))
+  catalogue.register(ctx, batchIssues(backend))
+  catalogue.register(ctx, quarantineRow(backend))
   catalogue.register(ctx, quarantineList(backend))
   catalogue.register(ctx, conventionList(backend))
   catalogue.register(ctx, conventionPreview(backend))

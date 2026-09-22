@@ -190,6 +190,7 @@ Convenience never relaxes constraints: self-check and corrections use the same d
 - 后置：收件箱是事件投影，不保存独立的处理状态。
 - 依赖：E06-UC03、E04-UC06、E05-UC03、E02-UC04、E09-UC05、E13-UC06。
 - 当前证据与缺口（2026-09-19 第六轮）：[monthly/inbox.py](../../backend/src/bridgeflow/monthly/inbox.py) 按来源端口聚合四类事项（总表各类问题、隔离行、待匹配上传列、研判落在已更正数据上），每项只带「去哪处理」，没有批准/拒绝（AC-4 由返回结构本身保证）。不保存处理状态：事项存在与否完全取决于原模块还报不报它，所以在原模块处理完就自动消失（实测更正生产部文件后，跨部门不一致由 2 条降为 1 条）。可见性与批次一致：不可见的事项既不显示也不计入总数。接口 `GET /monthly/inbox?period=&department=&kind=` 与 `POST /tools/monthly-inbox`，工具 `monthly_inbox`，界面在工作室状态区（[checklist.tsx](../../plugins/src/client/checklist.tsx) 的 `OpenItemInbox`）。[行为测试](../../backend/tests/test_inbox.py) 覆盖 AC-1–4，[浏览器旅程](../../plugins/tests/round1-journey.mjs) 断言每项只有一个按钮，截图 `docs/evidence/round1-e13-e14/open-items.png`。剩余：填报草稿补问与出处缺失两类来源尚未接入（D18）。
+- 2026-09-22 增量（#245）：新增 `corrections` 来源端口，清洗修正在收件箱以 `intake_correction` 条目出现，按**部门 × 列聚合**（subject=列名，detail=条数与涉及规则，next_view=`corrections`）；处置留痕类修正（`quarantine_released/discarded`）不算待办。逐条明细走 `POST /tools/batch-issues`（[E04-UC09](04-intake-quality.md)）。
 
 ### English requirements and acceptance
 
