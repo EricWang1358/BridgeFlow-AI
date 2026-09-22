@@ -30,13 +30,15 @@ def approved_post(client, payload):
 
 @pytest.fixture(autouse=True)
 def isolated_environment(monkeypatch, tmp_path):
-    for name in ("llm_provider", "llm_provider_sanitizer", "llm_provider_resolver", "llm_provider_evaluator"):
+    for name in ("llm_provider", "llm_provider_sanitizer", "llm_provider_resolver", "llm_provider_evaluator",
+                 "llm_provider_dictionary_drafter"):
         monkeypatch.setattr(settings, name, "mock")
     monkeypatch.setattr(settings, "field_dictionary_path", str(REPO_ROOT / "data/mappings/field-dictionary.example.yaml"))
     monkeypatch.setattr(settings, "integration_spec_path", str(REPO_ROOT / "data/company_templates/integration.yaml"))
     monkeypatch.setattr(settings, "result_store_path", str(tmp_path / "outputs"))
     monkeypatch.setattr(settings, "mapping_memory_path", str(tmp_path / "mappings.json"))
     monkeypatch.setattr(settings, "column_match_path", str(tmp_path / "column-matches.json"))
+    monkeypatch.setattr(settings, "dictionary_draft_path", str(tmp_path / "dictionary-drafts"))
     monkeypatch.setattr(settings, "bridgeflow_service_token", TEST_SECRET)
     # Existing sample/console tests opt into their compatibility path here. The new
     # enterprise tests explicitly restore production flags and exercise refusals.

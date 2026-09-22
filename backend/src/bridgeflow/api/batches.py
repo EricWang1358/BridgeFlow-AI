@@ -203,9 +203,11 @@ def _next_step(status: str, quarantined: int, unresolved: int) -> str:
     of the same facts. Kept next to `summary`, which computes the status it answers.
     """
     if status == "needs_configuration":
-        return ("No joinable column is declared, so nothing downstream can run. Ask the dictionary owner "
-                "to declare one per department, then import again — declarations freeze into a batch at "
-                "import, and this batch is left alone.")
+        return ("No joinable column is declared, so nothing downstream can run. Draft the missing "
+                "declarations — dictionary_import with the business's OA dictionary spreadsheet, or "
+                "dictionary_draft from this batch's column profiles — decide every entry with the person, "
+                "publish, then import again. Declarations freeze into a batch at import, and this batch "
+                "is left alone.")
     if status == "needs_review":
         return (f"Settle {quarantined} quarantined row(s) — release must pass revalidation, discard needs "
                 f"a reason, applying derives a new batch — and confirm {unresolved} pending mapping(s); "

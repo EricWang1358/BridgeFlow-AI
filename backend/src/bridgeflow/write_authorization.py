@@ -17,7 +17,7 @@ from bridgeflow.store import _root
 OPERATIONS = frozenset({"confirm_mapping", "confirm_column_match", "quarantine_decide",
                        "quarantine_apply", "convention_decide", "risk_disposition", "workflow_record", "workflow_approve_submit",
                        "workflow_handoff", "feishu_import", "feishu_upload_report", "discovery_propose", "discovery_register", "discovery_graph_save", "discovery_score_save", "discovery_meeting_save", "discovery_decision_propose", "discovery_decision_vote",
-                       "discovery_decision_resolve", "discovery_decision_finalize"})
+                       "discovery_decision_resolve", "discovery_decision_finalize", "dictionary_draft", "dictionary_publish"})
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS employee_permits (
  token TEXT PRIMARY KEY, subject TEXT NOT NULL, operation TEXT NOT NULL,
@@ -54,6 +54,12 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> Resol
     if operation in {"confirm_column_match", "quarantine_decide", "quarantine_apply",
                      "convention_decide", "risk_disposition", "feishu_upload_report"}:
         _visible(load_batch(str(body.get("batch_id", ""))), user)
+    elif operation == "dictionary_draft":
+        # Drafting reads a batch's column statistics; the drafter must be able to see
+        # the batch they draft from (D32: the master-table owner sees every department).
+        batch_id = str(body.get("batch_id", ""))
+        if batch_id:
+            _visible(load_batch(batch_id), user)
     elif operation in {"discovery_decision_propose", "discovery_decision_vote",
                        "discovery_decision_resolve", "discovery_decision_finalize"}:
         from bridgeflow.api.discovery import authorize_decision

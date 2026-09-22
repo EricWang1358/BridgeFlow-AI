@@ -274,6 +274,9 @@ BridgeFlow field dictionary: /home/you/Hackathon2026/BridgeFlow-AI/data/mock_bus
 
 如果批次回 `needs_configuration`，说明字典没为某个部门声明可连接列。
 「为什么主表是空的」下面会打印这批冻结的是哪份字典；如果那不是你想要的文件，问题就在这儿。
+如果缺的就是字典本身，现在不用再手写 YAML：业务有 OA 字典表就交给队长转写（`dictionary_import`），
+没有就让它按这批文件的列画像起草（`dictionary_draft`）；每条在审批里决定（度量还要同时定汇总口径），
+全部有决定后发布（`dictionary_publish`）。新版本只影响之后的导入。
 
 ## 9 发起研判
 

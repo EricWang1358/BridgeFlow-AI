@@ -353,6 +353,12 @@ def _period_column(table: CleanTable, dictionary: FieldDictionary) -> str | None
 
 #: Entity kinds that can serve as a join key, in the order we prefer them.
 _JOIN_KINDS: tuple[str, ...] = ("project", "sku", "customer", "raw_material", "gl_account")
+#: After the starter vocabulary, any kind the dictionary declares counts. A published
+#: draft from the business's own dictionary produces kinds like 项目名称 or material —
+#: PR #60 already moved validation from the vocabulary to the declaration, and
+#: `kind_for` respects a non-empty dictionary exactly, so this opens the door to the
+#: business's nouns without reopening name guessing.
+_ANY_DECLARED = object()
 
 
 def _primary_key_column(table: CleanTable, dictionary: FieldDictionary) -> EntityKey | None:
@@ -370,8 +376,9 @@ def _primary_key_column(table: CleanTable, dictionary: FieldDictionary) -> Entit
     its canonical entity only means something if you know what kind of thing it is:
     the same string can name a customer in one sheet and a material in another.
     """
-    for kind in _JOIN_KINDS:
+    for kind in (*_JOIN_KINDS, _ANY_DECLARED):
         for column in table.columns:
-            if dictionary.kind_for(table.department, column.name) == kind:
-                return EntityKey(column.name, kind)
+            declared = dictionary.kind_for(table.department, column.name)
+            if declared is not None and (kind is _ANY_DECLARED or declared == kind):
+                return EntityKey(column.name, declared)
     return None

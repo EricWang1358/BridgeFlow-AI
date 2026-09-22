@@ -33,6 +33,22 @@ FIELD_DICTIONARY_PATH=/absolute/path/to/field-dictionary.yaml
 覆盖不全，且那只是为了让样本数据跑起来。当前默认入口在字典缺席时明确报 `needs_configuration`
 并要求配置，不猜（见仓库根的 `CLAUDE.md`）。
 
+## 字典不再需要手写（2026-09-22 起）
+
+`needs_configuration` 的出路不再只有手工编辑本文件。两条起草路（`CLAUDE.md`「字典：模型起草，
+人逐条审核，发布才生效」）：
+
+1. **业务有 OA 字典表** → 队长调 `dictionary_import`，把六列标准格式（字段名称 / 关联部门 / 数据类型 /
+   详细含义与用途描述 / 来源表字段 / 变更说明）**确定性转写**成草案：`公共主键 + String` 行转实体声明，
+   `Number` 行转度量。转写不调模型、不花钱。
+2. **什么都没有** → `dictionary_draft` 按批次列画像统计（类型、填充率、唯一度、跨部门值重合，
+   不含单元格内容）调模型起草，计费留痕；无证据条目由宿主丢弃。
+
+之后逐条 `dictionary_decide`（接受 / 修改 / 拒绝；度量必须同时定 `sum / average / period_end`），
+全部有决定再 `dictionary_publish`：发布前重跑导入侧同级校验（可连接列、date_order、一个度量一列），
+写 `versions/field-dictionary--*.yaml` 并更新当前文件。发布只影响之后的导入；旧批次的冻结快照不变。
+转写不替人决定的事：哪一列是报表期间（需要时把该条目改成 `period` 角色）、度量的汇总口径。
+
 ## 格式
 
 ```yaml
