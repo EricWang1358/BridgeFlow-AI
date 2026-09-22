@@ -118,6 +118,16 @@ clone 一个恶意仓库就足以重定向代码加载与网络出口。不要�
 不是「客户必须先手写一份字典」的前提——[docs/01](docs/01-problem-and-hmw.md) 说客户没有数据团队、
 每家的表都不一样，字段映射本身就是产品的一部分。
 
+**2026-09-22 已实现**（`backend/src/bridgeflow/dictionary_draft.py`、`api/dictionary_tools.py`、
+插件工具 `dictionary_import / dictionary_draft / dictionary_decide / dictionary_publish`）。起草有两条路：
+业务带来 OA 字典表（六列标准格式）走 `dictionary_import` **确定性转写**，不花钱不调模型；没有表才走
+`dictionary_draft` 按列画像统计起草（计费留痕，宿主丢弃无证据条目）。两条路汇进同一道逐条决定与发布闸：
+全部条目有决定、每个度量有 rollup、合并结果通过导入侧同级校验（含可连接列），才写
+`versions/field-dictionary--*.yaml` 新版本并更新当前指针；旧批次的冻结快照不受影响。校验先于审批回执消耗。
+同期把 `sop_flow._primary_key_column` 的可连接判定放开为「字典声明过的任意实体 kind」（已知 kind 仅作
+优先序），否则转写出的中文 kind（如 项目名称）发布后仍然连不上——这是实现时发现的词表残留，不是放宽猜测：
+`kind_for` 对非空字典仍然完全尊重声明、绝不回退列名猜测。
+
 ### 跨部门映射不靠字符串相似度
 
 `SKU-A1` 与 `RM-Alu-6061` 是产品与其原料，本来就不该字符相似（实测相似度 35.3）。
