@@ -16,7 +16,7 @@ from bridgeflow.config import settings
 from bridgeflow.llm import Message
 from bridgeflow.schemas import CleanTable, Entity, EntityGraph, EntityKind, Link, Relation
 
-_TOKEN = re.compile(r"[^0-9a-z]+")
+_TOKEN = re.compile(r"[^\w-]+", re.UNICODE)
 
 # Fallback column hints, used only until the OA field dictionary is available.
 # The dictionary replaces these — see data/mappings/README.md.
@@ -519,4 +519,13 @@ def _kind_from_hint(column: str) -> EntityKind | None:
 
 
 def _slug(label: str) -> str:
-    return _TOKEN.sub("-", label.lower()).strip("-")
+    r"""A stable id fragment for one entity label.
+
+    `\w` is unicode-aware, so CJK labels survive: 城东搅拌站 must stay itself. The
+    old ASCII-only pattern slugged every Chinese label to the empty string — all of
+    a real customer's projects collapsed into one entity, and the master table came
+    out with one row. Purely symbolic labels still fall back to the raw label so an
+    id is never empty, which is what actually separates the entities.
+    """
+    slug = _TOKEN.sub("-", label.casefold()).strip("-")
+    return slug or label.strip()
