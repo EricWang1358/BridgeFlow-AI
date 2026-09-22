@@ -16,11 +16,11 @@ from bridgeflow.api.checklist import router as checklist_router
 from bridgeflow.api.conclusions import router as conclusions_router
 from bridgeflow.api.console import router as console_router
 from bridgeflow.api.conventions import router as conventions_router
+from bridgeflow.api.dictionary_tools import router as dictionary_tools_router
 from bridgeflow.api.discovery import router as discovery_router
 from bridgeflow.api.discovery import tools_router as discovery_tools_router
 from bridgeflow.api.dispositions import router as dispositions_router
 from bridgeflow.api.documents import router as documents_router
-from bridgeflow.api.dictionary_tools import router as dictionary_tools_router
 from bridgeflow.api.feishu_tools import router as feishu_tools_router
 from bridgeflow.api.integration import router as integration_router
 from bridgeflow.api.observability import router as observability_router

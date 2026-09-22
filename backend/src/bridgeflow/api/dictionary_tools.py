@@ -129,7 +129,7 @@ async def dictionary_import(request: ImportRequest, http_request: Request) -> Dr
     # Parse before the approval is spent: a malformed spreadsheet must cost the
     # person a corrected file, not a fresh approval.
     try:
-        entries, unmapped, notes, covered = dictionary_draft.parse_oa_bytes(payload, name)
+        entries, unmapped, notes, _covered = dictionary_draft.parse_oa_bytes(payload, name)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     if not entries:

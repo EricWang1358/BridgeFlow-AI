@@ -271,7 +271,7 @@ def parse_oa_bytes(payload: bytes, filename: str) -> tuple[list[DraftEntry], lis
     unmapped: list[UnmappedRow] = []
     covered: set[str] = set()
     for row in rows[1:]:
-        def cell(name: str) -> str:
+        def cell(name: str, row: list = row) -> str:
             position = index[name]
             return str(row[position]).strip() if position < len(row) and row[position] is not None else ""
 
@@ -549,7 +549,7 @@ def publish(draft: Draft, *, by: str) -> dict:
     Raises `DictionaryPublishError` with import's semantics; the API layer maps it to
     a 409 so nothing is written on refusal.
     """
-    effective, _, merged = check_publish(draft)
+    _, _, merged = check_publish(draft)
 
     from bridgeflow.metrics import dictionary_path
 

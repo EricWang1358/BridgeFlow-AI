@@ -127,7 +127,7 @@ def decide_all(client, draft_id: str, entries: list[dict], **overrides) -> None:
 
 
 def active_dictionary() -> dict:
-    raw = yaml.safe_load(open(settings.field_dictionary_path, encoding="utf-8").read())
+    raw = yaml.safe_load(Path(settings.field_dictionary_path).read_text(encoding="utf-8"))
     return raw or {}
 
 
@@ -160,7 +160,7 @@ def test_the_oa_transcription_carries_evidence_and_marks_the_absent_department(c
     for entry in view["entries"]:
         assert entry["evidence"], f"entry {entry['entry_id']} has no evidence"
         assert entry["decision"] == "pending"
-    assert all(not entry["department"] == "procurement" for entry in view["entries"]), \
+    assert all(entry["department"] != "procurement" for entry in view["entries"]), \
         "a declaration was invented for a department that never uploaded"
     assert result["pending"] == len(view["entries"])
 
@@ -204,7 +204,7 @@ def test_publish_writes_a_version_the_rejected_stay_out_and_the_frozen_batch_sta
 
     response = publish(client, draft["draft_id"])
     assert response.status_code == 200, response.text
-    published = yaml.safe_load(open(settings.field_dictionary_path, encoding="utf-8").read())
+    published = yaml.safe_load(Path(settings.field_dictionary_path).read_text(encoding="utf-8"))
 
     columns = published["columns"]
     assert columns["production"]["sku"] == "sku"
@@ -302,8 +302,8 @@ def test_drafting_without_uploads_is_refused(client):
 
 
 def test_primary_key_follows_dictionary_order_not_upload_column_order():
-    from bridgeflow.agents.sop_flow import EntityKey, _primary_key_column
     from bridgeflow.agents.semantic_resolver import FieldDictionary
+    from bridgeflow.agents.sop_flow import EntityKey, _primary_key_column
     from bridgeflow.schemas import CleanTable, ColumnSpec
 
     # The transcribed real dictionary declares 项目名称 (OA row 1) before 项目编号
