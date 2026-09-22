@@ -24,8 +24,8 @@ Frozen human dictionary → shape profiling → closed candidate set → native 
 | E05-UC04 | 跨部门实体关系与同类别名 / Resolve cross-department relations and aliases | IMPLEMENTED |
 | E05-UC05 | 映射记忆、审计与失效 / Persist mapping memory with evidence invalidation | IMPLEMENTED |
 | E05-UC06 | 会议规则上下文接入 / Ingest meeting context for mapping rules | DESIGNED |
-| E05-UC07 | 聚合画像与字典起草 / Aggregate profiles and draft a dictionary | IMPLEMENTED |
-| E05-UC08 | 草案逐条审核与发布 / Review draft entries and publish a version | IMPLEMENTED |
+| E05-UC07 | 聚合画像与字典起草 / Aggregate profiles and draft a dictionary | IMPLEMENTED_OFFLINE |
+| E05-UC08 | 草案逐条审核与发布 / Review draft entries and publish a version | IMPLEMENTED_OFFLINE |
 
 > E05-UC07/UC08 实现记录（2026-09-22，`feature/usability-20260921`）：起草有两条路——
 > `dictionary_import` 把业务自己的 OA 字典表（字段名称/关联部门/数据类型/描述/来源表字段/变更说明）

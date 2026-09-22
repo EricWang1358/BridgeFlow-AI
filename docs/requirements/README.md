@@ -36,7 +36,7 @@ As of 2026-09-19, this directory contains **14 epics and 87 UCs** (E05-UC07/UC08
 | E02 | [标准化与流转 / Standardization](02-standardization.md) | 10 |
 | E03 | [组织落地 / Adoption](03-adoption.md) | 5 |
 | E04 | [数据导入、清洗与隔离 / Data intake, cleaning and quarantine](04-intake-quality.md) | 8 |
-| E05 | [字段字典、语义匹配与记忆 / Dictionaries, semantic matching and memory](05-mapping.md) | 6 |
+| E05 | [字段字典、语义匹配与记忆 / Dictionaries, semantic matching and memory](05-mapping.md) | 8 |
 | E06 | [总表整合、口径核对与导出 / Master integration, reconciliation and export](06-master-integration.md) | 6 |
 | E07 | [确定性指标与四角色研判 / Deterministic metrics and four-role review](07-review.md) | 7 |
 | E08 | [声明式报价与签发 / Declared quotation and release](08-quotation.md) | 5 |
@@ -54,9 +54,9 @@ As of 2026-09-19, this directory contains **14 epics and 87 UCs** (E05-UC07/UC08
 | Status | UC 数 / Count |
 | --- | ---: |
 | IMPLEMENTED | 38 |
-| IMPLEMENTED_OFFLINE | 14 |
+| IMPLEMENTED_OFFLINE | 16 |
 | PARTIAL | 19 |
-| DESIGNED | 8 |
+| DESIGNED | 6 |
 | BLOCKED_EXTERNAL | 3 |
 | DEFERRED | 5 |
 
