@@ -102,6 +102,9 @@ class Settings(BaseSettings):
     # Dictionary drafts (#205, E05-UC07/UC08): proposed declarations decided entry by
     # entry, published as versions. Never the active dictionary itself.
     dictionary_draft_path: str = "data/outputs/dictionary-drafts"
+    # Every bounded cell read (#245): one JSONL line per read — who, when, which row,
+    # bound to which open item. Reads are free of approvals; this log is their record.
+    cell_access_log_path: str = "data/outputs/cell-access"
     # Approved workflow declarations (#143–#145). Unset means the workflow API reports
     # "not configured" rather than running on guessed stages or templates.
     workflow_catalogue_path: str = ""

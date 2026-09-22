@@ -24,6 +24,7 @@ Browser identity via portal JWT/JWKS is distinct from shared host authentication
 | E09-UC04 | 飞书登录与应用令牌 / Authenticate through Feishu and application tokens | PARTIAL |
 | E09-UC05 | 浏览器批次部门可见性 / Enforce departmental batch visibility | PARTIAL |
 | E09-UC06 | 审批操作角色与个人审计 / Authorize approver roles and individual audit | PARTIAL |
+| E09-UC07 | 受控单元格读取与审计 / Bounded cell reads with an audit trail | IMPLEMENTED_OFFLINE |
 
 ## E09-UC01 — 原生审批与一次性回执 / Require native approval and one-use receipts
 
@@ -233,3 +234,14 @@ With portal identity enabled, the browser requests authorization for an active n
 Uploads and report notes require `batch_import` and `review_note`; notes persist the verified author. The authorization ledger records consumption, not successful business execution. Remaining: personal refusal/cancellation audit, employee isolation of native sessions/model reads, administration UI and live enterprise integration. Status remains PARTIAL.
 
 实现：[员工授权](../../backend/src/bridgeflow/write_authorization.py)、[原生审批](../../plugins/src/approval/gate.ts)。验证：[权限与回执测试](../../backend/tests/test_employee_approval.py)、[浏览器旅程](../../plugins/tests/web-smoke.mjs)；实际结果见 [实测状态](../00-status.md)。
+
+
+## E09-UC07 — 受控单元格读取与审计 / Bounded cell reads with an audit trail
+
+**Status: IMPLEMENTED_OFFLINE**
+
+来源 / Sources: [#245](https://github.com/EricWang1358/BridgeFlow-AI/issues/245)。这是对「原始数据行绝不进上下文」的**显式修订**（照 #205 修订「字典纯人工预设」的同一模式）：修订只有一条——**不批量进上下文；与一个具体待办绑定的、有界的单元格读取允许进入**，作为该待办提议的证据。批量拉表、与待办无关的行、任意行号读取、跨部门越权读取全部维持禁止。
+
+`POST /tools/quarantine-row` 按待办（department + index）读取一条隔离行：值、上传原表头、文件出处、当前未过检查；一次一行，单格 4 KB 封顶并点名截断列，部门可见性沿用批次规则（`_visible`，不可见 404），每次读取写 `data/outputs/cell-access/` 按日 JSONL（谁/何时/哪行/哪些列）。读取免逐次审批（docs/36 D1）；写决定仍走 `quarantine_decide` 审批闸。`quarantine.Fix` 增加可选 `proposed_by` / `evidence`：队长提议的修正值带着归属与证据落账，人批准才成为决定，revalidate 逻辑一行未动。行为测试：`backend/tests/test_agent_issues.py`（含封顶、404、审计、未批 403、归属留痕）。
+
+`POST /tools/quarantine-row` reads exactly one held row bound to its open item: values, original headers, file provenance, current failing checks — one row per call, 4 KB per cell with named truncation, batch visibility enforced (404 when invisible), every read appended to the daily cell-access JSONL. Reads spend no approval (docs/36 D1); writes still go through `quarantine_decide`'s gate. `quarantine.Fix` gained optional `proposed_by`/`evidence`: a captain-proposed value lands with attribution, becomes a decision only through the person's approval, and revalidation is untouched. Behavioral tests: `backend/tests/test_agent_issues.py`.

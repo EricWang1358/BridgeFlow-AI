@@ -34,7 +34,7 @@ def test_items_from_every_module_appear_once_with_where_to_settle_them(client):
     assert result["batch_id"] == batch
     assert sum(v for k, v in result["by_kind"].items() if k.startswith("master_")) == len(master["issues"])
     assert result["total"] == len(result["items"]) >= len(master["issues"])
-    assert {item["next_view"] for item in result["items"]} <= {"integration", "quarantine", "columns", "state"}
+    assert {item["next_view"] for item in result["items"]} <= {"integration", "quarantine", "columns", "corrections", "state"}
     # AC-4: the inbox offers a place to go, never a decision.
     assert all(set(item) == {"id", "kind", "source", "batch_id", "period", "departments", "subject", "detail", "next_view"}
                for item in result["items"])
