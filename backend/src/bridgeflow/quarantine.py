@@ -46,6 +46,11 @@ _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 class Fix(BaseModel):
     column: str = Field(min_length=1, max_length=80)
     value: str = Field(max_length=200)
+    #: Who proposed this value and on what evidence, when it came from the captain's
+    #: proposal rather than the person's own words (#245). Purely attribution: the
+    #: person approved by submitting the decision, and revalidation is unchanged.
+    proposed_by: str = ""
+    evidence: str = Field(default="", max_length=500)
 
 
 class Disposition(BaseModel):

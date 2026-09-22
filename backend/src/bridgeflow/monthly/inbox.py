@@ -147,10 +147,41 @@ def _missing_provenance(ctx: Context) -> list[OpenItem]:
             for name, count in sorted(fields.items())]
 
 
+#: A recorded disposition is history, not open work — its correction line must not
+#: reappear as an item (`quarantine.apply` writes it into the derived batch).
+_DISPOSITION_RULES = {"quarantine_released", "quarantine_discarded"}
+
+
+def _intake_corrections(ctx: Context) -> list[OpenItem]:
+    """Sanitizer changes as open items, aggregated per department × column (D3 of docs/36).
+
+    The browser lists every change; the inbox is the index. One item per column with
+    a count and the rules involved; the per-item detail lives in `/tools/batch-issues`.
+    """
+    if ctx.batch is None:
+        return []
+    aggregated: dict[tuple[str, str], tuple[int, list[str]]] = {}
+    for table in ctx.batch.clean_tables:
+        for correction in table.corrections:
+            if correction.rule in _DISPOSITION_RULES:
+                continue
+            key = (table.department, correction.column)
+            count, rules = aggregated.get(key, (0, []))
+            if correction.rule not in rules:
+                rules = [*rules, correction.rule]
+            aggregated[key] = (count + 1, rules)
+    return [OpenItem(id=f"correction:{department}:{column}", kind="intake_correction",
+                     source="corrections", batch_id=ctx.batch_id, period=ctx.period,
+                     departments=[department], subject=column,
+                     detail=f"{count} correction(s): {', '.join(rules[:3])}", next_view="corrections")
+            for (department, column), (count, rules) in sorted(aggregated.items())]
+
+
 SOURCES: dict[str, OpenItemSource] = {
     "grades": _missing_provenance,
     "integration": _master_issues,
     "quarantine": _quarantined_rows,
+    "corrections": _intake_corrections,
     "column_matches": _column_questions,
     "batches": _stale_report,
 }

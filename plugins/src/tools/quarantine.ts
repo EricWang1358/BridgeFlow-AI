@@ -16,7 +16,14 @@ import type { ApprovalReceipts } from '../approval/receipts.ts'
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json }
 
 export function decideBody(args: Record<string, unknown>, agentId: string, callId: string | undefined) {
-  const fixes = (Array.isArray(args.fixes) ? args.fixes : []).map((f: Record<string, unknown>) => ({ column: String(f?.label ?? f?.column ?? ''), value: String(f?.value ?? '') }))
+  const fixes = (Array.isArray(args.fixes) ? args.fixes : []).map((f: Record<string, unknown>) => {
+    const fix: Record<string, unknown> = { column: String(f?.label ?? f?.column ?? ''), value: String(f?.value ?? '') }
+    // A proposal the captain drafted (#245): attribution rides with the value; the
+    // person's approval is what makes it a decision. Absent means the person dictated it.
+    if (f?.proposed_by) fix.proposed_by = String(f.proposed_by)
+    if (f?.evidence) fix.evidence = String(f.evidence)
+    return fix
+  })
   return { batch_id: args.batch_id, department: args.department, index: args.index, action: args.action,
     reason: args.reason, fixes, shift: args.shift === 'left' || args.shift === 'right' ? args.shift : '', confirmed_by: agentId, call_id: callId ?? null }
 }
@@ -54,8 +61,13 @@ export function quarantineDecide(config: BackendConfig, receipts: ApprovalReceip
       action: { type: 'string', required: true, enum: ['release', 'discard'] },
       reason: { type: 'string', required: true, description: 'The person\'s reason' },
       shift: { type: 'string', enum: ['left', 'right'], description: 'Release with every cell moved one column, only when quarantine_list suggested that direction and the person agreed' },
-      fixes: { type: 'array', description: 'Cells the person corrected, releasing only. Never a value you inferred.',
-        items: { type: 'object', properties: { label: { type: 'string', required: true, description: 'Column name as listed' }, value: { type: 'string', required: true } }, additionalProperties: false } },
+      fixes: { type: 'array', description: 'Cells to correct, releasing only. A value the person gave needs no extras; a value YOU proposed from quarantine_row must carry proposed_by and evidence, and the person must have approved it in this decision\'s approval.',
+        items: { type: 'object', properties: {
+          label: { type: 'string', required: true, description: 'Column name as listed' },
+          value: { type: 'string', required: true },
+          proposed_by: { type: 'string', description: 'Present only when the captain proposed the value' },
+          evidence: { type: 'string', description: 'The row evidence the proposal rests on' },
+        }, additionalProperties: false } },
     },
     output: { ...anyObject, render: (_args, value) => [{ type: 'text', text: String((value as { next_step?: string }).next_step ?? 'Recorded.') }] },
     async execute(args, exec) {
