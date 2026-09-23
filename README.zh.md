@@ -598,7 +598,7 @@ BRIDGEFLOW_TEST_FAULT=step-limit pnpm --dir plugins smoke:business
 
 ```text
 官方 DSH Web：原生对话、会话、审批、轨迹
-  └─ BridgeFlow 槽位：导入与数据、拒绝理由、报告卡
+  └─ BridgeFlow 槽位：来源栏与添加来源、工作室四个去处、拒绝理由、报告卡
        └─ 类型化领域工具 + 主机策略
             ├─ Python：不可变批次、字典、算术、校验
             ├─ 官方 DSH spawn：生产 / 采购 / 财务 / 市场

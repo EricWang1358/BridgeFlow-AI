@@ -70,7 +70,7 @@ source env.sh && python3 scripts/start_web.py --demo --port 3082
 
 ## 台上怎么操作
 
-1. 从「导入与数据」或右上角「部门文件」导入 `data/business_demo/risk/` 下各部门 CSV，
+1. 在左侧「来源」栏点「＋ 添加来源」，导入 `data/business_demo/risk/` 下各部门 CSV（导入后四份文件列在来源栏里，点开即预览），
    业务月份填 **2025-11**（与[案例说明](../data/business_demo/README.md)一致）。
    讲清楚待确认映射与隔离行的区别：未确认的映射不会被本次汇总直接消费。
 2. 点「发起研判」，请求直接进当前会话，不用复制粘贴（想先改一句就用旁边的「改一改再发」）。
