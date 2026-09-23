@@ -51,11 +51,11 @@ before. Nothing is assumed beyond "you can open a terminal".
 | Human in the loop: every write needs a native approval; a rejection writes nothing | ✅ Built | Every write tool; approvals exercised in the real-model review and workflow runs | Risk tiers (today: read / approval only) |
 | Safety: raw data rows never enter model context (three layers), prompt-injection defence | ✅ Built | Injected cell text reached no model session on the real model; bilingual injection cases | Third-party penetration test |
 | Observability: decision journal, per-run swimlanes with tokens, generated acceptance report 31/31 | ✅ Built | Records page; `test_journal.py` | — |
-| Tool-selection evaluation (real model; first step among ~50 tools) | ✅ Evaluated | 🟡 Stopped after 13 of 18 cases: 9/13 correct. The harness could not answer the captain's ask-user cards and stalled; the run also exposed `monthly_inbox` returning counts only, which made the captain re-query (fixed). Full rerun tracked in an issue | More cases |
+| Tool-selection evaluation (real model; first step among ~50 tools) | ✅ 15/18 (83%) | All 18 cases ran; median 3 steps, ~39k tokens; the three misses each have a reasoned explanation (docs/00) | More cases |
 | Model choice | ✅ dsh's own picker | Chooses among operator-configured models; adding providers or keys stays off | — |
 | Deployment: merge triggers tests and deploy, 7 seats | ✅ Live | GitHub Actions | Manual steps such as enabling the console gate (see HANDOFF) |
 | Feishu sheets / wiki / permissions | 🟡 In integration | Metadata and membership reads verified on the real tenant | End-to-end import, large-sheet paging (out of this round) |
-| 200k-row scale | ⬜ Not measured | A design constraint; upload cap 25 MiB | Scale test (#228) |
+| 200k-row scale | 🟡 Measured; does not fit current limits | CSV is 34 MiB, over the upload cap; XLSX expands to 176 MiB, over the guard; with limits raised CSV imports in 81–86 s at 1.2–1.6 GB peak, tool outputs ≤37 KB | Limits and memory budget are the owner's call (#228) |
 
 All sample data is fictional. Real customer exports, business confirmation of the assumed conventions and real enterprise acceptance are still outstanding.
 
@@ -79,7 +79,7 @@ Some states conflict (a batch that is ready cannot also be held back), so the de
 | `tour-smoke` / `round1-journey` / `web-smoke` / `quotation-smoke` / `cases-journey` | Tour, brief, discovery chain, quotation and notebooks, the three cases | Offline browser | All pass |
 | `business-smoke` (risk / balanced / injection / department failure) | Four-department review and cross-operation chain | Offline browser; the first three also on the real model | All pass |
 | `workflow-journey` | Filling and handoff end to end | Real model | Passes |
-| `tool-selection-live` | Does the captain pick the right first tool | Real model | 🟡 Stopped after 13 of 18 cases: 9/13 correct. The harness could not answer the captain's ask-user cards and stalled; the run also exposed `monthly_inbox` returning counts only, which made the captain re-query (fixed). Full rerun tracked in an issue |
+| `tool-selection-live` | Does the captain pick the right first tool | Real model | 15/18 |
 
 ## Before you start
 
@@ -102,16 +102,14 @@ Starting a review sends a request to the configured model, and that bills. One r
 case takes tens of seconds and tens of thousands of tokens; measured figures live in
 [`docs/00-status.md`](docs/00-status.md), which is the only place a measured number is written.
 
-**About the screenshots.** Labels follow the DSH language setting, so most captures below come from a
-Chinese-locale run; the last one is in English. The mapping: 来源 = Sources, 工作室 = Studio,
+**About the screenshots.** All were retaken on 2026-09-24 on the current interface. Most come from an
+English-locale offline run; 05–07 and 08 come from runs on the real model and show the Chinese UI. The mapping: 来源 = Sources, 工作室 = Studio,
 对话 = Chat, 轨迹 = Trajectory, 业务状态 = Business state, 发起研判 = Start the review, 主表 = Master
 table, 待确认映射 = Mappings awaiting confirmation, 隔离行 = Quarantined rows, 清洗记录 = Cleaning log,
 添加来源 = Add sources, 打开示例笔记本 = Open sample notebook, 新建笔记本 = Create notebook,
 保存笔记本 = Save notebook, 退出笔记本 = Exit notebook, 会话与设置 = Sessions & settings,
-允许一次 = Allow once, 拒绝 = Reject, 拒绝理由 = Rejection reason. Three captures still show the
-previous shell (Chat | Trajectory | Business state) instead of the three-pane notebook; each is
-labelled where it appears, and [`docs/images/README.md`](docs/images/README.md) records the
-provenance of every image.
+允许一次 = Allow once, 拒绝 = Reject, 拒绝理由 = Rejection reason.
+[`docs/images/README.md`](docs/images/README.md) records the provenance of every image.
 
 ## 1 Set up the machine
 
@@ -359,8 +357,7 @@ Click 发起研判. The request goes into the current session, so you can watch 
 
 ![Trajectory: review_context, four subagent calls, review_finalize](docs/images/06-trajectory-four-spawns.png)
 
-*Captured on the 2026-09-06 shell (Chat | Trajectory | Business state); the tool sequence and the
-cards are unchanged on the notebook shell.*
+*Captured on the real model, 2026-09-23.*
 
 What happens, in order:
 
@@ -405,7 +402,7 @@ To trace a number properly:
 
 ![Business state page](docs/images/07-business-state-page.png)
 
-*2026-09-06 shell.* The 业务状态 tab is a status view of the batch, not a workflow engine: nodes
+*Captured on the real model, 2026-09-23.* The 业务状态 tab is a status view of the batch, not a workflow engine: nodes
 highlight according to what actually happened, clicking filters, and nothing on the page executes a
 business action.
 
@@ -436,7 +433,7 @@ once.
 
 ![Approval panel with rejection reason](docs/images/08-approval-rejection-note.png)
 
-*2026-09-06 shell. The panel, the note field and the audit events are the same today.*
+*Captured on the real model, 2026-09-24: the card lists the draft values being approved, how each was read, its source and any flagged check.*
 
 - **Allow once** writes one mapping rule bound to exactly these parameters, through a one-use receipt
   the host generated after the decision. Replays are refused.

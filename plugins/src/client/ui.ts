@@ -12,6 +12,7 @@ export function configureLocale(value: Context['locale']) { locale = value }
 const subscribe = (fn: () => void) => locale.subscribe(fn)
 const current = () => locale.getSnapshot().active.startsWith('zh') ? 'zh' : 'en'
 const labels = {
+  draftUnavailable: ['读不到这份草稿；请在「填报与流转」页核对后再决定。', 'This draft could not be read; check it on the Filling & handoff page before deciding.'],
   runTokens: ['tokens（发起工具调用的模型步骤）', 'tokens (model steps that called tools)'],
   sampleCases: ['更多示例', 'More sample cases'],
   sampleCasesHelp: ['同一家虚构公司的 2024-07，分别展示不同的问题；有些状态不能放在同一个批次里。每个示例打开成一个新笔记本。', 'The same fictional company in 2024-07, each showing different problems, because some states cannot share one batch. Each opens in a new notebook.'],
@@ -357,7 +358,7 @@ const labels = {
   state: ['业务状态', 'Business state'], nativeDetails: ['原生工具详情', 'Native tool details'], unknown: ['尚无记录', 'No recorded state'], approval: ['映射审批', 'Mapping approval'],
   allowed_once: ['允许一次', 'Allow once'], rejected: ['已拒绝', 'Rejected'], cancelled: ['已取消/超时', 'Cancelled / timed out'], unavailable: ['审批不可用', 'Approval unavailable'],
   reason: ['拒绝理由', 'Rejection reason'], approvalTitle: ['确认跨部门映射', 'Confirm cross-department mapping'], allow: ['允许一次', 'Allow once'], reject: ['拒绝', 'Reject'],
-  optionalReason: ['拒绝理由（可选，最多 240 字符）', 'Rejection reason (optional, up to 240 characters)'], noteHelp: ['批准才写映射；拒绝不写入，以后仍可能询问。', 'Only approval writes the mapping. Rejection writes nothing; later imports may ask again.'],
+  optionalReason: ['拒绝理由（可选，最多 240 字符）', 'Rejection reason (optional, up to 240 characters)'], noteHelp: ['只有批准才会写入；拒绝不写入任何内容，之后还可以再提出。', 'Only approval writes this. Rejecting writes nothing, and it can be proposed again later.'],
   noteFail: ['理由未保存，尚未提交决定。重试或清空理由后拒绝。', 'Reason was not saved; no decision submitted. Retry or clear it to reject.'], expired: ['审批已结束或备注通道不可用', 'Approval ended or notes unavailable'],
   timeout: ['审批期限', 'Approval deadline'], seconds: ['秒', 'seconds'], inspect: ['查看调用轨迹', 'Inspect native trace'], details: ['查看摘要', 'Show summary'], failed: ['失败 / 已拒绝', 'Failed / rejected'], completed: ['已完成', 'Completed'],
   limits: ['文件上限', 'File limit'], transport: ['请求上限', 'Request limit'], invalidUpload: ['请选择至少一个 CSV/XLSX，文件总大小不得超过上限。', 'Select at least one CSV/XLSX; total size must fit the limit.'],

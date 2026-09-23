@@ -700,4 +700,5 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-sample-cases ul { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px }
 .bf-sample-cases button { display: grid; gap: 2px; width: 100%; text-align: left; padding: 8px 10px; border: 1px solid var(--bf-line); border-radius: 10px; background: transparent; cursor: pointer }
 .bf-sample-cases button small { color: var(--bf-muted); line-height: 1.45 }
+.bf-decision .bf-handoff-draft th { white-space: nowrap; vertical-align: top }
 `

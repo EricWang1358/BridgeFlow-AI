@@ -57,7 +57,7 @@ export function Discovery() {
   }
   return <section className="bf-state bf-discovery" aria-label={tr('立项材料与候选', 'Discovery materials and opportunities')}>
     <h2>{tr('立项材料与候选', 'Discovery materials and opportunities')}</h2>
-    <p>{tr('上传先暂存，原生审批后才登记。候选保存不代表批准立项。', 'Uploads are staged until native approval. Saving a proposal does not approve a project.')}</p>
+    <p>{tr('上传的文件先暂存，在对话里批准后才登记。保存提案之后，立项仍要另行批准。', 'Uploads wait until you approve them in the chat. Saving a proposal leaves the project to be approved separately.')}</p>
     <form onSubmit={e => { e.preventDefault(); setPage(null); setDetail(null); setEditing(undefined); setGraphDraft(null); setScoringTarget(null); setMeeting(null); setDecisionEdit(null); setProject(projectInput); setOffset(0); setStaged(null); setRevision(n => n + 1) }}>
       <label>{tr('项目标识', 'Project ID')}<input required pattern="[a-zA-Z0-9]([a-zA-Z0-9_]|-){0,79}" value={projectInput} onChange={e => setProjectInput(e.target.value)} /></label>
       <button type="submit" disabled={busy}>{tr('打开项目', 'Open project')}</button>
@@ -79,9 +79,9 @@ export function Discovery() {
         <button type="submit" disabled={busy}>{tr(busy ? '上传中…' : '暂存材料', busy ? 'Uploading…' : 'Stage material')}</button>
       </form>
       {staged && <section aria-label={tr('待审批登记', 'Registration awaiting approval')}>
-        <p>{tr('尚未登记。将下列请求粘贴到原生对话，核对审批内容后再批准。到期：', 'Not registered yet. Paste this request into native chat, review the approval, then decide. Expires: ')}{new Date(staged.expires_at * 1000).toLocaleString()}</p>
+        <p>{tr('还没登记。把下面的请求粘贴到对话里，核对审批卡后再决定。到期：', 'Not registered yet. Paste this request into the chat, check the approval card, then decide. Expires: ')}{new Date(staged.expires_at * 1000).toLocaleString()}</p>
         <textarea readOnly rows={10} value={request} aria-label={tr('登记审批请求', 'Registration approval request')} />
-        <button onClick={() => { void navigator.clipboard.writeText(request).then(() => setCopied(true)).catch(() => setError(tr('复制失败，请手动选择上方文本。', 'Copy failed; select the text above manually.'))) }}>{tr('复制审批请求', 'Copy approval request')}</button>
+        <button onClick={() => { void navigator.clipboard.writeText(request).then(() => setCopied(true)).catch(() => setError(tr('复制失败，请手动选中上方文字复制。', 'Copy failed; select the text above and copy it yourself.'))) }}>{tr('复制审批请求', 'Copy approval request')}</button>
         {copied && <p role="status">{tr('已复制，请粘贴到原生对话。', 'Copied. Paste into native chat.')}</p>}
       </section>}
       {kind === 'decision' && decisionEdit && <DecisionEditor key={`${project}:${decisionKey}`} project={project} meetingId={decisionEdit.meetingId} initial={decisionEdit.initial} />}

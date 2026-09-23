@@ -33,10 +33,10 @@ export function MeetingEditor({ initial }: { initial: Meeting }) {
     e.preventDefault()
     const statements = [...draft.scope, ...draft.risks, ...draft.resources, ...draft.minutes, ...draft.stages.map(s => s.rationale)]
     if (!draft.scope.length || !draft.stages.length || statements.some(s => !s.text.trim() || s.basis === 'reported' && !s.references.length)) {
-      setError(zh ? '请填写范围、阶段和陈述；报告型陈述须添加来源。' : 'Provide scope, stages and statements; reported statements require sources.'); return
+      setError(zh ? '填写范围、阶段和陈述；转述的陈述要写明来源。' : 'Fill in the scope, stages and statements. A statement someone reported needs its source.'); return
     }
     if (draft.phase === 'minutes' && (!cleanLines(draft.participants).length || !draft.minutes.length)) {
-      setError(zh ? '会后纪要须填写参会者和纪要。' : 'Minutes require reported participants and notes.'); return
+      setError(zh ? '会后纪要要写参会人和纪要内容。' : 'Meeting notes need the attendees and the notes.'); return
     }
     const { seq: _seq, ...value } = draft
     const meeting = { ...value, expected_seq: initial.seq ?? 0, exclusions: cleanLines(draft.exclusions),
@@ -49,7 +49,7 @@ export function MeetingEditor({ initial }: { initial: Meeting }) {
     setError(''); setCopied(false)
   }
   return <section aria-label={zh ? '会议记录编辑' : 'Meeting record editor'}><h3>{zh ? '会议准备与纪要' : 'Meeting preparation and minutes'}</h3>
-    <p>{zh ? '估算和建议标为假设。参会姓名是记录信息，不等于投票或立项批准。未批准编辑仅保留在当前页面。' : 'Label estimates and proposals as assumptions. Reported attendance is not a vote or project approval. Unsaved edits live only on this page.'}</p>
+    <p>{zh ? '把估算和建议标成假设。谁参会只是记录，投票和批准另算。未保存的修改只留在本页。' : 'Mark estimates and proposals as assumptions. Attendance is a record; votes and approval are separate. Unsaved edits stay only on this page.'}</p>
     {error && <p role="alert">{error}</p>}<form onSubmit={prepare} onChange={() => { setRequest(''); setCopied(false) }}>
       <label>{zh ? '会议标识' : 'Meeting ID'}<input required readOnly={!!initial.seq} pattern="[a-zA-Z0-9]([a-zA-Z0-9_]|-){0,79}" value={draft.id} onChange={e => update({ id: e.target.value })} /></label>
       <label>{zh ? '会议标题' : 'Meeting title'}<input required maxLength={200} value={draft.title} onChange={e => update({ title: e.target.value })} /></label>
@@ -75,7 +75,7 @@ export function MeetingEditor({ initial }: { initial: Meeting }) {
       {draft.phase === 'minutes' && <Statements title={zh ? '纪要' : 'Minutes'} items={draft.minutes} onChange={minutes => update({ minutes })} />}
       <label>{zh ? '本次记录／修订原因' : 'Reason for this record / revision'}<textarea aria-label={zh ? '本次记录／修订原因' : 'Reason for this record / revision'} required maxLength={1200} value={draft.change_reason} onChange={e => update({ change_reason: e.target.value })} /></label>
       <button type="submit">{zh ? '准备会议审批请求' : 'Prepare meeting approval'}</button>
-    </form>{request && <><p>{zh ? '尚未保存。粘贴到原生对话并审查批准。' : 'Not saved. Paste into native chat and review approval.'}</p><textarea readOnly rows={10} aria-label={zh ? '会议审批请求' : 'Meeting approval request'} value={request} /><button onClick={() => { void navigator.clipboard.writeText(request).then(() => setCopied(true)).catch(() => setError(zh ? '复制失败，请手动选择。' : 'Copy failed; select manually.')) }}>{zh ? '复制会议请求' : 'Copy meeting request'}</button>{copied && <p role="status">{zh ? '已复制。' : 'Copied.'}</p>}</>}
+    </form>{request && <><p>{zh ? '还没保存。把它粘贴到对话里，在那里批准。' : 'Not saved yet. Paste this into the chat and approve it there.'}</p><textarea readOnly rows={10} aria-label={zh ? '会议审批请求' : 'Meeting approval request'} value={request} /><button onClick={() => { void navigator.clipboard.writeText(request).then(() => setCopied(true)).catch(() => setError(zh ? '复制失败，请手动选择。' : 'Copy failed; select manually.')) }}>{zh ? '复制会议请求' : 'Copy meeting request'}</button>{copied && <p role="status">{zh ? '已复制。' : 'Copied.'}</p>}</>}
   </section>
 }
 
@@ -84,8 +84,8 @@ export function MeetingView({ meeting }: { meeting: Meeting & { actor?: string; 
   const renderStatements = (items: Statement[]) => <ul>{items.map((item, i) => <li key={i}><strong>{item.basis === 'assumption' ? (zh ? '假设／建议' : 'Assumption / proposal') : (zh ? '报告陈述' : 'Reported')}</strong>: {item.text}<ul>{item.references.map((ref, n) => <li key={n}>{ref.material_id} · v{ref.version} · {ref.locator.sheet} · {ref.locator.kind} {ref.locator.start}–{ref.locator.end}</li>)}</ul></li>)}</ul>
   return <section aria-label={zh ? '会议记录详情' : 'Meeting record details'}><h3>{meeting.title} · v{meeting.version}</h3>
     <p>{meeting.phase === 'minutes' ? (zh ? '会后纪要' : 'Minutes') : (zh ? '会前准备' : 'Preparation')} · {zh ? '记录人' : 'Recorder'}: {meeting.actor}</p>
-    <p>{zh ? '本记录不代表立项批准；参会姓名为报告信息。' : 'This record does not approve a project; attendee names are reported information.'}</p>
-    {meeting.status === 'needs_review' && <p role="alert">{zh ? '输入已变化，需重新审查。候选：' : 'Inputs changed; review required. Candidates: '}{meeting.stale_candidates?.join(', ')} · {zh ? '材料：' : 'Materials: '}{meeting.stale_sources?.join(', ')}</p>}
+    <p>{zh ? '这份记录只是会议记录，立项要另行批准；参会人姓名按转述记录。' : 'This is a record of the meeting; the project is approved separately. Attendee names are as reported.'}</p>
+    {meeting.status === 'needs_review' && <p role="alert">{zh ? '输入变了，需要重新看一遍。候选：' : 'The inputs changed, so this needs another look. Candidates: '}{meeting.stale_candidates?.join(', ')} · {zh ? '材料：' : 'Materials: '}{meeting.stale_sources?.join(', ')}</p>}
     <h4>{zh ? '冻结候选版本' : 'Frozen candidate versions'}</h4><ul>{meeting.candidate_snapshots?.map(c => <li key={c.id}>{c.title} · {c.id} · v{c.version}</li>)}</ul>
     {(['scope', 'risks', 'resources'] as const).map((key, i) => <div key={key}><h4>{(zh ? ['范围', '风险', '资源依赖'] : ['Scope', 'Risks', 'Resources'])[i]}</h4>{renderStatements(meeting[key])}</div>)}
     <h4>{zh ? '实施阶段' : 'Implementation stages'}</h4>{meeting.stages.map(s => <article key={s.id}><strong>{s.title} · {s.id}</strong><p>{zh ? '责任角色' : 'Owner role'}: {s.owner_role}</p><p>{zh ? '前置阶段' : 'Prerequisites'}: {s.depends_on.join(', ') || '—'}</p><p>{zh ? '退出条件' : 'Exit criteria'}</p><ul>{s.exit_criteria.map((c, i) => <li key={i}>{c}</li>)}</ul>{renderStatements([s.rationale])}</article>)}

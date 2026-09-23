@@ -44,9 +44,9 @@ export function ScoreEditor({ project, opportunity, initial }: { project: string
     setError(''); setCopied(false)
   }
   return <section aria-label={zh ? '候选评分编辑' : 'Opportunity rating editor'}><h3>{zh ? '候选评分' : 'Rate opportunity'} · {opportunity.id} · v{opportunity.seq}</h3>
-    <p>{zh ? '按声明量表填写，不确定可留空。缺分数、理由或依据的轴不会落点；评分不批准立项。' : 'Use the declared policy; leave unknowns blank. Missing scores, rationale or evidence withhold the point. Rating does not approve a project.'}</p>
+    <p>{zh ? '按声明的量表打分，不确定的可以留空。缺分数、理由或依据的那一轴不会画到图上。打分之后，立项仍要另行批准。' : 'Score against the declared scale; leave anything you are unsure of blank. An axis without a score, reason and evidence is not plotted. The project is approved separately.'}</p>
     {error && <p role="alert">{error}</p>}<button onClick={() => setRevision(n => n + 1)}>{zh ? '重新读取量表' : 'Reload policy'}</button>
-    {policy && <><PolicyView policy={policy} />{initial && initial.policy_fingerprint !== policy.fingerprint && <p role="alert">{zh ? '量表已变更，请重新核对两轴评分。' : 'Policy changed; review both ratings again.'}</p>}
+    {policy && <><PolicyView policy={policy} />{initial && initial.policy_fingerprint !== policy.fingerprint && <p role="alert">{zh ? '量表已变更，请重新核对两轴评分。' : 'The scale has changed; check both scores again.'}</p>}
       <form onSubmit={prepare} onChange={() => { setRequest(''); setCopied(false) }}><label>{zh ? '评分标识' : 'Rating ID'}<input name="id" required readOnly={!!initial} defaultValue={initial?.id ?? ''} pattern="[a-zA-Z0-9]([a-zA-Z0-9_]|-){0,79}" /></label>
         {(['effort', 'value'] as const).map(key => <fieldset key={key} aria-label={zh ? (key === 'effort' ? '投入评分' : '价值评分') : `${key} rating`}><legend>{policy[key].title}</legend>
           <label>{zh ? '分值（可留空）' : 'Score (optional)'}<input inputMode="decimal" pattern="-?[0-9]+(\.[0-9]{1,6})?" maxLength={24} value={ratings[key].score ?? ''} onChange={e => update(key, { score: e.target.value })} /></label>
@@ -56,7 +56,7 @@ export function ScoreEditor({ project, opportunity, initial }: { project: string
         <button type="submit">{zh ? '准备评分审批请求' : 'Prepare rating approval'}</button>
       </form>
     </>}
-    {request && <><p>{zh ? '尚未保存，请粘贴到原生对话后审查批准。' : 'Not saved. Paste into native chat and review approval.'}</p><textarea rows={10} readOnly aria-label={zh ? '评分审批请求' : 'Rating approval request'} value={request} /><button onClick={() => { void navigator.clipboard.writeText(request).then(() => setCopied(true)).catch(() => setError(zh ? '复制失败，请手动选择。' : 'Copy failed; select manually.')) }}>{zh ? '复制评分请求' : 'Copy rating request'}</button>{copied && <p role="status">{zh ? '已复制。' : 'Copied.'}</p>}</>}
+    {request && <><p>{zh ? '还没保存。把它粘贴到对话里，在那里批准。' : 'Not saved yet. Paste this into the chat and approve it there.'}</p><textarea rows={10} readOnly aria-label={zh ? '评分审批请求' : 'Rating approval request'} value={request} /><button onClick={() => { void navigator.clipboard.writeText(request).then(() => setCopied(true)).catch(() => setError(zh ? '复制失败，请手动选择。' : 'Copy failed; select manually.')) }}>{zh ? '复制评分请求' : 'Copy rating request'}</button>{copied && <p role="status">{zh ? '已复制。' : 'Copied.'}</p>}</>}
   </section>
 }
 
@@ -75,7 +75,7 @@ export function ScoreBoard({ project, onEdit }: { project: string; onEdit: (scor
   }
   const split = (axis: Axis) => (Number(axis.split) - Number(axis.minimum)) / (Number(axis.maximum) - Number(axis.minimum))
   return <section aria-label={zh ? '评分四象限' : 'Rating quadrants'}><h3>{zh ? '评分四象限' : 'Rating quadrants'}</h3><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button>
-    <p>{zh ? '只显示当前页、当前量表下依据完整的点；位置不是立项决定。重合点可从列表分别打开。' : 'Only complete current-policy ratings on this page are plotted. Position is not approval. Open overlapping points from the list.'}</p>
+    <p>{zh ? '只画出当前量表下依据齐全的评分；点的位置只是参考，立项要另行决定。重叠的点可以从列表里分别打开。' : 'Only complete scores under the current scale are plotted. A point\'s position is guidance; the project is decided separately. Open overlapping points from the list.'}</p>
     {error && <p role="alert">{error}</p>}{policy && page && <><PolicyView policy={policy} />
       <svg role="img" aria-label={zh ? '投入与价值四象限' : 'Effort and value quadrants'} viewBox="0 0 400 340" style={{ width: '100%' }}>
         <rect x="45" y="25" width="320" height="270" fill="none" stroke="currentColor" />

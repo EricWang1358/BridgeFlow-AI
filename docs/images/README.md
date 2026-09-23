@@ -6,20 +6,20 @@
 
 | 文件 | 内容 | 来源运行 | 界面外壳版本 |
 | --- | --- | --- | --- |
-| `01-notebook-empty.png` | 空笔记本：三栏工作面与顶栏按钮（含 Help & guided tours） | `plugins/tests/readme-shots.mjs`（2026-09-14） | 2026-09-14 三栏 |
-| `02-sample-sources.png` | 示例笔记本（模拟商砼公司 2024-07，v2 模板）：四份来源、批次号、主表产物与原件预览 | `plugins/tests/readme-shots.mjs`（2026-09-14） | 2026-09-14 三栏 |
-| `03-source-provenance.png` | 文件来源信息：上传文件、批次、工作表、SHA-256 | `plugins/tests/readme-shots.mjs`（2026-09-14） | 2026-09-14 三栏 |
-| `04-batch-master-table.png` | 批次弹窗：主表、清洗记录、待确认映射、列匹配、隔离行、发起研判 | `plugins/tests/readme-shots.mjs`（2026-09-14） | 2026-09-14 三栏 |
-| `05-report-preview.png` | 四部门报告预览：公式、关注阈值、责任、解释与原始来源 | `quotation-ui/runs/1788722008993` | 2026-09-07 三栏（窄栏裁切） |
-| `06-trajectory-four-spawns.png` | 轨迹：`review_context` → 四次 `subagent` → `review_finalize` | `business-mvp/risk/runs/1788698431615141529` | **2026-09-06 外壳**（对话｜轨迹｜业务状态） |
-| `07-business-state-page.png` | 业务状态页与节点筛选 | `business-mvp/chain-regression/runs/1788700374221311054` | **2026-09-06 外壳** |
-| `08-approval-rejection-note.png` | 原生审批面板：参数、拒绝理由、期限、拒绝 / 允许一次 | `business-mvp/approval/runs/1788698590713111342` | **2026-09-06 外壳** |
-| `09-save-notebook.png` | 离开前保存对话框：保存 / 不保存 / 取消 | `quotation-ui/runs/1788723465966` | 2026-09-07 三栏 |
-| `10-notebooks-list.png` | 笔记本列表与历史恢复 | 同上 | 2026-09-07 三栏 |
-| `12-cross-department-master.png` | 跨部门总表：完整行与待确认计数、口径假设、客户名称分歧、单元格出处 | `plugins/tests/readme-shots.mjs`（2026-09-14） | 2026-09-14 三栏 |
-| `13-workflow-handoff.png` | 填报与流转：交接看板（尚无记录） | 同上 | 2026-09-14 三栏 |
-| `14-guided-tour.png` | 新手导览欢迎卡 | 同上 | 2026-09-14 三栏 |
-| `11-quotation-workspace-en.png` | 报价工作区（英文界面）：声明模板与待补依据 | 同上 | 2026-09-07 三栏 |
+| `01-notebook-empty.png` | 空笔记本：三栏工作面，开始页常驻四步流程 | `plugins/tests/readme-shots.mjs`（2026-09-24，离线） | 2026-09-23 界面说清楚一轮 |
+| `02-sample-sources.png` | 示例笔记本（模拟商砼 2024-07）：来源、批次、原件预览、「更多示例」 | 同上 | 同上 |
+| `03-source-provenance.png` | 文件来源信息：上传文件、批次、工作表、SHA-256 | 同上 | 同上 |
+| `04-batch-master-table.png` | 批次数据表：主表、清洗记录、待确认映射、列匹配、隔离行 | 同上 | 同上 |
+| `05-report-preview.png` | 四部门报告预览：公式、关注阈值、责任、解释与原始来源 | `live-2026-09-23/risk`（**真实模型**） | 同上 |
+| `06-trajectory-four-spawns.png` | 轨迹：`review_context` → 四次 `subagent` → `review_finalize` | `live-2026-09-23/risk`（**真实模型**） | 同上 |
+| `07-business-state-page.png` | 业务状态页：四部门报告、依据与归属 | `live-2026-09-23/risk`（**真实模型**） | 同上 |
+| `08-approval-rejection-note.png` | 原生审批面板：要批准的草稿值、原话与换算、出处、被标出的检查、拒绝理由、拒绝 / 允许一次 | `live-2026-09-24/workflow`（**真实模型**） | 同上 |
+| `09-save-notebook.png` | 离开前保存对话框：保存 / 不保存 / 取消 | `quotation-ui/runs/1790170726838`（离线） | 同上 |
+| `10-notebooks-list.png` | 笔记本列表与历史恢复 | 同上 | 同上 |
+| `11-quotation-workspace-en.png` | 报价工作区（英文界面） | 同上 | 同上 |
+| `12-cross-department-master.png` | 跨部门总表：完整行与待确认计数、口径假设、客户名称分歧、单元格出处 | `plugins/tests/readme-shots.mjs`（2026-09-24，离线） | 同上 |
+| `13-workflow-handoff.png` | 填报与流转：七段流程条与两条示例记录（缺项 / 待审核），每条带下一步按钮 | 同上 | 同上 |
+| `14-guided-tour.png` | 首次进入的引导欢迎卡 | 同上 | 同上 |
 
 两点必须说清楚：
 

@@ -1,0 +1,81 @@
+{
+  "mode": "live",
+  "steps": [
+    {
+      "step": "review and submit",
+      "elapsed_ms": 8418
+    },
+    {
+      "step": "downstream starts",
+      "elapsed_ms": 8433
+    },
+    {
+      "step": "downstream completes",
+      "elapsed_ms": 11561
+    },
+    {
+      "step": "missing quantity answered",
+      "elapsed_ms": 33656
+    }
+  ],
+  "approvals": [
+    {
+      "step": "review and submit",
+      "at_ms": 11399
+    },
+    {
+      "step": "downstream starts",
+      "at_ms": 20425
+    },
+    {
+      "step": "downstream completes",
+      "at_ms": 32026
+    },
+    {
+      "step": "missing quantity answered",
+      "at_ms": 66267
+    }
+  ],
+  "questions": [
+    {
+      "step": "missing quantity answered",
+      "picked": "skipped"
+    }
+  ],
+  "model_requests": 16,
+  "tool_calls": [
+    "workflow_draft",
+    "workflow_approve_submit",
+    "workflow_board",
+    "workflow_board",
+    "workflow_handoff",
+    "workflow_board",
+    "workflow_handoff",
+    "workflow_board",
+    "workflow_draft",
+    "ask_user_question",
+    "workflow_record"
+  ],
+  "usage": {
+    "inputTokens": 15445,
+    "outputTokens": 10385,
+    "totalTokens": 278758,
+    "cacheReadTokens": 252928,
+    "reasoningTokens": 6641
+  },
+  "final": [
+    {
+      "kind": "artifact",
+      "state": "ready_for_review"
+    },
+    {
+      "kind": "artifact",
+      "state": "data_ready"
+    },
+    {
+      "kind": "handoff",
+      "state": "completed"
+    }
+  ],
+  "elapsed_ms": 68499
+}
