@@ -316,7 +316,11 @@ sample. Being able to see a page of data is a viewing feature, not a performance
 
 If the batch comes back `needs_configuration`, the dictionary declares no joinable column for one of
 the departments. Under 「为什么主表是空的」 the panel prints which dictionary was frozen for this
-batch; if that is not the file you meant, you have found the whole bug.
+batch; if that is not the file you meant, you have found the whole bug. If the dictionary itself is
+what is missing, nobody hand-edits YAML any more: give the captain the business's OA dictionary
+spreadsheet to transcribe (`dictionary_import`), or let it draft from the batch's column profiles
+(`dictionary_draft`), decide every entry in the approval — a measure also needs its rollup — and
+publish (`dictionary_publish`); the version affects later imports only.
 
 ## 9 Run the review
 

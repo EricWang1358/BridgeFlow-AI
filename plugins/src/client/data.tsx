@@ -98,6 +98,8 @@ export function DataView({ batchId, summary, sources, onImport, onRefresh }: {
         </div>
         <p className="bf-hint">{t('batchQualityHint')}</p>
         <p className="bf-hint">{summary.master_rows} {t('masterCompleteRows')} · {t('dictionaryInForce')} <code className="bf-mono">{summary.dictionary}</code></p>
+        {summary.status === 'needs_configuration' &&
+          <p className="bf-hint" data-open="true">{t('draftHint')}</p>}
       </aside>
     </div>
   </section>

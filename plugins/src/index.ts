@@ -25,6 +25,7 @@ import { workflowApproveSubmit, workflowBoard, workflowCatalogue, workflowDraft,
 import { listMetrics } from './tools/list-metrics.ts'
 import { profileBatch } from './tools/profile-batch.ts'
 import { lookupFieldDictionary } from './tools/lookup-field-dictionary.ts'
+import { dictionaryDecide, dictionaryDraft, dictionaryDraftView, dictionaryImport, dictionaryProfiles, dictionaryPublish } from './tools/dictionary.ts'
 import { batchSummary } from './tools/batch-summary.ts'
 import { ApprovalReceipts } from './approval/receipts.ts'
 import { PendingDetails } from './approval/detail.ts'
@@ -80,11 +81,17 @@ export function apply(ctx: Context, config: Config): void {
   if (config.allowMappingWrite) {
     catalogue.register(ctx, confirmMapping(backend, receipts))
     catalogue.register(ctx, confirmColumnMatch(backend, receipts))
+    catalogue.register(ctx, dictionaryImport(backend, receipts))
+    catalogue.register(ctx, dictionaryDraft(backend, receipts))
+    catalogue.register(ctx, dictionaryDecide(backend, receipts))
+    catalogue.register(ctx, dictionaryPublish(backend, receipts))
     catalogue.register(ctx, quarantineDecide(backend, receipts))
     catalogue.register(ctx, quarantineApply(backend, receipts))
     catalogue.register(ctx, conventionDecide(backend, receipts))
     catalogue.register(ctx, riskDispositionRecord(backend, receipts))
   }
+  catalogue.register(ctx, dictionaryProfiles(backend))
+  catalogue.register(ctx, dictionaryDraftView(backend))
   catalogue.register(ctx, quarantineList(backend))
   catalogue.register(ctx, conventionList(backend))
   catalogue.register(ctx, conventionPreview(backend))

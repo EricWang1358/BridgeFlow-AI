@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     llm_provider_sanitizer: str = ""
     llm_provider_resolver: str = ""
     llm_provider_evaluator: str = ""
+    # Drafts dictionary declarations from column statistics (#205). A separate knob so
+    # drafting can run on a stronger model than the pipeline agents without touching them.
+    llm_provider_dictionary_drafter: str = ""
 
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-5"
@@ -96,6 +99,9 @@ class Settings(BaseSettings):
     mapping_memory_path: str = "data/outputs/mappings.json"
     # Uploaded columns a person matched onto declared columns. Never the dictionary.
     column_match_path: str = "data/outputs/column-matches.json"
+    # Dictionary drafts (#205, E05-UC07/UC08): proposed declarations decided entry by
+    # entry, published as versions. Never the active dictionary itself.
+    dictionary_draft_path: str = "data/outputs/dictionary-drafts"
     # Approved workflow declarations (#143–#145). Unset means the workflow API reports
     # "not configured" rather than running on guessed stages or templates.
     workflow_catalogue_path: str = ""

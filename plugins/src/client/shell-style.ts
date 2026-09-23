@@ -222,4 +222,17 @@ body[data-ds-dark-theme] .bf-save-state[data-dirty=true] { color: #dfbd76 }
 .bf-feishu-mode { display: flex; gap: 6px; margin: 8px 0 }
 .bf-feishu-mode button { border: 1px solid #ffffff2a; background: transparent; color: inherit; cursor: pointer; padding: 3px 10px; border-radius: 999px; opacity: 0.75 }
 .bf-feishu-mode button[aria-pressed=true] { opacity: 1; font-weight: 600; background: #ffffff14 }
+/* The way out of a folder, said out loud (#244): crumbs navigated but read as labels. */
+.bf-feishu-up { border: 1px solid #ffffff2a; border-radius: 999px; padding: 2px 10px !important; opacity: 1 !important }
+.bf-feishu-up:hover { background: #ffffff1f }
+/* Every pick visible and removable wherever the browser is (#244): a pick used to
+   live only on its own row, in its own folder. */
+.bf-feishu-chosen { border: 1px solid #ffffff1a; border-radius: 10px; padding: 8px 10px; margin-top: 10px }
+.bf-feishu-chosen h4 { margin: 0 0 4px; font-size: 13px }
+.bf-feishu-chosen ul { list-style: none; padding: 0; margin: 0 }
+.bf-feishu-chosen li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0 }
+.bf-feishu-chosen-name { min-width: 0; overflow-wrap: anywhere }
+.bf-feishu-chosen select, .bf-feishu-chosen input[type="number"] { max-width: 12em }
+.bf-feishu-remove { border: 0; background: transparent; color: inherit; cursor: pointer; opacity: 0.6; padding: 2px 6px; border-radius: 6px; margin-left: auto }
+.bf-feishu-remove:hover { opacity: 1; background: #ffffff14 }
 `

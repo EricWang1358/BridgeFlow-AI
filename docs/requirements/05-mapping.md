@@ -24,8 +24,16 @@ Frozen human dictionary → shape profiling → closed candidate set → native 
 | E05-UC04 | 跨部门实体关系与同类别名 / Resolve cross-department relations and aliases | IMPLEMENTED |
 | E05-UC05 | 映射记忆、审计与失效 / Persist mapping memory with evidence invalidation | IMPLEMENTED |
 | E05-UC06 | 会议规则上下文接入 / Ingest meeting context for mapping rules | DESIGNED |
-| E05-UC07 | 聚合画像与字典起草 / Aggregate profiles and draft a dictionary | DESIGNED |
-| E05-UC08 | 草案逐条审核与发布 / Review draft entries and publish a version | DESIGNED |
+| E05-UC07 | 聚合画像与字典起草 / Aggregate profiles and draft a dictionary | IMPLEMENTED_OFFLINE |
+| E05-UC08 | 草案逐条审核与发布 / Review draft entries and publish a version | IMPLEMENTED_OFFLINE |
+
+> E05-UC07/UC08 实现记录（2026-09-22，`feature/usability-20260921`）：起草有两条路——
+> `dictionary_import` 把业务自己的 OA 字典表（字段名称/关联部门/数据类型/描述/来源表字段/变更说明）
+> **确定性转写**成草案（真实样例：hackathon 材料里的 字典.xlsx，77 行）；`dictionary_draft`
+> 按原设计吃 `profile` 统计走模型起草（计费留痕，宿主侧丢弃无证据条目）。两条路汇进同一个
+> `dictionary_decide`（逐条接受/修改/拒绝，度量必须同时定 rollup）与 `dictionary_publish`
+> （全部有决定才可发布；发布前重跑导入侧同级校验；写 `versions/` 新版本；旧批次不动）。
+> 行为测试：`backend/tests/test_dictionary_draft.py`。
 
 ## E05-UC07 — 聚合画像与字典起草 / Aggregate profiles and draft a dictionary
 

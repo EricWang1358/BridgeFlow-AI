@@ -229,6 +229,9 @@ const labels = {
   feishuPick: ['从飞书选择', 'Choose from Feishu'],
   feishuPickHelp: ['浏览你有权访问的飞书云文档，选中文件、在线表格或多维表格并指定部门后导入；表格需再选工作表与表头行，多维表格需再选数据表。只能看到你自己有权限的内容。', 'Browse the Feishu files your own account can access; pick files, sheets or bitables, assign departments, then import. A sheet also needs its worksheet and header row; a bitable needs its data table. You only see what your own account may access.'],
   feishuRoot: ['我的空间', 'My space'], feishuEmpty: ['这个文件夹是空的', 'This folder is empty'], feishuMore: ['加载更多', 'Load more'],
+  feishuUpOne: ['返回上级', 'Up one level'],
+  feishuChosen: ['已选择的来源', 'Chosen sources'], feishuChosenHelp: ['取消某个来源后再浏览或重新选择；至少保留一个才能导入。', 'Remove any source and keep browsing; at least one is needed to import.'],
+  feishuCancelPick: ['取消这个来源', 'Remove this source'],
   feishuUnsupported: ['此类型暂不支持导入', 'This type cannot be imported yet'], feishuAssign: ['部门', 'Department'],
   feishuImportGo: ['导入选中文件', 'Import selected files'], feishuPickFolder: ['选择当前文件夹', 'Choose this folder'],
   feishuUpload: ['上传报告到飞书', 'Upload report to Feishu'], feishuUploadHere: ['上传到当前文件夹', 'Upload to this folder'],
@@ -355,20 +358,28 @@ const labels = {
 
   // --- a state is only useful next to the action it implies -------------------
   nextTitle: ['下一步', 'Next step'],
-  next_needs_configuration: ['字段字典没有声明可用于连接的列，所以主表没有建，研判也起不来。核对下面这份字典是不是你以为的那份，补齐后重新导入一次——旧批次不会被改。',
-                             'The dictionary declares no joinable column, so no Master Table was built and the review cannot start. Check the dictionary below is the one you think it is, complete it, and import again — the old batch is left alone.'],
+  next_needs_configuration: ['字段字典没有声明可用于连接的列，所以主表没有建，研判也起不来。不用手写字典：业务有 OA 字典表就把它交给队长转写成草案，没有就让它按这批文件的列画像起草；每条由你在审批里决定（度量要同时定汇总口径），全部有决定后发布为新版本，再重新导入——旧批次不会被改。',
+                             'The dictionary declares no joinable column, so no Master Table was built and the review cannot start. No hand-editing needed: give the captain the OA dictionary spreadsheet to transcribe, or have it draft from this batch\'s column profiles; decide every entry in the approval (a measure also needs its rollup), publish as a new version, then import again — the old batch is left alone.'],
   askCaptain: ['让 captain 看这批数据', 'Ask the captain to look'],
-  askCaptainHint: ['它会找出字典不认识的上传列，只在本部门字典已声明的列里提出匹配和依据；每个匹配都要你在审批里决定，批准后重新导入即生效。没有候选时需要字典负责人决定。',
-                   'It finds uploaded columns the dictionary does not know and proposes matches only to columns already declared for that department, with evidence. You decide each one in the approval; re-import to apply. No candidate means the dictionary owner decides.'],
+  askCaptainHint: ['它会找出字典不认识的上传列，只在本部门字典已声明的列里提出匹配和依据；每个匹配都要你在审批里决定，批准后重新导入即生效。字典本身缺声明时，它会引导你走字典起草——转写业务字典表或按列画像起草，逐条决定后发布。',
+                   'It finds uploaded columns the dictionary does not know and proposes matches only to columns already declared for that department, with evidence. You decide each one in the approval; re-import to apply. When the dictionary itself is missing declarations it walks you through drafting one — transcribing the business\'s spreadsheet or proposing from column profiles, decided entry by entry, then published.'],
   columnQuestions: ['个上传列可能对应字典已声明的列', 'uploaded column(s) may match a declared column'],
   matchedColumns: ['按已批准的决定匹配的列', 'Columns matched by approved decisions'],
   staleMatches: ['列的形状变了，之前的决定没有沿用，需要重新确认', 'Column shape changed, so these earlier decisions were not reused and need confirming again'],
   droppedColumns: ['导入时剔除的列（无可提取的显示值）', 'Columns dropped at import (no displayable value)'],
   dictionaryInForce: ['本批次冻结的字典', 'Dictionary frozen into this batch'],
+  draftHint: ['缺字典声明不用手写字典：在对话里让队长起草——业务有 OA 字典表就交给它转写，没有就按这批文件的列画像起草；每条由你在审批里决定（度量要定汇总口径），全部有决定后发布为新版本，再重新导入。',
+               'Missing declarations are not hand-written any more: ask the captain in chat to draft — transcribe the business\'s OA dictionary spreadsheet, or propose from this batch\'s column profiles. Decide every entry in the approval (a measure needs its rollup), publish as a new version, then import again.'],
   declaresEntities: ['它为各部门声明的可连接列', 'Joinable columns it declares'],
   declaresNothing: ['未声明任何可连接列', 'declares none'],
-  next_needs_review: ['有行被扣下或有映射待确认。先看隔离行和待确认映射两个页签，再发起研判。',
-                      'Rows were held back or mappings are unconfirmed. Check the quarantine and pending-mapping tabs before asking for a review.'],
+  next_needs_review: ['{quarantined} 行被扣下、{unresolved} 条映射待确认。先处置隔离行、确认映射，再发起研判。',
+                      '{quarantined} row(s) held back, {unresolved} mapping(s) unconfirmed. Settle the quarantined rows and the mappings, then ask for a review.'],
+  nextStepTitle: ['下一步', 'Next step'],
+  goQuarantine: ['处理隔离行', 'Settle quarantined rows'], goMappings: ['确认待确认映射', 'Confirm pending mappings'],
+  copyReviewRequest: ['复制研判请求', 'Copy review request'],
+  // The inbox filter's label: named here only because the guard test proved the call
+  // had been rendering the raw key's English spelling in both locales (#244).
+  department: ['部门', 'Department'],
   next_ready: ['数据可用了。复制研判请求，粘贴到会话里发起四部门研判。',
                'The data is usable. Copy the review request and paste it into the conversation.'],
   next_empty: ['这一批没有可用数据。修正源文件后重新导入。', 'This batch has no usable data. Correct the source files and import again.'],
@@ -430,6 +441,8 @@ const labels = {
 } as const
 /** Language outside React: slot labels are callbacks, not components. */
 export function currentLanguage(): 'zh' | 'en' { return current() }
+/** Every defined label key. For the guard test that keeps copy from dying unwired (#244). */
+export function labelKeys(): string[] { return Object.keys(labels) }
 export function labelText(key: string): string {
   return labels[key as keyof typeof labels]?.[current() === 'zh' ? 0 : 1] ?? key
 }

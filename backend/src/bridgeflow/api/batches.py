@@ -121,6 +121,11 @@ class BatchSummary(BaseModel):
     unresolved: int
     status: str
     refusal: str = ""
+    #: The one action that moves this batch on, in the tool's own words (#244). The
+    #: browser renders its own localized copy; this field is for the captain, so
+    #: "what now" can be answered from the same facts the screen shows — a status
+    #: with nothing after it is where operators were being lost.
+    next_step: str = ""
     #: The dictionary this batch was frozen against, and what it declares as a
     #: joinable entity per department.
     #:
@@ -164,6 +169,10 @@ def _declared_entities(snapshot: dict | None) -> dict[str, list[str]]:
 
 
 def summary(batch_id: str, result: BatchSnapshot) -> BatchSummary:
+    quarantined = sum(len(t.quarantine) for t in result.clean_tables)
+    status = ("needs_configuration" if result.refusal else "needs_review"
+              if result.graph.unresolved or quarantined
+              else "ready" if result.master_table.rows else "empty")
     return BatchSummary(
         batch_id=batch_id, period=result.period,
         departments=[DepartmentSummary(
@@ -172,10 +181,9 @@ def summary(batch_id: str, result: BatchSnapshot) -> BatchSummary:
         ) for t in result.clean_tables],
         master_rows=len(result.master_table.rows) if result.master_table else 0,
         unresolved=len(result.graph.unresolved) if result.graph else 0,
-        status=("needs_configuration" if result.refusal else "needs_review"
-                if result.graph.unresolved or any(t.quarantine for t in result.clean_tables)
-                else "ready" if result.master_table.rows else "empty"),
+        status=status,
         refusal=result.refusal,
+        next_step=_next_step(status, quarantined, len(result.graph.unresolved) if result.graph else 0),
         demo_case=result.demo_case,
         dictionary=result.dictionary_source or _relative_dictionary(),
         declared_entities=_declared_entities(result.dictionary_snapshot),
@@ -186,6 +194,28 @@ def summary(batch_id: str, result: BatchSnapshot) -> BatchSummary:
         superseded_by=periods.successors(batch_id),
         dropped_columns=result.dropped_columns,
     )
+
+
+def _next_step(status: str, quarantined: int, unresolved: int) -> str:
+    """One sentence per status, naming the counts that block and the exit (#244).
+
+    English like every other host message; the browser carries its own localized copy
+    of the same facts. Kept next to `summary`, which computes the status it answers.
+    """
+    if status == "needs_configuration":
+        return ("No joinable column is declared, so nothing downstream can run. Draft the missing "
+                "declarations — dictionary_import with the business's OA dictionary spreadsheet, or "
+                "dictionary_draft from this batch's column profiles — decide every entry with the person, "
+                "publish, then import again. Declarations freeze into a batch at import, and this batch "
+                "is left alone.")
+    if status == "needs_review":
+        return (f"Settle {quarantined} quarantined row(s) — release must pass revalidation, discard needs "
+                f"a reason, applying derives a new batch — and confirm {unresolved} pending mapping(s); "
+                "then ask for the review.")
+    if status == "ready":
+        return ("Ready for the four-department review: dispatch review_context, one subagent per "
+                "department, then review_finalize.")
+    return "No usable data in this batch. Correct the source files and import again."
 
 
 def _relative_dictionary() -> str:
