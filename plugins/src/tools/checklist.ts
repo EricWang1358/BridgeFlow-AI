@@ -39,6 +39,26 @@ export function checklistTool(config: BackendConfig): ProductTool {
  * A projection with no handling state and no decisions: each item names where it is settled,
  * and settling happens in the module that holds the evidence and the approval.
  */
+type InboxArgs = { department?: string; kind?: string }
+type InboxText = { total?: number; by_kind?: Record<string, number>; by_department?: Record<string, number>
+  items?: { kind: string; subject?: string; detail?: string; departments?: string[]; next_view?: string }[] }
+/**
+ * The items themselves, not only their counts. Counts alone sent a real captain back for
+ * more: it re-asked by kind and by each department and got the same sentence every time,
+ * because the filters narrow the items this render used to drop — seven calls for one
+ * question. Capped, with the true total, as every tool result here is.
+ */
+export function renderInbox(args: InboxArgs, result: InboxText) {
+  const kinds = Object.entries(result.by_kind ?? {}).map(([kind, n]) => `${kind} ${n}`).join(', ')
+  const items = result.items ?? []
+  const filter = [args.department && `department=${args.department}`, args.kind && `kind=${args.kind}`].filter(Boolean).join(', ')
+  const lines = items.slice(0, 15).map(item => `- ${item.kind}: ${item.subject || '(no subject)'}${item.detail ? ` — ${item.detail}` : ''}`
+    + ` [departments: ${(item.departments ?? []).join('/') || 'all'}; settled in: ${item.next_view || 'its module'}]`)
+  return [{ type: 'text' as const, text: `${result.total ?? 0} open item(s) in the period (by kind: ${kinds || 'none'}). `
+    + `${filter ? `Filtered by ${filter}: ` : ''}${items.length} listed${items.length > 15 ? ', first 15 shown' : ''}.`
+    + (lines.length ? `\n${lines.join('\n')}` : '') }]
+}
+
 export function inboxTool(config: BackendConfig): ProductTool {
   return withAccess(defineTool({
     name: 'monthly_inbox',
@@ -48,12 +68,7 @@ export function inboxTool(config: BackendConfig): ProductTool {
       department: { type: 'string', description: 'Narrow the listing to one department' },
       kind: { type: 'string', description: 'Narrow the listing to one kind of item' },
     },
-    output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => {
-      const result = value as { total?: number; by_kind?: Record<string, number>; by_department?: Record<string, number> }
-      const kinds = Object.entries(result.by_kind ?? {}).map(([kind, n]) => `${kind} ${n}`).join(', ')
-      const owners = Object.entries(result.by_department ?? {}).map(([d, n]) => `${d} ${n}`).join(', ')
-      return [{ type: 'text', text: `${result.total ?? 0} open item(s). By kind: ${kinds || 'none'}. By department: ${owners || 'none'}.` }]
-    } },
+    output: { schema: { type: 'object', additionalProperties: true }, render: (args, value) => renderInbox(args as InboxArgs, value as InboxText) },
     async execute(args, exec) {
       return callBackend<Record<string, Json>>(config, '/tools/monthly-inbox',
         { period: args.period, department: args.department ?? '', kind: args.kind ?? '' }, exec)

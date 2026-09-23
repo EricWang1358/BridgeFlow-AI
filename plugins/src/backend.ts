@@ -44,7 +44,24 @@ export type CallContext = {
   readonly callId?: unknown
   readonly rootCallId?: unknown
   readonly name?: string
-  readonly agent?: { readonly id?: unknown } | undefined
+  readonly agent?: { readonly id?: unknown; readonly session?: { snapshotEvents(): Iterable<unknown> } } | undefined
+}
+
+/**
+ * The model step that issued this call: its id and its token usage as `input/output/total`.
+ * The call being executed was requested by the agent's latest assistant message, so that
+ * message's usage is what deciding on this call cost. Several calls from one message share
+ * the step id, so the journal counts each step once.
+ */
+function stepUsage(agent: CallContext['agent']): Record<string, string> {
+  try {
+    const events = [...(agent?.session?.snapshotEvents() ?? [])] as { id?: unknown; type?: string; data?: { usage?: Record<string, unknown> } }[]
+    const step = [...events].reverse().find(e => e.type === 'assistant/message')
+    const usage = step?.data?.usage
+    if (!step || !usage) return {}
+    const n = (key: string) => (typeof usage[key] === 'number' ? Math.round(usage[key] as number) : 0)
+    return { 'x-bridgeflow-step': String(step.id ?? ''), 'x-bridgeflow-tokens': `${n('inputTokens')}/${n('outputTokens')}/${n('totalTokens')}` }
+  } catch { return {} }
 }
 
 function traceHeaders(from: AbortSignal | CallContext): Record<string, string> {
@@ -56,6 +73,7 @@ function traceHeaders(from: AbortSignal | CallContext): Record<string, string> {
     'x-bridgeflow-root': header(context.rootCallId ?? context.callId),
     'x-bridgeflow-agent': header(context.agent?.id),
     'x-bridgeflow-tool': header(context.name),
+    ...stepUsage(context.agent),
   }).filter(([, value]) => value !== ''))
 }
 

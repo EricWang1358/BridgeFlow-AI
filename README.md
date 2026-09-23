@@ -33,23 +33,53 @@ before. Nothing is assumed beyond "you can open a terminal".
 - [16 Worked examples](#16-worked-examples)
 - [Where the real documentation is](#where-the-real-documentation-is)
 
-## What is built today, and what is not
+## Project status (2026-09-23, due 27 September)
 
-| Area | State | Where to look |
+"Offline" means the scripted test model (free and repeatable, used for regression); "real model" means the DeepSeek model configured in `env.sh` (`deepseek-v4-flash` this round). Every number and how to reproduce it is in [`docs/00-status.md`](docs/00-status.md); evidence files are in `docs/evidence/`.
+
+| Area | Status | Evidence | Still missing |
+| --- | --- | --- | --- |
+| Monthly review: import four department files, clean, quarantine, build the master table | ✅ Built | All offline journeys pass; each of the three demo cases shows its intended state | Real customer exports (#141) |
+| Cross-department master table aligned by the dictionary, every cell traceable | ✅ Built | Guided tour 12/12 steps; `test_demo_cases.py` | — |
+| Four-department review: the captain dispatches four department sub-agents in parallel; the host validates | ✅ Passes on the real model | Risk / balanced / cell-injection cases all validated 4/4, 12–19 s, 70–110k tokens each (`docs/evidence/live-2026-09-23/`) | Real samples from more industries |
+| Monthly brief: one-line conclusion, attention-item logic chains, evidence grades, Word export | ✅ Built (offline) | round1 journey; a test pins each attention formula to its key metric | Reviewing briefs on the real model |
+| Dictionary drafted by the model, reviewed entry by entry, published as a version (#205) | ✅ Built (offline) | Draft lifecycle tests | A real drafting run; three open business questions |
+| Filling and handoff workflow (Agent 2): ask for missing items → approve and submit → record → hand over → next team starts / completes; notices go out on submission | ✅ Runs end to end on the real model | Workflow journey: 4 native approvals, 12 model requests, 42.5 s; the flow strip and the sample workflow | Template-governance consumer; a real notification channel |
+| Materials → candidates → flow graph → scoring → meeting → MVP decision (Agent 1) | ✅ Built (offline) | web journey, whole chain | Real business materials |
+| Adoption (Agent 3): role guidance, adoption signals | 🟡 Partial | Guidance generated from declared templates | Pilot pages, feedback handling, retrospectives |
+| Quotation workspace | 🟡 Declared drafts | quotation journey | Extraction from real files; external release |
+| Human in the loop: every write needs a native approval; a rejection writes nothing | ✅ Built | Every write tool; approvals exercised in the real-model review and workflow runs | Risk tiers (today: read / approval only) |
+| Safety: raw data rows never enter model context (three layers), prompt-injection defence | ✅ Built | Injected cell text reached no model session on the real model; bilingual injection cases | Third-party penetration test |
+| Observability: decision journal, per-run swimlanes with tokens, generated acceptance report 31/31 | ✅ Built | Records page; `test_journal.py` | — |
+| Tool-selection evaluation (real model; first step among ~50 tools) | ✅ Evaluated | 🟡 Stopped after 13 of 18 cases: 9/13 correct. The harness could not answer the captain's ask-user cards and stalled; the run also exposed `monthly_inbox` returning counts only, which made the captain re-query (fixed). Full rerun tracked in an issue | More cases |
+| Model choice | ✅ dsh's own picker | Chooses among operator-configured models; adding providers or keys stays off | — |
+| Deployment: merge triggers tests and deploy, 7 seats | ✅ Live | GitHub Actions | Manual steps such as enabling the console gate (see HANDOFF) |
+| Feishu sheets / wiki / permissions | 🟡 In integration | Metadata and membership reads verified on the real tenant | End-to-end import, large-sheet paging (out of this round) |
+| 200k-row scale | ⬜ Not measured | A design constraint; upload cap 25 MiB | Scale test (#228) |
+
+All sample data is fictional. Real customer exports, business confirmation of the assumed conventions and real enterprise acceptance are still outstanding.
+
+## Demo cases and tests
+
+Some states conflict (a batch that is ready cannot also be held back), so the demo is several cases, each opened from Sources → Open sample notebook / More sample cases into its own notebook.
+
+| Case | Shows | What you should see |
 | --- | --- | --- |
-| Monthly reconciliation: import four department files, clean, quarantine, build the master table | Built | Sections 7–8 |
-| Cross-department master table from the business side's v2 templates and dictionary, every cell traced to its source | Built | Section 7 |
-| Four department sub-agents review the month; structured, evidence-bound, host-validated | Built (live-model runs recorded in `docs/00`) | Sections 9–10 |
-| Column matching and quarantine release through native approval | Built | Section 11 |
-| Guided product tour for first-time users | Built | Section 6 |
-| Quotation drafts from a declared policy | Declaration and mock samples only; no extraction from real documents, no sending | Section 13 |
-| Filling & handoff (Agent 2): assisted filling, approval, handoff board, native downstream start/return/complete | Template-governance consumption of the approved scope not wired; no real notifications | Section 13 |
-| Workflow generation (Agent 1): discovery materials, candidate scenarios, flow diagrams, four-quadrant scoring, meetings, MVP decision under declared rules with per-person votes | Built: the browser completes materials → candidates → diagram → scoring → meeting → decision end to end; real business sign-off and Agent 2 template-governance consumption outstanding | Section 13 |
-| Organisational rollout (Agent 3): role guidance, frontline feedback, retrospectives | Role guidance generated from declared templates, plus adoption signals; no pilot pages, feedback handling or retrospectives | Section 13 |
-| Feishu integration: file upload/download, online-sheet and bitable reads, wiki import; department access control from wiki membership | Real-tenant integration testing in progress: metadata and membership reads verified, import end-to-end and large-table pagination still to measure ([docs/00](docs/00-status.md)) | [`docs/32`](docs/32-feishu-sheets-bitable-read.md) |
+| Guided sample (concrete supplier, 2024-07) | The in-page tour "combine & verify" | Ready; one customer-name mismatch in the master; three metrics over threshold |
+| Many problems at once | Several kinds of problem together | Needs review; one row quarantined (text in a money field); missing-department, cannot-compute and other open items together; review held back |
+| A different set of problems | Errors that do not overlap the previous case | Needs review; three named review blockers (negative quantity, a June row, a renamed column), one column question, a missing template column |
+| All clear | What everything-right looks like | Ready; nothing open; all 10 checks inside their thresholds |
+| Sample workflow ("Load the sample workflow" on Filling & handoff) | The workflow end to end | One record missing its actual quantity, one awaiting review; the captain asks, submits and hands over, each step on your approval |
+| Try it yourself (`data/mock_business/try-it-2024-08/`) | Manual upload, one-department correction, refusals | See that folder's README |
 
-All sample data is fictional. Real customer exports, the business side's confirmation of the conventions
-filled in by best practice, and a real held-out evaluation are still outstanding.
+| Test | Checks | Mode | Result |
+| --- | --- | --- | --- |
+| Backend `pytest` | Rules, contracts, demo-case expectations, workflow state machine | Offline | All pass (counts in docs/00) |
+| Plugin unit tests | Tool catalogue, copy keys, ids and versions in tool output | Offline | All pass |
+| `tour-smoke` / `round1-journey` / `web-smoke` / `quotation-smoke` / `cases-journey` | Tour, brief, discovery chain, quotation and notebooks, the three cases | Offline browser | All pass |
+| `business-smoke` (risk / balanced / injection / department failure) | Four-department review and cross-operation chain | Offline browser; the first three also on the real model | All pass |
+| `workflow-journey` | Filling and handoff end to end | Real model | Passes |
+| `tool-selection-live` | Does the captain pick the right first tool | Real model | 🟡 Stopped after 13 of 18 cases: 9/13 correct. The harness could not answer the captain's ask-user cards and stalled; the run also exposed `monthly_inbox` returning counts only, which made the captain re-query (fixed). Full rerun tracked in an issue |
 
 ## Before you start
 

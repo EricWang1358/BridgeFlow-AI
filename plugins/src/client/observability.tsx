@@ -26,7 +26,8 @@ const OUTCOMES = ['', 'refused', 'wrote', 'served'] as const
 
 type Step = { at: string; agent: string; tool: string; outcome: string; ms: number; reason: string; trace: string }
 type Run = { run: string; started_at: string; ended_at: string; steps: number; agents: string[]
-  refused: number; ms: number; batch_id: string; tools: string[]; timeline: Step[] }
+  refused: number; ms: number; batch_id: string; tools: string[]; timeline: Step[]
+  tokens?: { input: number; output: number; total: number; model_steps: number } }
 
 /**
  * One agent run, drawn as lanes (E13/E14 evidence, rubric: observability).
@@ -87,6 +88,7 @@ export function AgentRuns({ batchId }: { batchId: string }) {
         <span className="bf-run-summary">
           <strong>{run.steps} {t('runSteps')}</strong>
           <span className="bf-hint"> · {run.agents.length} {t('runAgents')} · {Math.round(run.ms)} ms
+            {run.tokens?.model_steps ? ` · ${run.tokens.total.toLocaleString()} ${t('runTokens')}` : ''}
             {run.refused ? ` · ${run.refused} ${t('journal_refused')}` : ''}</span>
         </span>
         <span className="bf-run-tools bf-hint">{run.tools.slice(0, 3).join(' → ')}{run.tools.length > 3 ? ' …' : ''}</span>

@@ -12,6 +12,7 @@ export function configureLocale(value: Context['locale']) { locale = value }
 const subscribe = (fn: () => void) => locale.subscribe(fn)
 const current = () => locale.getSnapshot().active.startsWith('zh') ? 'zh' : 'en'
 const labels = {
+  runTokens: ['tokens（发起工具调用的模型步骤）', 'tokens (model steps that called tools)'],
   sampleCases: ['更多示例', 'More sample cases'],
   sampleCasesHelp: ['同一家虚构公司的 2024-07，分别展示不同的问题；有些状态不能放在同一个批次里。每个示例打开成一个新笔记本。', 'The same fictional company in 2024-07, each showing different problems, because some states cannot share one batch. Each opens in a new notebook.'],
   reviewBlockers: ['研判会被拒绝，原因：', 'The review would refuse this batch:'],

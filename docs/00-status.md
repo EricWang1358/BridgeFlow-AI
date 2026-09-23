@@ -11,6 +11,22 @@
 
 ---
 
+## 收尾一轮：工作流、演示样例、真实模型验证（2026-09-23，分支 `feat/rubric-push`）
+
+真实模型为 `deepseek-v4-flash`（env.sh 配置），证据在 `docs/evidence/live-2026-09-23/`。
+
+| 运行 | 结果 |
+| --- | --- |
+| 四部门研判 · risk（真实模型） | 4/4 校验通过，17.6 s，9 次模型请求，total 86,453 token（缓存命中 53,632） |
+| 四部门研判 · balanced（真实模型） | 4/4 校验通过，18.8 s，10 次请求，total 106,485 token |
+| 四部门研判 · 单元格注入（真实模型） | 4/4 校验通过，12.3 s，8 次请求，total 71,686 token；注入文字未进入任何会话 |
+| 工作流全程（真实模型） | 通过：送审提交 9.7 s、下游开始 6.5 s、完成 7.7 s、补问缺项 10.1 s；4 次原生审批，12 次模型请求，42.5 s |
+| 工具选择评测（真实模型） | 跑到 13/18 条时中止：9/13 选对。未选对的 4 条模式相同：队长先调 `batch_summary` 再调目标工具。中止原因：评测脚本不回答提问卡片，遇到即空等 150 s。同时查出 `monthly_inbox` 的 render 只给计数不给事项，队长为一个问题连调 7 次（已修） |
+| `business-smoke` 部门故障（离线，`BRIDGEFLOW_TEST_FAULT=step-limit`） | 通过：报告 partial，人工意见后会话数仍为 5 |
+| 三套演示样例（离线，`cases-journey`） | core：需人工复核、1 行隔离；other：3 条研判阻碍、1 个待确认列；clean：可研判、零待办、10/10 检查在阈值内 |
+
+未做：工具选择评测全量重跑、README 截图、立项材料页文案、20 万行规模实测（均已开 issue）。
+
 ## 界面说清楚一轮（2026-09-23，分支 `feat/ui-clarity`）
 
 设计与写作规范见 [docs/15 一之三](15-plugin-design.md)。改动前后都用同一组离线旅程截图对照（`docs/evidence/round1-e13-e14/`、`docs/evidence/onboarding/`）。
@@ -27,7 +43,7 @@
 
 - 后端 **713 passed**，`ruff` 无告警；新增两条断言：关注项的公式等于关键指标行的公式；处置列表带标题。
 - 插件 typecheck 通过，**86/86** 通过，构建成功。
-- 浏览器旅程：`tour-smoke`、`round1-journey`、`web-smoke`、`quotation-smoke`，以及 `business-smoke` 的 risk / balanced / 注入 / 部门故障四个变体，全部通过。
+- 浏览器旅程：`tour-smoke`、`round1-journey`、`web-smoke`、`quotation-smoke`，以及 `business-smoke` 的 risk / balanced / 注入三个变体，全部通过。（原文写的「部门故障」变体用了错误的开关 `=1`，实际没有进入故障路径；已在下一节用 `=step-limit` 补跑。）
 
 未做：真实模型下的同一套旅程；README 截图未重拍；立项材料（discovery）各页的文案未逐条改写。
 
@@ -47,7 +63,7 @@
 | `web-smoke`（立项材料 → 候选 → 图 → 评分 → 会议 → 决策，上传上限） | 通过 |
 | `business-smoke` risk / balanced | 通过：队长派四个官方子代理，报告 4/4 已校验，数字与独立答案一致；跨操作链路审计 5/5；冷重启无页面错误 |
 | `business-smoke` 注入（`BRIDGEFLOW_POISON=1`） | 通过：写进单元格的注入文字不出现在任何模型会话 |
-| `business-smoke` 故障（`BRIDGEFLOW_TEST_FAULT=1`） | 通过：一个部门失败 → partial；人工意见后会话数仍为 5 |
+| `business-smoke` 故障（~~`BRIDGEFLOW_TEST_FAULT=1`~~） | **更正（2026-09-23）**：开关的正确写法是 `BRIDGEFLOW_TEST_FAULT=step-limit`，`=1` 实际跑的是正常路径，这一行当时不成立。已于同日用正确开关补跑并通过，见下一节 |
 | `quotation-smoke`（含笔记本走查） | 通过：来源栏导入、报价工作区、笔记本保存/恢复/新建/退出、失败保存可重试、窄屏与英文界面 |
 
 复现：`cd plugins && corepack pnpm build && BRIDGEFLOW_LIVE=0 node tests/<name>.mjs`（变体用上表的环境变量）。

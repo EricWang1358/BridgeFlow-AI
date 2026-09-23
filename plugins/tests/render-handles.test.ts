@@ -30,3 +30,11 @@ test('risk_dispositions shows the version that risk_disposition_record checks', 
   const out = text(renderDispositions({ open: 1, dispositions: [{ check_id: 'net_margin', state: '待确认', version: 3, available: ['confirm'] }] }))
   assert.match(out, /net_margin v3/)
 })
+
+test('monthly_inbox lists the items and the filter, not only counts', async () => {
+  const { renderInbox } = await import('../src/tools/checklist.ts')
+  const out = text(renderInbox({ department: 'finance' }, { total: 2, by_kind: { master_disagreement: 1, missing_provenance: 1 },
+    items: [{ kind: 'master_disagreement', subject: '客户名称', detail: '生产部与市场部不一致', departments: ['production', 'marketing'], next_view: 'integration' }] }))
+  assert.match(out, /Filtered by department=finance: 1 listed/)
+  assert.match(out, /master_disagreement: 客户名称 — 生产部与市场部不一致 \[departments: production\/marketing; settled in: integration\]/)
+})
