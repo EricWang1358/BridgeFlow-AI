@@ -683,4 +683,15 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 /* File names in Sources stay on one line; the full name is in the tooltip. */
 .bf-resource-list strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .bf-run-mark-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+
+/* The filling-and-handoff flow: every stage, who acts there, how many records sit there. */
+.bf-pipeline { list-style: none; margin: 12px 0 16px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 8px }
+.bf-pipeline > li { position: relative; display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--bf-line); border-radius: 10px; background: var(--bf-surface-2); --bf-stage: var(--bf-muted) }
+.bf-pipeline > li[data-actor=flowActorYou] { --bf-stage: var(--bf-ok) }
+.bf-pipeline > li[data-actor=flowActorDownstream] { --bf-stage: var(--bf-accent) }
+.bf-pipeline > li[data-active=true] { background: var(--bf-surface); border-color: var(--bf-stage); box-shadow: inset 3px 0 var(--bf-stage) }
+.bf-pipeline-actor { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--bf-stage) }
+.bf-pipeline > li > b { font-size: 13px; font-weight: 600; line-height: 1.3 }
+.bf-pipeline-count { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--bf-muted) }
+.bf-pipeline > li[data-active=true] .bf-pipeline-count { color: var(--bf-text) }
 `

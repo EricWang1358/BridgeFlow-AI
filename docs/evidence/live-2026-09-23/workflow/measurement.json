@@ -1,0 +1,73 @@
+{
+  "mode": "live",
+  "steps": [
+    {
+      "step": "review and submit",
+      "elapsed_ms": 9684
+    },
+    {
+      "step": "downstream starts",
+      "elapsed_ms": 6494
+    },
+    {
+      "step": "downstream completes",
+      "elapsed_ms": 7734
+    },
+    {
+      "step": "missing quantity answered",
+      "elapsed_ms": 10079
+    }
+  ],
+  "approvals": [
+    {
+      "step": "review and submit",
+      "at_ms": 14457
+    },
+    {
+      "step": "downstream starts",
+      "at_ms": 21648
+    },
+    {
+      "step": "downstream completes",
+      "at_ms": 29391
+    },
+    {
+      "step": "missing quantity answered",
+      "at_ms": 40110
+    }
+  ],
+  "questions": [],
+  "model_requests": 12,
+  "tool_calls": [
+    "workflow_draft",
+    "workflow_approve_submit",
+    "workflow_board",
+    "workflow_handoff",
+    "workflow_board",
+    "workflow_handoff",
+    "workflow_draft",
+    "workflow_record"
+  ],
+  "usage": {
+    "inputTokens": 14605,
+    "outputTokens": 4120,
+    "totalTokens": 185765,
+    "cacheReadTokens": 167040,
+    "reasoningTokens": 1767
+  },
+  "final": [
+    {
+      "kind": "artifact",
+      "state": "ready_for_review"
+    },
+    {
+      "kind": "artifact",
+      "state": "data_ready"
+    },
+    {
+      "kind": "handoff",
+      "state": "completed"
+    }
+  ],
+  "elapsed_ms": 42526
+}

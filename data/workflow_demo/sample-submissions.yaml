@@ -1,0 +1,36 @@
+# Synthetic employee submissions for the sample workflow (the production → marketing
+# handoff in catalogue.yaml). NOT customer data. They are written the way a person hands
+# them in — aliases instead of standard labels, units spelled out — so the sample shows the
+# mapping and the questions, not a pre-cleaned record.
+#
+# Loading the sample only *receives* them. Approving, submitting and every downstream step
+# still go through the captain and a person's approval, exactly as with real records.
+catalogue_version: "2026-09-13.demo-1"
+submissions:
+  # Missing its confirmed actual quantity: the workflow asks for it instead of guessing.
+  - template: production_record
+    source: 生产部-示例-9月第1周.xlsx
+    observations:
+      - {label: 月份, value: 2026年9月}
+      - {label: 站点, value: 演示厂站}
+      - {label: 年, value: "2026"}
+      - {label: 开单日期, value: 2026/09/01}
+      - {label: 客户, value: 演示客户甲}
+      - {label: 工程, value: 演示项目A}
+      - {label: 产品, value: C30 混凝土}
+      - {label: 产量, value: 100 方}
+      - {label: 发出量, value: 98 m³}
+  # Complete, with the confirmation it rests on: ready for a person to review and approve.
+  - template: production_record
+    source: 生产部-示例-9月第2周.xlsx
+    observations:
+      - {label: 月份, value: 2026年9月}
+      - {label: 站点, value: 演示厂站}
+      - {label: 年, value: "2026"}
+      - {label: 开单日期, value: 2026/09/08}
+      - {label: 客户, value: 演示客户乙}
+      - {label: 工程, value: 演示项目B}
+      - {label: 产品, value: C35 混凝土}
+      - {label: 产量, value: 120 方}
+      - {label: 发出量, value: 118 m³}
+      - {label: 确认数量, value: 116.5 方, evidence: 签收单 DEMO-0908}

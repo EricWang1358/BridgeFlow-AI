@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { api, useUI, describeError } from './ui.ts'
+import { api, askCaptain, useUI, describeError } from './ui.ts'
 import { Notebook } from './notebook.tsx'
 import { Chip } from './workspace.tsx'
+import { WorkflowFlow } from './workflow-flow.tsx'
 
 /**
  * Template filling and handoff, as people see it (#144, #145).
@@ -38,6 +39,7 @@ export function Handoff() {
   const [rows, setRows] = useState<Row[] | null>(null), [catalogue, setCatalogue] = useState<Catalogue | null>(null)
   const [findings, setFindings] = useState<Finding[]>([]), [draft, setDraft] = useState<Draft | null>(null)
   const [selected, setSelected] = useState(''), [error, setError] = useState(''), [revision, setRevision] = useState(0)
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController(), signal = controller.signal
@@ -58,6 +60,20 @@ export function Handoff() {
     return () => controller.abort()
   }, [selected, revision])
 
+  const counts: Record<string, number> = {}
+  for (const row of rows ?? []) if (row.kind !== 'partial') counts[row.state] = (counts[row.state] ?? 0) + 1
+  const fill = (key: string, id: string) => t(key).replaceAll('{id}', id)
+  // The next step of a record is a request to the captain, never a write from this page:
+  // every write still goes through the captain's tool and a person's approval.
+  const next = (row: Row): [string, string] | null =>
+    row.kind === 'artifact' && row.state === 'needs_input' ? ['askNeedsInput', fill('requestNeedsInput', row.id)]
+      : row.kind === 'artifact' && row.state === 'ready_for_review' ? ['askReview', fill('requestReview', row.id)]
+        : row.kind === 'handoff' && row.state === 'waiting' ? ['askStart', fill('requestStart', row.id)]
+          : row.kind === 'handoff' && row.state === 'in_progress' ? ['askComplete', fill('requestComplete', row.id)] : null
+  async function run(action: () => Promise<unknown>) {
+    setBusy(true); setError('')
+    try { await action(); setRevision(n => n + 1) } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
+  }
   return <Notebook title={t('handoffWorkspace')} description={t('handoffHelp')}
     sources={catalogue ? <>
       <p className="bf-hint">{catalogue.case} · {t('catalogueVersion')} {catalogue.version} <Chip status={catalogue.status}/></p>
@@ -81,7 +97,11 @@ export function Handoff() {
     <div className="bf-card-head"><h3>{t('handoffBoard')}</h3><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button></div>
     {error && <p role="alert" className="bf-error">{error}</p>}
     {!rows && !error && <p role="status" className="bf-loading">{t('loading')}</p>}
-    {rows && !rows.length && <div className="bf-notebook-empty"><h3>{t('handoffEmpty')}</h3><p>{t('handoffEmptyHelp')}</p></div>}
+    {rows && !rows.length && <p className="bf-hint">{t('handoffEmpty')}</p>}
+    <WorkflowFlow counts={counts} />
+    {rows && !rows.length && <div className="bf-notebook-empty"><p>{t('handoffEmptyHelp')}</p>
+      <p className="bf-hint">{t('workflowSampleHelp')}</p>
+      <button className="bf-primary" disabled={busy} onClick={() => void run(() => api('/workflow/sample', { method: 'POST' }))}>{t(busy ? 'busy' : 'workflowSample')}</button></div>}
     {rows && rows.map((row, i) => <article className="bf-source-item" key={row.kind === 'partial' ? `p${i}` : row.id}>
       <div className="bf-handoff-head"><strong>{row.department} · {row.title}</strong>
         <Chip status={row.kind === 'partial' ? 'partial' : row.state}/>
@@ -89,6 +109,8 @@ export function Handoff() {
         {row.kind === 'handoff' && row.stale && <Chip status="upstream_revised"/>}</div>
       <p>{row.summary}</p>
       <span className="bf-hint">{row.business_key.join(' · ')}{row.kind === 'handoff' ? ` · ${row.owner_role}` : ''}</span>
+      {(() => { const step = next(row); return step && <button className="bf-primary" disabled={busy}
+        onClick={() => void run(() => askCaptain(step[1]))}>{t(step[0])}</button> })()}
       {row.kind === 'artifact' && <button aria-expanded={selected === row.id} onClick={() => setSelected(selected === row.id ? '' : row.id)}>{t(selected === row.id ? 'close' : 'viewDraft')}</button>}
       {row.kind === 'artifact' && selected === row.id && draft?.id === row.id && <DraftDetail draft={draft}/>}
     </article>)}

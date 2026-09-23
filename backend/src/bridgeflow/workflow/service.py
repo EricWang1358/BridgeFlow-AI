@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -85,6 +86,9 @@ class HandoffSnapshot:
 
 def _key_hash(key: tuple[str, ...]) -> str:
     return hashlib.sha256(json.dumps(key, ensure_ascii=False).encode()).hexdigest()[:16]
+
+
+logger = logging.getLogger(__name__)
 
 
 class WorkflowService:
@@ -285,6 +289,18 @@ class WorkflowService:
                     Event("upstream_revised", {"revising": snapshot.template})])], at=self._now())
 
     # --- notifications ---------------------------------------------------------------
+
+    def deliver_pending(self) -> None:
+        """Deliver what a write just queued, without letting delivery undo the write.
+
+        The record is already in the target system when this runs; a notifier that is down
+        leaves the notice pending or failed for the next attempt (the outbox pattern), and
+        nothing here may turn a successful submission into an error.
+        """
+        try:
+            self.dispatch()
+        except Exception:
+            logger.warning("Notification delivery deferred", exc_info=True)
 
     def dispatch(self) -> list[Notification]:
         """Attempt every pending or retryable notification once."""

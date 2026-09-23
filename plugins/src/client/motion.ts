@@ -132,6 +132,12 @@ body[data-bf-notebook][data-bf-nav] [data-slot="root"] > div > div:has(> [data-s
 .bf-flow > li:nth-child(3) { animation-delay: 340ms } .bf-flow > li:nth-child(3)::after { animation-delay: 460ms }
 .bf-flow > li:nth-child(4) { animation-delay: 480ms }
 
+/* The workflow's stages arrive left to right, in the order a record travels. */
+.bf-pipeline > li { animation: bf-rise var(--bf-dur-enter) var(--bf-ease-out) both }
+.bf-pipeline > li:nth-child(2) { animation-delay: 40ms } .bf-pipeline > li:nth-child(3) { animation-delay: 80ms }
+.bf-pipeline > li:nth-child(4) { animation-delay: 120ms } .bf-pipeline > li:nth-child(5) { animation-delay: 160ms }
+.bf-pipeline > li:nth-child(n+6) { animation-delay: 200ms }
+
 /* ---- waiting ------------------------------------------------------------ */
 /* Work in flight says so by movement as well as by word: a light sweeps across the
    chip while the captain is dispatching departments. */
@@ -154,7 +160,7 @@ body[data-bf-notebook][data-bf-nav] [data-slot="root"] > div > div:has(> [data-s
   .bf-panel details[open] > :not(summary), .bf-report details[open] > :not(summary),
   .bf-hero details[open] > :not(summary), .bf-formulas[open] > :not(summary), .bf-loading,
   .bf-inline-preview > :not(header) > *, .bf-brief > *, .bf-brief-attention > li, .bf-explain[open] > ul,
-  .bf-chip[data-status=dispatching], .bf-chip[data-status=running], .bf-flow > li, .bf-flow > li::after {
+  .bf-chip[data-status=dispatching], .bf-chip[data-status=running], .bf-flow > li, .bf-flow > li::after, .bf-pipeline > li {
     animation: none !important;
   }
   body[data-bf-reflow] .bf-shell-pane.bf-state, body[data-bf-reflow][data-bf-notebook] [data-slot="root"] > div,

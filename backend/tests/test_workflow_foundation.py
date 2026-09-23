@@ -291,6 +291,15 @@ def test_downstream_actions_follow_the_handoff_machine(tmp_path):
     assert finding.route_to == "agent_1_workflow"
 
 
+def test_a_completion_keeps_the_confirmation_it_rests_on(tmp_path):
+    service = build(tmp_path)
+    ready(service)
+    [handoff] = service.handoffs()
+    started = service.act(handoff.id, "start", "", handoff.seq)
+    done = service.act(handoff.id, "complete", "市场部负责人确认已处理", started.seq)
+    assert done.view.state is HandoffState.COMPLETED and done.view.reason == "市场部负责人确认已处理"
+
+
 def test_a_notification_that_keeps_failing_is_abandoned_while_the_data_stays_ready(tmp_path):
     class Down:
         name = "down"
@@ -399,6 +408,29 @@ def test_review_over_http_needs_a_fresh_approval_bound_to_the_request(client):
     assert submitted.json()["state"] == "data_ready"
     rows = client.get("/workflow/board").json()["rows"]
     assert {row["kind"] for row in rows} == {"artifact", "handoff"}
+    # The next team's notice goes out with the submission instead of waiting for a
+    # dispatcher that nothing runs.
+    assert next(row for row in rows if row["kind"] == "handoff")["notification"] == "sent"
+
+
+def test_the_sample_workflow_only_receives_and_leaves_approval_to_a_person(client):
+    loaded = client.post("/workflow/sample")
+    assert loaded.status_code == 200, loaded.text
+    artifacts = [row for row in loaded.json()["rows"] if row["kind"] == "artifact"]
+    # One submission is missing its confirmed quantity, one is complete; neither is approved.
+    assert sorted(row["state"] for row in artifacts) == ["needs_input", "ready_for_review"]
+    assert not [row for row in loaded.json()["rows"] if row["kind"] == "handoff"]
+    # A workflow that already holds records is left alone.
+    assert client.post("/workflow/sample").status_code == 409
+
+
+def test_the_sample_is_refused_under_any_other_catalogue(client, monkeypatch, tmp_path):
+    other = dict(RAW, version="someone-else-1")
+    path = tmp_path / "catalogue.yaml"
+    path.write_text(yaml.safe_dump(other, allow_unicode=True), encoding="utf-8")
+    monkeypatch.setattr(settings, "workflow_catalogue_path", str(path))
+    refused = client.post("/workflow/sample")
+    assert refused.status_code == 409 and "demo catalogue" in refused.json()["detail"]
 
 
 def test_no_business_name_is_written_into_the_workflow_code():

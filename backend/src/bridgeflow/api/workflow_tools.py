@@ -201,7 +201,11 @@ async def workflow_approve_submit(request: ApproveCall, http_request: Request) -
             workflow.review(request.artifact_id, request.digest, actor, request.expected_seq)
         elif current.draft.digest != request.digest:
             raise HTTPException(409, "The values changed since they were shown; read the draft again")
-        return _draft(workflow.submit(request.artifact_id))
+        submitted = workflow.submit(request.artifact_id)
+    # Data ready queues a notice for the next team; deliver it now rather than waiting for
+    # a dispatcher nobody runs — until this, every notice stayed pending forever.
+    workflow.deliver_pending()
+    return _draft(submitted)
 
 
 class GuidanceCall(BaseModel):

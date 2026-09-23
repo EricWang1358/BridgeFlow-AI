@@ -13,10 +13,11 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Annotated, Any
 
+import yaml
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
-from bridgeflow.config import settings
+from bridgeflow.config import REPO_ROOT, settings
 from bridgeflow.identity import UserIdentity, require_user
 from bridgeflow.security import consume_approval
 from bridgeflow.store import _root
@@ -222,7 +223,9 @@ async def review(artifact_id: str, request: ReviewRequest, http_request: Request
 async def submit(artifact_id: str) -> ArtifactOut:
     workflow = service()
     with _domain_errors():
-        return _artifact(workflow.submit(artifact_id))
+        submitted = workflow.submit(artifact_id)
+    workflow.deliver_pending()
+    return _artifact(submitted)
 
 
 @router.post("/handoffs/{handoff_id}/{action}", response_model=HandoffOut)
@@ -252,6 +255,32 @@ async def get_board(user: BrowserUser) -> board.Board:
         return board.Board(rows=[r for r in result.rows
             if (visible.template(r.template) if isinstance(r, board.ArtifactRow)
                 else visible.stage(r.stage))])
+
+
+@router.post("/sample", response_model=board.Board)
+async def load_sample(user: BrowserUser) -> board.Board:
+    """Explicit sample workflow: synthetic employee submissions, received as handed in.
+
+    Like the sample notebook (`/batches/demo`), this is a click, not a model call, and it
+    only *receives*: one submission lacks its confirmed quantity, one is complete. Approving,
+    submitting and every downstream step still go through the captain and a person's
+    approval. The sample belongs to the demo catalogue; any other catalogue refuses it, and a
+    workflow that already holds records is left alone.
+    """
+    sample = yaml.safe_load((REPO_ROOT / "data/workflow_demo/sample-submissions.yaml").read_text(encoding="utf-8"))
+    workflow = service()
+    with _domain_errors():
+        if workflow.catalogue.version != sample["catalogue_version"]:
+            raise HTTPException(409, f"The sample workflow belongs to the demo catalogue "
+                                     f"{sample['catalogue_version']}; this deployment uses {workflow.catalogue.version}")
+        if workflow.artifacts():
+            raise HTTPException(409, "The workflow already holds records; the sample is only loaded into an empty one")
+        for item in sample["submissions"]:
+            workflow.receive(item["template"], [
+                Observation(label=o["label"], value=o["value"], evidence=o.get("evidence", ""),
+                            source={"kind": "file", "ref": f"{item['source']}!{o['label']}"})
+                for o in item["observations"]])
+    return await get_board(user)
 
 
 # --- adoption (Agent 3) ----------------------------------------------------------------
