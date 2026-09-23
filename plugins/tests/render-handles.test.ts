@@ -38,3 +38,13 @@ test('monthly_inbox lists the items and the filter, not only counts', async () =
   assert.match(out, /Filtered by department=finance: 1 listed/)
   assert.match(out, /master_disagreement: 客户名称 — 生产部与市场部不一致 \[departments: production\/marketing; settled in: integration\]/)
 })
+
+test('integration_summary lists open items and conventions, not only counts', async () => {
+  const { renderIntegration } = await import('../src/tools/integration.ts')
+  const out = text(renderIntegration({ rows: 4, complete_rows: 3, issues_by_kind: { disagreement: 1 },
+    open_items: [{ kind: 'disagreement', field: '客户名称', departments: ['production', 'marketing'] }],
+    assumptions: { vat_rate: '增值税按 13%' }, convention_states: { vat_rate: 'unconfirmed' }, next_step: 'Explain who decides.' }))
+  assert.match(out, /- disagreement: 客户名称 \[departments: production\/marketing\]/)
+  assert.match(out, /- vat_rate \(unconfirmed\): 增值税按 13%/)
+  assert.match(out, /Explain who decides\./)
+})

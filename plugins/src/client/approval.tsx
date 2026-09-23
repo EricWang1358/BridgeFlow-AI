@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, useUI, describeError } from './ui.ts'
+import { DraftForApproval } from './handoff.tsx'
 import type { Limits } from './workspace.tsx'
 import type { PendingApproval } from '@deepseek-ai/dsh-client-ui-approval/client'
 
@@ -93,6 +94,9 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
             </dl>
           : <p>{pending.reason}</p>}
     </div>
+    {/* "Approve these values" shows the values: the arguments alone are an id and a digest. */}
+    {pending.toolName === 'workflow_approve_submit' && details?.find(d => d.label === 'artifact_id')
+      && <DraftForApproval artifactId={details.find(d => d.label === 'artifact_id')!.value} />}
     <label className="bf-field">
       <span>{t('optionalReason')}</span>
       <textarea aria-label={t('reason')} value={note} maxLength={240} disabled={busy}

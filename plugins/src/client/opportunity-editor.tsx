@@ -38,12 +38,12 @@ export function OpportunityEditor({ project, initial }: { project: string; initi
       setError(tr('来源结束行不能早于开始行。', 'Source end must not precede start.')); return
     }
     const body = JSON.stringify({ proposal }, null, 2)
-    if (body.length > 60000) { setError(tr('提案过长，请拆分后审核。', 'Proposal is too large; split it for review.')); return }
+    if (body.length > 60000) { setError(tr('提案太长，请拆开后再审核。', 'The proposal is too large; split it before review.')); return }
     setRequest(`Please call discovery_propose with these exact arguments, and wait for native approval:\n${body}`)
   }
   return <section aria-label={tr('候选共创', 'Opportunity co-design')}>
     <h3>{tr(initial ? '修订候选' : '新建候选', initial ? 'Revise opportunity' : 'New opportunity')}</h3>
-    <p>{tr('陈述必须带来源。材料存在不代表陈述正确；保留推断和待确认问题，交人复核。', 'Each statement needs sources. A source existing does not prove a claim; retain inferences and open questions for review.')}</p>
+    <p>{tr('每条陈述都要有来源。来源只是线索，陈述是否成立要人来判断；推断和待确认的问题要留着交人复核。', 'Every statement needs a source. A source is a lead, and a person decides whether the statement holds; keep inferences and open questions for review.')}</p>
     {initial && <p>{tr('基于版本', 'Based on version')}: {initial.seq}</p>}
     {!!initial?.stale_sources?.length && <p role="alert">{tr('以下来源已修订，请重新核对版本：', 'Recheck revised sources: ')}{initial.stale_sources.join(', ')}</p>}
     <form onSubmit={prepare} onChange={() => { setRequest(''); setCopied(false) }}>
@@ -70,6 +70,6 @@ export function OpportunityEditor({ project, initial }: { project: string; initi
       <button type="submit">{tr('准备候选审批请求', 'Prepare proposal approval')}</button>
     </form>
     {error && <p role="alert">{error}</p>}
-    {request && <><p>{tr('尚未保存。粘贴到原生对话，核对后决定是否批准保存。', 'Not saved. Paste into native chat and review before approving the save.')}</p><textarea aria-label={tr('候选审批请求', 'Proposal approval request')} readOnly rows={10} value={request} /><button onClick={() => { void navigator.clipboard.writeText(request).then(() => setCopied(true)).catch(() => setError(tr('复制失败，请手动选择文本。', 'Copy failed; select the text manually.'))) }}>{tr('复制候选审批请求', 'Copy proposal approval request')}</button>{copied && <p role="status">{tr('已复制，等待您粘贴。', 'Copied; waiting for you to paste.')}</p>}</>}
+    {request && <><p>{tr('还没保存。把它粘贴到对话里，核对后再决定是否批准保存。', 'Not saved yet. Paste this into the chat and check it before you approve the save.')}</p><textarea aria-label={tr('候选审批请求', 'Proposal approval request')} readOnly rows={10} value={request} /><button onClick={() => { void navigator.clipboard.writeText(request).then(() => setCopied(true)).catch(() => setError(tr('复制失败，请手动选择文本。', 'Copy failed; select the text manually.'))) }}>{tr('复制候选审批请求', 'Copy proposal approval request')}</button>{copied && <p role="status">{tr('已复制，等待您粘贴。', 'Copied; waiting for you to paste.')}</p>}</>}
   </section>
 }

@@ -36,7 +36,7 @@ function PolicyView({ policy }: { policy: Policy }) {
 function RequestView({ request }: { request: string }) {
   const { language } = useUI(), zh = language === 'zh'
   const [message, setMessage] = useState('')
-  return <section aria-label={zh ? '决策操作请求' : 'Decision action request'}><p>{zh ? '尚未执行。复制到原生对话，核对身份与内容后审批。' : 'Not executed. Copy into native chat, verify identity and content, then review approval.'}</p>
+  return <section aria-label={zh ? '决策操作请求' : 'Decision action request'}><p>{zh ? '还没有执行。把请求复制到对话里，确认是你本人、内容无误，再在审批卡里批准。' : 'Not done yet. Copy the request into the chat, check it is you and the content is right, then approve it in the approval card.'}</p>
     <textarea readOnly rows={10} aria-label={zh ? '决策审批请求' : 'Decision approval request'} value={request} />
     <button onClick={() => { void navigator.clipboard.writeText(request).then(() => setMessage(zh ? '已复制。' : 'Copied.')).catch(() => setMessage(zh ? '复制失败，请手动选择。' : 'Copy failed; select manually.')) }}>{zh ? '复制决策请求' : 'Copy decision request'}</button>{message && <p role="status">{message}</p>}
   </section>
@@ -59,10 +59,10 @@ export function DecisionEditor({ project, meetingId, initial }: { project: strin
   return <section aria-label={zh ? '决策提案编辑' : 'Decision proposal editor'}><h3>{zh ? '决策提案' : 'Decision proposal'}</h3>
     <button onClick={() => { setRequest(''); setRevision(n => n + 1) }}>{zh ? '重读纪要与规则' : 'Reload minutes and rules'}</button>
     {(error || policyError) && <p role="alert">{error || policyError}</p>}{policy && <PolicyView policy={policy} />}
-    {meeting && policy && <><p>{meeting.title} · v{meeting.seq}</p>{initial && <p role="alert">{zh ? '修订将清空已有选票和条件确认，旧批准不再有效。' : 'Revision clears votes and confirmations and supersedes the old approval.'}</p>}
-      {meeting.phase !== 'minutes' ? <p role="alert">{zh ? '请先保存会后纪要，再准备决策。' : 'Save meeting minutes before proposing a decision.'}</p> : <form onChange={() => setRequest('')} onSubmit={e => {
+    {meeting && policy && <><p>{meeting.title} · v{meeting.seq}</p>{initial && <p role="alert">{zh ? '修改会清空已投的票和已确认的条件，原来的批准随之失效。' : 'Changing this clears the votes and confirmed conditions; the earlier approval no longer applies.'}</p>}
+      {meeting.phase !== 'minutes' ? <p role="alert">{zh ? '请先保存会后纪要，再提出决定。' : 'Save the meeting notes before proposing a decision.'}</p> : <form onChange={() => setRequest('')} onSubmit={e => {
         e.preventDefault()
-        if (!selected.length || !splitLines(scope).length || selected.some(c => !meeting.candidates.some(v => v.id === c))) { setError(zh ? '请选择当前纪要中的候选并填写批准范围。' : 'Select candidates from these minutes and specify approved scope.'); return }
+        if (!selected.length || !splitLines(scope).length || selected.some(c => !meeting.candidates.some(v => v.id === c))) { setError(zh ? '从这份纪要里选出候选，并写明批准的范围。' : 'Pick candidates from these notes and state what is approved.'); return }
         setRequest(instruction('discovery_decision_propose', { proposal: { id, project_id: project, meeting_id: meeting.id, meeting_version: meeting.seq,
           selected_candidates: selected, scope: splitLines(scope), exclusions: splitLines(exclusions), rationale, conditions,
           policy_fingerprint: policy.fingerprint, expected_seq: initial?.seq ?? 0 } })); setError('')
@@ -107,11 +107,11 @@ export function DecisionPanel({ initial, onRevise }: { initial: Decision; onRevi
     <p>{zh ? '提案版本 / 纪要版本' : 'Proposal / minutes version'}: {decision.proposal_version} / {decision.meeting_id} v{decision.meeting_version}</p>
     <p>{zh ? '理由' : 'Rationale'}: {decision.rationale}</p><h4>{zh ? '批准范围' : 'Approval scope'}</h4><ul>{decision.scope.map((s, i) => <li key={i}>{s}</li>)}</ul><h4>{zh ? '排除范围' : 'Exclusions'}</h4><ul>{decision.exclusions.map((s, i) => <li key={i}>{s}</li>)}</ul>
     <p>{zh ? '赞成 / 反对 / 弃权' : 'Yes / no / abstain'}: {decision.tally.yes} / {decision.tally.no} / {decision.tally.abstain}</p>
-    <p>{decision.tally.passes ? (zh ? '票数达标，仍须明确决定。' : 'Tally passes; an explicit decision is still required.') : (zh ? '票数尚未满足声明规则。' : 'Tally does not meet declared rules.')}</p>
+    <p>{decision.tally.passes ? (zh ? '票数够了，但仍需要有人明确做出决定。' : 'Enough votes. Someone still has to make the decision.') : (zh ? '票数尚未满足声明规则。' : 'Tally does not meet declared rules.')}</p>
     <ul>{Object.values(decision.votes).map(v => <li key={v.actor}>{v.actor} · {v.choice} · {v.rationale}</li>)}</ul>
     <h4>{zh ? '条件与确认' : 'Conditions and confirmations'}</h4><ul>{decision.conditions.map(c => <li key={c.id}>{c.id}: {c.description} · {c.confirmer} · {decision.resolutions[c.id] ? (zh ? '已确认' : 'Confirmed') : (zh ? '未确认' : 'Unconfirmed')}{decision.resolutions[c.id] && <><p>{decision.resolutions[c.id]!.rationale}</p><ul>{decision.resolutions[c.id]!.references.map((r, i) => <li key={i}>{r.material_id} · v{r.version} · {r.locator.kind} · {r.locator.sheet} {r.locator.start}–{r.locator.end}</li>)}</ul></>}</li>)}</ul>
     {decision.finalization && <p>{zh ? '决定记录' : 'Recorded decision'}: {decision.finalization.actor} · {decision.finalization.outcome} · {decision.finalization.rationale}</p>}
-    {decision.agent2_handoff && current ? <section aria-label={zh ? 'Agent 2 批准范围' : 'Agent 2 approved scope'}><h4>{zh ? '当前有效批准范围' : 'Current approved scope'}</h4><p>{decision.agent2_handoff.owner_role} · {zh ? '决定序号' : 'Decision sequence'} {decision.agent2_handoff.decision_seq}</p><ul>{decision.agent2_handoff.candidates.map(c => <li key={c.id}>{c.id} · v{c.version}</li>)}</ul><p>{zh ? '消费端尚未接入；此处不是执行回执。' : 'Consumer integration is pending; this is not an execution receipt.'}</p></section> : <p>{zh ? '当前没有可交付 Agent 2 的批准范围。' : 'No currently approved scope is available for Agent 2.'}</p>}
+    {decision.agent2_handoff && current ? <section aria-label={zh ? 'Agent 2 批准范围' : 'Agent 2 approved scope'}><h4>{zh ? '当前有效批准范围' : 'Current approved scope'}</h4><p>{decision.agent2_handoff.owner_role} · {zh ? '决定序号' : 'Decision sequence'} {decision.agent2_handoff.decision_seq}</p><ul>{decision.agent2_handoff.candidates.map(c => <li key={c.id}>{c.id} · v{c.version}</li>)}</ul><p>{zh ? '交给填报流程的环节还没接上；这里不代表已经执行。' : 'Handing this to the filling workflow is not connected yet; nothing has been carried out.'}</p></section> : <p>{zh ? '目前没有已批准、可以交给填报流程的范围。' : 'Nothing approved is ready to hand to the filling workflow yet.'}</p>}
     <button disabled={!policy?.viewer.actions.includes('discovery_decision_propose')} onClick={() => onRevise(decision)}>{zh ? '修订决策提案' : 'Revise decision proposal'}</button>
     <div onChange={() => setRequest('')}><label>{zh ? '本次操作理由' : 'Action rationale'}<textarea aria-label={zh ? '本次操作理由' : 'Action rationale'} maxLength={1200} value={reason} onChange={e => setReason(e.target.value)} /></label>
       {decision.status === 'proposed' && can('vote') && <><label>{zh ? '本人投票' : 'Own vote'}<select aria-label={zh ? '本人投票' : 'Own vote'} value={choice} onChange={e => setChoice(e.target.value)}><option value="">—</option><option value="yes">{zh ? '赞成' : 'Yes'}</option><option value="no">{zh ? '反对' : 'No'}</option><option value="abstain">{zh ? '弃权' : 'Abstain'}</option></select></label><button disabled={!choice} onClick={() => prepare('vote', { choice })}>{zh ? '准备本人投票请求' : 'Prepare own vote request'}</button></>}

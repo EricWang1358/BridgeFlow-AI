@@ -18,7 +18,7 @@ type Row =
   | { kind: 'artifact'; id: string; title: string; department: string; business_key: string[]; version: number; state: string; summary: string; updated_at: string }
   | { kind: 'handoff'; id: string; title: string; department: string; owner_role: string; business_key: string[]; state: string; stale: boolean; notification: string; summary: string; updated_at: string }
   | { kind: 'partial'; stage: string; title: string; department: string; business_key: string[]; summary: string }
-type Draft = {
+export type Draft = {
   id: string; title: string; department: string; state: string; version: number
   values: Record<string, { label: string; value: string; raw: string; evidence: string; note: string; source: { kind: string; ref: string } }>
   issues: { kind: string; label: string; message: string; question: string; blocking: boolean }[]
@@ -117,7 +117,21 @@ export function Handoff() {
   </Notebook>
 }
 
-function DraftDetail({ draft }: { draft: Draft }) {
+/** The draft behind an approval card: the values a person is asked to approve (#253 follow-up). */
+export function DraftForApproval({ artifactId }: { artifactId: string }) {
+  const { t } = useUI()
+  const [draft, setDraft] = useState<Draft | null>(null), [failed, setFailed] = useState(false)
+  useEffect(() => {
+    const controller = new AbortController()
+    void api<Draft>(`/workflow/artifacts/${artifactId}`, { signal: controller.signal }).then(setDraft)
+      .catch(() => { if (!controller.signal.aborted) setFailed(true) })
+    return () => controller.abort()
+  }, [artifactId])
+  if (failed) return <p className="bf-hint">{t('draftUnavailable')}</p>
+  return draft ? <DraftDetail draft={draft} /> : <p className="bf-hint bf-loading">{t('loading')}</p>
+}
+
+export function DraftDetail({ draft }: { draft: Draft }) {
   const { t } = useUI()
   return <section className="bf-handoff-draft" aria-label={t('viewDraft')}>
     {draft.issues.filter(i => i.blocking).map((issue, i) => <div className="bf-callout" data-tone="warn" key={i}>

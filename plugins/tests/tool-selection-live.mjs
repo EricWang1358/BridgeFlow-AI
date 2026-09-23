@@ -88,7 +88,7 @@ try {
     await wait(800)
     const composer = page.locator('[contenteditable=true]').first()
     await composer.fill(prompt); await composer.press('Enter')
-    let captain = '', first = [], ended = false
+    let captain = '', first = [], ended = false, asked = false
     const began = Date.now()
     for (const until = Date.now() + 150_000; Date.now() < until && !ended;) {
       const fresh = (await listSessions()).filter(f => !before.has(f))
@@ -100,6 +100,17 @@ try {
           if (call) first = call.data.message.content.filter(b => b.type === 'tool-call').map(b => b.name)
         }
         ended = log.at(-1)?.type === 'turn/end'
+      }
+      // The captain may ask before acting (native ask-user card). Answer with its first
+      // option so the turn can finish; that it asked is recorded, not hidden (#252).
+      const skip = page.getByRole('button', { name: /^(Skip this question|跳过此问题)$/ })
+      if (await skip.count()) {
+        asked = true
+        const card = skip.first().locator('xpath=ancestor::*[.//button[normalize-space()="Submit" or normalize-space()="提交"]][1]')
+        const option = card.locator('li, [role=option], [role=radio]').first()
+        if (await option.count()) { await option.click().catch(() => {}); await card.getByRole('button', { name: /^(Submit|提交)$/ }).click().catch(() => skip.first().click()) }
+        else await skip.first().click()
+        await wait(1000); continue
       }
       const reject = page.getByRole('button', { name: /^(拒绝|Reject)$/ })
       if (await reject.count()) {
@@ -115,11 +126,15 @@ try {
       for (const [k, v] of Object.entries(e.data.usage)) if (typeof v === 'number') usage[k] = (usage[k] ?? 0) + v
     const forbidden = (item.forbid ?? []).filter(name => first.includes(name))
     const correct = forbidden.length === 0 && (item.expect.length ? first.some(name => item.expect.includes(name)) : first.length === 0)
-    results.push({ id: item.id, prompt, expect: item.expect, first, correct, ended, elapsed_ms: Date.now() - began, total_tokens: usage.totalTokens ?? 0 })
-    console.log(`${correct ? 'PASS' : 'FAIL'} ${item.id}: first=${JSON.stringify(first)} expect=${JSON.stringify(item.expect)}`)
+    const steps = captain ? (await events(captain)).filter(e => e.type === 'assistant/message').length : 0
+    results.push({ id: item.id, prompt, expect: item.expect, first, correct, ended, asked, steps, elapsed_ms: Date.now() - began, total_tokens: usage.totalTokens ?? 0 })
+    console.log(`${correct ? 'PASS' : 'FAIL'} ${item.id}: first=${JSON.stringify(first)} expect=${JSON.stringify(item.expect)} steps=${steps} tokens=${usage.totalTokens ?? 0}${asked ? ' asked' : ''}${ended ? '' : ' NOT-ENDED'}`)
   }
   const passed = results.filter(r => r.correct).length
   const report = { generated_at: new Date().toISOString(), model: 'configured DSH_PROVIDER/DSH_MODEL', cases: results.length, passed,
+    median_steps: [...results.map(r => r.steps)].sort((a, b) => a - b)[Math.floor(results.length / 2)],
+    median_tokens: [...results.map(r => r.total_tokens)].sort((a, b) => a - b)[Math.floor(results.length / 2)],
+    asked: results.filter(r => r.asked).length,
     accuracy: Number((passed / results.length).toFixed(3)), total_tokens: results.reduce((n, r) => n + r.total_tokens, 0), results }
   await writeFile(`${evidence}/tool-selection.json`, JSON.stringify(report, null, 2))
   console.log(JSON.stringify({ status: 'done', cases: report.cases, passed, accuracy: report.accuracy, total_tokens: report.total_tokens, evidence }))
