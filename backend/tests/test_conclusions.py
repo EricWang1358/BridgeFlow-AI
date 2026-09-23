@@ -54,6 +54,10 @@ def test_attention_items_follow_the_declared_severity_with_owner_and_grade(clien
     assert brief["report_status"] == "validated" and brief["missing_departments"] == [] and brief["stale"] is False
     assert [a["check_id"] for a in brief["attention"]] == ["net_margin", "collection_gap", "material_cost"]
     assert all(a["decision_owner"] and a["action"] for a in brief["attention"])
+    # The page states how each flagged figure was computed; it is the declared formula.
+    formulas = {m["check_id"]: m["formula"] for m in brief["key_metrics"]}
+    assert all(a["formula"] for a in brief["attention"])
+    assert all(a["formula"] == formulas[a["check_id"]] for a in brief["attention"] if a["check_id"] in formulas)
     assert [m["metric"] for m in brief["key_metrics"]] == ["net_margin", "material_cost_ratio", "settlement_collection_rate",
                                                          "receivable_months", "sign_rate"]
     grade = {a["check_id"]: a["grade"]["grade"] for a in brief["attention"]}

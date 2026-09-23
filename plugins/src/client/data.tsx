@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { departments, ResupplyForm, TemplateDownload } from './workspace.tsx'
 import { api, describeError, navigate, useUI, type Summary } from './ui.ts'
+import { Explain } from './explain.tsx'
 
 /**
  * 数据 — one timeline for a month's files: take the template, self-check, import, fix (E14).
@@ -46,6 +47,7 @@ export function DataView({ batchId, summary, sources, onImport, onRefresh }: {
       <button onClick={onImport}>{t('addSources')}</button>
     </div>
     <p className="bf-hint">{t('dataHelp')}</p>
+    <Explain text={t('how_data')} />
     {error && <p role="alert" className="bf-error">{error}</p>}
 
     <ol className="bf-data-steps">

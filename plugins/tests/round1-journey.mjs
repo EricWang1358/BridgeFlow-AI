@@ -83,7 +83,7 @@ try {
   await page.locator('.bf-brief').waitFor()
   const items = await page.locator('.bf-brief-attention > li .bf-check-title').allInnerTexts()
   assert.equal(items.length, 3)
-  const grades = await page.locator('.bf-brief-attention .bf-check .bf-grade').allInnerTexts()
+  const grades = await page.locator('.bf-brief-attention .bf-check .bf-grade').evaluateAll(els => els.map(el => el.dataset.grade))
   assert.deepEqual(grades.slice().sort(), ['G2', 'G2', 'G3'])
   assert.equal(await page.locator('.bf-brief-attention .bf-grade[data-grade="G4"]').count(), 3)
   // E13-UC01 (round 11): an attention item cites the cells behind its figure

@@ -41,6 +41,21 @@ body[data-bf-notebook] span:has(> [data-slot="conversation.hero.brand.mark"]) ~ 
 body[data-bf-notebook] .bf-hero { box-sizing: border-box; width: 100%; background: transparent; border: 0; box-shadow: none; padding: 8px 30px; margin: 0 0 24px }
 body[data-bf-notebook] .bf-hero > h3, body[data-bf-notebook] .bf-hero > p { display: none }
 .bf-hero details { margin: 14px 0; font-size: 12px; color: var(--bf-shell-muted) }
+.bf-flow-title { margin: 18px 0 12px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--bf-shell-muted) }
+.bf-flow { list-style: none; margin: 0 0 22px; padding: 0; counter-reset: bf-flow; max-width: 520px }
+.bf-flow > li { counter-increment: bf-flow; position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 14px; padding: 0 0 18px; color: var(--bf-shell-text) }
+.bf-flow > li::before { content: counter(bf-flow); grid-column: 1; grid-row: 1 / span 3; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; font-size: 12px; font-weight: 700; background: var(--bf-flow-tone-soft); color: var(--bf-flow-tone) }
+.bf-flow > li:not(:last-child)::after { content: ''; position: absolute; left: 13px; top: 32px; bottom: 4px; width: 2px; border-radius: 1px; background: var(--bf-shell-border); transform-origin: top }
+.bf-flow > li { --bf-flow-tone: #5f6b7a; --bf-flow-tone-soft: #eef1f5 }
+.bf-flow > li[data-actor=agents] { --bf-flow-tone: #2f6bd8; --bf-flow-tone-soft: #e8f0fd }
+.bf-flow > li[data-actor=person] { --bf-flow-tone: #1c7a4a; --bf-flow-tone-soft: #e6f4ec }
+body[data-ds-dark-theme] .bf-flow > li { --bf-flow-tone: #b3bdca; --bf-flow-tone-soft: #2c323a }
+body[data-ds-dark-theme] .bf-flow > li[data-actor=agents] { --bf-flow-tone: #8fb3f5; --bf-flow-tone-soft: #243452 }
+body[data-ds-dark-theme] .bf-flow > li[data-actor=person] { --bf-flow-tone: #7fd1a3; --bf-flow-tone-soft: #1f3a2c }
+.bf-flow > li > * { grid-column: 2 }
+.bf-flow-actor { justify-self: start; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--bf-flow-tone); margin: 1px 0 2px }
+.bf-flow > li > b { font-size: 14px; font-weight: 600; line-height: 1.35 }
+.bf-flow > li > span:last-child { font-size: 12px; line-height: 1.55; color: var(--bf-shell-muted) }
 body[data-bf-notebook] .bf-hero .bf-actions { display: flex; flex-wrap: wrap; gap: 8px }
 body[data-bf-notebook] .bf-hero button { background: transparent !important; color: var(--bf-shell-text) !important; border: 1px solid var(--bf-shell-border); border-radius: 24px; padding: 8px 14px; width: auto; font-size: 12px; font-weight: 400 }
 body[data-bf-hide-sources] [data-slot="root"] > div { padding-left: 12px }
@@ -62,7 +77,14 @@ body[data-bf-notebook] [data-slot="root"] > [data-details-collapsed] > div:has(>
 .bf-shell-brand > span:first-child { display: grid; place-items: center; width: 29px; height: 29px; background: #f4f7ff; color: #386bbb; border-radius: 50%; font-weight: 700 }
 .bf-shell-brand strong { font-size: 17px; font-weight: 500 }
 .bf-shell-title { font-size: 13px; color: var(--bf-shell-muted) }
-.bf-shell-top nav { display: flex; gap: 8px }
+.bf-shell-top nav { display: flex; align-items: center; gap: 14px }
+/* Three kinds of control, three weights: notebook actions are quiet text, the pane
+   switches read as one segmented control, and Help keeps its own outline. */
+.bf-top-group { display: flex; align-items: center; gap: 2px }
+.bf-top-group[data-kind=notebook] button { border-color: transparent; color: var(--bf-shell-muted) }
+.bf-top-group[data-kind=notebook] button:hover:not(:disabled) { background: #0f172a0d; color: var(--bf-shell-text) }
+.bf-top-group[data-kind=panes] { border: 1px solid var(--bf-shell-border); border-radius: 24px; padding: 2px; background: var(--bf-shell-pane) }
+.bf-top-group[data-kind=panes] button { border-color: transparent }
 .bf-shell-top button, .bf-shell-pane button { font: inherit; cursor: pointer; color: inherit }
 .bf-shell-top button { border: 1px solid var(--bf-shell-border); background: transparent; border-radius: 24px; padding: 5px 12px; font-size: 12px }
 .bf-shell-pane.bf-state {
@@ -76,7 +98,7 @@ body[data-bf-notebook] [data-slot="root"] > [data-details-collapsed] > div:has(>
 .bf-shell-studio { right: 12px; width: var(--bf-shell-right) }
 .bf-shell-pane > header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--bf-shell-border); height: 40px; flex-shrink: 0; padding: 0 14px }
 .bf-shell-pane > header h2 { font-size: 13px; font-weight: 500 }
-.bf-shell-scroll { padding: 14px; flex: 1; min-height: 0; overflow: auto }
+.bf-shell-scroll { padding: 16px 18px; flex: 1; min-height: 0; overflow: auto }
 .bf-add-source { width: 100%; border: 1px solid var(--bf-shell-border); border-radius: 22px; background: transparent; padding: 8px; font-size: 12px }
 .bf-add-source:hover, .bf-resource-list button:hover, .bf-artifact:hover { background: color-mix(in srgb, var(--bf-shell-text) 7%, transparent) }
 .bf-source-batch { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 20px 0 12px }
@@ -202,6 +224,7 @@ body[data-ds-dark-theme] .bf-save-state[data-dirty=true] { color: #dfbd76 }
   .bf-shell-brand { gap: 7px }
   .bf-shell-top { padding: 0 12px }
   .bf-shell-top nav { gap: 4px; width:100%; overflow-x:auto; white-space:nowrap; padding-bottom:4px; }
+  .bf-top-group { flex-shrink: 0 }
   .bf-shell-top button { padding: 5px 7px; font-size: 11px }
 }
 .bf-route-notice { position: fixed; z-index: 2147483000; top: 64px; left: 50%; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px)); display: flex; gap: 12px; align-items: center; box-shadow: 0 8px 24px rgb(0 0 0 / 30%) }

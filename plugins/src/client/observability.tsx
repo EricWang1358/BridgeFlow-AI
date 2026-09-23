@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, describeError, useUI } from './ui.ts'
+import { Explain } from './explain.tsx'
 
 /**
  * What the system decided, and how it scores against its own claims.
@@ -77,6 +78,7 @@ export function AgentRuns({ batchId }: { batchId: string }) {
   return <section className="bf-runs" aria-label={t('agentRuns')}>
     <h4>{t('agentRuns')}</h4>
     <p className="bf-hint">{t('agentRunsHelp')}</p>
+    <Explain text={t('how_runs')} />
     {!runs.length && <p className="bf-hint">{t('agentRunsEmpty')}</p>}
     <ol className="bf-run-list">{runs.map(run => <li key={run.run}>
       <button className="bf-run-head" aria-expanded={open === run.run}
@@ -123,6 +125,7 @@ export function DecisionJournal({ batchId }: { batchId: string }) {
       <button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button>
     </div>
     <p className="bf-hint">{t('decisionJournalHelp')}</p>
+    <Explain text={t('how_journal')} />
 
     <dl className="bf-facts bf-journal-summary">
       <dt>{t('journalDecisions')}</dt><dd>{journal.total}</dd>
@@ -177,6 +180,7 @@ export function EvalReport() {
       {report.age_hours !== null && report.age_hours !== undefined
         ? ` · ${t('evalGenerated')} ${report.age_hours} h`
         : ''}</p>
+    <Explain text={t('how_eval')} />
     <dl className="bf-facts">
       {Object.entries(report.tracks).map(([track, counts]) => <div key={track} style={{ display: 'contents' }}>
         <dt>{t(`evalTrack_${track}`)}</dt><dd>{counts.passed} / {counts.total}</dd>

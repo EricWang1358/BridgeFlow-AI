@@ -34,7 +34,7 @@ type Catalogue = {
 type Finding = { rule: string; category: string; scope: Record<string, string>; facts: string[]; hypothesis: string; route_to: string; decided_by: string }
 
 export function Handoff() {
-  const { t } = useUI()
+  const { t, paren } = useUI()
   const [rows, setRows] = useState<Row[] | null>(null), [catalogue, setCatalogue] = useState<Catalogue | null>(null)
   const [findings, setFindings] = useState<Finding[]>([]), [draft, setDraft] = useState<Draft | null>(null)
   const [selected, setSelected] = useState(''), [error, setError] = useState(''), [revision, setRevision] = useState(0)
@@ -63,7 +63,7 @@ export function Handoff() {
       <p className="bf-hint">{catalogue.case} · {t('catalogueVersion')} {catalogue.version} <Chip status={catalogue.status}/></p>
       {Object.entries(catalogue.templates).map(([key, template]) => <article className="bf-source-item" key={key}>
         <div className="bf-handoff-head"><strong>{template.department}「{template.title}」v{template.version}</strong><Chip status={template.status}/></div>
-        <span className="bf-hint">{Object.values(template.fields).map(f => f.label + (f.required ? '' : `（${t('optional')}）`)).join('、')}</span>
+        <span className="bf-hint">{Object.values(template.fields).map(f => f.label + (f.required ? '' : paren(t('optional')))).join(', ')}</span>
       </article>)}
       <h4>{t('fieldLineage')}</h4>
       {catalogue.lineage.map((edge, i) => <p className="bf-hint" key={i}><code>{edge.source}</code> → <code>{edge.target}</code> · {edge.transform} <Chip status={edge.status}/></p>)}

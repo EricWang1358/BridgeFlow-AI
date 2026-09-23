@@ -45,12 +45,19 @@ export async function notebookWalkthrough(page, scratch) {
   await studio.getByRole('main',{name:'报价',exact:true}).waitFor()
   await page.waitForFunction(()=>new URLSearchParams(location.hash.slice(12)).get('kind')==='quotation')
 
+  // An open studio page uses the reading layout (docs/15 一之三), so the widths compared
+  // across the reload are both taken with the quotation page open.
+  await page.waitForTimeout(400)
+  const reading=await sources.boundingBox()
+  assert(reading.width<=width.width,'Opening a page must not widen Sources')
   await top.getByRole('button',{name:'保存笔记本',exact:true}).click()
   await top.getByText('已保存',{exact:true}).waitFor()
   await page.reload()
   await title.waitFor()
   await page.waitForFunction(()=>document.querySelector('.bf-notebook-title')?.value==='报价待办')
-  assert(Math.abs((await sources.boundingBox()).width-width.width)<2,'Panel width preference survives reload')
+  await studio.getByRole('main',{name:'报价',exact:true}).waitFor()
+  await page.waitForTimeout(400)
+  assert(Math.abs((await sources.boundingBox()).width-reading.width)<2,'Panel width preference survives reload')
   await top.getByRole('button',{name:'新建笔记本',exact:true}).click()
   await page.waitForFunction(()=>document.querySelector('.bf-notebook-title')?.value==='未命名笔记本')
   await title.fill('临时草稿')

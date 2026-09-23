@@ -148,7 +148,7 @@ type View = { total: number; offset: number; rows: Record<string, unknown>[] }
  * destinations, and this panel is reached only from there. It has no entry of its own.
  */
 export function DataWorkspace() {
-  const { t } = useUI(), dialog = useRef<HTMLDialogElement>(null)
+  const { t, paren } = useUI(), dialog = useRef<HTMLDialogElement>(null)
   const [batch, setBatch] = useState<Summary | null>(null), [batchId, setBatchId] = useState('')
   const [section, setSection] = useState('master'), [offset, setOffset] = useState(0)
   const [view, setView] = useState<View | null>(null), [review, setReview] = useState<Review | null>(null)
@@ -247,7 +247,7 @@ export function DataWorkspace() {
         </div>}
         {!!batch.dropped_columns?.length && <div className="bf-callout" data-tone="warn">
           <h3>{t('droppedColumns')}</h3>
-          <p className="bf-mono">{batch.dropped_columns.map(c => `${t(c.department)}.${c.column}（${c.field_type}）`).join(' · ')}</p>
+          <p className="bf-mono">{batch.dropped_columns.map(c => `${t(c.department)}.${c.column}${paren(c.field_type)}`).join(' · ')}</p>
         </div>}
 
         <div className="bf-actions">
@@ -289,7 +289,7 @@ export function DataWorkspace() {
  */
 export function ResupplyForm({ batch, department, onDerived }:
   { batch: Summary; department: string; onDerived: (batchId: string) => void }) {
-  const { t } = useUI()
+  const { t, colon } = useUI()
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [result, setResult] = useState<Resupply | null>(null)
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(''); setResult(null)
@@ -320,10 +320,10 @@ export function ResupplyForm({ batch, department, onDerived }:
     </form>
     {result && <div className="bf-callout" data-tone="ok" role="status">
       <h3>{t('resupplyDone')} · <code className="bf-mono">{result.batch.batch_id}</code></h3>
-      <p>{t('resupplyDiff')}：{result.diff.cells_changed} {t('resupplyChangedCells')}
+      <p>{t('resupplyDiff')}{colon}{result.diff.cells_changed} {t('resupplyChangedCells')}
         {result.diff.fields_changed.length ? ` · ${t('resupplyChangedFields')} ${result.diff.fields_changed.join('、')}` : ''}
         {` · ${t('resupplyRows')} ${result.diff.rows_before} → ${result.diff.rows_after}`}</p>
-      {Object.keys(result.diff.issues_delta).length > 0 && <p className="bf-hint">{t('resupplyIssues')}：{
+      {Object.keys(result.diff.issues_delta).length > 0 && <p className="bf-hint">{t('resupplyIssues')}{colon}{
         Object.entries(result.diff.issues_delta).map(([kind, delta]) => `${t(`issue_${kind}`)} ${delta > 0 ? '+' : ''}${delta}`).join(' · ')}</p>}
       <p className="bf-hint">{result.next_step}</p>
     </div>}

@@ -25,7 +25,7 @@ type Inbox = { total: number; items: Item[]; by_kind: Record<string, number>; by
  */
 export function OpenItemInbox({ period, batchId, focusView = '', onClearFocus }:
   { period: string; batchId: string; focusView?: string; onClearFocus?: () => void }) {
-  const { t } = useUI()
+  const { t, colon } = useUI()
   const [inbox, setInbox] = useState<Inbox | null>(null), [error, setError] = useState(''), [department, setDepartment] = useState('')
   useEffect(() => {
     if (!period) return
@@ -51,7 +51,7 @@ export function OpenItemInbox({ period, batchId, focusView = '', onClearFocus }:
       <option value="">{t('allDepartments')}</option>
       {Object.keys(inbox.by_department).map(name => <option key={name} value={name}>{t(name)} · {inbox.by_department[name]}</option>)}
     </select></label>
-    {inbox.unreadable.map(reason => <p key={reason} className="bf-hint">{t('inboxUnreadable')}：{reason}</p>)}
+    {inbox.unreadable.map(reason => <p key={reason} className="bf-hint">{t('inboxUnreadable')}{colon}{reason}</p>)}
     {!shown.length && <p className="bf-hint">{t('inboxEmpty')}</p>}
     <ul>{shown.map(item => <li key={item.id}>
       <b>{t(`item_${item.kind}`) === `item_${item.kind}` ? item.kind : t(`item_${item.kind}`)}</b>
@@ -65,7 +65,7 @@ export function OpenItemInbox({ period, batchId, focusView = '', onClearFocus }:
 
 export function CloseChecklist({ period, batchId, onImport, onFocus, focusView = '' }:
   { period: string; batchId: string; onImport: () => void; onFocus?: (nextView: string) => void; focusView?: string }) {
-  const { t } = useUI()
+  const { t, colon, list: joined } = useUI()
   const [list, setList] = useState<Checklist | null>(null), [error, setError] = useState('')
   useEffect(() => {
     if (!period) return
@@ -87,9 +87,9 @@ export function CloseChecklist({ period, batchId, onImport, onFocus, focusView =
     <ol>{list.steps.map(step => <li key={step.id} data-state={step.state} data-focused={step.next_view === focusView}>
       <span className="bf-step-state" data-state={step.state}>{t(`stepState_${step.state}`)}</span>
       <b>{t(`step_${step.id}`)}</b>
-      {step.owner_role && <span className="bf-hint"> · {t('stepOwner')} {step.owner_role}</span>}
+      {step.owner_role && <span className="bf-hint bf-step-owner">{t('stepOwner')}{colon}{step.owner_role}</span>}
       {step.state !== 'done' && <>
-        {step.outstanding.length > 0 && <div className="bf-hint">{t('stepOutstanding')}：{step.outstanding.map(name => t(name) === name ? name : t(name)).join('、')}</div>}
+        {step.outstanding.length > 0 && <div className="bf-hint">{t('stepOutstanding')}{colon}{joined(step.outstanding.map((name: string) => t(name)))}</div>}
         {step.reason && <div className="bf-hint">{step.reason}</div>}
         <div className="bf-actions" style={{ marginBottom: 0 }}>
           {step.count > 0 && onFocus && <button onClick={() => onFocus(step.next_view)}>{t('stepShowItems')}</button>}

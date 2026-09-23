@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AgentRuns, DecisionJournal, EvalReport } from './observability.tsx'
 import { api, describeError, formatDateTime, navigate, useUI, type Summary } from './ui.ts'
+import { Explain } from './explain.tsx'
 
 /**
  * 记录 — who decided what, when, and on what evidence.
@@ -12,7 +13,7 @@ import { api, describeError, formatDateTime, navigate, useUI, type Summary } fro
  */
 type Convention = { id: string; text: string; kind: string; state: string; version: number
   source: string; note: string; decided_by: string; at: string; declaration_change: string }
-type Disposition = { check_id: string; state: string; version: number; note: string; decided_by: string; at: string; closed: boolean }
+type Disposition = { check_id: string; title?: string; state: string; version: number; note: string; decided_by: string; at: string; closed: boolean }
 type Artifact = { report_id: string; period: string; status: string; created_at: number; kind?: string }
 
 export function RecordsView({ batchId, summary, artifacts, language }: {
@@ -21,7 +22,7 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
   artifacts: Artifact[]
   language: string
 }) {
-  const { t } = useUI()
+  const { t, colon, paren } = useUI()
   const [conventions, setConventions] = useState<Convention[]>([])
   const [dispositions, setDispositions] = useState<Disposition[]>([]), [dispositionNote, setDispositionNote] = useState('')
   const [error, setError] = useState('')
@@ -42,6 +43,7 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
   return <section className="bf-records" aria-label={t('records')}>
     <div className="bf-card-head"><h3>{t('records')} · {summary.period}</h3></div>
     <p className="bf-hint">{t('recordsHelp')}</p>
+    <Explain text={t('how_records')} />
     {error && <p role="alert" className="bf-error">{error}</p>}
 
     <h4>{t('recordsLineage')}</h4>
@@ -61,7 +63,7 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
         <span><strong>{item.id}</strong> <span className="bf-convention" data-state={item.state}>{t(`conventionState_${item.state}`)}</span></span>
         <span className="bf-hint">{item.state === 'unconfirmed'
           ? t(`conventionKind_${item.kind}`)
-          : `${t('conventionSource')}：${item.source}（${item.decided_by} · v${item.version}）`}</span>
+          : `${t('conventionSource')}${colon}${item.source}${paren(`${item.decided_by} · v${item.version}`)}`}</span>
       </li>)}
     </ul>
 
@@ -69,7 +71,7 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
     {dispositionNote && <p className="bf-hint">{dispositionNote}</p>}
     <ul className="bf-records-list">
       {dispositions.map(item => <li key={item.check_id}>
-        <span><strong>{t(`check_${item.check_id}`) === `check_${item.check_id}` ? item.check_id : t(`check_${item.check_id}`)}</strong></span>
+        <span><strong>{item.title || item.check_id}</strong></span>
         <span className="bf-hint">{item.state}{item.decided_by ? ` · ${item.decided_by}` : ''}{item.note ? ` · ${item.note}` : ''}</span>
       </li>)}
     </ul>

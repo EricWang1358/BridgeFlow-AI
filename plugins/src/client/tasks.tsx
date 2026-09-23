@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CloseChecklist, OpenItemInbox } from './checklist.tsx'
 import { WorkflowProgress } from './workflow-progress.tsx'
 import { describeError, startReview, useUI, type Summary } from './ui.ts'
+import { Explain } from './explain.tsx'
 import type { projectAudit } from './audit.ts'
 
 /**
@@ -36,6 +37,7 @@ export function TasksView({ batchId, summary, audit, savedReportStatus, notebook
       }} data-tour-id="review-start">{t(busy ? 'busy' : 'startReview')}</button>
     </div>
     <p className="bf-hint">{t('monthlyTasksHelp')}</p>
+    <Explain text={t('how_tasks')} />
     {error && <p role="alert" className="bf-error">{error}</p>}
 
     {/* A batch whose data was corrected afterwards is the one thing that invalidates everything

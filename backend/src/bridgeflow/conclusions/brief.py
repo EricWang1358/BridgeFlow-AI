@@ -59,6 +59,8 @@ class AttentionItem(BaseModel):
     unit: str
     threshold: float
     attention_when: str
+    #: The declared formula, so the page can say how the figure was computed next to it.
+    formula: str = ""
     owner: str
     decision_owner: str
     action: str
@@ -167,7 +169,7 @@ class BriefBuilder:
             items.append(AttentionItem(
                 check_id=check["check_id"], title=check["title"], metric=check["metric"], value=check["value"],
                 unit=check["unit"], threshold=check["threshold"], attention_when=check["attention_when"],
-                owner=check["role"], decision_owner=check["decision_owner"], action=check["action"],
+                formula=str(check.get("formula", "")), owner=check["role"], decision_owner=check["decision_owner"], action=check["action"],
                 explanation=check["explanation"], grade=self._metric_grade(check),
                 advice_grade=self._count(self._grader.grade(advice(check, conventions, self.confirmed_conventions)).as_dict()),
                 # Capped, with the real total beside it: a figure over 200k rows cites its
