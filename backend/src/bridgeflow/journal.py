@@ -45,7 +45,9 @@ MAX_REASON = 300
 FACT_KEYS = ("batch_id", "period", "report_id", "declaration", "counts", "outcome_detail",
              # The agent's own identifiers, sent by the tool layer: the call, the model-requested
              # call that owns the whole tree (one "run"), which agent asked, and which tool.
-             "call_id", "run", "agent", "tool")
+             "call_id", "run", "agent", "tool",
+             # The model step that issued the call and what it cost, as input/output/total.
+             "step", "tokens")
 
 
 def _folder():
@@ -79,7 +81,11 @@ TRACE_HEADERS = {"x-bridgeflow-call": "call_id", "x-bridgeflow-root": "run",
                  "x-bridgeflow-agent": "agent", "x-bridgeflow-tool": "tool",
                  # A tool's subject lives in its body, which this seam never reads; the tool
                  # layer therefore states it, and only these two keys are accepted.
-                 "x-bridgeflow-batch": "batch_id", "x-bridgeflow-period": "period"}
+                 "x-bridgeflow-batch": "batch_id", "x-bridgeflow-period": "period",
+                 "x-bridgeflow-step": "step", "x-bridgeflow-tokens": "tokens"}
+
+#: Token usage is three counts and nothing else; any other shape is dropped.
+TOKENS = re.compile(r"^\d{1,9}/\d{1,9}/\d{1,9}$")
 
 
 def trace_facts(headers) -> dict[str, str]:
@@ -88,7 +94,25 @@ def trace_facts(headers) -> dict[str, str]:
         value = headers.get(header)
         if value:
             found[key] = str(value)[:120]
+    if "tokens" in found and not TOKENS.match(found["tokens"]):
+        del found["tokens"]
     return found
+
+
+def _tokens(steps: list[dict[str, Any]]) -> dict[str, int]:
+    """Sum each model step once: several calls from one message share its usage."""
+    seen: dict[tuple[str, str], str] = {}
+    for s in steps:
+        facts = s.get("facts") or {}
+        if facts.get("tokens"):
+            seen[(facts.get("agent", ""), facts.get("step") or facts.get("call_id", ""))] = facts["tokens"]
+    total = {"input": 0, "output": 0, "total": 0, "model_steps": len(seen)}
+    for value in seen.values():
+        i, o, t = (int(x) for x in value.split("/"))
+        total["input"] += i
+        total["output"] += o
+        total["total"] += t
+    return total
 
 
 def subject_of(path: str) -> dict[str, str]:
@@ -206,13 +230,15 @@ def runs(*, day: str = "", limit: int = 20) -> dict[str, Any]:
             "run": run, "started_at": ordered[0].get("at", ""), "ended_at": ordered[-1].get("at", ""),
             "steps": len(ordered), "agents": agents, "refused": len(refusals),
             "ms": round(sum(s.get("ms", 0) for s in ordered), 1),
+            "tokens": _tokens(ordered),
             "batch_id": next((s.get("facts", {}).get("batch_id", "") for s in ordered
                               if s.get("facts", {}).get("batch_id")), ""),
             "tools": list(dict.fromkeys(s.get("facts", {}).get("tool", "") or s.get("surface", "") for s in ordered)),
             "timeline": [{"at": s.get("at", ""), "agent": s.get("facts", {}).get("agent", ""),
                           "tool": s.get("facts", {}).get("tool", "") or s.get("surface", ""),
                           "outcome": s.get("outcome", ""), "ms": s.get("ms", 0),
-                          "reason": s.get("reason", ""), "trace": s.get("trace", "")} for s in ordered],
+                          "reason": s.get("reason", ""), "trace": s.get("trace", ""),
+                          "tokens": s.get("facts", {}).get("tokens", "")} for s in ordered],
         })
     found.sort(key=lambda r: r["started_at"], reverse=True)
     return {"day": day, "total": len(found), "runs": found[:limit], "days": read_back["days"]}

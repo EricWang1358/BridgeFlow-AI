@@ -226,11 +226,11 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           || /^\/integration\/batches\/[a-f0-9]{32}(\/xlsx)?$/.test(path)
           || /^\/conclusions\/batches\/[a-f0-9]{32}(\/(comparison|charts|report))?$/.test(path)
           || /^\/conventions\/batches\/[a-f0-9]{32}(\/preview)?$/.test(path)
-          || path === '/monthly/checklist' || path === '/monthly/inbox'
+          || path === '/monthly/checklist' || path === '/monthly/inbox' || path === '/batches/demo/cases'
           || path === '/journal' || path === '/journal/runs' || path === '/eval/report'
           || /^\/reviews\/[a-f0-9]{32}\/dispositions$/.test(path)
           || /^\/batches\/templates\/(production|procurement|finance|marketing)$/.test(path))
-        const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo' || path === '/batches/self-check' || path === '/discovery/uploads'
+        const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo' || path === '/workflow/sample' || path === '/batches/self-check' || path === '/discovery/uploads'
           // Correcting one department derives a new batch; it is an upload like any other (E14-UC04).
           || /^\/batches\/[a-f0-9]{32}\/departments\/(production|procurement|finance|marketing)$/.test(path))
         // Feishu user-identity calls (docs/30, docs/31, docs/33): the browser relays the

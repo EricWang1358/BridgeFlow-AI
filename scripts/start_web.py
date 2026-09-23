@@ -169,14 +169,20 @@ def main() -> None:
         # fictional concrete supplier (data/mock_business/demo). The older English CSV case
         # in data/business_demo stays as the browser smokes' fixture with its own dictionary.
         env["FIELD_DICTIONARY_PATH"] = str(ROOT / "data/mock_business/demo/dictionary.yaml")
-        # The synthetic production → marketing handoff (#147); never a company standard.
-        env.setdefault("WORKFLOW_CATALOGUE_PATH", str(ROOT / "data/workflow_demo/catalogue.yaml"))
+
+    # The template-filling and handoff workflow is a core flow, and without a catalogue its
+    # page is a 503 — deployed, that meant the flow was invisible. No business catalogue
+    # exists yet (the templates are still with the business side, #23), so an unset path
+    # falls back to the synthetic production → marketing handoff (#147). Its page states
+    # the catalogue's case ("合成示例 … 非客户数据"), and an operator's own path always wins.
+    env.setdefault("WORKFLOW_CATALOGUE_PATH", str(ROOT / "data/workflow_demo/catalogue.yaml"))
 
     # Say which dictionary is in force, every time. Which one is loaded decides
     # whether a batch can be joined at all, and it was the one fact neither the
     # launcher nor the screen ever stated.
     dictionary = env.get("FIELD_DICTIONARY_PATH", "data/mappings/field-dictionary.yaml")
     print(f"BridgeFlow field dictionary: {dictionary}", flush=True)
+    print(f"BridgeFlow workflow catalogue: {env['WORKFLOW_CATALOGUE_PATH']}", flush=True)
     processes: list[subprocess.Popen] = []
     def stop(_sig=None, _frame=None):
         for process in reversed(processes):

@@ -83,18 +83,29 @@ const draftSchema = {
 
 /** What rendering reads; structural so it accepts the schema-inferred value. */
 interface DraftText {
+  artifact_id?: string; seq?: number; digest?: string; values?: Record<string, unknown>
   department?: string; title?: string; version?: number; state?: string; next_step?: string
   open_questions?: { field?: string; kind?: string; question?: string; why?: string }[]
   checks?: { title?: string; value?: string; unit?: string; attention?: boolean }[]
 }
 
-function renderDraft(value: DraftText) {
+/**
+ * What the model reads of a draft. The render is all the model sees, so it must carry what
+ * the next call needs: `workflow_record` takes the draft's seq, `workflow_approve_submit` its
+ * digest and seq. Leaving them out made every submit impossible for a real model — the
+ * scripted test model read the raw value and never noticed. The values are one record's
+ * fields, as the person gave them, so the person can be shown exactly what they approve.
+ */
+export function renderDraft(value: DraftText) {
   const questions = value.open_questions ?? []
   const checks = (value.checks ?? []).filter(c => c.attention).map(c => `${c.title} ${c.value}${c.unit}`)
+  const values = Object.entries(value.values ?? {}).slice(0, 40).map(([label, v]) => `${label}=${String(v)}`)
   return [{
     type: 'text' as const,
     text:
+      `artifact_id=${value.artifact_id ?? ''} seq=${value.seq ?? ''} digest=${value.digest ?? ''}. ` +
       `${value.department ?? ''}「${value.title ?? ''}」v${value.version ?? 1}: ${value.state}. ` +
+      (values.length ? `Values: ${values.join('; ')}. ` : '') +
       (questions.length
         ? `Open questions: ${questions.map(q => `${q.field || q.kind} — ${q.question || q.why}`).join('; ')}. `
         : 'No open questions. ') +
@@ -171,6 +182,18 @@ export function workflowDraft(config: BackendConfig): ProductTool {
   }), { kind: 'read' })
 }
 
+interface BoardText {
+  rows?: { kind?: string; id?: string; seq?: number; state?: string; summary: string; stale?: boolean; inputs?: Record<string, number> }[]
+  truncated?: boolean; total?: number
+}
+/** One line per row, led by the id and seq that `workflow_draft` / `workflow_handoff` need. */
+export function renderBoard(board: BoardText) {
+  const rows = (board.rows ?? []).map(r => (r.id ? `[${r.kind} id=${r.id} seq=${r.seq} state=${r.state}${r.stale ? ' stale' : ''}] ` : `[${r.kind}] `)
+    + r.summary + (r.inputs ? ` inputs=${JSON.stringify(r.inputs)}` : ''))
+  const more = board.truncated ? ` (showing the latest ${rows.length} of ${board.total})` : ''
+  return [{ type: 'text' as const, text: rows.length ? rows.join(' | ') + more : 'Nothing recorded yet.' }]
+}
+
 export function workflowBoard(config: BackendConfig): ProductTool {
   return withAccess(defineTool({
     name: 'workflow_board',
@@ -180,10 +203,7 @@ export function workflowBoard(config: BackendConfig): ProductTool {
     parameters: {},
     output: {
       schema: { type: 'object', additionalProperties: true },
-      render: (_args, value) => {
-        const board = value as { rows?: { summary: string }[]; truncated?: boolean }
-        return [{ type: 'text', text: (board.rows ?? []).map(r => r.summary).join(' | ') || 'Nothing recorded yet.' }]
-      },
+      render: (_args, value) => renderBoard(value as BoardText),
     },
     async execute(_args, exec) {
       return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-board', {}, exec)

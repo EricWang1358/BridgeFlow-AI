@@ -154,3 +154,20 @@ def test_browser_reads_are_not_runs(client):
     batch = client.post("/batches/demo").json()["batch_id"]
     client.get(f"/integration/batches/{batch}")
     assert client.get("/journal/runs").json()["runs"] == []
+
+
+def test_a_run_counts_each_model_step_once_and_only_numbers(client):
+    batch = client.post("/batches/demo").json()["batch_id"]
+    usage = {"x-bridgeflow-root": "r-t", "x-bridgeflow-agent": "captain", "x-bridgeflow-tool": "batch_summary"}
+    # Two calls issued by one model step share its usage: counted once.
+    for call_id in ("c1", "c2"):
+        client.post("/tools/batch-summary", json={"batch_id": batch}, headers=usage | {
+            "x-bridgeflow-call": call_id, "x-bridgeflow-step": "s1", "x-bridgeflow-tokens": "1000/200/1200"})
+    client.post("/tools/batch-summary", json={"batch_id": batch}, headers=usage | {
+        "x-bridgeflow-call": "c3", "x-bridgeflow-step": "s2", "x-bridgeflow-tokens": "300/50/350"})
+    # Anything that is not three counts never enters the journal.
+    client.post("/tools/batch-summary", json={"batch_id": batch}, headers=usage | {
+        "x-bridgeflow-call": "c4", "x-bridgeflow-step": "s3", "x-bridgeflow-tokens": "1/2/3; customer=ACME"})
+    run = next(r for r in client.get("/journal/runs").json()["runs"] if r["run"] == "r-t")
+    assert run["tokens"] == {"input": 1300, "output": 250, "total": 1550, "model_steps": 2}
+    assert "ACME" not in str(run)

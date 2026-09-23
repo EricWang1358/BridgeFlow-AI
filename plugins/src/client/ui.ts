@@ -12,6 +12,24 @@ export function configureLocale(value: Context['locale']) { locale = value }
 const subscribe = (fn: () => void) => locale.subscribe(fn)
 const current = () => locale.getSnapshot().active.startsWith('zh') ? 'zh' : 'en'
 const labels = {
+  runTokens: ['tokens（发起工具调用的模型步骤）', 'tokens (model steps that called tools)'],
+  sampleCases: ['更多示例', 'More sample cases'],
+  sampleCasesHelp: ['同一家虚构公司的 2024-07，分别展示不同的问题；有些状态不能放在同一个批次里。每个示例打开成一个新笔记本。', 'The same fictional company in 2024-07, each showing different problems, because some states cannot share one batch. Each opens in a new notebook.'],
+  reviewBlockers: ['研判会被拒绝，原因：', 'The review would refuse this batch:'],
+  next_blocked: ['请修正源表，再用「单部门补传」替换出错部门的文件，这会生成新批次。', 'Correct the source file, then replace that department\'s file; that creates a new batch.'],
+  workflowFlow: ['填报与流转流程', 'Filling and handoff flow'],
+  flowStage_input: ['补齐缺项', 'Fill in what is missing'], flowStage_review: ['待审核', 'Awaiting review'], flowStage_approved: ['已批准', 'Approved'],
+  flowStage_recorded: ['已入库', 'Recorded'], flowStage_handed: ['已交接', 'Handed over'], flowStage_working: ['下游处理中', 'Being worked on'], flowStage_done: ['已完成', 'Done'],
+  flowActorPerson: ['填报人', 'Submitter'], flowActorYou: ['你审批', 'You approve'], flowActorSystem: ['系统', 'System'], flowActorDownstream: ['下游部门', 'Next team'],
+  workflowSample: ['载入示例工作流', 'Load the sample workflow'],
+  workflowSampleHelp: ['放入两条虚构的生产记录：一条缺实际量，一条待审核。只做接收；审核、提交和交接仍要你在对话里批准。', 'Adds two fictional production records: one missing its actual quantity, one ready for review. It only receives them; reviewing, submitting and handing over still need your approval in chat.'],
+  workflowNext: ['下一步', 'Next step'],
+  askNeedsInput: ['请队长补问', 'Ask the captain to fill the gaps'], askReview: ['请队长送审', 'Ask the captain to submit for approval'],
+  askStart: ['请队长开始处理', 'Ask the captain to start it'], askComplete: ['请队长标记完成', 'Ask the captain to complete it'],
+  requestNeedsInput: ['请用 workflow_draft 读取草稿 {id}，告诉我还缺哪些项；我回答后，用 workflow_record（artifact_id={id}）记录我的原话。我会在审批卡里确认。', 'Read draft {id} with workflow_draft and tell me what is still missing. When I answer, record my words with workflow_record (artifact_id={id}); I will confirm in the approval card.'],
+  requestReview: ['请用 workflow_draft 读取草稿 {id}，把全部值和检查结果列给我，然后直接用 workflow_approve_submit 提交。审批卡就是我的确认。', 'Read draft {id} with workflow_draft, list every value and check for me, then submit it with workflow_approve_submit. The approval card is my confirmation.'],
+  requestStart: ['请在 workflow_board 上找到交接 {id}，列出它的输入，然后用 workflow_handoff 执行 start。审批卡就是我的确认。', 'Find handoff {id} on workflow_board, list its inputs, then run workflow_handoff with action start. The approval card is my confirmation.'],
+  requestComplete: ['我确认：下游团队已完成交接 {id} 的工作。请在 workflow_board 上找到它，用 workflow_handoff 执行 complete，并把这句确认写进理由。审批卡就是我的确认。', 'I confirm the next team has finished the work on handoff {id}. Find it on workflow_board and run workflow_handoff with action complete, citing this confirmation as the reason. The approval card is my confirmation.'],
   heroActor1: ['规则', 'Rules'], heroActor2: ['你', 'You'], heroActor3: ['队长 + 四个部门代理', 'Captain + 4 agents'], heroActor4: ['你', 'You'],
   howItWorks: ['这是怎么运作的', 'How this works'],
   how_tasks: ['每一步的状态都取自办理它的那个页面，所以这里和那个页面永远一致。\n读不到状态的步骤显示「未知」，不算完成。\n结账由你决定：所有必需步骤完成时这里会提示，但系统从不替你标记「已结账」。', 'Each step\'s status comes from the page that handles it, so this list and that page always agree.\nIf a status cannot be read, the step shows Unknown and does not count as done.\nClosing the month is your call. BridgeFlow tells you when every required step is done but never marks the month closed.'],
@@ -275,7 +293,7 @@ const labels = {
   ended_captain_disposed: ['会话在汇总前关闭，已保存为未完成。', 'The session closed before finalization; saved as incomplete.'],
   ended_host_restarted: ['服务在汇总前重启，无法继续，已明确结束。请重新发起研判。', 'The host restarted before finalization and could not continue; start a new review.'],
   handoffHelp: ['来自已批准模板的标准记录，以及交给下一个团队的内容。每个阶段分开记录：已收到、已就绪、已通知、已完成。', 'Standard records from approved templates, and what was handed to the next team. Each stage is tracked on its own: received, ready, notified, done.'],
-  handoffBoard: ['流转看板', 'Handoff board'], handoffEmpty: ['还没有填报记录', 'No records yet'],
+  handoffBoard: ['流转看板', 'Handoff board'], handoffEmpty: ['还没有填报记录。下面是一条记录会走的流程。', 'No records yet. Here is how a record will flow.'],
   handoffEmptyHelp: ['在对话里请队长按模板帮你填报：它会逐项补问，你在审批里确认每个值。', 'Ask the captain in chat to help fill a template: it asks for each missing item and you confirm every value in the approval.'],
   handoffWriteHelp: ['此页只读。记录与提交都在对话中经审批完成。', 'This page is read-only. Recording and submitting happen in chat, through approval.'],
   catalogueVersion: ['声明版本', 'Declaration version'], fieldLineage: ['字段血缘', 'Field lineage'], integrations: ['接入', 'Integrations'],
@@ -604,6 +622,8 @@ export function reviewRequest(batch: string, period = '') {
   return `请研判 ${period} 批次 ${batch}：review_context → 同一响应四次官方 subagent（production/procurement/finance/marketing）→ review_finalize。缺口如实标 partial，不重试，不执行业务动作。`
 }
 export type Summary = { demo_case?: string | null; batch_id: string; period: string; status: string; master_rows: number; unresolved: number; refusal: string;
+  /** Row-level problems the review would refuse, in its own words; they keep the batch out of ready. */
+  review_blockers?: string[]
   departments: { department: string; rows: number; quarantined: number; corrections: number }[]
   /** The dictionary this batch was frozen against, and what it declares per department. */
   dictionary?: string
@@ -659,6 +679,9 @@ export async function startReview(batch: string, period: string): Promise<void> 
 export async function startDiagnosis(batch: string, period: string): Promise<void> {
   return ask(diagnoseRequest(batch, period))
 }
+
+/** Put a prepared request in front of the captain, in the current session (or a new one). */
+export async function askCaptain(text: string): Promise<void> { return ask(text) }
 
 async function ask(text: string): Promise<void> {
   await runtime.sessions.refresh()

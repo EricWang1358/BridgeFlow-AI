@@ -13,6 +13,7 @@ export function batchSummary(config: BackendConfig) {
           batch_id: { type: 'string', required: true }, period: { type: 'string', required: true },
           master_rows: { type: 'number', required: true }, unresolved: { type: 'number', required: true },
           status: { type: 'string', required: true }, refusal: { type: 'string', required: true },
+          review_blockers: { type: 'array', items: { type: 'string' } },
           // The one action that moves the batch on (#244): lets the captain answer
           // "what now" from the same facts the screen shows.
           next_step: { type: 'string', required: true },

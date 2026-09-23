@@ -121,6 +121,11 @@ class BatchSummary(BaseModel):
     unresolved: int
     status: str
     refusal: str = ""
+    #: Row-level data problems the review would refuse (a negative quantity, a row from
+    #: another month, duplicate rows, a currency mismatch), in the review's own words.
+    #: Any of them keeps the batch out of "ready": the status never promises a review
+    #: that would then be refused.
+    review_blockers: list[str] = Field(default_factory=list)
     #: The one action that moves this batch on, in the tool's own words (#244). The
     #: browser renders its own localized copy; this field is for the captain, so
     #: "what now" can be answered from the same facts the screen shows — a status
@@ -170,8 +175,11 @@ def _declared_entities(snapshot: dict | None) -> dict[str, list[str]]:
 
 def summary(batch_id: str, result: BatchSnapshot) -> BatchSummary:
     quarantined = sum(len(t.quarantine) for t in result.clean_tables)
+    from bridgeflow.business import data_blockers  # business imports BatchSnapshot from here
+
+    blockers = [] if result.refusal else data_blockers(result)
     status = ("needs_configuration" if result.refusal else "needs_review"
-              if result.graph.unresolved or quarantined
+              if result.graph.unresolved or quarantined or blockers
               else "ready" if result.master_table.rows else "empty")
     return BatchSummary(
         batch_id=batch_id, period=result.period,
@@ -183,7 +191,8 @@ def summary(batch_id: str, result: BatchSnapshot) -> BatchSummary:
         unresolved=len(result.graph.unresolved) if result.graph else 0,
         status=status,
         refusal=result.refusal,
-        next_step=_next_step(status, quarantined, len(result.graph.unresolved) if result.graph else 0),
+        review_blockers=blockers,
+        next_step=_next_step(status, quarantined, len(result.graph.unresolved) if result.graph else 0, blockers),
         demo_case=result.demo_case,
         dictionary=result.dictionary_source or _relative_dictionary(),
         declared_entities=_declared_entities(result.dictionary_snapshot),
@@ -196,7 +205,7 @@ def summary(batch_id: str, result: BatchSnapshot) -> BatchSummary:
     )
 
 
-def _next_step(status: str, quarantined: int, unresolved: int) -> str:
+def _next_step(status: str, quarantined: int, unresolved: int, blockers: list[str] | None = None) -> str:
     """One sentence per status, naming the counts that block and the exit (#244).
 
     English like every other host message; the browser carries its own localized copy
@@ -208,6 +217,9 @@ def _next_step(status: str, quarantined: int, unresolved: int) -> str:
                 "dictionary_draft from this batch's column profiles — decide every entry with the person, "
                 "publish, then import again. Declarations freeze into a batch at import, and this batch "
                 "is left alone.")
+    if status == "needs_review" and blockers and not quarantined and not unresolved:
+        return ("The review would refuse this batch: " + "; ".join(blockers[:3])
+                + ". Correct the source file and replace that department's file, which derives a new batch.")
     if status == "needs_review":
         return (f"Settle {quarantined} quarantined row(s) — release must pass revalidation, discard needs "
                 f"a reason, applying derives a new batch — and confirm {unresolved} pending mapping(s); "
@@ -333,23 +345,38 @@ def _read_xlsx(payload: bytes, filename: str, layout: Layout) -> tuple[str, pd.D
     return sheet, frame, header_row
 
 
+DEMO_CASES = REPO_ROOT / "data/mock_business/cases/cases.yaml"
+
+
+@router.get("/demo/cases")
+async def demo_cases() -> dict:
+    """The sample cases a person can open, with what each one is meant to show."""
+    registry = yaml.safe_load(DEMO_CASES.read_text(encoding="utf-8"))
+    return {"cases": [{"id": key, "title": case["title"], "summary": case["summary"]}
+                      for key, case in registry["cases"].items()]}
+
+
 @router.post("/demo", response_model=BatchSummary)
-async def demo_batch(user: Annotated[UserIdentity | None, Depends(require_user)]) -> BatchSummary:
+async def demo_batch(user: Annotated[UserIdentity | None, Depends(require_user)], case: str = "tour") -> BatchSummary:
     """Explicit sample notebook; freeze its dictionary without replacing deployment policy.
 
-    The sample is the fictional concrete supplier in `data/mock_business/demo`, filed on the
-    business side's v2 department templates, so the notebook shows the templates, the
-    cross-department master table and the declared review together.
+    The samples are the fictional concrete supplier, filed on the business side's v2
+    department templates. One batch cannot show every state, so there are several cases
+    (`data/mock_business/cases/cases.yaml`); without `case` it is the guided-tour sample.
     """
-    folder = REPO_ROOT / "data/mock_business/demo"
+    registry = yaml.safe_load(DEMO_CASES.read_text(encoding="utf-8"))
+    chosen = registry["cases"].get(case)
+    if chosen is None:
+        raise HTTPException(404, f"No sample case {case!r}; available: {', '.join(registry['cases'])}")
+    folder, period = REPO_ROOT / chosen["folder"], str(registry["period"])
     departments: list[Department] = ["production", "procurement", "finance", "marketing"]
     labels = {"production": "生产部", "procurement": "物资部", "finance": "财务部", "marketing": "市场部"}
     _check_upload_scope(departments, user)
     files = [UploadFile(io.BytesIO((folder / f"{department}.xlsx").read_bytes()),
-                        filename=f"模拟-{labels[department]}-2024-07.xlsx") for department in departments]
+                        filename=f"模拟-{labels[department]}-{period}.xlsx") for department in departments]
     try:
-        return await _import_batch("2024-07", departments, files, folder / "dictionary.yaml",
-                                   "mock-company-2024-07", owner=user.sub if user else "")
+        return await _import_batch(period, departments, files, REPO_ROOT / registry["dictionary"],
+                                   chosen["case_id"], owner=user.sub if user else "")
     finally:
         for upload in files:
             await upload.close()

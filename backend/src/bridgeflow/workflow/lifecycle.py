@@ -170,7 +170,9 @@ class HandoffMachine:
             view.inputs = {str(k): int(v) for k, v in dict(event.data["inputs"]).items()}
             view.stale = False
             view.reason = ""
-        if event.type == "handoff_returned":
+        # A return and a completion both rest on what a person stated; keep the latest so the
+        # handoff shows why it is where it is (the full history stays in the event log).
+        if event.type in ("handoff_returned", "handoff_completed"):
             view.reason = str(event.data.get("reason", ""))
         view.state = target
         return view

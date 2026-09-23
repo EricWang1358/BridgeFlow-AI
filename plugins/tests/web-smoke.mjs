@@ -171,7 +171,9 @@ try {
   })
   assert.equal(data.status, 403)
   for (const name of ['bridgeflow-plugins', 'dsh-client-ui-approval', 'dsh-client-ui-trajectory', 'dsh-client-ui-chat']) assert(data.boot.includes(name), name)
-  for (const name of ['dsh-client-ui-cordis', 'dsh-client-ui-settings-plugins', 'dsh-client-ui-attachment', 'dsh-client-ui-permission-presets']) assert(!data.boot.includes(name), name)
+  for (const name of ['dsh-client-ui-cordis', 'dsh-client-ui-settings-plugins', 'dsh-client-ui-attachment', 'dsh-client-ui-permission-presets', 'dsh-client-ui-settings-models']) assert(!data.boot.includes(name), name)
+  // dsh's own model picker chooses among configured models; adding providers stays off.
+  assert(data.boot.includes('dsh-client-ui-model-selection'), 'dsh-client-ui-model-selection')
   assert.equal((await fetch(`http://127.0.0.1:${webPort}/bridgeflow/batches/00000000000000000000000000000000`)).status, 401)
   await page.getByRole('button', { name: '关闭', exact: true }).click()
   await page.getByRole('button', { name: '会话与设置', exact: true }).click()

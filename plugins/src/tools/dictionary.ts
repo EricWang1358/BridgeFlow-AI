@@ -31,6 +31,14 @@ export interface DraftResult {
   next_step: string
 }
 
+type EntryText = { entry_id: string; department: string; column: string; role: string; decision: string; evidence: string }
+/** Each entry led by the entry_id that `dictionary_decide` takes; without it no entry could be decided. */
+export function renderDraftEntries(value: { entries?: unknown }) {
+  return [{ type: 'text' as const, text: ((value.entries ?? []) as EntryText[])
+    .map(entry => `[${entry.entry_id}] ${entry.department}.${entry.column} → ${entry.role} [${entry.decision}] ${entry.evidence}`).join(' | ') ||
+    'The draft has no entries.' }]
+}
+
 export function draftBody(args: Record<string, unknown>, agentId: string, callId: string | undefined) {
   return { batch_id: args.batch_id, confirmed_by: agentId, call_id: callId ?? null }
 }
@@ -96,12 +104,7 @@ export function dictionaryDraftView(config: BackendConfig): ProductTool {
     },
     output: {
       schema: { type: 'object', properties: { draft_id: { type: 'string' } }, additionalProperties: true },
-      render: (_args, value) => [{
-        type: 'text',
-        text: ((value.entries ?? []) as unknown as { department: string, column: string, role: string, decision: string, evidence: string }[])
-          .map(entry => `${entry.department}.${entry.column} → ${entry.role} [${entry.decision}] ${entry.evidence}`).join(' | ') ||
-          'The draft has no entries.',
-      }],
+      render: (_args, value) => renderDraftEntries(value as { entries?: unknown }),
     },
     async execute(args, exec) {
       return callBackend(config, '/tools/dictionary-draft-view', { draft_id: args.draft_id }, exec)

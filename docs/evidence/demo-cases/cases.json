@@ -1,0 +1,24 @@
+{
+  "core": {
+    "status": "needs_review",
+    "blockers": [],
+    "quarantined": 1,
+    "column_questions": 0
+  },
+  "other": {
+    "status": "needs_review",
+    "blockers": [
+      "production: 生产量 violates the declared nonnegative convention",
+      "production: a row is outside the requested period or lacks a date",
+      "marketing: 累计收款 is missing or unreadable"
+    ],
+    "quarantined": 0,
+    "column_questions": 1
+  },
+  "clean": {
+    "status": "ready",
+    "blockers": [],
+    "quarantined": 0,
+    "column_questions": 0
+  }
+}

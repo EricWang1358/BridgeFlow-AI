@@ -1,4 +1,5 @@
 import { Discovery } from './discovery.tsx'
+import { SampleCases } from './sample-cases.tsx'
 import { TourDriver, TourHelpButton, TourLayer } from './tour/tour.tsx'
 import { tourEvent } from './tour/state.ts'
 import { notebookKinds, notebookPurposes, isNotebookKind } from '../notebook-capabilities.ts'
@@ -177,7 +178,8 @@ function Shell({ ctx }: { ctx: Context }) {
           <span className="bf-file-icon" aria-hidden="true">▤</span><span><strong title={source.filename}>{source.filename}</strong><small>{t(source.id)} · {source.preview_available ? `${source.total} ${t('rows')}` : t('originalUnavailable')}</small></span><span aria-hidden="true">↗</span>
         </button></li>)}</ul>
         {!sources.length && <div className="bf-shell-empty"><span aria-hidden="true">▤</span><strong>{t('emptySources')}</strong><p>{t('emptySourcesHelp')}</p><p>{t('sampleNotebookHelp')}</p></div>}
-        <button data-tour-id="sample" disabled={notebook.busy || !notebook.loaded} onClick={notebook.sample}>{t('sampleNotebook')}</button>
+        <button data-tour-id="sample" disabled={notebook.busy || !notebook.loaded} onClick={() => notebook.sample()}>{t('sampleNotebook')}</button>
+        <SampleCases disabled={notebook.busy || !notebook.loaded} open={(id, title) => notebook.sample(id, title)} />
         <details className="bf-existing"><summary>{t('existing')}</summary><form onSubmit={e => { e.preventDefault(); const form = new FormData(e.currentTarget); navigate({ batch: String(form.get('batch')), view: 'tasks' }) }}><input name="batch" aria-label={t('batchId')} pattern="[a-f0-9]{32}" required/><button>{t('open')}</button></form></details>
       </div>
     </aside>

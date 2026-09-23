@@ -242,6 +242,9 @@ try {
   if (fault) {
     await page.locator('dialog[open]').getByRole('textbox', { name: '人工复核意见' }).fill('财务尚缺签核，请财务负责人核对来源后补充判断。')
     await page.locator('dialog[open]').getByRole('button', { name: '交给队长复核' }).click()
+    // The note lands in the captain's conversation; the report was opened from the Business
+    // state tab, so switch back to Chat to read it (docs/19 P1: tab activation is still manual).
+    await page.getByRole('tab', { name: /^(对话|Chat)$/ }).click()
     await page.getByText(/人工复核意见（报告/).first().waitFor()
     const after = (await readdir(sessionRoot, { recursive: true })).filter(p => p.endsWith('session.jsonl'))
     assert.equal(after.length, 5, 'Human handoff must not spawn another department team')

@@ -93,12 +93,14 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
   const create = () => leave(async () => { const fresh = await createNotebookSession(sessions); sessions.open(fresh); navigate({view:'state'}) })
   const exit = () => leave(async () => { sessions.clear(); navigate({view:'state'}); history.current?.showModal(); await sessions.refresh() })
   const openHistory = () => { history.current?.showModal(); void perform(() => sessions.refresh()) }
-  const sample = () => leave(async () => {
-    const batch = await api<Summary>('/batches/demo',{method:'POST'})
+  // Without a case it is the guided-tour sample; other cases show states that cannot share
+  // one batch (data/mock_business/cases/cases.yaml), each in its own notebook.
+  const sample = (demoCase = '', title = '') => leave(async () => {
+    const batch = await api<Summary>(`/batches/demo${demoCase ? `?case=${encodeURIComponent(demoCase)}` : ''}`,{method:'POST'})
     const fresh = await createNotebookSession(sessions)
-    const notebook = {title:t('sampleNotebookTitle'),batch:batch.batch_id,view:'state',kind:'monthly'}
+    const notebook = {title:title || t('sampleNotebookTitle'),batch:batch.batch_id,view:demoCase ? 'tasks' : 'state',kind:'monthly'}
     await api(`/notebook?session_id=${encodeURIComponent(fresh)}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(notebook)})
-    drafts.current.delete(fresh); sessions.open(fresh); navigate({batch:batch.batch_id,view:'state'}); await sessions.refresh()
+    drafts.current.delete(fresh); sessions.open(fresh); navigate({batch:batch.batch_id,view:demoCase ? 'tasks' : 'state'}); await sessions.refresh()
     tourEvent('sample', batch.batch_id, fresh)
   })
   const dialogs = <>

@@ -14,6 +14,15 @@ import type { ApprovalReceipts } from '../approval/receipts.ts'
  */
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json }
 
+type DispositionsText = { open?: number; refusal?: string
+  dispositions?: { check_id: string; state: string; version?: number; available: string[] }[] }
+/** Each finding with the version `risk_disposition_record` checks as expected_version. */
+export function renderDispositions(result: DispositionsText) {
+  if (result.refusal) return [{ type: 'text' as const, text: result.refusal }]
+  return [{ type: 'text' as const, text: `${result.open ?? 0} open finding(s). ` + (result.dispositions ?? [])
+    .map(d => `${d.check_id} v${d.version ?? 0}: ${d.state}${d.available.length ? ` → ${d.available.join('/')}` : ''}`).join(' | ') }]
+}
+
 export function recordBody(args: Record<string, unknown>, agentId: string, callId: string | undefined) {
   return { batch_id: args.batch_id, check_id: args.check_id, action: args.action, note: args.note ?? '',
     report_id: args.report_id ?? null,
@@ -28,13 +37,7 @@ export function riskDispositions(config: BackendConfig): ProductTool {
     name: 'risk_dispositions',
     description: 'The state of each attention finding in a batch\'s review: current state, who decided it, and which actions the company\'s declaration allows next. No cell values.',
     parameters: { batch_id: { type: 'string', required: true } },
-    output: { ...anyObject, render: (_args, value) => {
-      const result = value as { open?: number; refusal?: string
-        dispositions?: { check_id: string; state: string; available: string[] }[] }
-      if (result.refusal) return [{ type: 'text', text: result.refusal }]
-      return [{ type: 'text', text: `${result.open ?? 0} open finding(s). ` + (result.dispositions ?? [])
-        .map(d => `${d.check_id}: ${d.state}${d.available.length ? ` → ${d.available.join('/')}` : ''}`).join(' | ') }]
-    } },
+    output: { ...anyObject, render: (_args, value) => renderDispositions(value as DispositionsText) },
     async execute(args, exec) {
       return callBackend<Record<string, Json>>(config, '/tools/risk-dispositions', { batch_id: args.batch_id }, exec)
     },

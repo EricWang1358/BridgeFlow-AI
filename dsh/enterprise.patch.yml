@@ -60,13 +60,12 @@
   disabled: true
   config: {}
 
+# Adding providers or typing API keys stays off: on a shared console that would let anyone
+# send data to an endpoint of their choosing. Choosing among the models the operator has
+# already configured (DSH_HOME settings) is dsh's own picker, and it is on: which model
+# answers is a per-session choice, not something BridgeFlow hard-codes.
 - id: ui-settings-models
   name: '@deepseek-ai/dsh-client-ui-settings-models'
-  disabled: true
-  config: {}
-
-- id: ui-model-selection
-  name: '@deepseek-ai/dsh-client-ui-model-selection'
   disabled: true
   config: {}
 

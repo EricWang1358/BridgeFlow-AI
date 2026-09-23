@@ -96,6 +96,42 @@ def expression(node: dict, batch: BatchSnapshot | None, depth: int = 0, *,
     return Value(value, (a.sources + b.sources)[:5], a.count + b.count)
 
 
+def data_blockers(batch: BatchSnapshot) -> list[str]:
+    """Row-level data problems that stop a review, each in the words the review refuses with.
+
+    These are declared import contracts, not column-name guesses. The batch status reads the
+    same list, so a batch is never shown as ready for review while the review would refuse
+    it — before this, a negative quantity or a row from another month imported as "ready"
+    and was only refused when somebody started the review.
+    """
+    config = (batch.dictionary_snapshot or {}).get("business_review") or {}
+    reasons: list[str] = []
+    for table in batch.clean_tables:
+        if any(c.rule == "duplicate_row" for c in table.corrections):
+            reasons.append(f"{table.department}: identical rows need transaction identity review before totals; import a corrected source")
+        schema = config.get("inputs", {}).get(table.department, {})
+        date_column = schema.get("date_column")
+        if not date_column:
+            continue
+        for row in table.rows:
+            for column in schema.get("nonnegative_columns", []):
+                try:
+                    value = number(row.get(column))
+                except HTTPException:
+                    # Named here, where department and column are known; the bare check
+                    # only knows that some declared cell could not be read.
+                    reasons.append(f"{table.department}: {column} is missing or unreadable")
+                    continue
+                if value < 0:
+                    reasons.append(f"{table.department}: {column} violates the declared nonnegative convention")
+            if not str(row.get(date_column, "")).startswith(batch.period + "-"):
+                reasons.append(f"{table.department}: a row is outside the requested period or lacks a date")
+            currency = schema.get("currency")
+            if currency and row.get(currency["column"]) != currency["value"]:
+                reasons.append(f"{table.department}: currency missing or mismatched; conversion is not configured")
+    return list(dict.fromkeys(reasons))
+
+
 def context(batch_id: str, batch: BatchSnapshot) -> dict:
     if batch.refusal or any(t.quarantine for t in batch.clean_tables):
         refuse("Resolve batch configuration or quarantined rows and import a new batch before review")
@@ -104,23 +140,12 @@ def context(batch_id: str, batch: BatchSnapshot) -> dict:
         refuse("No business review contract configured for this batch")
     if {t.department for t in batch.clean_tables} != set(ROLES):
         refuse("Business review requires all four departments")
-    # These are declared import contracts, not column-name guesses.
     for table in batch.clean_tables:
-        if any(c.rule == "duplicate_row" for c in table.corrections):
-            refuse(f"{table.department}: identical rows need transaction identity review before totals; import a corrected source")
-        schema = config.get("inputs", {}).get(table.department, {})
-        date_column = schema.get("date_column")
-        if not date_column:
+        if not config.get("inputs", {}).get(table.department, {}).get("date_column"):
             refuse(f"No period field declared for {table.department}")
-        for row in table.rows:
-            for column in schema.get("nonnegative_columns", []):
-                if number(row.get(column)) < 0:
-                    refuse(f"{table.department}: {column} violates the declared nonnegative convention")
-            if not str(row.get(date_column, "")).startswith(batch.period + "-"):
-                refuse(f"{table.department}: a row is outside the requested period or lacks a date")
-            currency = schema.get("currency")
-            if currency and row.get(currency["column"]) != currency["value"]:
-                refuse(f"{table.department}: currency missing or mismatched; conversion is not configured")
+    blockers = data_blockers(batch)
+    if blockers:
+        refuse(blockers[0])
     definitions = config.get("metrics", {})
     if not 1 <= len(definitions) <= 24:
         refuse("Business metric catalogue must contain 1–24 entries")

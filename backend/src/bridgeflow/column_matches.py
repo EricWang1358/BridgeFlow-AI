@@ -146,12 +146,18 @@ def open_columns(snapshot: dict | None, table: CleanTable) -> tuple[list[str], d
 
 
 def count_questions(snapshot: dict | None, tables: list[CleanTable]) -> int:
-    """How many uploaded columns have a declared column they might be. No profiling."""
+    """How many declared columns are missing while unknown columns could be them. No profiling.
+
+    The question a person answers is per missing declared column — which uploaded column is
+    it, or is it really absent — not per unknown column. Counting unknown columns reported
+    every undeclared header in the sheet (20 for one renamed column under the demo
+    dictionary), which buried the one real question.
+    """
     total = 0
     for table in tables:
         unknown, missing = open_columns(snapshot, table)
-        if missing:
-            total += len(unknown)
+        if unknown:
+            total += len(missing)
     return total
 
 
