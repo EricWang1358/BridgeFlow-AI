@@ -3,8 +3,9 @@
 # NOT company data and NOT an approved business standard. Header labels follow the
 # header-only 生产部.xlsx template discussed in #143; every alias, unit, route, owner
 # role and time limit below is a demonstration setting that the business side still has
-# to confirm. It is marked `approved` only so the demo can accept data; the marketing
-# template stays `draft` to show that unapproved declarations never run.
+# to confirm. Both templates are marked `approved` only so the demo can run its two hops
+# (production → marketing → finance); the test suite keeps the guarantee that a `draft`
+# template never runs by loading a variant of this file.
 version: "2026-09-13.demo-1"
 status: approved
 case: 合成示例：生产部一条生产记录标准化后交市场部处理；非客户数据
@@ -61,12 +62,12 @@ templates:
     title: 结算依据
     department: 市场部
     version: 1
-    status: draft
+    status: approved
     business_key: [project, period]
     fields:
-      project: {label: 项目名称}
-      period: {label: 期间, dtype: period}
-      settled_qty: {label: 结算量, dtype: number, unit: m3, units: {m3: m3}}
+      project: {label: 项目名称, aliases: [工程]}
+      period: {label: 期间, dtype: period, aliases: [月份]}
+      settled_qty: {label: 结算量, dtype: number, unit: m3, units: {方: m3, m³: m3, m3: m3}, minimum: 0}
 
 stages:
   production_reporting:
@@ -82,6 +83,13 @@ stages:
     outputs: [settlement_basis]
     action: 核对数量差异并准备结算依据
     sla_hours: 48
+  finance_settlement:
+    title: 财务部结算开票
+    department: 财务部
+    owner_role: 财务部结算员
+    inputs: [settlement_basis]
+    action: 核对结算依据并开具发票
+    sla_hours: 72
 
 lineage:
   - source: production_record.actual_qty

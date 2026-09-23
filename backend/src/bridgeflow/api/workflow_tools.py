@@ -20,10 +20,17 @@ from typing import Any, Literal
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from bridgeflow.api.workflow import _domain_errors, _handoff, service
+from bridgeflow.api.workflow import (
+    _domain_errors,
+    _handoff,
+    discovery_context,
+    require_scope,
+    service,
+)
 from bridgeflow.config import settings
 from bridgeflow.security import consume_approval
 from bridgeflow.workflow import board
+from bridgeflow.workflow import scope as workflow_scope
 from bridgeflow.workflow.intake import Observation, Source
 from bridgeflow.workflow.service import ArtifactSnapshot
 
@@ -136,10 +143,10 @@ class HandoffCall(BaseModel):
 async def workflow_handoff(request: HandoffCall, http_request: Request) -> dict[str, Any]:
     _require_writes()
     workflow = service()
-    consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(), "workflow_handoff")
+    actor = consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(), "workflow_handoff")
     with _domain_errors():
         return _handoff(workflow.act(request.handoff_id, request.action, request.reason,
-                                     request.expected_seq)).model_dump()
+                                     request.expected_seq, by=actor)).model_dump()
 
 
 class ReceiveCall(BaseModel):
@@ -153,6 +160,7 @@ class ReceiveCall(BaseModel):
 async def workflow_receive(request: ReceiveCall, http_request: Request) -> dict[str, Any]:
     _require_writes()
     workflow = service()
+    require_scope(workflow)  # before the approval is spent: a stale scope costs a new decision, not a receipt
     consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(), "workflow_record")
     with _domain_errors():
         return _draft(workflow.receive(request.template, _observations(request.said, request.call_id)))
@@ -225,3 +233,42 @@ async def workflow_guidance(request: GuidanceCall) -> dict[str, Any]:
         result[f"{key}_truncated"] = len(result[key]) > MAX_BOARD_ROWS
         result[key] = result[key][:MAX_BOARD_ROWS]
     return result
+
+
+@router.post("/workflow-scope")
+async def workflow_scope_tool() -> dict[str, Any]:
+    """For the captain: the accepted MVP scope, whether it is still current, and approved
+    decisions waiting to be accepted (with the decision_seq acceptance needs)."""
+    workflow = service()
+    domain, policy = discovery_context()
+    state = workflow_scope.view(workflow, domain, policy)
+    state["pending"] = workflow_scope.pending(domain, policy, workflow) if policy else []
+    return state | {"next_step": (
+        "If a pending decision is listed, show the person its scope and exclusions, then call workflow_accept_scope "
+        "with its project_id, decision_id and decision_seq; the approval card is their decision. If the accepted "
+        "scope is stale, say why and that new records wait for the current decision.")}
+
+
+class AcceptScopeCall(BaseModel):
+    project_id: str = Field(min_length=1, max_length=80)
+    decision_id: str = Field(min_length=1, max_length=80)
+    decision_seq: int = Field(ge=1)
+    confirmed_by: str = "unknown-agent"
+    call_id: str | None = None
+
+
+@router.post("/workflow-accept-scope")
+async def workflow_accept_scope(request: AcceptScopeCall, http_request: Request) -> dict[str, Any]:
+    """A person accepts an approved MVP decision as the scope this workflow runs under."""
+    _require_writes()
+    workflow = service()
+    domain, policy = discovery_context()
+    if policy is None:
+        raise HTTPException(503, "No decision policy is configured; there is no MVP decision to accept")
+    actor = consume_approval(http_request.headers.get("x-bridgeflow-approval", ""), await http_request.body(),
+                             "workflow_accept_scope")
+    try:
+        return workflow_scope.accept(workflow, domain, policy, project=request.project_id,
+                                     decision_id=request.decision_id, expected_decision_seq=request.decision_seq, by=actor)
+    except workflow_scope.ScopeError as exc:
+        raise HTTPException(409, str(exc)) from exc

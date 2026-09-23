@@ -40,7 +40,7 @@ test('the combined table and handoff are valid durable notebook destinations', (
 test('a notebook can be saved on every studio destination and batch-table section', async () => {
   // The #219 destinations were missing from the whitelist, so Save failed on those pages.
   const { sections } = await import('../src/client/workspace.tsx')
-  for (const view of ['tasks', 'data', 'brief', 'records', ...sections]) {
+  for (const view of ['tasks', 'data', 'brief', 'records', 'overview', ...sections]) {
     assert.equal(parseNotebook({ title: 'Monthly', view, batch: 'a'.repeat(32) }).view, view)
   }
 })

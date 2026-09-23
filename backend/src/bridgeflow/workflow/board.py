@@ -9,6 +9,8 @@ partial, never as "data ready".
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 from pydantic import BaseModel, Field
 
 from bridgeflow.workflow.lifecycle import ArtifactState, HandoffState, NotificationState
@@ -47,6 +49,14 @@ class HandoffRow(BaseModel):
     summary: str
     seq: int
     updated_at: str
+    #: Templates this stage produces that are not recorded yet for the key; it cannot complete until they are.
+    awaiting_outputs: list[str] = []
+    #: When the handoff opened, and — if its stage declares a time limit — when it is due and
+    #: by how many hours it is late (negative: hours left). Unfinished work only; nothing is flagged without an
+    #: agreed limit (the same rule the adoption signal uses).
+    opened_at: str = ""
+    due_at: str = ""
+    overdue_hours: float | None = None
 
 
 class PartialRow(BaseModel):
@@ -103,6 +113,9 @@ def _handoff_row(service: WorkflowService, snapshot: HandoffSnapshot, notices: d
         summary = f"{stage.department}已退回：{snapshot.view.reason}"
     else:
         summary = f"{stage.department}已完成"
+    owed = service.missing_outputs(snapshot.stage, snapshot.key) if state in (HandoffState.WAITING, HandoffState.IN_PROGRESS) else []
+    if owed:
+        summary += "；" + "、".join(service.catalogue.templates[t].title for t in owed) + "入库后才能完成"
     if snapshot.view.stale:
         summary += "；上游已修订，请按新版本复核"
     if notification in (NotificationState.FAILED, NotificationState.ABANDONED):
@@ -111,7 +124,19 @@ def _handoff_row(service: WorkflowService, snapshot: HandoffSnapshot, notices: d
                       owner_role=stage.owner_role, business_key=list(snapshot.key), inputs=snapshot.view.inputs,
                       state=str(state), stale=snapshot.view.stale,
                       notification=str(notification) if notification else "none",
-                      summary=summary, seq=snapshot.seq, updated_at=snapshot.updated_at)
+                      summary=summary, seq=snapshot.seq, updated_at=snapshot.updated_at, awaiting_outputs=owed,
+                      **_timing(service, snapshot, stage))
+
+
+def _timing(service: WorkflowService, snapshot: HandoffSnapshot, stage) -> dict:
+    opened = snapshot.events[0].at if snapshot.events else ""
+    if not opened or stage.sla_hours is None:
+        return {"opened_at": opened}
+    due = datetime.fromisoformat(opened) + timedelta(hours=stage.sla_hours)
+    late = None
+    if snapshot.view.state in (HandoffState.WAITING, HandoffState.IN_PROGRESS, HandoffState.RETURNED):
+        late = round((service.clock() - due).total_seconds() / 3600, 1)
+    return {"opened_at": opened, "due_at": due.isoformat(), "overdue_hours": late}
 
 
 def project(service: WorkflowService) -> Board:

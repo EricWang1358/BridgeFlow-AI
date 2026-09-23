@@ -3,6 +3,7 @@ import { api, askCaptain, useUI, describeError } from './ui.ts'
 import { Notebook } from './notebook.tsx'
 import { Chip } from './workspace.tsx'
 import { WorkflowFlow } from './workflow-flow.tsx'
+import { WorkflowScopeCard, WorkflowTimeline } from './workflow-scope.tsx'
 
 /**
  * Template filling and handoff, as people see it (#144, #145).
@@ -16,7 +17,7 @@ import { WorkflowFlow } from './workflow-flow.tsx'
 
 type Row =
   | { kind: 'artifact'; id: string; title: string; department: string; business_key: string[]; version: number; state: string; summary: string; updated_at: string }
-  | { kind: 'handoff'; id: string; title: string; department: string; owner_role: string; business_key: string[]; state: string; stale: boolean; notification: string; summary: string; updated_at: string }
+  | { kind: 'handoff'; id: string; stage: string; title: string; department: string; owner_role: string; business_key: string[]; state: string; stale: boolean; notification: string; summary: string; updated_at: string; due_at?: string; overdue_hours?: number | null; awaiting_outputs?: string[] }
   | { kind: 'partial'; stage: string; title: string; department: string; business_key: string[]; summary: string }
 export type Draft = {
   id: string; title: string; department: string; state: string; version: number
@@ -39,7 +40,7 @@ export function Handoff() {
   const [rows, setRows] = useState<Row[] | null>(null), [catalogue, setCatalogue] = useState<Catalogue | null>(null)
   const [findings, setFindings] = useState<Finding[]>([]), [draft, setDraft] = useState<Draft | null>(null)
   const [selected, setSelected] = useState(''), [error, setError] = useState(''), [revision, setRevision] = useState(0)
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState(false), [timeline, setTimeline] = useState('')
 
   useEffect(() => {
     const controller = new AbortController(), signal = controller.signal
@@ -60,8 +61,11 @@ export function Handoff() {
     return () => controller.abort()
   }, [selected, revision])
 
-  const counts: Record<string, number> = {}
-  for (const row of rows ?? []) if (row.kind !== 'partial') counts[row.state] = (counts[row.state] ?? 0) + 1
+  const counts: Record<string, number> = {}, overdue: Record<string, number> = {}
+  for (const row of rows ?? []) if (row.kind !== 'partial') {
+    counts[row.state] = (counts[row.state] ?? 0) + 1
+    if (row.kind === 'handoff' && (row.overdue_hours ?? -1) > 0) overdue[row.state] = (overdue[row.state] ?? 0) + 1
+  }
   const fill = (key: string, id: string) => t(key).replaceAll('{id}', id)
   // The next step of a record is a request to the captain, never a write from this page:
   // every write still goes through the captain's tool and a person's approval.
@@ -69,7 +73,7 @@ export function Handoff() {
     row.kind === 'artifact' && row.state === 'needs_input' ? ['askNeedsInput', fill('requestNeedsInput', row.id)]
       : row.kind === 'artifact' && row.state === 'ready_for_review' ? ['askReview', fill('requestReview', row.id)]
         : row.kind === 'handoff' && row.state === 'waiting' ? ['askStart', fill('requestStart', row.id)]
-          : row.kind === 'handoff' && row.state === 'in_progress' ? ['askComplete', fill('requestComplete', row.id)] : null
+          : row.kind === 'handoff' && row.state === 'in_progress' && !row.awaiting_outputs?.length ? ['askComplete', fill('requestComplete', row.id)] : null
   async function run(action: () => Promise<unknown>) {
     setBusy(true); setError('')
     try { await action(); setRevision(n => n + 1) } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
@@ -97,8 +101,9 @@ export function Handoff() {
     <div className="bf-card-head"><h3>{t('handoffBoard')}</h3><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button></div>
     {error && <p role="alert" className="bf-error">{error}</p>}
     {!rows && !error && <p role="status" className="bf-loading">{t('loading')}</p>}
+    <WorkflowScopeCard revision={revision} onChanged={() => setRevision(n => n + 1)} />
     {rows && !rows.length && <p className="bf-hint">{t('handoffEmpty')}</p>}
-    <WorkflowFlow counts={counts} />
+    <WorkflowFlow counts={counts} overdue={overdue} />
     {rows && !rows.length && <div className="bf-notebook-empty"><p>{t('handoffEmptyHelp')}</p>
       <p className="bf-hint">{t('workflowSampleHelp')}</p>
       <button className="bf-primary" disabled={busy} onClick={() => void run(() => api('/workflow/sample', { method: 'POST' }))}>{t(busy ? 'busy' : 'workflowSample')}</button></div>}
@@ -106,12 +111,18 @@ export function Handoff() {
       <div className="bf-handoff-head"><strong>{row.department} · {row.title}</strong>
         <Chip status={row.kind === 'partial' ? 'partial' : row.state}/>
         {row.kind === 'handoff' && row.notification !== 'none' && <Chip status={`notice_${row.notification}`}/>}
-        {row.kind === 'handoff' && row.stale && <Chip status="upstream_revised"/>}</div>
+        {row.kind === 'handoff' && row.stale && <Chip status="upstream_revised"/>}
+        {row.kind === 'handoff' && row.overdue_hours != null && <span className="bf-due" data-overdue={row.overdue_hours > 0}>
+          {t(row.overdue_hours > 0 ? 'overdueBy' : 'dueIn').replaceAll('{h}', String(Math.abs(Math.round(row.overdue_hours))))}</span>}</div>
       <p>{row.summary}</p>
       <span className="bf-hint">{row.business_key.join(' · ')}{row.kind === 'handoff' ? ` · ${row.owner_role}` : ''}</span>
       {(() => { const step = next(row); return step && <button className="bf-primary" disabled={busy}
         onClick={() => void run(() => askCaptain(step[1]))}>{t(step[0])}</button> })()}
-      {row.kind === 'artifact' && <button aria-expanded={selected === row.id} onClick={() => setSelected(selected === row.id ? '' : row.id)}>{t(selected === row.id ? 'close' : 'viewDraft')}</button>}
+      {row.kind !== 'partial' && <div className="bf-row-actions">
+        <button aria-expanded={timeline === row.id} onClick={() => setTimeline(timeline === row.id ? '' : row.id)}>{t('timeline')}</button>
+        {row.kind === 'artifact' && <button aria-expanded={selected === row.id} onClick={() => setSelected(selected === row.id ? '' : row.id)}>{t(selected === row.id ? 'close' : 'viewDraft')}</button>}
+      </div>}
+      {row.kind !== 'partial' && timeline === row.id && <WorkflowTimeline kind={row.kind} id={row.id} />}
       {row.kind === 'artifact' && selected === row.id && draft?.id === row.id && <DraftDetail draft={draft}/>}
     </article>)}
   </Notebook>

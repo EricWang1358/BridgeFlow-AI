@@ -30,6 +30,8 @@ const env = { ...process.env, DSH_HOME: `${scratch}/dsh`, DSH_TOOLS_MODE: 'nativ
   BRIDGEFLOW_SERVICE_TOKEN: randomBytes(32).toString('hex'), PYTHONPATH: `${root}/backend/src`, RESULT_STORE_PATH: `${scratch}/outputs`,
   MAPPING_MEMORY_PATH: `${scratch}/mappings.json`, FIELD_DICTIONARY_PATH: `${root}/data/mock_business/demo/dictionary.yaml`,
   WORKFLOW_CATALOGUE_PATH: `${root}/data/workflow_demo/catalogue.yaml`,
+  DISCOVERY_SCORING_POLICY_PATH: `${root}/data/discovery_demo/scoring-policy.yaml`,
+  DISCOVERY_DECISION_POLICY_PATH: `${root}/data/discovery_demo/decision-policy.yaml`,
   LLM_PROVIDER: 'mock', BRIDGEFLOW_ENABLE_LEGACY_CONSOLE: 'false', BRIDGEFLOW_ALLOW_SAMPLE_DATA: 'false' }
 const processes = []
 let logs = '', browser, page
@@ -78,13 +80,35 @@ try {
   assert.equal(await page.locator('.bf-pipeline > li[data-active=true]').count(), 0)
   await shot('01-empty-flow')
 
+  // Discovery → workflow: nothing is linked yet; the sample project ends in an approved
+  // decision, which the card then offers for the captain to accept (behind approval).
+  const scopeCard = page.getByRole('region', { name: 'Workflow scope' })
+  await scopeCard.getByRole('button', { name: 'Load the sample discovery project', exact: true }).click()
+  await scopeCard.getByRole('button', { name: 'Ask the captain to accept this scope', exact: true }).waitFor()
+  assert.match(await scopeCard.innerText(), /demo-handoff \/ mvp/)
+  await shot('00-scope-waiting')
+
   // The sample only receives: one record lacks its confirmed quantity, one awaits review.
   await page.getByRole('button', { name: 'Load the sample workflow', exact: true }).click()
-  await page.getByRole('button', { name: 'Ask the captain to submit for approval', exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Ask the captain to submit for approval', exact: true }).first().waitFor()
   const loaded = await board()
-  assert.deepEqual(loaded.filter(r => r.kind === 'artifact').map(r => r.state).sort(), ['needs_input', 'ready_for_review'])
+  assert.deepEqual(loaded.filter(r => r.kind === 'artifact').map(r => r.state).sort(), ['needs_input', 'ready_for_review', 'ready_for_review'])
   assert.equal(await page.locator('.bf-pipeline > li[data-active=true]').count(), 2)
   await shot('02-sample-loaded')
+
+  // Every record keeps its own timeline: what happened, when, by whom.
+  await page.locator('article.bf-source-item').first().getByRole('button', { name: 'Timeline', exact: true }).click()
+  await page.locator('.bf-timeline > li').first().waitFor()
+  assert.match(await page.locator('.bf-timeline').innerText(), /Submission received/)
+
+  // The overview reads the same board: the two occupied stages show up as bars.
+  await studio.getByRole('button', { name: /^Overview/ }).click()
+  const stagesBlock = page.getByRole('region', { name: 'Workflow stages' })
+  await stagesBlock.locator('.bf-ov-bar').first().waitFor()
+  assert.equal(await page.locator('.bf-ov-tile').filter({ hasText: 'Records in flight' }).locator('b').innerText(), '3')
+  await shot('07-overview-without-batch')
+  await studio.getByRole('button', { name: 'Filling & handoff', exact: true }).click()
+  await page.locator('.bf-pipeline').waitFor()
 
   const measured = { mode: live ? 'live' : 'offline', steps: [] }
   if (live) {
@@ -106,9 +130,13 @@ try {
     }
     // Drive one step: click each approval card as it appears, answer once if asked, and
     // stop when the workflow itself (read from the backend) reaches the goal.
-    async function drive(label, button, done, reply) {
+    // `within` names the record card whose button to press (title and project), because
+    // several records can offer the same next step.
+    async function drive(label, button, done, reply, within = []) {
       const stepBegan = Date.now()
-      await page.getByRole('button', { name: button, exact: true }).click()
+      let card = page.locator('article.bf-source-item')
+      for (const text of within) card = card.filter({ hasText: text })
+      await (typeof button === 'string' ? card.getByRole('button', { name: button, exact: true }).first() : button).click()
       let lastActivity = Date.now(), replied = !reply, nudged = false
       for (const until = Date.now() + 300_000; Date.now() < until;) {
         const allow = page.getByRole('button', { name: /^(允许一次|Allow once)$/ })
@@ -128,7 +156,7 @@ try {
           else { await skip.click(); await say('The 1.5 m³ difference is expected transit loss. Submit it as it stands; the approval card is my confirmation.') }
           lastActivity = Date.now(); await wait(1500); continue
         }
-        if (done(await board())) { measured.steps.push({ step: label, elapsed_ms: Date.now() - stepBegan }); await refresh(); return }
+        if (await done(await board())) { measured.steps.push({ step: label, elapsed_ms: Date.now() - stepBegan }); await refresh(); return }
         if (await captainIdle() && Date.now() - lastActivity > 5000) {
           if (!replied) { await say(reply); replied = true }
           else if (!nudged) { await say('Please go ahead with the tool call; the approval card is my confirmation.'); nudged = true }
@@ -139,17 +167,36 @@ try {
       }
       throw new Error(`${label}: timed out`)
     }
-    const ready = loaded.find(r => r.kind === 'artifact' && r.state === 'ready_for_review').id
+    // Accept the approved MVP decision as this workflow's scope, before any record moves.
+    await drive('scope accepted', scopeCard.getByRole('button', { name: 'Ask the captain to accept this scope', exact: true }),
+      async () => (await page.evaluate(async () => (await (await fetch('/bridgeflow/workflow/scope')).json()))).current === true)
+    await scopeCard.getByText('Running under an approved MVP decision').waitFor()
+    await shot('00b-scope-accepted')
+    const ready = loaded.find(r => r.kind === 'artifact' && r.template === 'production_record' && r.state === 'ready_for_review').id
     const missing = loaded.find(r => r.kind === 'artifact' && r.state === 'needs_input').id
     await drive('review and submit', 'Ask the captain to submit for approval',
-      rows => rows.some(r => r.id === ready && r.state === 'data_ready') && rows.some(r => r.kind === 'handoff'))
+      rows => rows.some(r => r.id === ready && r.state === 'data_ready') && rows.some(r => r.kind === 'handoff'),
+      undefined, ['生产记录', '演示项目B'])
     await shot('03-recorded-and-handed-over')
-    await drive('downstream starts', 'Ask the captain to start it', rows => rows.some(r => r.kind === 'handoff' && r.state === 'in_progress'))
-    await drive('downstream completes', 'Ask the captain to complete it', rows => rows.some(r => r.kind === 'handoff' && r.state === 'completed'))
+    const market = r => r.kind === 'handoff' && r.stage === 'market_review'
+    const finance = r => r.kind === 'handoff' && r.stage === 'finance_settlement'
+    await drive('downstream starts', 'Ask the captain to start it', rows => rows.some(r => market(r) && r.state === 'in_progress'), undefined, ['市场部'])
+    // Marketing's stage produces the settlement basis; it cannot be completed until that is
+    // recorded, so the page offers no "complete" until then (the board says what is owed).
+    assert.equal(await page.locator('article.bf-source-item').filter({ hasText: '入库后才能完成' })
+      .getByRole('button', { name: 'Ask the captain to complete it', exact: true }).count(), 0)
+    const settlement = loaded.find(r => r.kind === 'artifact' && r.template === 'settlement_basis').id
+    await drive('settlement submitted', 'Ask the captain to submit for approval',
+      rows => rows.some(r => r.id === settlement && r.state === 'data_ready') && rows.some(finance), undefined, ['结算依据'])
+    await drive('downstream completes', 'Ask the captain to complete it', rows => rows.some(r => market(r) && r.state === 'completed'), undefined, ['市场部'])
     await shot('04-completed')
+    // The second hop: marketing's settlement basis went to finance.
+    await drive('finance starts', 'Ask the captain to start it', rows => rows.some(r => finance(r) && r.state === 'in_progress'), undefined, ['财务部'])
+    await drive('finance completes', 'Ask the captain to complete it', rows => rows.some(r => finance(r) && r.state === 'completed'), undefined, ['财务部'])
+    await shot('06-second-hop-completed')
     await drive('missing quantity answered', 'Ask the captain to fill the gaps',
       rows => rows.some(r => r.id === missing && r.state === 'ready_for_review'),
-      'The actual quantity is 97 m³, confirmed by delivery note DEMO-0901.')
+      'The actual quantity is 97 m³, confirmed by delivery note DEMO-0901.', ['生产记录', '演示项目A'])
     await shot('05-answered')
     const all = await sessionLogs()
     const messages = all.flatMap(l => l.events).filter(e => e.type === 'assistant/message')

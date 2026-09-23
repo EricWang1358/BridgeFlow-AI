@@ -17,6 +17,7 @@ import { Handoff } from './handoff.tsx'
 import { MasterTable } from './master.tsx'
 import { MonthlyBrief } from './brief.tsx'
 import { BusinessReview, type Review } from './review.tsx'
+import { Overview } from './overview.tsx'
 import { projectAudit, type AuditEvent } from './audit.ts'
 import { useNotebook } from './notebook-session.tsx'
 import { PanelResizers, useNativeSidebar } from './shell-layout.tsx'
@@ -110,7 +111,7 @@ function Shell({ ctx }: { ctx: Context }) {
     void task?.catch(e => { if (!signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
   }, [batchId, selected.source, selected.report, selected.view, offset, revision])
-  const viewing = ['discovery', 'quotation', 'handoff', 'integration', 'brief', 'source', 'artifact', 'tasks', 'data', 'records'].includes(selected.view ?? '')
+  const viewing = ['overview', 'discovery', 'quotation', 'handoff', 'integration', 'brief', 'source', 'artifact', 'tasks', 'data', 'records'].includes(selected.view ?? '')
   useEffect(() => {
     if (!viewing) { viewer.current?.close(); return }
     setPanel('studio'); setHiddenStudio(false); ctx.layout.closeDetails()
@@ -128,7 +129,7 @@ function Shell({ ctx }: { ctx: Context }) {
           onImport={() => importer.current?.showModal()} onRefresh={() => setRevision(n => n + 1)} />
       : selected.view === 'records' && batchId
         ? <RecordsView batchId={batchId} summary={summary} artifacts={artifacts} language={language} />
-        : selected.view === 'discovery' ? <Discovery /> : selected.view === 'quotation' ? <Quotation /> : selected.view === 'handoff' ? <Handoff /> : selected.view === 'integration' && batchId ? <MasterTable batchId={batchId} /> : selected.view === 'brief' && batchId ? <MonthlyBrief batchId={batchId} /> : preview ? <section aria-label={t('sourcePreview')}>
+        : selected.view === 'overview' ? <Overview batchId={batchId} /> : selected.view === 'discovery' ? <Discovery /> : selected.view === 'quotation' ? <Quotation /> : selected.view === 'handoff' ? <Handoff /> : selected.view === 'integration' && batchId ? <MasterTable batchId={batchId} /> : selected.view === 'brief' && batchId ? <MonthlyBrief batchId={batchId} /> : preview ? <section aria-label={t('sourcePreview')}>
     <h3>{preview.filename}</h3><p className="bf-hint">{t('parsedOriginal')} {preview.sheet}</p>
     <div className="bf-source-table"><table><thead><tr><th>{t('sourceRow')}</th>{preview.columns.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>
       <tbody>{preview.rows.map((row, i) => <tr key={preview.offset + i}><th>{preview.row_numbers?.[i] ?? preview.offset + i + 2}</th>{row.map((cell, j) => <td key={j}>{cell === null ? '—' : String(cell)}</td>)}</tr>)}</tbody></table></div>
@@ -189,14 +190,15 @@ function Shell({ ctx }: { ctx: Context }) {
         <div className="bf-studio-tools" aria-label={t('tools')}>
           {/* Four destinations, named after what a person is doing, not after our modules.
               Everything that used to have two entries now has exactly one, inside one of these. */}
-          <button data-tour-id="state-open" data-tone="pink" aria-pressed={selected.view === 'tasks'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'tasks' })}><span aria-hidden="true">◷</span>{t('monthlyTasks')}<span className="bf-badge">{openItems}</span><span aria-hidden="true">›</span></button>
-          <button data-tone="blue" aria-pressed={selected.view === 'data'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'data' })}><span aria-hidden="true">▤</span>{t('dataWorkspace')}<span aria-hidden="true">›</span></button>
-          <button data-tone="green" aria-pressed={selected.view === 'brief'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'brief' })}><span aria-hidden="true">◎</span>{t('monthlyBrief')}<span aria-hidden="true">›</span></button>
-          <button data-tone="teal" aria-pressed={selected.view === 'records'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'records' })}><span aria-hidden="true">⇄</span>{t('records')}<span aria-hidden="true">›</span></button>
+          <button data-span="all" data-tone="blue" aria-pressed={selected.view === 'overview'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'overview' })}><span aria-hidden="true">▦</span><span>{t('overview')}</span><span aria-hidden="true">›</span></button>
+          <button data-tour-id="state-open" data-tone="pink" aria-pressed={selected.view === 'tasks'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'tasks' })}><span aria-hidden="true">◷</span><span>{t('monthlyTasks')}</span><span className="bf-badge">{openItems}</span><span aria-hidden="true">›</span></button>
+          <button data-tone="blue" aria-pressed={selected.view === 'data'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'data' })}><span aria-hidden="true">▤</span><span>{t('dataWorkspace')}</span><span aria-hidden="true">›</span></button>
+          <button data-tone="green" aria-pressed={selected.view === 'brief'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'brief' })}><span aria-hidden="true">◎</span><span>{t('monthlyBrief')}</span><span aria-hidden="true">›</span></button>
+          <button data-tone="teal" aria-pressed={selected.view === 'records'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'records' })}><span aria-hidden="true">⇄</span><span>{t('records')}</span><span aria-hidden="true">›</span></button>
           <div className="bf-studio-group">{t('otherWorkspaces')}</div>
-          <button data-tour-id="quotation-open" data-secondary="true" data-tone="gold" aria-pressed={selected.view === 'quotation'} onClick={() => { navigate({ ...(batchId ? { batch: batchId } : {}), view: 'quotation' }); window.dispatchEvent(new Event('bridgeflow:quotation-opened')) }}><span aria-hidden="true">▧</span>{t('quotationWorkspace')}<span aria-hidden="true">›</span></button>
-          <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'discovery'} onClick={() => navigate({ view: 'discovery' })}><span aria-hidden="true">▥</span>{t('discoveryWorkspace')}<span aria-hidden="true">›</span></button>
-          <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'handoff'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'handoff' })}><span aria-hidden="true">⇄</span>{t('handoffWorkspace')}<span aria-hidden="true">›</span></button>
+          <button data-tour-id="quotation-open" data-secondary="true" data-tone="gold" aria-pressed={selected.view === 'quotation'} onClick={() => { navigate({ ...(batchId ? { batch: batchId } : {}), view: 'quotation' }); window.dispatchEvent(new Event('bridgeflow:quotation-opened')) }}><span aria-hidden="true">▧</span><span>{t('quotationWorkspace')}</span><span aria-hidden="true">›</span></button>
+          <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'discovery'} onClick={() => navigate({ view: 'discovery' })}><span aria-hidden="true">▥</span><span>{t('discoveryWorkspace')}</span><span aria-hidden="true">›</span></button>
+          <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'handoff'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'handoff' })}><span aria-hidden="true">⇄</span><span>{t('handoffWorkspace')}</span><span aria-hidden="true">›</span></button>
         </div>
         {!summary && <p className="bf-hint">{t('studioStartHelp')}</p>}
         {(error || notebook.error) && <p role="alert" className="bf-error">{error || notebook.error}{notebook.error && <button onClick={notebook.retry}>{t('refresh')}</button>}</p>}

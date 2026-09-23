@@ -1,0 +1,57 @@
+# The discovery sample project: fictional concrete supplier, from a department's material
+# to an approved MVP decision. The approved candidate is the scenario the workflow catalogue
+# (data/workflow_demo/catalogue.yaml, `mvp.candidates`) can run, so accepting it links the
+# three-agent story: discovery (Agent 1) → filling and handoff (Agent 2).
+# Every person is fictional; the votes and the approval are sample data, labelled as such.
+project_id: demo-handoff
+material:
+  id: production-weekly
+  department: 生产部
+  period: "2026-09"
+  filename: 生产部-发货周报-示例.csv
+  declared_kind: records
+  source_description: 生产部每周手工汇总的发货记录（虚构）
+  content: "项目,出厂量,实际量,备注\n演示项目A,98,,市场部每周电话追问实际量\n演示项目B,118,116.5,签收单 DEMO-0908\n"
+  by: 示例-生产统计员
+opportunity:
+  id: production_to_marketing_handoff
+  title: 生产数据标准化后自动交给市场部
+  departments: [生产部, 市场部]
+  claims:
+    - {kind: problem, text: 市场部每周要电话追问实际量，出厂量与实际量常对不上, basis: reported}
+    - {kind: value_hypothesis, text: 按模板填报并经审核后自动交接，市场部按时限处理, basis: inferred}
+  open_questions: [结算用出厂量还是实际量？需要业务方确认]
+  by: 示例-立项负责人
+score:
+  id: handoff-rating
+  effort: {score: 3, rationale: 只涉及生产部和市场部两张表，模板已有草案}
+  value: {score: 8, rationale: 每周省去人工追问，差异能在交接前被标出}
+  by: 示例-立项负责人
+meeting:
+  id: kickoff
+  title: 生产 → 市场交接试点启动会
+  scope: [{text: 仅试点生产记录填报与市场部接收, basis: reported}]
+  exclusions: [不含财务开票以外的系统对接]
+  risks: [{text: 实际量的确认依据尚未统一, basis: assumption}]
+  resources: [{text: 生产统计员与市场部负责人各一人, basis: assumption}]
+  stages:
+    - id: pilot
+      title: 一个月试点
+      owner_role: 标准化负责人
+      exit_criteria: [连续四周交接无需电话追问]
+      rationale: {text: 先小范围验证，再决定是否推广, basis: assumption}
+  discussion_questions: [结算量以哪个数量为准？]
+  participants: [示例-生产经理, 示例-市场经理, 示例-立项负责人]
+  minutes: [{text: 同意按候选方案试点，结算口径待确认, basis: reported}]
+  by: 示例-会议记录人
+decision:
+  id: mvp
+  scope: [试点生产记录填报、审核与交接市场部, 市场部结算依据交接财务部]
+  exclusions: [不含向客户的对外发送]
+  rationale: 启动会同意试点；投票通过后由总经理批准
+  proposer: 示例-立项负责人
+  votes:
+    - {voter: 示例-生产经理, choice: "yes", reason: 能减少每周追问}
+    - {voter: 示例-市场经理, choice: "yes", reason: 交接有时限、差异提前标出}
+  approver: 示例-总经理
+  approval_reason: 批准一个月试点，范围以决策为准

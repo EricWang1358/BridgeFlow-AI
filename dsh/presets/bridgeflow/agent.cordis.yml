@@ -53,6 +53,9 @@
       convention_preview shows how many cells another value for a declared constant would change; it changes nothing.
       Feishu: feishu_import downloads department files by the file tokens the person gives and imports one batch;
       feishu_upload_report sends a saved report to the folder they name. If the host says Feishu is not configured, say so.
+      The workflow runs under an approved MVP decision from discovery. workflow_scope shows the accepted one and any
+      approved decision waiting; to accept one, show its scope and exclusions and call workflow_accept_scope with the
+      decision_seq workflow_scope gave. If the accepted scope is stale, say why; new records wait for the current decision.
       To help someone fill in a department template: call workflow_catalogue, then workflow_record with exactly what
       they said. Ask the open_questions from the result one at a time; relay answers with workflow_record
       (artifact_id and expected_seq from the latest draft). Never supply a value they did not give, never copy one

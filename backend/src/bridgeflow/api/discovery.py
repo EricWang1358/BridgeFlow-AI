@@ -6,7 +6,7 @@ from pydantic import Field, ValidationError
 
 from bridgeflow.access import operations_for, workflow_departments_for
 from bridgeflow.api.workflow_tools import _require_writes
-from bridgeflow.config import settings
+from bridgeflow.config import REPO_ROOT, settings
 from bridgeflow.identity import UserIdentity, require_user
 from bridgeflow.security import consume_approval
 from bridgeflow.store import _root
@@ -64,6 +64,25 @@ def scoring_policy(project: str, user: UserIdentity | None = None) -> ScoringPol
     if policy.project_id != project or not visible(policy.model_dump(), scope(user)):
         raise HTTPException(404, "Scoring policy not found")
     return policy
+
+
+@router.post("/sample")
+def load_sample(user: BrowserUser) -> dict:
+    """Explicit sample project: fictional people, from a material to an approved MVP decision.
+
+    Like the sample notebook and the sample workflow, it is a click, not a model call. It
+    only runs under the sample's own policies (data/discovery_demo/); any other policy
+    refuses it, and a project that already exists is returned as it is.
+    """
+    from bridgeflow.workflow import discovery_sample
+
+    sample = discovery_sample.load(REPO_ROOT / "data/discovery_demo/sample-project.yaml")
+    try:
+        scoring = load_policy(settings.discovery_scoring_policy_path)
+        decision = load_decision_policy(settings.discovery_decision_policy_path)
+        return discovery_sample.seed(service(), scoring, decision, sample)
+    except DiscoveryError as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @router.get("/{project}/scoring-policy")

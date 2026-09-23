@@ -219,7 +219,7 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
         }
         const read = req.method === 'GET' && (path === '/quotation/contract' || /^\/batches\/[a-f0-9]{32}(\/(view|review|artifacts|review-notes\/[a-f0-9]{32}|sources(?:\/(?:production|procurement|finance|marketing))?))?$/.test(path)
           // Workflow views are read-only here; recording and approving go through the captain and approval.
-          || /^\/workflow\/(board|catalogue|adoption|artifacts\/[a-f0-9]{32})$/.test(path)
+          || /^\/workflow\/(board|catalogue|adoption|scope|artifacts\/[a-f0-9]{32}|history\/(artifact|handoff)\/[a-zA-Z0-9:_-]{1,80})$/.test(path)
           || /^\/discovery\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/(material|opportunity|graph|score|meeting|decision)(\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79})?$/.test(path)
           || /^\/discovery\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/(scoring-policy|decision-policy)$/.test(path)
           || /^\/discovery\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/material\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/original$/.test(path)
@@ -230,7 +230,7 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           || path === '/journal' || path === '/journal/runs' || path === '/eval/report'
           || /^\/reviews\/[a-f0-9]{32}\/dispositions$/.test(path)
           || /^\/batches\/templates\/(production|procurement|finance|marketing)$/.test(path))
-        const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo' || path === '/workflow/sample' || path === '/batches/self-check' || path === '/discovery/uploads'
+        const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo' || path === '/workflow/sample' || path === '/discovery/sample' || path === '/batches/self-check' || path === '/discovery/uploads'
           // Correcting one department derives a new batch; it is an upload like any other (E14-UC04).
           || /^\/batches\/[a-f0-9]{32}\/departments\/(production|procurement|finance|marketing)$/.test(path))
         // Feishu user-identity calls (docs/30, docs/31, docs/33): the browser relays the

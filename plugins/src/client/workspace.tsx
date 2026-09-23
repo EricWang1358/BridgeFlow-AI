@@ -172,7 +172,7 @@ export function DataWorkspace() {
       // This panel owns the row-level tables (cleaning, mappings, columns, quarantine). The
       // destinations own everything else, so any of their routes closes it rather than
       // opening a second window onto the same batch.
-      if (['discovery', 'quotation', 'handoff', 'integration', 'brief', 'source', 'artifact',
+      if (['overview', 'discovery', 'quotation', 'handoff', 'integration', 'brief', 'source', 'artifact',
            'tasks', 'data', 'records'].includes(value.view ?? '')) { dialog.current?.close(); return }
       if (!value.batch || value.view === 'state' || !/^[a-f0-9]{32}$/.test(value.batch)) return
       pendingBatch.current?.abort(); abort = new AbortController(); pendingBatch.current = abort; const signal = abort.signal

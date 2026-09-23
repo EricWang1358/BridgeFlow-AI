@@ -27,6 +27,8 @@ export const style = `
   --bf-text: var(--foreground, #101b27);
   --bf-muted: #5b6b7c;
   --bf-accent: #2f6bd8;
+  --bf-chart-mark: #2f6bd8;
+  --bf-chart-critical: #9d271c;
   --bf-accent-soft: #e8f0fd;
   --bf-warn: #8a4b06;
   --bf-warn-bg: #fdf3e0;
@@ -378,6 +380,8 @@ body[data-ds-dark-theme] .bf-hero, body[data-ds-dark-theme] .bf-open {
   --bf-text: #e9f0f7;
   --bf-muted: #9fb1c3;
   --bf-accent: #5c9bff;
+  --bf-chart-mark: #4a86e8;
+  --bf-chart-critical: #e0645a;
   --bf-accent-soft: #1b2b42;
   --bf-warn: #f2c879;
   --bf-warn-bg: #3b2f19;
@@ -701,4 +705,59 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-sample-cases button { display: grid; gap: 2px; width: 100%; text-align: left; padding: 8px 10px; border: 1px solid var(--bf-line); border-radius: 10px; background: transparent; cursor: pointer }
 .bf-sample-cases button small { color: var(--bf-muted); line-height: 1.45 }
 .bf-decision .bf-handoff-draft th { white-space: nowrap; vertical-align: top }
+/* Discovery → workflow scope, timelines and time limits. */
+.bf-scope h3 { margin: 0 0 4px; font-size: 14px }
+.bf-scope-list { margin: 6px 0; padding-left: 18px; font-size: 13px; line-height: 1.55 }
+.bf-due { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; background: var(--bf-surface-2); color: var(--bf-muted) }
+.bf-due[data-overdue=true] { background: var(--bf-danger-bg); color: var(--bf-danger) }
+.bf-pipeline-late { font-size: 11px; font-weight: 600; color: var(--bf-danger) }
+.bf-pipeline > li[data-late=true] { box-shadow: inset 3px 0 var(--bf-danger) }
+.bf-timeline { list-style: none; margin: 8px 0; padding: 0 0 0 14px; border-left: 2px solid var(--bf-line); display: grid; gap: 8px; font-size: 12px }
+.bf-timeline > li { position: relative }
+.bf-timeline > li::before { content: ''; position: absolute; left: -19px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--bf-accent) }
+.bf-timeline time { color: var(--bf-muted); margin-right: 8px; font-variant-numeric: tabular-nums }
+.bf-timeline p { margin: 2px 0 0 }
+/* Overview: KPI tiles, small multiples and bar lists. One mark colour, critical reserved for overdue/refused. */
+.bf-overview { display: grid; gap: 16px }
+.bf-ov-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap }
+.bf-ov-head h3 { margin: 0 }
+.bf-ov-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px }
+.bf-ov-tile { display: grid; gap: 4px; text-align: left; padding: 14px; border: 1px solid var(--bf-line); border-radius: 12px; background: var(--bf-surface); color: var(--bf-text); cursor: pointer; transition: transform .18s ease, box-shadow .18s ease }
+.bf-ov-tile:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgb(0 0 0 / 8%) }
+.bf-ov-tile > span { font-size: 12px; color: var(--bf-muted) }
+.bf-ov-tile > b { font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums }
+.bf-ov-tile > small { font-size: 12px; color: var(--bf-muted); display: grid; gap: 4px }
+.bf-ov-tile[data-tone=critical] { border-color: var(--bf-chart-critical) }
+.bf-ov-meter { display: block; height: 6px; border-radius: 3px; background: var(--bf-surface-2); overflow: hidden }
+.bf-ov-meter > span { display: block; height: 100%; background: var(--bf-chart-mark); border-radius: 3px }
+.bf-ov-critical { color: var(--bf-danger); font-weight: 600 }
+.bf-ov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(260px, 30%), 1fr)); gap: 12px }
+.bf-ov-block { border: 1px solid var(--bf-line); border-radius: 12px; padding: 14px; background: var(--bf-surface); display: grid; gap: 10px; align-content: start; min-width: 0 }
+.bf-ov-block[data-wide=true] { grid-column: 1 / -1 }
+.bf-ov-block > header { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap }
+.bf-ov-block h4 { margin: 0; font-size: 13px }
+.bf-ov-block > header button { font-size: 12px; padding: 3px 10px; white-space: nowrap; width: auto }
+.bf-ov-sparks { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px }
+.bf-ov-sparks[data-bars=true] { grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)) }
+.bf-ov-spark { margin: 0; display: grid; gap: 4px }
+.bf-ov-spark figcaption { display: grid; gap: 1px; font-size: 12px; color: var(--bf-muted) }
+.bf-ov-spark figcaption b { font-size: 18px; color: var(--bf-text); font-variant-numeric: tabular-nums }
+.bf-ov-spark svg { width: 100%; height: 64px; overflow: visible; cursor: crosshair }
+.bf-ov-line { fill: none; stroke: var(--bf-chart-mark); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round }
+.bf-ov-threshold { stroke: var(--bf-muted); stroke-width: 1; stroke-dasharray: 3 3 }
+.bf-ov-cross { stroke: var(--bf-line); stroke-width: 1 }
+.bf-ov-dot { fill: var(--bf-chart-mark); stroke: var(--bf-surface); stroke-width: 2 }
+.bf-ov-dot[data-critical=true] { fill: var(--bf-chart-critical) }
+.bf-ov-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
+.bf-ov-bars > li { position: relative; display: grid; grid-template-columns: minmax(0, 9.5em) 1fr auto; align-items: center; gap: 8px; font-size: 12px }
+.bf-ov-bar-label { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; color: var(--bf-text) }
+.bf-ov-bar-track { display: flex; gap: 2px; height: 12px }
+.bf-ov-bar { display: block; height: 100%; min-width: 2px; background: var(--bf-chart-mark); border-radius: 0 4px 4px 0; transition: width .5s cubic-bezier(.2,.8,.2,1) }
+.bf-ov-bar[data-critical=true] { background: var(--bf-chart-critical) }
+.bf-ov-bars > li[data-hover=true] .bf-ov-bar { filter: brightness(1.1) }
+.bf-ov-bar-value { font-variant-numeric: tabular-nums; color: var(--bf-text); text-align: right }
+.bf-ov-tip { position: absolute; right: 0; top: -26px; z-index: 2; padding: 3px 8px; border-radius: 6px; background: var(--bf-text); color: var(--bf-surface); font-size: 11px; white-space: nowrap; pointer-events: none }
+@media (prefers-reduced-motion: reduce) { .bf-ov-tile, .bf-ov-bar { transition: none } }
+.bf-row-actions { display: flex; gap: 8px; flex-wrap: wrap }
+.bf-row-actions > button { flex: 0 0 auto; width: auto; padding: 4px 12px; font-size: 12px }
 `

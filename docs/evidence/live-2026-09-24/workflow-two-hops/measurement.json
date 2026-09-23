@@ -1,0 +1,124 @@
+{
+  "mode": "live",
+  "steps": [
+    {
+      "step": "scope accepted",
+      "elapsed_ms": 10618
+    },
+    {
+      "step": "review and submit",
+      "elapsed_ms": 11781
+    },
+    {
+      "step": "downstream starts",
+      "elapsed_ms": 4273
+    },
+    {
+      "step": "settlement submitted",
+      "elapsed_ms": 5342
+    },
+    {
+      "step": "downstream completes",
+      "elapsed_ms": 7490
+    },
+    {
+      "step": "finance starts",
+      "elapsed_ms": 4316
+    },
+    {
+      "step": "finance completes",
+      "elapsed_ms": 4453
+    },
+    {
+      "step": "missing quantity answered",
+      "elapsed_ms": 8611
+    }
+  ],
+  "approvals": [
+    {
+      "step": "scope accepted",
+      "at_ms": 23700
+    },
+    {
+      "step": "review and submit",
+      "at_ms": 37357
+    },
+    {
+      "step": "downstream starts",
+      "at_ms": 43069
+    },
+    {
+      "step": "settlement submitted",
+      "at_ms": 48466
+    },
+    {
+      "step": "downstream completes",
+      "at_ms": 55984
+    },
+    {
+      "step": "finance starts",
+      "at_ms": 60918
+    },
+    {
+      "step": "finance completes",
+      "at_ms": 65385
+    },
+    {
+      "step": "missing quantity answered",
+      "at_ms": 74676
+    }
+  ],
+  "questions": [],
+  "model_requests": 28,
+  "tool_calls": [
+    "workflow_scope",
+    "workflow_accept_scope",
+    "workflow_draft",
+    "workflow_guidance",
+    "workflow_catalogue",
+    "workflow_approve_submit",
+    "workflow_board",
+    "workflow_handoff",
+    "workflow_draft",
+    "workflow_approve_submit",
+    "workflow_board",
+    "workflow_board",
+    "workflow_handoff",
+    "workflow_board",
+    "workflow_handoff",
+    "workflow_board",
+    "workflow_handoff",
+    "workflow_draft",
+    "workflow_record"
+  ],
+  "usage": {
+    "inputTokens": 32030,
+    "outputTokens": 6132,
+    "totalTokens": 483602,
+    "cacheReadTokens": 445440,
+    "reasoningTokens": 917
+  },
+  "final": [
+    {
+      "kind": "artifact",
+      "state": "ready_for_review"
+    },
+    {
+      "kind": "artifact",
+      "state": "data_ready"
+    },
+    {
+      "kind": "artifact",
+      "state": "data_ready"
+    },
+    {
+      "kind": "handoff",
+      "state": "completed"
+    },
+    {
+      "kind": "handoff",
+      "state": "completed"
+    }
+  ],
+  "elapsed_ms": 76859
+}
