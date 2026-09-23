@@ -8,17 +8,22 @@ export async function auditChain(page, root, scratch, report) {
     try { await action(); results.push({ name, passed: true }) }
     catch (e) { results.push({ name, passed: false, error: String(e).slice(0, 700) }) }
   }
-  const dialog = page.getByRole('dialog', {name:'BridgeFlow 数据工作区',exact:true})
+  const dialog = page.getByRole('dialog', {name:'批次数据表',exact:true})
   await page.evaluate(r => { location.hash = `bridgeflow?batch=${r.batch_id}&view=review&report=${r.report_id}` }, report)
   await dialog.getByRole('region', { name: '四部门研判报告' }).waitFor()
-  await dialog.getByText('导入新批次', { exact: true }).click()
-  await dialog.locator('input[name=period]').fill('2025-11')
-  for (const role of ['production', 'procurement', 'finance', 'marketing']) await dialog.locator(`input[name=${role}]`).setInputFiles(`${root}/data/business_demo/balanced/${role}.csv`)
-  await dialog.getByRole('button', { name: '导入并检查', exact: true }).click()
-  await page.waitForFunction(old => document.querySelector('dialog code')?.textContent !== old, report.batch_id)
-  const second = await dialog.locator('code').first().innerText()
+  // #225: importing has one entry, the Sources pane. Leave report A's dialog first.
+  await dialog.getByRole('button', { name: '关闭', exact: true }).click()
+  const sources = page.getByRole('complementary', { name: '来源', exact: true })
+  await sources.getByRole('button', { name: '＋ 添加来源', exact: true }).click()
+  const importer = page.getByRole('dialog', { name: '添加来源', exact: true })
+  await importer.locator('input[name=period]').fill('2025-11')
+  for (const role of ['production', 'procurement', 'finance', 'marketing']) await importer.locator(`input[name=${role}]`).setInputFiles(`${root}/data/business_demo/balanced/${role}.csv`)
+  await importer.getByRole('button', { name: '导入并检查', exact: true }).click()
+  await page.waitForFunction(old => { const id = new URLSearchParams(location.hash.slice(12)).get('batch'); return !!id && id !== old }, report.batch_id)
+  const second = new URLSearchParams(new URL(page.url()).hash.slice(12)).get('batch')
   await check('import B after exact report A clears old report identity', async () => {
-    await dialog.getByRole('button', { name: '四部门报告', exact: true }).click()
+    assert.equal(new URLSearchParams(new URL(page.url()).hash.slice(12)).get('report'), null)
+    await page.evaluate(id => { location.hash = `bridgeflow?batch=${id}&view=review` }, second)
     await dialog.getByRole('alert').waitFor()
     assert.match(await dialog.getByRole('alert').innerText(), /尚无研判报告/)
     assert.equal(new URLSearchParams(new URL(page.url()).hash.slice(12)).get('batch'), second)

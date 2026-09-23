@@ -66,7 +66,7 @@ function MonthlyState({ source, loadOlder, openView }: ConvViewProps & Injected)
       ? <><span className="bf-period">{batch.period}</span> <Chip status={batch.status} /> <span className="bf-hint">{batch.master_rows} {t('rows')} · <code className="bf-mono">{batch.batch_id}</code></span></>
       : <span className="bf-hint">{t('unknown')}</span>}</p>
     {batch && <NextStep batch={batch} />}
-    <nav><button disabled={!batch} onClick={() => navigate({ batch: batchId, view: node === 'needs_review' ? 'mappings' : node === 'needs_configuration' ? 'corrections' : 'master' })}>{t('data')} ↗</button>
+    <nav><button disabled={!batch} onClick={() => navigate({ batch: batchId, view: node === 'needs_review' ? 'mappings' : node === 'needs_configuration' ? 'corrections' : 'master' })}>{t('batchTables')} ↗</button>
       <button onClick={() => openView('trajectory', '')}>{t('inspect')} ↗</button>
       {report && <button onClick={() => navigate({ batch: batchId, view: 'review', report: report.report_id })}>{t('review')} ↗</button>}</nav>
     </>}

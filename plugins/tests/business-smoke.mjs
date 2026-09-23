@@ -74,9 +74,11 @@ try {
   // #110: a new user on a zh-CN browser defaults to English; switch explicitly.
   await assertDefaultEnglish(page)
   await switchLanguage(page, '中文')
-  await page.getByRole('button', { name: '会话与设置', exact: true }).click()
-  await page.getByRole('button', { name: '导入与数据', exact: true }).click({ timeout: 30_000 })
-  await page.locator('dialog[open] input[name=period]').fill('2025-11')
+  // #225: one entry for adding sources — the Sources pane's button opens the import dialog.
+  const sources = page.getByRole('complementary', { name: '来源', exact: true })
+  await sources.getByRole('button', { name: '＋ 添加来源', exact: true }).click({ timeout: 30_000 })
+  const importer = page.getByRole('dialog', { name: '添加来源', exact: true })
+  await importer.locator('input[name=period]').fill('2025-11')
   // #69: BRIDGEFLOW_POISON=1 adds an instruction-shaped note to one department's sheet.
   // The review must still match the independent answers, and the text must never reach
   // any model context — rows stay out of prompts and tool results by construction.
@@ -89,13 +91,13 @@ try {
       await writeFile(`${scratch}/marketing.csv`, [`${lines[0]},note`, ...lines.slice(1).map((line, i) => `${line},${i === 0 ? injection : ''}`)].join('\n') + '\n')
       file = `${scratch}/marketing.csv`
     }
-    await page.locator(`dialog[open] input[name=${role}]`).setInputFiles(file)
+    await importer.locator(`input[name=${role}]`).setInputFiles(file)
   }
-  await page.getByRole('button', { name: '导入并检查', exact: true }).click()
-  await page.getByText('批次已保存。清洗和聚合由规则执行，未调用模型。', { exact: true }).waitFor()
-  const batchId = await page.locator('dialog[open] code').innerText()
+  await importer.getByRole('button', { name: '导入并检查', exact: true }).click()
+  // A saved batch closes the dialog and opens its Data view; the route carries the batch id.
+  await page.waitForURL(/[?&]batch=[a-f0-9]{32}/)
+  const batchId = new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('batch')
   await page.screenshot({ path: `${scratch}/business-upload.png`, fullPage: true })
-  await page.getByRole('button', { name: '关闭', exact: true }).click()
   await page.getByRole('button', { name: '会话与设置', exact: true }).click()
   await page.getByRole('button', { name: /^(Choose workspace|选择工作区)$/ }).click()
   await page.getByRole('menuitem', { name: 'BridgeFlow', exact: true }).click()
@@ -215,20 +217,25 @@ try {
   await page.waitForTimeout(150)
   await page.screenshot({ path: `${scratch}/business-state-dark.png`, fullPage: true })
   await page.emulateMedia({ colorScheme: 'light' })
-  await page.getByRole('button', { name: '部门文件', exact: true }).click()
-  await page.getByRole('complementary', { name: '部门文件' }).waitFor()
+  // #219: department files live in the Sources pane, one row per uploaded file.
+  for (const role of ['production', 'procurement', 'finance', 'marketing']) await sources.getByRole('button', { name: new RegExp(`${role}\\.csv`) }).first().waitFor()
   await page.screenshot({ path: `${scratch}/department-files.png`, fullPage: true })
-  await page.getByRole('complementary', { name: '部门文件' }).getByRole('button', { name: '关闭' }).click()
   await statePage.getByRole('button', { name: '查看调用轨迹 ↗' }).click()
   await page.getByRole('tab', { name: /轨迹|Trajectory/ }).waitFor()
   await page.screenshot({ path: `${scratch}/native-spawn.png`, fullPage: true })
   await page.reload()
-  await page.getByRole('button', { name: '会话与设置', exact: true }).click()
-  await page.getByRole('button', { name: '导入与数据', exact: true }).click()
-  await page.getByRole('dialog', {name:'BridgeFlow 数据工作区'}).getByText('打开已有批次', { exact: true }).click()
-  await page.getByRole('dialog', {name:'BridgeFlow 数据工作区'}).getByRole('textbox', { name: '批次编号' }).fill(batchId)
-  await page.getByRole('dialog', {name:'BridgeFlow 数据工作区'}).getByRole('button', { name: '打开', exact: true }).click()
-  await page.getByRole('button', { name: '四部门报告', exact: true }).click()
+  // A saved batch reopens by id from the Sources pane after a reload, and its report
+  // opens from the business state page into the row-level tables dialog.
+  await sources.getByText('打开已有批次', { exact: true }).click()
+  await sources.getByRole('textbox', { name: '批次编号' }).fill(batchId)
+  await sources.getByRole('button', { name: '打开', exact: true }).click()
+  await page.waitForURL(new RegExp(`batch=${batchId}`))
+  // The state page keeps its own batch choice (docs/19): open the batch there too.
+  await page.getByRole('tab', { name: '业务状态', exact: true }).click()
+  await statePage.getByText('依据与归属', { exact: true }).click()
+  await statePage.getByRole('textbox', { name: '批次编号' }).fill(batchId)
+  await statePage.getByRole('button', { name: '打开', exact: true }).click()
+  await statePage.getByRole('button', { name: '四部门报告 ↗' }).click()
   await page.getByRole('region', { name: '四部门研判报告', exact: true }).waitFor()
   for (const role of ['生产', '采购', '财务', '市场']) await page.locator('dialog[open]').getByRole('article', { name: `${role}研判`, exact: true }).waitFor()
   await page.screenshot({ path: `${scratch}/business-review.png`, fullPage: true })

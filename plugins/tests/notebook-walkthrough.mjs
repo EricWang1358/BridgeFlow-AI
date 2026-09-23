@@ -71,7 +71,7 @@ export async function notebookWalkthrough(page, scratch) {
   await studio.locator('.bf-artifact[data-kind=master]').waitFor()
   assert.equal(await sources.getByRole('combobox',{name:'笔记本用途'}).inputValue(),'monthly')
   // Both Studio entries must open a visible, operable modal while the native sidebar stays collapsed.
-  const dataWorkspace=page.getByRole('dialog',{name:'BridgeFlow 数据工作区',exact:true})
+  const dataWorkspace=page.getByRole('dialog',{name:'批次数据表',exact:true})
   for(const entry of [studio.locator('[data-tone=green]'),studio.locator('.bf-artifact[data-kind=master]')]) {
     assert.equal(await toggle.getAttribute('aria-expanded'),'false')
     await entry.click()

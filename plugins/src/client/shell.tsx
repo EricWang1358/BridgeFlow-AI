@@ -116,7 +116,9 @@ function Shell({ ctx }: { ctx: Context }) {
     if (wide && !viewer.current?.open) { setExpanded(true); viewer.current?.showModal() }
   }, [viewing, selected.source, selected.report, selected.view, ctx, wide])
   const openSource = (source: Source) => { setError(''); navigate({ batch: batchId, view: 'source', source: source.id }) }
-  const closePreview = () => { viewer.current?.close(); navigate({ ...(batchId ? { batch: batchId } : {}), kind:notebook.kind }) }
+  // Back to the studio home. A batch route without a view is how the row-level
+  // tables dialog is opened, so leaving the view out popped that modal on every close.
+  const closePreview = () => { viewer.current?.close(); navigate({ ...(batchId ? { batch: batchId } : {}), view: 'state', kind:notebook.kind }) }
   const previewContent = selected.view === 'tasks' && batchId
     ? <TasksView batchId={batchId} summary={summary} audit={audit} savedReportStatus={artifacts[0]?.status}
         notebookKind={notebook.kind} onImport={() => importer.current?.showModal()} onRefresh={() => setRevision(n => n + 1)} />
