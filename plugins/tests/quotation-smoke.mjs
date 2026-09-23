@@ -149,7 +149,7 @@ try {
   // paginate, reload the route, and switch batches without stale originals.
   await sources.getByRole('button', {name:'＋ 添加来源',exact:true}).click()
   const importer = page.getByRole('dialog', {name:'添加来源',exact:true})
-  await importer.locator('input[type=month]').fill('2025-11')
+  await importer.locator('input[name=period]').fill('2025-11')
   const csv = 'item,value\n' + Array.from({length:65}, (_,i) => `SOURCE-A-${i},${i}`).join('\n')
   await importer.locator('input[name=production]').setInputFiles({name:'original-production.csv',mimeType:'text/csv',buffer:Buffer.from(csv)})
   await importer.getByRole('button', {name:'导入并检查',exact:true}).click()
@@ -184,7 +184,7 @@ try {
   await page.getByRole('dialog', {name:'预览',exact:true}).getByRole('button', {name:'关闭',exact:true}).click()
   await page.screenshot({path:`${scratch}/source-preview.png`,fullPage:true})
   await sources.getByRole('button', {name:'＋ 添加来源',exact:true}).click()
-  await importer.locator('input[type=month]').fill('2025-11')
+  await importer.locator('input[name=period]').fill('2025-11')
   await importer.locator('input[name=production]').setInputFiles({name:'batch-b.csv',mimeType:'text/csv',buffer:Buffer.from('item,value\nSOURCE-B,99')})
   await importer.getByRole('button', {name:'导入并检查',exact:true}).click()
   await sources.getByRole('button', {name:/batch-b.csv/}).waitFor()

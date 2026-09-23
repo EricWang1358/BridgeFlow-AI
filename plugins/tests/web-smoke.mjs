@@ -136,9 +136,11 @@ try {
   // to Chinese goes through the native Settings language row and persists.
   await assertDefaultEnglish(page)
   await switchLanguage(page, '中文')
-  await page.getByRole('button', { name: '会话与设置', exact: true }).click()
-  await page.getByRole('button', { name: '导入与数据', exact: true }).click({ timeout: 30_000 })
-  await page.locator('dialog[open] input[name=period]').fill('2025-11')
+  // #225: importing has one entry, the Sources pane's Add sources dialog.
+  const sources = page.getByRole('complementary', { name: '来源', exact: true })
+  await sources.getByRole('button', { name: '＋ 添加来源', exact: true }).click({ timeout: 30_000 })
+  const importer = page.getByRole('dialog', { name: '添加来源', exact: true })
+  await importer.locator('input[name=period]').fill('2025-11')
   const limits = await page.evaluate(async () => (await fetch('/bridgeflow/config')).json())
   assert.equal(limits.maxUploadBytes, 25 * 1024 * 1024)
   assert.equal(limits.maxRequestBytes, 26 * 1024 * 1024)
@@ -146,16 +148,20 @@ try {
   assert.equal((await fetch(`http://127.0.0.1:${webPort}/bridgeflow/config`)).status, 401)
   // Use the file chooser's disk path, avoiding a large base64 CDP transfer.
   await writeFile(`${scratch}/oversized.csv`, Buffer.alloc(limits.maxUploadBytes + 1))
-  await page.locator('dialog[open] input[name=production]').setInputFiles(`${scratch}/oversized.csv`)
+  await importer.locator('input[name=production]').setInputFiles(`${scratch}/oversized.csv`)
   let uploads = 0
   const countUpload = request => { if (request.method() === 'POST' && request.url().endsWith('/bridgeflow/batches')) uploads++ }
   page.on('request', countUpload)
-  await page.getByRole('button', { name: '导入并检查', exact: true }).click()
-  await page.getByText('请选择至少一个 CSV/XLSX，文件总大小不得超过上限。', { exact: true }).waitFor()
+  await importer.getByRole('button', { name: '导入并检查', exact: true }).click()
+  await importer.getByText('请选择至少一个 CSV/XLSX，文件总大小不得超过上限。', { exact: true }).waitFor()
   assert.equal(uploads, 0, 'Oversized data must be rejected before the upload request')
   page.off('request', countUpload)
-  await page.locator('dialog[open] input[name=production]').setInputFiles({ name: 'production.csv', mimeType: 'text/csv', buffer: Buffer.from('sku,output_qty\nSKU-A1,17\n') })
-  await page.getByRole('button', { name: '导入并检查', exact: true }).click()
+  await importer.locator('input[name=production]').setInputFiles({ name: 'production.csv', mimeType: 'text/csv', buffer: Buffer.from('sku,output_qty\nSKU-A1,17\n') })
+  await importer.getByRole('button', { name: '导入并检查', exact: true }).click()
+  // A saved batch closes the dialog and opens its Data view; the master rows live in
+  // the batch tables dialog.
+  await page.waitForURL(/[?&]batch=[a-f0-9]{32}/)
+  await page.evaluate(() => { const q = new URLSearchParams(location.hash.slice(12)); location.hash = `bridgeflow?batch=${q.get('batch')}&view=master` })
   await page.getByText('主表 1 行 · 待确认映射 0 条').waitFor()
   await page.getByRole('cell', { name: '17', exact: true }).waitFor()
   await page.screenshot({ path: `${scratch}/data-workspace.png`, fullPage: true })

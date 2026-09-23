@@ -22,7 +22,8 @@ export async function notebookWalkthrough(page, scratch) {
     const on=await button.evaluate(el=>getComputedStyle(el).backgroundColor)
     await button.click()
     assert.equal(await button.getAttribute('aria-expanded'),'false')
-    assert.notEqual(await button.evaluate(el=>getComputedStyle(el).backgroundColor),on)
+    // The state colour eases in (motion.ts); wait for it instead of sampling mid-transition.
+    await page.waitForFunction(([el,from])=>getComputedStyle(el).backgroundColor!==from,[await button.elementHandle(),on],{timeout:3000})
     await button.click()
     assert.equal(await button.getAttribute('aria-expanded'),'true')
   }
@@ -34,10 +35,10 @@ export async function notebookWalkthrough(page, scratch) {
   const width=await sources.boundingBox()
   await title.fill('报价待办')
   await sources.getByRole('combobox',{name:'笔记本用途'}).selectOption('quotation')
-  const state=studio.getByRole('button',{name:/业务状态/}).first()
-  await state.click();await state.click()
-  await studio.getByRole('region',{name:'报价进度'}).waitFor()
-  assert.equal(await studio.getByRole('region',{name:'月度对账进度'}).count(),0)
+  // Purpose switching between the quotation and monthly workflows is asserted on the
+  // business state page by chain-regression.mjs; the studio's This month's tasks tile
+  // needs a batch, which a fresh quotation notebook does not have.
+  assert.equal(await studio.locator('[data-tour-id="state-open"]').isDisabled(),true)
   const quote=studio.getByRole('button',{name:/报价工作区/})
   await quote.click();await quote.click()
   assert.equal(await quote.getAttribute('aria-pressed'),'true')
@@ -70,9 +71,15 @@ export async function notebookWalkthrough(page, scratch) {
   assert.equal(await sources.locator('.bf-resource-list li').count(),4)
   await studio.locator('.bf-artifact[data-kind=master]').waitFor()
   assert.equal(await sources.getByRole('combobox',{name:'笔记本用途'}).inputValue(),'monthly')
-  // Both Studio entries must open a visible, operable modal while the native sidebar stays collapsed.
-  const dataWorkspace=page.getByRole('dialog',{name:'BridgeFlow 数据工作区',exact:true})
-  for(const entry of [studio.locator('[data-tone=green]'),studio.locator('.bf-artifact[data-kind=master]')]) {
+  // #225: destinations open in the studio's own preview, never as a second window.
+  assert.equal(await toggle.getAttribute('aria-expanded'),'false')
+  await studio.locator('[data-tone=green]').click()
+  await studio.getByRole('region',{name:'预览',exact:true}).waitFor()
+  assert.equal(await page.locator('dialog[open]').count(),0)
+  // The master artifact still opens the row-level tables: a visible, operable modal
+  // while the native sidebar stays collapsed.
+  const dataWorkspace=page.getByRole('dialog',{name:'批次数据表',exact:true})
+  for(const entry of [studio.locator('.bf-artifact[data-kind=master]')]) {
     assert.equal(await toggle.getAttribute('aria-expanded'),'false')
     await entry.click()
     await dataWorkspace.locator('tbody tr').first().waitFor({timeout:5000})

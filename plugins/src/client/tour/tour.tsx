@@ -23,12 +23,20 @@ export function TourDriver({ session, batch, sample, ready, reveal }: { session:
     const step = tours[state.progress.track][state.progress.index]!
     revealRef.current(step.pane)
     // Reading an already-existing view is safe. Action entry steps never navigate for the user.
-    if (step.view && state.progress.batch === batch && !activeModal()) {
+    const open = () => {
+      if (!step.view || state.progress.batch !== batch || activeModal()) return
       const current = route()
       if (step.view === 'source') {
         if (state.progress.source && (current.view !== 'source' || current.source !== state.progress.source)) navigate({ batch, view: 'source', source: state.progress.source })
       } else if (current.view !== step.view) navigate({ batch, view: step.view })
     }
+    open()
+    // Restoring a notebook lands on the default view after its metadata loads, which
+    // can arrive after this step opened its own view. Reopen it only when the route
+    // fell back to that default; a view the person chose is left alone.
+    const fellBack = () => { const view = route().view; if (!view || view === 'state') open() }
+    window.addEventListener('hashchange', fellBack)
+    return () => window.removeEventListener('hashchange', fellBack)
   }, [state.mode, state.progress.track, state.progress.index, state.revision, batch])
   return null
 }

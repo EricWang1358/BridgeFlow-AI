@@ -305,7 +305,7 @@ const labels = {
   dispatchCount: ['工具派发尝试', 'Tool dispatch attempts'],
   captainFlow: ['队长派活 → 四部门研判 → 规则校验', 'Captain dispatch → departments → validation'], batchHint: ['选择上方入口查看批次数据；已校验报告不代表映射已获批准。', 'Open a source view above. A validated report does not imply approved mappings.'],
   files: ['部门文件', 'Department files'], submitted: ['意见已提交到队长会话', 'Note submitted to captain session'], audit: ['当前会话审计', 'Current session audit'], loadedWindow: ['仅统计已加载的会话事件，可加载更早记录。', 'Counts cover loaded events only; older events may be loaded.'], loadOlder: ['加载更早记录', 'Load older events'], stateHelp: ['图为静态规则；高亮与计数来自当前批次和原生会话记录。点击节点筛选，下方可打开原始视图。', 'The diagram shows fixed rules. Highlights and counts come from the selected batch and native session records. Select a node to filter, then open its source view.'],
-  data: ['导入与数据', 'Import & data'], workspace: ['BridgeFlow 数据工作区', 'BridgeFlow data workspace'], close: ['关闭', 'Close'],
+  close: ['关闭', 'Close'],
   title: ['批次数据与业务研判', 'Batch data & business review'], intro: ['把四部门数据放在一起', 'Bring four departments together'],
   newBatch: ['导入新批次', 'Import a new batch'], uploadHelp: ['CSV 或 XLSX；多工作表或表头不在第 1 行时，按提示填写表格位置。每次导入保留独立批次。', 'CSV or XLSX; for several sheets or a header below row 1, fill in the table position when asked. Each import keeps an independent batch.'],
   sheetLayout: ['表格位置（可选）', 'Table position (optional)'], sheetName: ['工作表名', 'Sheet name'], headerRow: ['表头行号', 'Header row'],

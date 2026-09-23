@@ -68,14 +68,17 @@ confirm_mapping → 官方审批 + callId / approvalId → 一次性回执 → m
 
 下面是代码审查确认的实现缺口。没有把「还没做故障注入」写成「实测失败」。
 
-| 优先级 | 缺口与位置 | 下一轮必须拿出的验收证据 |
-| --- | --- | --- |
-| P0 | partial 的人工意见通过 `ui.ts:sendHumanNote` 提交普通聊天，「禁止重跑」只是一句文本要求，没有宿主级操作限制 | 让测试模型故意请求 review_context / subagent / 写工具，实际派发必须被拒；意见有持久记录，且不改变报告的校验状态 |
-| P0 | `review-batch.ts` 的超时只中止组合进 subagent 调用的 signal；父模型的等待与结束回复不受这个期限约束 | 分别在「父模型卡在派活前」「子模型卡住」「汇总请求卡住」三处注入；到期要终止并形成可读的终态 |
-| P0 | `ReviewPolicy.states` 只在内存中，重启后无法从已持久化的 dispatching 事件还原运行；`finish()` 缓存失败 promise 且没有失败终态事件 | 汇总前重启、服务暂时失联、响应丢失重试三种场景；要么可恢复要么明确失败，且不会重复签发报告 |
-| P1 | 配置里的输出 token 上限是单次模型请求的上限，不能宣称整名子代理的全部步骤共用一个额度 | 跨步骤累计预算与强制停止测试；父编排、子步骤、汇总三处的成本分别记录 |
-| P1 | 拒绝备注先写独立事件、决定后提交；多窗口竞争或超时边界可能留下没成为最终理由的备注 | 两窗口做相反决定、备注写入后超时；审计要能区分备注草稿与最终决定，不把草稿称为最终拒绝原因 |
-| P1 | 父子会话链接失败只记了客户端 logger，页面没有明确提示；状态页 URL 与原生页签激活也不是同一个操作 | 不存在的 parent/child、刷新、浏览器前进后退都要有可见结果；不靠操作原生 DOM 强制切页 |
+**2026-09-23 复核**：本表最初写于 #115 之前，此后 #111–#113 已关闭。逐条对照当前代码与测试，
+结论如下；「已收尾」只指离线测试与脚本化浏览器旅程成立，不代表真实模型下复验过。
+
+| 优先级 | 缺口与位置 | 现状 | 证据 |
+| --- | --- | --- | --- |
+| P0 | partial 的人工意见走普通聊天，「禁止重跑」只是一句文本 | **已收尾**（#111）：带 `HUMAN_NOTE_MARKER` 的轮次由宿主 guard 拒绝 `review_context` / `subagent` / 写工具，只许读 | `runtime.test.ts`「a human-note turn cannot start a review or write」；`test_review_runs.py` 人工意见只追加、不改报告；`business-smoke` 故障变体断言人工意见后会话数仍为 5（没有再派一组部门） |
+| P0 | 超时只中止子代理，父模型等待与汇总不受期限约束 | **已收尾**（#112）：一个期限覆盖派活、各部门与汇总；到期由宿主以 `deadline_exceeded` 结束 | `runtime.test.ts`「registered with its deadline before any department」「a captain that never dispatches is ended by the host at the deadline」；`test_review_runs.py` 超时后迟到的成功不能覆盖 |
+| P0 | `ReviewPolicy.states` 只在内存，重启无法还原；`finish()` 缓存失败 promise | **已收尾**（#113）：宿主启动时调 `review-recover`，把遗留的 dispatching 运行以可读报告显式结束；失败的汇总不缓存、可重试；按 review_id 幂等 | `test_review_runs.py`「a restarted host ends open reviews」「finalizing twice returns the same report」；`runtime.test.ts`「a finalize that fails is not cached」 |
+| P1 | 输出 token 上限是单次请求上限，不是整名子代理的额度 | **仍开放**：现有的是每部门 `CHILD_STEP_LIMIT = 3` 步数上限与按阶段分开记录的用量，没有跨步骤累计 token 的硬停 | `review-batch.ts`；`test_review_runs.py` 用量按阶段记数 |
+| P1 | 拒绝备注先写事件、决定后提交，竞争下可能留下未成为最终理由的备注 | **已收尾**：备注在正式决定前是草稿，只有拒绝才成为最终理由 | `runtime.test.ts`「a saved approval note is a draft until the official decision」 |
+| P1 | 父子会话链接失败只记客户端日志，页面无提示 | **部分收尾**：不存在的子会话链接在页面上显示「部门会话不存在」；状态页 URL 与原生页签激活仍不是同一个操作 | `business-smoke`（#40）英文界面断言该提示 |
 
 P0 的意思是它影响「本次业务操作是否完成」的可信度，必须在稳定的演示验收之前收尾，
 不是说已经证明存在越权写入。审批回执、领域拒绝、角色校验这些既有保护，与上面的恢复缺口要分开评估。
@@ -88,4 +91,4 @@ P0 的意思是它影响「本次业务操作是否完成」的可信度，必�
 
 每一步核对 `batch_id`、`review_id`、`report_id`、parent/child、approval/call 五类归属，
 检查页面显示、落盘内容与真实调用三者是否一致。测试的最终退出状态、`acceptance.json` 与证据清单必须互相对得上。
-目前只完成了表里标出的修复与验证，据此不能关闭上面的 P0，也不能把模拟意见算成部门负责人的签核。
+上面的「已收尾」来自离线测试与脚本化模型下的浏览器旅程；真实模型下的连续操作验收仍未做，也不能把模拟意见算成部门负责人的签核。

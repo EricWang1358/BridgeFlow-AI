@@ -24,9 +24,9 @@ export async function switchLanguage(page, target) {
   await page.locator('body[data-tour-ready]').waitFor()
   const welcome = page.locator('[data-tour-mode="welcome"] [data-tour-card]')
   if (await welcome.isVisible()) await welcome.getByRole('button', {name:/^(Maybe later|稍后再说)$/}).click()
-  // Native modality correctly blocks Settings behind a data workspace. Dismiss
-  // that read-only workspace through its own control, never force-click through it.
-  const workspace = page.getByRole('dialog', { name: /^BridgeFlow (数据工作区|data workspace)$/ })
+  // Native modality correctly blocks Settings behind the batch tables dialog. Dismiss
+  // that read-only dialog through its own control, never force-click through it.
+  const workspace = page.getByRole('dialog', { name: /^(批次数据表|Batch tables)$/ })
   if (await workspace.isVisible()) await workspace.getByRole('button', { name: /^(关闭|Close)$/, exact: true }).click()
   const toggle = page.getByRole('button', { name: /^(Sessions & settings|会话与设置)$/, exact: true })
   if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click()
