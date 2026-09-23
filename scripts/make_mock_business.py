@@ -132,17 +132,22 @@ def diagnosis(rate: Decimal, growth: Decimal) -> str:
 # --- 按月推演 -------------------------------------------------------------------------------
 
 
-def simulate() -> dict:
-    """{月份: {项目编号: {"master": 总表字段→值, "days": [生产部日记录]}}}"""
+def simulate(projects: list | None = None, plan: tuple[str, str, str] = ("0.40", "0.25", "0.15")) -> dict:
+    """{月份: {项目编号: {"master": 总表字段→值, "days": [生产部日记录]}}}
+
+    `projects` 与 `plan`（收款计划中已落实 / 有把握 / 可争取占合同欠款的比例）只供
+    `make_demo_cases.py` 派生演示样例；默认值生成的就是现有的月度数据与引导样例，逐字节不变。
+    """
+    projects = PROJECTS if projects is None else projects
     rng = random.Random(20240501)
     state = {p.code: {"output": p.base_output, "received": p.base_received, "last_actual": p.april_actual,
                       "last_billed": q(p.april_actual * p.price, 2), "debit": p.ytd_debit, "credit": p.ytd_credit}
-             for p in PROJECTS}
+             for p in projects}
     months: dict = {}
     for month, _ in MONTHS:
         months[month] = {}
         prices = [D(x) for x in MATERIAL_PRICE[month]]
-        for p in PROJECTS:
+        for p in projects:
             s = state[p.code]
             # 生产部：按日发货。每天的生产量、余料与现场签收各自取整到 0.5 方。
             target = D(p.monthly_actual[month])
@@ -177,7 +182,7 @@ def simulate() -> dict:
             received = s["received"] + receipt
             contract_debt = settled - received
             total_debt = output - received
-            confirmed, likely, possible = (q(contract_debt * D(x), -3) for x in ("0.40", "0.25", "0.15"))
+            confirmed, likely, possible = (q(contract_debt * D(x), -3) for x in plan)
             plan_total = received + confirmed + likely + possible
 
             # 财务部：应收账款明细账与项目损益

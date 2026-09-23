@@ -89,7 +89,7 @@ export function CloseChecklist({ period, batchId, onImport, onFocus, focusView =
       <b>{t(`step_${step.id}`)}</b>
       {step.owner_role && <span className="bf-hint bf-step-owner">{t('stepOwner')}{colon}{step.owner_role}</span>}
       {step.state !== 'done' && <>
-        {step.outstanding.length > 0 && <div className="bf-hint">{t('stepOutstanding')}{colon}{joined(step.outstanding.map((name: string) => t(name)))}</div>}
+        {step.outstanding.length > 0 && <div className="bf-hint">{t('stepOutstanding')}{colon}{joined(step.outstanding.map((name: string) => name.replace(/^([a-z_]+)(×\d+)?$/, (whole, kind: string, count = '') => t(`issue_${kind}`) === `issue_${kind}` ? whole : `${t(`issue_${kind}`)}${count}`)))}</div>}
         {step.reason && <div className="bf-hint">{step.reason}</div>}
         <div className="bf-actions" style={{ marginBottom: 0 }}>
           {step.count > 0 && onFocus && <button onClick={() => onFocus(step.next_view)}>{t('stepShowItems')}</button>}

@@ -6,7 +6,10 @@ import type {} from '@deepseek-ai/dsh-api-session-controller'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 
 export type Notebook = { title: string; kind?: NotebookKind; batch?: string; view?: string; source?: string; report?: string }
-const views = new Set(['discovery', 'integration', 'handoff', 'state', 'source', 'artifact', 'quotation', 'master', 'mappings', 'corrections', 'quarantine', 'review'])
+// Every view a notebook can be saved on: the studio destinations (#219) as well as the
+// batch tables' sections. A view missing here made Save fail on that page.
+const views = new Set(['discovery', 'integration', 'handoff', 'state', 'source', 'artifact', 'quotation', 'master', 'mappings', 'corrections', 'quarantine', 'review',
+  'tasks', 'data', 'brief', 'records', 'columns'])
 const departments = new Set(['production', 'procurement', 'finance', 'marketing'])
 
 /** This is navigation metadata, never a prompt, model fact, or approval grant. */

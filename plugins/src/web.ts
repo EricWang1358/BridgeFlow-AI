@@ -226,7 +226,7 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           || /^\/integration\/batches\/[a-f0-9]{32}(\/xlsx)?$/.test(path)
           || /^\/conclusions\/batches\/[a-f0-9]{32}(\/(comparison|charts|report))?$/.test(path)
           || /^\/conventions\/batches\/[a-f0-9]{32}(\/preview)?$/.test(path)
-          || path === '/monthly/checklist' || path === '/monthly/inbox'
+          || path === '/monthly/checklist' || path === '/monthly/inbox' || path === '/batches/demo/cases'
           || path === '/journal' || path === '/journal/runs' || path === '/eval/report'
           || /^\/reviews\/[a-f0-9]{32}\/dispositions$/.test(path)
           || /^\/batches\/templates\/(production|procurement|finance|marketing)$/.test(path))

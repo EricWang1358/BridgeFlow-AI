@@ -694,4 +694,10 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-pipeline > li > b { font-size: 13px; font-weight: 600; line-height: 1.3 }
 .bf-pipeline-count { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--bf-muted) }
 .bf-pipeline > li[data-active=true] .bf-pipeline-count { color: var(--bf-text) }
+.bf-blockers { margin: 4px 0 6px; padding-left: 18px; font-size: 12px; line-height: 1.55 }
+.bf-sample-cases { margin: 10px 0; font-size: 12px }
+.bf-sample-cases > summary { cursor: pointer; color: var(--bf-muted) }
+.bf-sample-cases ul { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px }
+.bf-sample-cases button { display: grid; gap: 2px; width: 100%; text-align: left; padding: 8px 10px; border: 1px solid var(--bf-line); border-radius: 10px; background: transparent; cursor: pointer }
+.bf-sample-cases button small { color: var(--bf-muted); line-height: 1.45 }
 `

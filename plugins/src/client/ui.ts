@@ -12,6 +12,10 @@ export function configureLocale(value: Context['locale']) { locale = value }
 const subscribe = (fn: () => void) => locale.subscribe(fn)
 const current = () => locale.getSnapshot().active.startsWith('zh') ? 'zh' : 'en'
 const labels = {
+  sampleCases: ['更多示例', 'More sample cases'],
+  sampleCasesHelp: ['同一家虚构公司的 2024-07，分别展示不同的问题；有些状态不能放在同一个批次里。每个示例打开成一个新笔记本。', 'The same fictional company in 2024-07, each showing different problems, because some states cannot share one batch. Each opens in a new notebook.'],
+  reviewBlockers: ['研判会被拒绝，原因：', 'The review would refuse this batch:'],
+  next_blocked: ['请修正源表，再用「单部门补传」替换出错部门的文件，这会生成新批次。', 'Correct the source file, then replace that department\'s file; that creates a new batch.'],
   workflowFlow: ['填报与流转流程', 'Filling and handoff flow'],
   flowStage_input: ['补齐缺项', 'Fill in what is missing'], flowStage_review: ['待审核', 'Awaiting review'], flowStage_approved: ['已批准', 'Approved'],
   flowStage_recorded: ['已入库', 'Recorded'], flowStage_handed: ['已交接', 'Handed over'], flowStage_working: ['下游处理中', 'Being worked on'], flowStage_done: ['已完成', 'Done'],
@@ -617,6 +621,8 @@ export function reviewRequest(batch: string, period = '') {
   return `请研判 ${period} 批次 ${batch}：review_context → 同一响应四次官方 subagent（production/procurement/finance/marketing）→ review_finalize。缺口如实标 partial，不重试，不执行业务动作。`
 }
 export type Summary = { demo_case?: string | null; batch_id: string; period: string; status: string; master_rows: number; unresolved: number; refusal: string;
+  /** Row-level problems the review would refuse, in its own words; they keep the batch out of ready. */
+  review_blockers?: string[]
   departments: { department: string; rows: number; quarantined: number; corrections: number }[]
   /** The dictionary this batch was frozen against, and what it declares per department. */
   dictionary?: string
