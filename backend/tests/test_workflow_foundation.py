@@ -87,14 +87,28 @@ def ready(service: WorkflowService) -> str:
     return service.submit(artifact.id).id
 
 
+def record_output(service: WorkflowService, project: str = "演示项目A") -> str:
+    """What the marketing stage produces: its settlement basis for the same project and month."""
+    out = RAW["templates"]["settlement_basis"]["fields"]
+    artifact = service.receive("settlement_basis", [
+        obs(out["project"]["aliases"][0], project), obs(out["period"]["aliases"][0], "2026年9月"),
+        obs(out["settled_qty"]["label"], "97.5 方", evidence="DEMO-SETTLE-001")])
+    artifact = service.review(artifact.id, artifact.draft.digest, "reviewer", artifact.seq)
+    return service.submit(artifact.id).id
+
+
 # --- declarations ------------------------------------------------------------------
 
 
 def test_the_demo_catalogue_loads_and_a_draft_template_never_runs():
     declared = catalogue.load(DEMO)
     assert declared.runnable("production_record").status == "approved"
+    assert declared.runnable("settlement_basis").status == "approved"  # the demo's second hop
+    # The guarantee itself: the same template, declared as a draft, never runs.
+    raw = copy.deepcopy(RAW)
+    raw["templates"]["settlement_basis"]["status"] = "draft"
     with pytest.raises(CatalogueError, match="draft"):
-        declared.runnable("settlement_basis")
+        Catalogue.model_validate(raw).runnable("settlement_basis")
 
 
 @pytest.mark.parametrize("breakage, message", [
@@ -296,6 +310,7 @@ def test_a_completion_keeps_the_confirmation_it_rests_on(tmp_path):
     ready(service)
     [handoff] = service.handoffs()
     started = service.act(handoff.id, "start", "", handoff.seq)
+    record_output(service)
     done = service.act(handoff.id, "complete", "市场部负责人确认已处理", started.seq)
     assert done.view.state is HandoffState.COMPLETED and done.view.reason == "市场部负责人确认已处理"
 
@@ -417,8 +432,11 @@ def test_the_sample_workflow_only_receives_and_leaves_approval_to_a_person(clien
     loaded = client.post("/workflow/sample")
     assert loaded.status_code == 200, loaded.text
     artifacts = [row for row in loaded.json()["rows"] if row["kind"] == "artifact"]
-    # One submission is missing its confirmed quantity, one is complete; neither is approved.
-    assert sorted(row["state"] for row in artifacts) == ["needs_input", "ready_for_review"]
+    # Production: one missing its confirmed quantity, one complete; marketing's settlement
+    # basis for the second hop is complete too. None of them is approved.
+    assert sorted((row["template"], row["state"]) for row in artifacts) == [
+        ("production_record", "needs_input"), ("production_record", "ready_for_review"),
+        ("settlement_basis", "ready_for_review")]
     assert not [row for row in loaded.json()["rows"] if row["kind"] == "handoff"]
     # A workflow that already holds records is left alone.
     assert client.post("/workflow/sample").status_code == 409
@@ -470,5 +488,59 @@ def test_revision_must_be_ready_and_acknowledged_before_work_continues(tmp_path,
         service.act(handoff.id, action, "", handoff.seq)
     handoff = service.act(handoff.id, "acknowledge", "", handoff.seq)
     assert not handoff.view.stale
+    if started:
+        record_output(service)
     assert service.act(handoff.id, action, "", handoff.seq).view.state == (
         HandoffState.COMPLETED if started else HandoffState.IN_PROGRESS)
+
+
+def test_a_handoff_is_due_by_its_stage_limit_and_overdue_only_while_open(tmp_path):
+    clock = Clock()
+    service = build(tmp_path, clock=clock)
+    ready(service)
+    limit = RAW["stages"]["market_review"]["sla_hours"]
+    [row] = [r for r in board.project(service).rows if isinstance(r, board.HandoffRow)]
+    assert row.overdue_hours == -limit  # hours left, counted from when it was handed over
+    clock.now += timedelta(hours=limit + 5)
+    [row] = [r for r in board.project(service).rows if isinstance(r, board.HandoffRow)]
+    assert row.overdue_hours == 5 and row.due_at.startswith("2026-09-")
+    [handoff] = service.handoffs()
+    handoff = service.act(handoff.id, "start", "", handoff.seq, by="示例-市场部")
+    record_output(service)
+    service.act(handoff.id, "complete", "已核对", handoff.seq, by="示例-市场部")
+    [row] = [r for r in board.project(service).rows if isinstance(r, board.HandoffRow) and r.stage == "market_review"]
+    assert row.overdue_hours is None  # finished work is not overdue, however late it was
+
+
+def test_a_timeline_says_who_did_what_and_when_but_never_the_values(tmp_path):
+    service = build(tmp_path)
+    artifact_id = ready(service)
+    [handoff] = service.handoffs()
+    service.act(handoff.id, "start", "", handoff.seq, by="示例-市场部")
+    steps = service.history("artifact", artifact_id)
+    assert [s["type"] for s in steps][:2] == ["material_received", "answer_provided"]
+    assert steps[0]["detail"].endswith("field(s)")
+    assert "97.5" not in json.dumps(steps, ensure_ascii=False)  # the draft view shows values; the timeline does not
+    [opened, started] = service.history("handoff", handoff.id)
+    assert opened["type"] == "handoff_opened" and "production_record v1" in opened["detail"]
+    assert started["by"] == "示例-市场部"
+
+
+def test_a_stage_that_produces_a_record_cannot_complete_before_that_record_is_recorded(tmp_path):
+    service = build(tmp_path)
+    ready(service)
+    [handoff] = service.handoffs()
+    handoff = service.act(handoff.id, "start", "", handoff.seq)
+    [row] = [r for r in board.project(service).rows if isinstance(r, board.HandoffRow)]
+    assert row.awaiting_outputs == ["settlement_basis"] and "入库后才能完成" in row.summary
+    with pytest.raises(TransitionError, match="not recorded"):
+        service.act(handoff.id, "complete", "市场部负责人确认已处理", handoff.seq)
+    record_output(service, project="演示项目B")  # another project's output does not count
+    with pytest.raises(TransitionError, match="not recorded"):
+        service.act(handoff.id, "complete", "市场部负责人确认已处理", handoff.seq)
+    record_output(service)
+    rows = board.project(service).rows
+    [market] = [r for r in rows if isinstance(r, board.HandoffRow) and r.stage == "market_review"]
+    assert market.awaiting_outputs == []
+    assert service.act(handoff.id, "complete", "市场部负责人确认已处理", handoff.seq).view.state is HandoffState.COMPLETED
+    assert any(isinstance(r, board.HandoffRow) and r.stage == "finance_settlement" for r in rows)  # the second hop opened

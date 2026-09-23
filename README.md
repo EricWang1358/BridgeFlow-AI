@@ -44,8 +44,10 @@ before. Nothing is assumed beyond "you can open a terminal".
 | Four-department review: the captain dispatches four department sub-agents in parallel; the host validates | ✅ Passes on the real model | Risk / balanced / cell-injection cases all validated 4/4, 12–19 s, 70–110k tokens each (`docs/evidence/live-2026-09-23/`) | Real samples from more industries |
 | Monthly brief: one-line conclusion, attention-item logic chains, evidence grades, Word export | ✅ Built (offline) | round1 journey; a test pins each attention formula to its key metric | Reviewing briefs on the real model |
 | Dictionary drafted by the model, reviewed entry by entry, published as a version (#205) | ✅ Built (offline) | Draft lifecycle tests | A real drafting run; three open business questions |
-| Filling and handoff workflow (Agent 2): ask for missing items → approve and submit → record → hand over → next team starts / completes; notices go out on submission | ✅ Runs end to end on the real model | Workflow journey: 4 native approvals, 12 model requests, 42.5 s; the flow strip and the sample workflow | Template-governance consumer; a real notification channel |
-| Materials → candidates → flow graph → scoring → meeting → MVP decision (Agent 1) | ✅ Built (offline) | web journey, whole chain | Real business materials |
+| Filling and handoff workflow (Agent 2): ask for missing items → approve and submit → record → hand over → next team starts / completes, over two hops (production → marketing → finance); each handoff has a due time and shows when it is overdue; every record has a timeline of who did what and when | ✅ Runs end to end on the real model | Workflow journey, scope acceptance plus both hops: 8 native approvals, 28 model requests, 76.9 s (`docs/evidence/live-2026-09-24/workflow-two-hops/`). A stage cannot complete until its own output is recorded; the real model caught this before the rule existed | Template-governance consumer; a real notification channel |
+| Materials → candidates → flow graph → scoring → meeting → MVP decision (Agent 1) | ✅ Built (offline) | web journey, whole chain; "Load the sample project" seeds one approved decision through the real services | Real business materials |
+| Agent 1 → Agent 2: the approved MVP decision becomes the workflow's scope | ✅ Built | Accepted through the captain behind approval, only at the version the person saw and only for scenarios the catalogue can run; a revised or withdrawn decision marks the scope stale and new records are refused (`test_workflow_scope.py`, workflow journey) | Generating templates from a decision (templates are declared today) |
+| Overview dashboard: close progress, open items, workflow stages with overdue counts, key metrics, tokens per run | ✅ Built (offline) | Read-only; each block reads the owning page's endpoint and opens that page; workflow and README-shot journeys | Metric trends need a second month of data |
 | Adoption (Agent 3): role guidance, adoption signals | 🟡 Partial | Guidance generated from declared templates | Pilot pages, feedback handling, retrospectives |
 | Quotation workspace | 🟡 Declared drafts | quotation journey | Extraction from real files; external release |
 | Human in the loop: every write needs a native approval; a rejection writes nothing | ✅ Built | Every write tool; approvals exercised in the real-model review and workflow runs | Risk tiers (today: read / approval only) |
@@ -488,7 +490,9 @@ transcript, a validated fact store from uploaded documents, and any way to send 
 
 ### Filling & handoff, and the three-agent workflow
 
-![Filling & handoff: the handoff board, empty until a record is filled](docs/images/13-workflow-handoff.png)
+![Filling & handoff: the approved MVP decision waiting to be accepted, the flow strip and the sample records](docs/images/13-workflow-handoff.png)
+
+![Overview: close progress, open items, records in flight, key metrics, open items by department and workflow stages](docs/images/15-overview.png)
 
 The business side designed three agents: **Agent 1** reads department materials, proposes candidate
 work scenarios, draws information and file flows, scores a four-quadrant proposal and records the MVP
@@ -501,8 +505,12 @@ diagram, four-quadrant scoring, meeting minutes, and an MVP decision under decla
 per-person votes (editors prepare, the native approval records every save; nothing is auto-generated
 or auto-approved); assisted filling through the captain (every write needs native approval); native
 downstream actions (start / return / complete) with revision confirmation and expiry protection; and
-role guidance generated from the declared templates. Not built: the Agent 2 consumer that turns an
-approved decision into governed templates, pilot-facing guidance pages, the feedback and
+role guidance generated from the declared templates; and the link between the two agents — an approved
+MVP decision is accepted as the workflow's scope (behind approval, re-checked on every read), and new
+records stop if the decision is later revised. Each handoff carries a due time from its stage, and every
+record keeps a timeline. The **Overview** page puts close progress, open items, workflow stages and
+model usage on one screen, each block opening the page that owns it. Not built: generating governed
+templates from a decision (the catalogue declares them), pilot-facing guidance pages, the feedback and
 retrospective loop, and real notification channels. The item-by-item comparison with the design and
 the planned order are in [`HANDOFF.md`](HANDOFF.md).
 

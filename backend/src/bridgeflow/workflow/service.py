@@ -27,6 +27,7 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 from bridgeflow.workflow import intake
 from bridgeflow.workflow.catalogue import Catalogue, CatalogueError, TemplateSpec
@@ -214,10 +215,38 @@ class WorkflowService:
         return HandoffSnapshot(handoff_id, str(opened["stage"]), tuple(opened["business_key"]),
                                HandoffMachine.replay(events), events[-1].seq, events[-1].at, events)
 
+    def history(self, kind: str, identifier: str) -> list[dict[str, Any]]:
+        """One record's steps in order: what happened, when, by whom and why — never the values.
+
+        Read straight from the append-only stream, so the timeline cannot disagree with the
+        state it explains. Field values stay on the draft view; here a step says how many
+        fields arrived, not what they were.
+        """
+        if kind not in ("artifact", "handoff"):
+            raise NotFound(f"No history kind {kind}")
+        events = self.store.read(f"{kind}:{identifier}")
+        if not events:
+            raise NotFound(f"{kind} {identifier} not found")
+        steps = []
+        for event in events:
+            data = dict(event.data)
+            detail = ""
+            if "observations" in data:
+                detail = f"{len(data['observations'])} field(s)"
+            elif event.type == "submission_succeeded":
+                detail = f"version {data.get('version', '')}".strip()
+            elif event.type == "submission_failed":
+                detail = str(data.get("error", ""))[:200]
+            elif event.type == "handoff_opened":
+                detail = ", ".join(f"{k} v{v}" for k, v in dict(data.get("inputs", {})).items())
+            steps.append({"seq": event.seq, "type": event.type, "at": event.at, "by": str(data.get("by", "")),
+                          "reason": str(data.get("reason", ""))[:300], "detail": detail})
+        return steps
+
     def handoffs(self) -> list[HandoffSnapshot]:
         return [self.handoff(stream.split(":", 1)[1]) for stream in self.store.streams("handoff:")]
 
-    def act(self, handoff_id: str, action: str, reason: str, expected_seq: int) -> HandoffSnapshot:
+    def act(self, handoff_id: str, action: str, reason: str, expected_seq: int, by: str = "") -> HandoffSnapshot:
         types = {"start": "handoff_started", "return": "handoff_returned", "complete": "handoff_completed",
                  "acknowledge": "revision_acknowledged"}
         if action not in types:
@@ -229,12 +258,16 @@ class WorkflowService:
             raise StaleRead(f"Handoff is at {current.seq}, request was based on {expected_seq}")
         if action in {"start", "complete"} and current.view.stale:
             raise TransitionError("Acknowledge the ready upstream revision before continuing work")
+        if action == "complete" and (owed := self.missing_outputs(current.stage, current.key)):
+            titles = "、".join(self.catalogue.templates[t].title for t in owed)
+            raise TransitionError(f"This stage's own output ({titles}) is not recorded for {' / '.join(current.key)} yet; "
+                                  "submit and record it before completing the handoff")
         if action == "acknowledge":
             ready = self._ready_versions()
             if any(ready.get((template, current.key)) != version
                    for template, version in current.view.inputs.items()):
                 raise TransitionError("Upstream inputs are not ready at the handoff's current versions")
-        event = Event(types[action], {"reason": reason.strip()})
+        event = Event(types[action], {"reason": reason.strip(), **({"by": by} if by else {})})
         HandoffMachine.next(HandoffView(**{**vars(current.view), "inputs": dict(current.view.inputs)}), event)
         self._append(f"handoff:{handoff_id}", current.seq, [event])
         return self.handoff(handoff_id)
@@ -254,6 +287,15 @@ class WorkflowService:
     def missing_inputs(self, stage: str, key: tuple[str, ...]) -> list[str]:
         ready = self._ready_versions()
         return [t for t in self.catalogue.stages[stage].inputs if (t, key) not in ready]
+
+    def missing_outputs(self, stage: str, key: tuple[str, ...]) -> list[str]:
+        """What the stage declares it produces and has not yet recorded for this business key.
+
+        A stage whose work *is* producing a record is not done while that record is only a draft:
+        completing it would tell the next team the work is finished before it is.
+        """
+        ready = self._ready_versions()
+        return [t for t in self.catalogue.stages[stage].outputs if (t, key) not in ready]
 
     def _plan_handoff(self, stage: str, key: tuple[str, ...], ready: dict[tuple[str, tuple[str, ...]], int],
                       pending: list[Pending], notices: list[tuple[str, str, str, str]]) -> None:

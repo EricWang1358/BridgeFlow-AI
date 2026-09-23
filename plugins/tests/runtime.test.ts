@@ -213,7 +213,8 @@ test('workflow reads stay available when workflow writes are switched off', asyn
   for (const name of ['workflow_catalogue', 'workflow_draft', 'workflow_board']) assert(names.includes(name))
   assert(names.includes('workflow_guidance'))
   assert(!names.includes('workflow_handoff'))
-  assert(!names.includes('workflow_record') && !names.includes('workflow_approve_submit'))
+  assert(!names.includes('workflow_record') && !names.includes('workflow_approve_submit') && !names.includes('workflow_accept_scope'))
+  assert(names.includes('workflow_scope'))
   await ctx.fiber.dispose()
 })
 
@@ -457,7 +458,7 @@ test('the product tool catalogue is pinned: a new or missing tool must be a deli
   const product = ctx.tools.schemas().map(tool => tool.name).sort()
   assert.deepEqual(product, [
     'aggregate_metric', 'batch_summary', 'column_candidates', 'confirm_column_match', 'confirm_mapping', 'convention_decide', 'convention_list', 'convention_preview', 'dictionary_decide', 'dictionary_draft', 'dictionary_draft_view', 'dictionary_import', 'dictionary_profiles', 'dictionary_publish', 'discovery_decision_finalize', 'discovery_decision_propose', 'discovery_decision_resolve', 'discovery_decision_vote', 'discovery_graph_save', 'discovery_materials', 'discovery_meeting_save', 'discovery_propose', 'discovery_register', 'discovery_score_save', 'feishu_import', 'feishu_upload_report', 'integration_summary', 'list_metrics', 'lookup_field_dictionary', 'monthly_checklist', 'monthly_inbox', 'profile_batch', 'quarantine_apply', 'quarantine_decide', 'quarantine_list', 'review_context',
-    'review_finalize', 'risk_disposition_record', 'risk_dispositions', 'workflow_approve_submit', 'workflow_board', 'workflow_catalogue', 'workflow_draft', 'workflow_guidance', 'workflow_handoff', 'workflow_record',
+    'review_finalize', 'risk_disposition_record', 'risk_dispositions', 'workflow_accept_scope', 'workflow_approve_submit', 'workflow_board', 'workflow_catalogue', 'workflow_draft', 'workflow_guidance', 'workflow_handoff', 'workflow_record', 'workflow_scope',
   ])
   await ctx.fiber.dispose()
 })

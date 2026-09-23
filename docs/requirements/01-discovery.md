@@ -190,7 +190,7 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 - 主流程：记录候选、投票或确认、决定人、理由、条件和排除范围；批准后交 Agent 2。
 - 异常与验收：未定投票规则不能自动计票生效；条件未满足保留条件式决定；修订新建版本。
 - 后置：保存或返回可追溯的结果；只有实际成功才推进状态。失败保留原记录和可操作原因。
-- 当前证据与缺口：声明政策、版本提案、验签选票、条件确认和决定领域/API/原生工具已实现；决策浏览器已接，Agent 2 消费端待接 / declared policy, versioned proposals, verified votes, condition confirmation and decisions implemented in domain/API/native tools/browser; Agent 2 consumer pending。
+- 当前证据与缺口：声明政策、版本提案、验签选票、条件确认和决定领域/API/原生工具已实现；决策浏览器已接；2026-09-24 起填报流程经审批接收当前有效的批准范围（按展示给人的决定序号、只接收目录能运行的场景，每次读取都重核，决定被修订/撤回后范围失效并拒收新记录，`workflow/scope.py`）。由决定生成模板尚未做 / declared policy, versioned proposals, verified votes, condition confirmation and decisions implemented in domain/API/native tools/browser; since 2026-09-24 the filling workflow accepts the current approved scope behind approval (at the decision sequence shown, only for scenarios the catalogue runs, re-checked on every read; a revised or withdrawn decision makes it stale and new records are refused, `workflow/scope.py`). Generating templates from a decision is not built。
 
 ### English requirements and acceptance
 
@@ -200,7 +200,7 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 - Main flow: Record candidates, votes or confirmations, decision owner, rationale, conditions and exclusions; hand the approved scope to Agent 2.
 - Exceptions and acceptance: No automatic approval without agreed voting rules; unresolved conditions remain explicit; revisions create versions.
 - Postcondition: retain or return a traceable result; advance state only after actual success. Preserve the previous record and an actionable failure reason otherwise.
-- Evidence and gap: 声明政策、版本提案、验签选票、条件确认和决定领域/API/原生工具已实现；决策浏览器已接，Agent 2 消费端待接 / declared policy, versioned proposals, verified votes, condition confirmation and decisions implemented in domain/API/native tools/browser; Agent 2 consumer pending.
+- Evidence and gap: 声明政策、版本提案、验签选票、条件确认和决定领域/API/原生工具已实现；决策浏览器已接；2026-09-24 起填报流程经审批接收当前有效的批准范围（按展示给人的决定序号、只接收目录能运行的场景，每次读取都重核，决定被修订/撤回后范围失效并拒收新记录，`workflow/scope.py`）。由决定生成模板尚未做 / declared policy, versioned proposals, verified votes, condition confirmation and decisions implemented in domain/API/native tools/browser; since 2026-09-24 the filling workflow accepts the current approved scope behind approval (at the decision sequence shown, only for scenarios the catalogue runs, re-checked on every read; a revised or withdrawn decision makes it stale and new records are refused, `workflow/scope.py`). Generating templates from a decision is not built.
 
 ### 验证设计 / Verification design
 

@@ -34,3 +34,11 @@ submissions:
       - {label: 产量, value: 120 方}
       - {label: 发出量, value: 118 m³}
       - {label: 确认数量, value: 116.5 方, evidence: 签收单 DEMO-0908}
+  # The second hop: marketing's settlement basis for project B, ready for review. Once
+  # approved it is recorded and handed to finance for invoicing.
+  - template: settlement_basis
+    source: 市场部-结算依据-9月.xlsx
+    observations:
+      - {label: 工程, value: 演示项目B}
+      - {label: 月份, value: 2026年9月}
+      - {label: 结算量, value: 116.5 方, evidence: 签收单 DEMO-0908}

@@ -39,7 +39,7 @@ Deliver workflow standardization, pilot and execution with explicit human decisi
 - 主流程：承接已批准 MVP，逐阶段定义输入输出、键、期间、单位、公式及双向血缘，列出未确认项。
 - 异常与验收：不得按第一列拼接；生产量、出厂量、实际量与产值、结算、收款分别保留。
 - 后置：保存或返回可追溯的结果；只有实际成功才推进状态。失败保留原记录和可操作原因。
-- 当前证据与缺口：catalogue.py；GET /workflow/lineage/{template}/{field}。
+- 当前证据与缺口：catalogue.py；GET /workflow/lineage/{template}/{field}；目录声明两跳（生产→市场→财务）；新记录只在已接收且仍有效的立项批准范围下进入（workflow/scope.py）/ two declared hops; new records only under an accepted, still-current MVP scope。
 
 ### English requirements and acceptance
 
@@ -49,7 +49,7 @@ Deliver workflow standardization, pilot and execution with explicit human decisi
 - Main flow: Starting with an approved MVP, define stage inputs, outputs, keys, periods, units, formulas and bidirectional lineage, including unresolved items.
 - Exceptions and acceptance: Never join on the first column; preserve distinct production, shipment, actual quantity, output value, settlement and payment concepts.
 - Postcondition: retain or return a traceable result; advance state only after actual success. Preserve the previous record and an actionable failure reason otherwise.
-- Evidence and gap: catalogue.py；GET /workflow/lineage/{template}/{field}.
+- Evidence and gap: catalogue.py；GET /workflow/lineage/{template}/{field}；目录声明两跳（生产→市场→财务）；新记录只在已接收且仍有效的立项批准范围下进入（workflow/scope.py）/ two declared hops; new records only under an accepted, still-current MVP scope.
 
 ### 验证设计 / Verification design
 
@@ -194,7 +194,7 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 - 主流程：所有必要输入就绪后为每个下游创建交接；数据状态、通知状态、业务状态分列；通知可独立重试。
 - 异常与验收：消息送达不等于已读或完成；缺收件路由不猜人；失败不回滚已成功数据。
 - 后置：保存或返回可追溯的结果；只有实际成功才推进状态。失败保留原记录和可操作原因。
-- 当前证据与缺口：board.py、store.py 本地 outbox；真实通知未接通 / real notification pending。
+- 当前证据与缺口：board.py、store.py 本地 outbox；交接按环节声明的 sla_hours 给出到期时间与超时时长，每条记录可读时间线（GET /workflow/history，不含字段值）；总览页汇总各环节与超时数 / handoffs carry a due time from the stage's sla_hours and an overdue count, each record has a value-free timeline, the overview page totals stages and overdue items；真实通知未接通 / real notification pending。
 
 ### English requirements and acceptance
 
@@ -204,7 +204,7 @@ Use declared synthetic fixtures for the main flow and independently exercise the
 - Main flow: Create each downstream handoff only when every required input is ready; separate data, notification and work states; retry notification independently.
 - Exceptions and acceptance: Delivery does not imply reading or completion; missing routes never trigger guessed recipients; delivery failure does not undo ready data.
 - Postcondition: retain or return a traceable result; advance state only after actual success. Preserve the previous record and an actionable failure reason otherwise.
-- Evidence and gap: board.py、store.py 本地 outbox；真实通知未接通 / real notification pending.
+- Evidence and gap: board.py、store.py 本地 outbox；交接按环节声明的 sla_hours 给出到期时间与超时时长，每条记录可读时间线（GET /workflow/history，不含字段值）；总览页汇总各环节与超时数 / handoffs carry a due time from the stage's sla_hours and an overdue count, each record has a value-free timeline, the overview page totals stages and overdue items；真实通知未接通 / real notification pending.
 
 ### 验证设计 / Verification design
 

@@ -21,7 +21,7 @@ import { checklistTool, inboxTool } from './tools/checklist.ts'
 import { conventionDecide, conventionList, conventionPreview } from './tools/conventions.ts'
 import { riskDispositionRecord, riskDispositions } from './tools/dispositions.ts'
 import { quarantineApply, quarantineDecide, quarantineList } from './tools/quarantine.ts'
-import { workflowApproveSubmit, workflowBoard, workflowCatalogue, workflowDraft, workflowGuidance, workflowHandoff, workflowRecord } from './tools/workflow.ts'
+import { workflowAcceptScope, workflowApproveSubmit, workflowBoard, workflowCatalogue, workflowDraft, workflowGuidance, workflowHandoff, workflowRecord, workflowScope } from './tools/workflow.ts'
 import { listMetrics } from './tools/list-metrics.ts'
 import { profileBatch } from './tools/profile-batch.ts'
 import { lookupFieldDictionary } from './tools/lookup-field-dictionary.ts'
@@ -103,6 +103,7 @@ export function apply(ctx: Context, config: Config): void {
   catalogue.register(ctx, workflowDraft(backend))
   catalogue.register(ctx, workflowBoard(backend))
   catalogue.register(ctx, workflowGuidance(backend))
+  catalogue.register(ctx, workflowScope(backend))
   catalogue.register(ctx, discoveryMaterials(backend))
   if (config.allowWorkflowWrite) {
     catalogue.register(ctx, discoveryPropose(backend, receipts))
@@ -114,6 +115,7 @@ export function apply(ctx: Context, config: Config): void {
     catalogue.register(ctx, workflowRecord(backend, receipts))
     catalogue.register(ctx, workflowApproveSubmit(backend, receipts))
     catalogue.register(ctx, workflowHandoff(backend, receipts))
+    catalogue.register(ctx, workflowAcceptScope(backend, receipts))
     catalogue.register(ctx, feishuImport(backend, receipts))
     catalogue.register(ctx, feishuUploadReport(backend, receipts))
   }

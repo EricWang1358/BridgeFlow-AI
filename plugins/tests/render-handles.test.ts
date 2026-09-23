@@ -21,6 +21,11 @@ test('workflow_board shows each row id and seq that workflow_handoff takes', () 
   assert.match(out, /id=h-1 seq=2 state=waiting/)
 })
 
+test('workflow_board says which output a handoff still owes before it can complete', () => {
+  const out = text(renderBoard({ rows: [{ kind: 'handoff', id: 'h-2', seq: 3, state: 'in_progress', summary: '处理中', awaiting_outputs: ['settlement_basis'] }] }))
+  assert.match(out, /cannot_complete_until_recorded=settlement_basis/)
+})
+
 test('dictionary_draft_view shows the entry_id that dictionary_decide takes', () => {
   const out = text(renderDraftEntries({ entries: [{ entry_id: 'e-7', department: 'finance', column: '项目编号', role: 'entity:project', decision: 'pending', evidence: '重合 100%' }] }))
   assert.match(out, /\[e-7\]/)
@@ -47,4 +52,14 @@ test('integration_summary lists open items and conventions, not only counts', as
   assert.match(out, /- disagreement: 客户名称 \[departments: production\/marketing\]/)
   assert.match(out, /- vat_rate \(unconfirmed\): 增值税按 13%/)
   assert.match(out, /Explain who decides\./)
+})
+
+test('workflow_scope shows the ids and decision_seq that workflow_accept_scope takes, and staleness', async () => {
+  const { renderScope } = await import('../src/tools/workflow.ts')
+  const waiting = text(renderScope({ accepted: null, current: false, stale_reasons: [], runnable_candidates: ['production_to_marketing_handoff'],
+    pending: [{ project_id: 'demo-handoff', decision_id: 'mvp', decision_seq: 4, scope: ['试点'], candidates: ['production_to_marketing_handoff'] }] }))
+  assert.match(waiting, /project_id=demo-handoff decision_id=mvp decision_seq=4/)
+  const stale = text(renderScope({ accepted: { project_id: 'demo-handoff', decision_id: 'mvp', decision_seq: 4, scope: ['试点'], exclusions: [] },
+    current: false, stale_reasons: ['decision_revised'], runnable_candidates: [] }))
+  assert.match(stale, /STALE \(decision_revised\)/)
 })

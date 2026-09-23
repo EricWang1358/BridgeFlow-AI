@@ -109,6 +109,17 @@ def submitted_handoff(client):
     return next(r for r in client.post("/tools/workflow-board").json()["rows"] if r["kind"] == "handoff")
 
 
+def record_settlement(client):
+    """The marketing stage's own output for the same project and month, through the same tools."""
+    out = yaml.safe_load((REPO_ROOT / "data/workflow_demo/catalogue.yaml").read_text(encoding="utf-8"))["templates"]["settlement_basis"]["fields"]
+    draft = post(client, "/tools/workflow-receive", {"template": "settlement_basis", "confirmed_by": "captain", "call_id": "s1",
+        "said": said((out["project"]["label"], "演示项目A", ""), (out["period"]["label"], "2026-09", ""),
+                     (out["settled_qty"]["label"], "97.5 方", "DEMO-SETTLE-001"))}).json()
+    result = post(client, "/tools/workflow-approve-submit", {
+        "artifact_id": draft["artifact_id"], "expected_seq": draft["seq"], "digest": draft["digest"]})
+    assert result.status_code == 200, result.text
+
+
 def test_downstream_tool_requires_approval_and_fresh_sequence(client):
     handoff = submitted_handoff(client)
     body = {"handoff_id": handoff["id"], "expected_seq": handoff["seq"], "action": "start"}
@@ -119,6 +130,9 @@ def test_downstream_tool_requires_approval_and_fresh_sequence(client):
     assert started.status_code == 200, started.text
     assert started.json()["state"] == "in_progress"
     assert post(client, "/tools/workflow-handoff", body).status_code == 409
+    early = post(client, "/tools/workflow-handoff", {**body, "expected_seq": started.json()["seq"], "action": "complete"})
+    assert early.status_code == 409 and "not recorded" in early.json()["detail"]  # its own output is still owed
+    record_settlement(client)
     completed = post(client, "/tools/workflow-handoff", {
         **body, "expected_seq": started.json()["seq"], "action": "complete"})
     assert completed.status_code == 200 and completed.json()["state"] == "completed"

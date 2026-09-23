@@ -134,6 +134,8 @@ body[data-bf-notebook] [data-slot="root"] > [data-details-collapsed] > div:has(>
 /* The chevron sits on the icon line, so a long name can never push it onto its own row. */
 .bf-studio-tools button > span:last-child { grid-row: 1; grid-column: 3; opacity: .45; font-size: 12px }
 .bf-studio-tools button .bf-badge { grid-row: 1; grid-column: 2; justify-self: end; margin: 0 }
+.bf-studio-tools button[data-span=all] { grid-column: 1 / -1; min-height: 0; grid-template-rows: auto }
+.bf-studio-tools button[data-span=all] > span:nth-child(2) { grid-row: 1; grid-column: 2 }
 .bf-studio-tools .bf-studio-group { grid-column: 1 / -1; margin: 14px 2px 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .55 }
 .bf-studio-tools button[data-secondary=true] {
   grid-column: 1 / -1; grid-template-columns: auto 1fr auto; grid-template-rows: auto;

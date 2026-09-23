@@ -61,7 +61,15 @@ export function Discovery() {
     <form onSubmit={e => { e.preventDefault(); setPage(null); setDetail(null); setEditing(undefined); setGraphDraft(null); setScoringTarget(null); setMeeting(null); setDecisionEdit(null); setProject(projectInput); setOffset(0); setStaged(null); setRevision(n => n + 1) }}>
       <label>{tr('项目标识', 'Project ID')}<input required pattern="[a-zA-Z0-9]([a-zA-Z0-9_]|-){0,79}" value={projectInput} onChange={e => setProjectInput(e.target.value)} /></label>
       <button type="submit" disabled={busy}>{tr('打开项目', 'Open project')}</button>
+      <button type="button" disabled={busy} onClick={() => {
+        setBusy(true); setError('')
+        void api<{ project_id: string; id: string; seq: number }>('/discovery/sample', { method: 'POST' }).then(decision => {
+          setPage(null); setDetail(null); setEditing(undefined); setGraphDraft(null); setScoringTarget(null); setMeeting(null); setDecisionEdit(null)
+          setProjectInput(decision.project_id); setProject(decision.project_id); setKind('decision'); setOffset(0); setStaged(null); setRevision(n => n + 1)
+        }).catch(e => setError(describeError(e, t))).finally(() => setBusy(false))
+      }}>{tr('载入示例项目', 'Load the sample project')}</button>
     </form>
+    <p className="bf-hint">{tr('示例项目从一份部门材料走到一条已批准的立项决策；人名和投票都是示例数据。', 'The sample project goes from one department file to an approved MVP decision. Its people and votes are sample data.')}</p>
     {error && <p role="alert">{error}</p>}
     {project && <>
       <h3>{project}</h3>

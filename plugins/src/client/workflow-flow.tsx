@@ -18,7 +18,7 @@ export const FLOW = [
   { id: 'done', states: ['completed'], actor: 'flowActorDownstream' },
 ] as const
 
-export function WorkflowFlow({ counts }: { counts: Record<string, number> }) {
+export function WorkflowFlow({ counts, overdue = {} }: { counts: Record<string, number>; overdue?: Record<string, number> }) {
   const { t } = useUI()
   const names: Record<string, string> = { input: t('flowStage_input'), review: t('flowStage_review'), approved: t('flowStage_approved'),
     recorded: t('flowStage_recorded'), handed: t('flowStage_handed'), working: t('flowStage_working'), done: t('flowStage_done') }
@@ -27,10 +27,12 @@ export function WorkflowFlow({ counts }: { counts: Record<string, number> }) {
   return <ol className="bf-pipeline" aria-label={t('workflowFlow')}>
     {FLOW.map(stage => {
       const count = stage.states.reduce((n, state) => n + (counts[state] ?? 0), 0)
-      return <li key={stage.id} data-stage={stage.id} data-actor={stage.actor} data-active={count > 0}>
+      const late = stage.states.reduce((n, state) => n + (overdue[state] ?? 0), 0)
+      return <li key={stage.id} data-stage={stage.id} data-actor={stage.actor} data-active={count > 0} data-late={late > 0}>
         <span className="bf-pipeline-actor">{actors[stage.actor]}</span>
         <b>{names[stage.id]}</b>
         <span className="bf-pipeline-count">{count}</span>
+        {late > 0 && <span className="bf-pipeline-late">{t('flowOverdue').replaceAll('{n}', String(late))}</span>}
       </li>
     })}
   </ol>

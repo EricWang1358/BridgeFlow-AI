@@ -18,7 +18,8 @@ const env = { ...process.env, DSH_HOME: `${scratch}/dsh`, DSH_TOOLS_MODE: 'nativ
   BRIDGEFLOW_SERVICE_TOKEN: randomBytes(32).toString('hex'), PYTHONPATH: `${root}/backend/src`, RESULT_STORE_PATH: `${scratch}/outputs`,
   MAPPING_MEMORY_PATH: `${scratch}/mappings.json`, COLUMN_MATCH_PATH: `${scratch}/column-matches.json`,
   FIELD_DICTIONARY_PATH: `${root}/data/mock_business/demo/dictionary.yaml`, INTEGRATION_SPEC_PATH: `${root}/data/company_templates/integration.yaml`,
-  LLM_PROVIDER: 'mock', BRIDGEFLOW_ENABLE_LEGACY_CONSOLE: 'false', BRIDGEFLOW_ALLOW_SAMPLE_DATA: 'false', WORKFLOW_CATALOGUE_PATH: `${root}/data/workflow_demo/catalogue.yaml` }
+  LLM_PROVIDER: 'mock', BRIDGEFLOW_ENABLE_LEGACY_CONSOLE: 'false', BRIDGEFLOW_ALLOW_SAMPLE_DATA: 'false', WORKFLOW_CATALOGUE_PATH: `${root}/data/workflow_demo/catalogue.yaml`,
+  DISCOVERY_SCORING_POLICY_PATH: `${root}/data/discovery_demo/scoring-policy.yaml`, DISCOVERY_DECISION_POLICY_PATH: `${root}/data/discovery_demo/decision-policy.yaml` }
 const processes = []; let logs = '', browser, page
 function start(cmd, args) { const p = spawn(cmd, args, { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] }); p.stdout.on('data', d => { logs += d }); p.stderr.on('data', d => { logs += d }); processes.push(p); return p }
 try {
@@ -67,8 +68,16 @@ try {
   // The workflow with its sample loaded, so the flow strip shows where records sit.
   await studio.getByRole('button', { name: /Filling & handoff/ }).first().click()
   await page.getByRole('button', { name: 'Load the sample workflow', exact: true }).click()
-  await page.getByRole('button', { name: 'Ask the captain to submit for approval', exact: true }).waitFor(); await page.waitForTimeout(800)
+  await page.getByRole('button', { name: 'Ask the captain to submit for approval', exact: true }).first().waitFor()
+  await page.getByRole('button', { name: 'Load the sample discovery project', exact: true }).click()
+  await page.getByRole('button', { name: 'Ask the captain to accept this scope', exact: true }).waitFor(); await page.waitForTimeout(800)
   await shot('13-workflow-handoff')
+  // The overview reads the same sources as each page and links back to them.
+  await studio.getByRole('button', { name: /^.?Overview/ }).first().click()
+  await page.locator('.bf-ov-kpis .bf-ov-tile').first().waitFor()
+  await studio.getByRole('button', { name: 'Expand preview', exact: true }).click()
+  await page.locator('dialog[open] .bf-ov-spark, dialog[open] .bf-ov-bars').first().waitFor(); await page.waitForTimeout(1000)
+  await shot('15-overview')
   assert.deepEqual(errors, [])
   console.log(JSON.stringify({ status: 'captured', out: evidence }))
 } catch (error) { console.error(logs.slice(-3000)); throw error }

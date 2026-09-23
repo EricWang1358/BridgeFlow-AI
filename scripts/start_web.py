@@ -176,6 +176,12 @@ def main() -> None:
     # falls back to the synthetic production → marketing handoff (#147). Its page states
     # the catalogue's case ("合成示例 … 非客户数据"), and an operator's own path always wins.
     env.setdefault("WORKFLOW_CATALOGUE_PATH", str(ROOT / "data/workflow_demo/catalogue.yaml"))
+    # Discovery's scoring and decision pages need declared policies; without them they are a
+    # 503, which is how the discovery → workflow story went unseen. Same rule as above: the
+    # synthetic sample policies (data/discovery_demo/, fictional people) apply only when an
+    # operator has declared none.
+    env.setdefault("DISCOVERY_SCORING_POLICY_PATH", str(ROOT / "data/discovery_demo/scoring-policy.yaml"))
+    env.setdefault("DISCOVERY_DECISION_POLICY_PATH", str(ROOT / "data/discovery_demo/decision-policy.yaml"))
 
     # Say which dictionary is in force, every time. Which one is loaded decides
     # whether a batch can be joined at all, and it was the one fact neither the

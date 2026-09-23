@@ -1,0 +1,25 @@
+# Synthetic scoring scale for the discovery sample project. NOT a company policy.
+id: demo-scoring
+project_id: demo-handoff
+version: 1
+departments: [生产部, 市场部]
+declared_by: 示例-总经办
+declaration_ref: 合成示例，仅用于演示立项评分；非业务方批准的量表
+effort:
+  title: 实施难度
+  unit: 分
+  minimum: 0
+  maximum: 10
+  split: 5
+  split_is_high: true
+  low_meaning: 容易落地
+  high_meaning: 需要较多协调
+value:
+  title: 业务价值
+  unit: 分
+  minimum: 0
+  maximum: 10
+  split: 5
+  split_is_high: false
+  low_meaning: 价值有限
+  high_meaning: 值得优先做

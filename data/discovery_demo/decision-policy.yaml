@@ -1,0 +1,17 @@
+# Synthetic decision rules for the discovery sample project. NOT a company policy: every
+# person named here is fictional, and the sample's votes and approval are sample data.
+id: demo-decision
+project_id: demo-handoff
+version: 1
+departments: [生产部, 市场部]
+declared_by: 示例-总经办
+declaration_ref: 合成示例，仅用于演示 MVP 决策；非业务方批准的规则
+proposers: [示例-立项负责人]
+voters: [示例-生产经理, 示例-市场经理]
+approvers: [示例-总经理]
+condition_confirmers: [示例-质量负责人]
+quorum: 2
+minimum_yes: 2
+no_votes_block: true
+abstentions_count_for_quorum: false
+agent2_owner_role: 标准化负责人

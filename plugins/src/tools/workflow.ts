@@ -183,13 +183,13 @@ export function workflowDraft(config: BackendConfig): ProductTool {
 }
 
 interface BoardText {
-  rows?: { kind?: string; id?: string; seq?: number; state?: string; summary: string; stale?: boolean; inputs?: Record<string, number> }[]
+  rows?: { kind?: string; id?: string; seq?: number; state?: string; summary: string; stale?: boolean; inputs?: Record<string, number>; awaiting_outputs?: string[] }[]
   truncated?: boolean; total?: number
 }
 /** One line per row, led by the id and seq that `workflow_draft` / `workflow_handoff` need. */
 export function renderBoard(board: BoardText) {
   const rows = (board.rows ?? []).map(r => (r.id ? `[${r.kind} id=${r.id} seq=${r.seq} state=${r.state}${r.stale ? ' stale' : ''}] ` : `[${r.kind}] `)
-    + r.summary + (r.inputs ? ` inputs=${JSON.stringify(r.inputs)}` : ''))
+    + r.summary + (r.inputs ? ` inputs=${JSON.stringify(r.inputs)}` : '') + (r.awaiting_outputs?.length ? ` cannot_complete_until_recorded=${r.awaiting_outputs.join(',')}` : ''))
   const more = board.truncated ? ` (showing the latest ${rows.length} of ${board.total})` : ''
   return [{ type: 'text' as const, text: rows.length ? rows.join(' | ') + more : 'Nothing recorded yet.' }]
 }
@@ -314,4 +314,63 @@ export function workflowGuidance(config: BackendConfig): ProductTool {
       return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-guidance', { stage: args.stage }, exec)
     },
   }), { kind: 'read' })
+}
+
+type ScopeText = { accepted: { project_id: string; decision_id: string; decision_seq: number; scope: string[]; exclusions: string[]; by?: string; accepted_at?: string } | null
+  current: boolean; stale_reasons: string[]; runnable_candidates: string[]
+  pending?: { project_id: string; decision_id: string; decision_seq: number; scope: string[]; candidates: string[] }[]; next_step?: string }
+/** The accepted scope and any approved decision waiting, led by the ids and seq acceptance takes. */
+export function renderScope(value: ScopeText) {
+  const lines = [value.accepted
+    ? `Accepted: ${value.accepted.project_id}/${value.accepted.decision_id} v${value.accepted.decision_seq} by ${value.accepted.by || '—'}; `
+      + `${value.current ? 'current' : `STALE (${value.stale_reasons.join(', ')})`}. Scope: ${value.accepted.scope.join('; ')}. `
+      + `Exclusions: ${value.accepted.exclusions.join('; ') || 'none'}.`
+    : `No MVP decision accepted yet; this catalogue can run: ${value.runnable_candidates.join(', ') || 'nothing'}.`]
+  for (const p of value.pending ?? []) lines.push(`Waiting: project_id=${p.project_id} decision_id=${p.decision_id} decision_seq=${p.decision_seq} `
+    + `candidates=${p.candidates.join(',')} scope: ${p.scope.join('; ')}`)
+  if (value.next_step) lines.push(value.next_step)
+  return [{ type: 'text' as const, text: lines.join('\n') }]
+}
+
+export function workflowScope(config: BackendConfig): ProductTool {
+  return withAccess(defineTool({
+    name: 'workflow_scope',
+    description: 'Which approved MVP decision from discovery the workflow runs under, whether it is still current, and ' +
+      'approved decisions waiting to be accepted (with the decision_seq acceptance needs). Read this before workflow_accept_scope.',
+    parameters: {},
+    output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => renderScope(value as ScopeText) },
+    async execute(_args, exec) {
+      return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-scope', {}, exec)
+    },
+  }), { kind: 'read' })
+}
+
+export function scopeBody(args: Record<string, unknown>, agentId: string, callId: string | undefined) {
+  return { project_id: args.project_id, decision_id: args.decision_id, decision_seq: args.decision_seq,
+    confirmed_by: agentId, call_id: callId ?? null }
+}
+
+export function workflowAcceptScope(config: BackendConfig, receipts: ApprovalReceipts): ProductTool {
+  return withAccess(defineTool({
+    name: 'workflow_accept_scope',
+    description: 'A person accepts an approved MVP decision (from workflow_scope) as the scope the workflow runs under. ' +
+      'The host re-reads the decision: it must still be approved at decision_seq, and its candidates must be scenarios ' +
+      'the catalogue can run. Show the scope and exclusions first; the approval card is the person\'s decision.',
+    parameters: {
+      project_id: { type: 'string', required: true, description: 'project_id from workflow_scope' },
+      decision_id: { type: 'string', required: true, description: 'decision_id from workflow_scope' },
+      decision_seq: { type: 'number', required: true, description: 'decision_seq from workflow_scope' },
+    },
+    output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => renderScope(value as ScopeText) },
+    async execute(args, exec) {
+      return callBackend<Record<string, JsonValue>>(config, '/tools/workflow-accept-scope',
+        scopeBody(args, exec.agent?.id ?? 'unknown-agent', exec.callId), exec,
+        receipts.take(JSON.stringify([exec.agent?.id, exec.callId])))
+    },
+  }), {
+    kind: 'approval',
+    reason: 'Accept this approved MVP decision as the scope the filling-and-handoff workflow runs under.',
+    denialEffect: 'Nothing was accepted; the workflow scope is unchanged. Do NOT describe the decision as accepted',
+    body: scopeBody,
+  })
 }

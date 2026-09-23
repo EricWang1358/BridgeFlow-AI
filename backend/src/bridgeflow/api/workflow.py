@@ -22,6 +22,7 @@ from bridgeflow.identity import UserIdentity, require_user
 from bridgeflow.security import consume_approval
 from bridgeflow.store import _root
 from bridgeflow.workflow import adoption, board, catalogue, materials
+from bridgeflow.workflow import scope as workflow_scope
 from bridgeflow.workflow.intake import Observation
 from bridgeflow.workflow.lifecycle import TransitionError
 from bridgeflow.workflow.ports import notifier_for, sink_for
@@ -190,6 +191,7 @@ class HandoffAction(BaseModel):
 @router.post("/artifacts", response_model=ArtifactOut, status_code=201)
 async def receive(request: ReceiveRequest) -> ArtifactOut:
     workflow = service()
+    require_scope(workflow)
     with _domain_errors():
         return _artifact(workflow.receive(request.template, request.observations))
 
@@ -257,6 +259,38 @@ async def get_board(user: BrowserUser) -> board.Board:
                 else visible.stage(r.stage))])
 
 
+def discovery_context():
+    """The discovery store and the configured decision policy, or no policy when unset."""
+    from bridgeflow.api.discovery import service as discovery_service
+    from bridgeflow.workflow.discovery import DiscoveryError
+    from bridgeflow.workflow.discovery_decisions import load_decision_policy
+
+    try:
+        policy = load_decision_policy(settings.discovery_decision_policy_path)
+    except DiscoveryError:
+        policy = None
+    return discovery_service(), policy
+
+
+def require_scope(workflow: WorkflowService) -> None:
+    domain, policy = discovery_context()
+    try:
+        workflow_scope.require_current(workflow, domain, policy)
+    except workflow_scope.ScopeError as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@router.get("/scope")
+async def get_scope(user: BrowserUser) -> dict[str, Any]:
+    """Which approved MVP decision the workflow runs under, and any approved one waiting."""
+    workflow = service()
+    domain, policy = discovery_context()
+    with _domain_errors():
+        state = workflow_scope.view(workflow, domain, policy)
+        state["pending"] = workflow_scope.pending(domain, policy, workflow) if policy else []
+    return state
+
+
 @router.post("/sample", response_model=board.Board)
 async def load_sample(user: BrowserUser) -> board.Board:
     """Explicit sample workflow: synthetic employee submissions, received as handed in.
@@ -269,6 +303,7 @@ async def load_sample(user: BrowserUser) -> board.Board:
     """
     sample = yaml.safe_load((REPO_ROOT / "data/workflow_demo/sample-submissions.yaml").read_text(encoding="utf-8"))
     workflow = service()
+    require_scope(workflow)
     with _domain_errors():
         if workflow.catalogue.version != sample["catalogue_version"]:
             raise HTTPException(409, f"The sample workflow belongs to the demo catalogue "
@@ -281,6 +316,18 @@ async def load_sample(user: BrowserUser) -> board.Board:
                             source={"kind": "file", "ref": f"{item['source']}!{o['label']}"})
                 for o in item["observations"]])
     return await get_board(user)
+
+
+@router.get("/history/{kind}/{identifier}")
+async def get_history(kind: str, identifier: str, user: BrowserUser) -> dict[str, Any]:
+    """A record's timeline for the handoff page: each step, when, by whom and why."""
+    workflow = service()
+    with _domain_errors():
+        visible = Visibility(workflow.catalogue, user)
+        if (kind == "artifact" and not visible.template(workflow.artifact(identifier).template)) or \
+                (kind == "handoff" and not visible.stage(workflow.handoff(identifier).stage)):
+            raise HTTPException(404, f"{kind.capitalize()} not found")
+        return {"kind": kind, "id": identifier, "steps": workflow.history(kind, identifier)}
 
 
 # --- adoption (Agent 3) ----------------------------------------------------------------
