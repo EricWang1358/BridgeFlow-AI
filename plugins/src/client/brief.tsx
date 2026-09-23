@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { MetricCharts } from './charts.tsx'
 import { api, describeError, navigate, useUI } from './ui.ts'
 import { Chip } from './workspace.tsx'
+import { CountUp } from './count-up.tsx'
+import { Explain } from './explain.tsx'
 
 /**
  * The one-page monthly brief (E13-UC01) with evidence grades (E13-UC06).
@@ -15,7 +17,7 @@ type Change = { metric?: string; field?: string; unit?: string; current: number 
 type Totals = { field: string; current: number; base: number; absolute: number; relative: number | null; new_entities: number; discontinued: number; continuing: number }
 type Comparison = { base_kind: string; base_period: string; base_batch_id: string; status: string; reason: string; changed_fields: string[]; metrics: Change[]; totals: Totals[]; breaches: Change[] }
 type Metric = { metric: string; check_id: string; title: string; value: number; unit: string; status: string; formula: string; source_count: number; owner: string; grade: Grade; change: Change | null }
-type Attention = { check_id: string; title: string; metric: string; value: number; unit: string; threshold: number; attention_when: string; owner: string; decision_owner: string; action: string; explanation: string; grade: Grade; advice_grade: Grade
+type Attention = { check_id: string; title: string; metric: string; value: number; unit: string; threshold: number; attention_when: string; formula?: string; owner: string; decision_owner: string; action: string; explanation: string; grade: Grade; advice_grade: Grade
   sources: { department: string; filename?: string; sheet?: string; row?: number; source_row?: number; column?: string; original_column?: string }[]
   source_count: number }
 type Brief = {
@@ -28,7 +30,7 @@ type Brief = {
 const number = (value: number, unit: string) => `${value.toLocaleString(undefined, { maximumFractionDigits: unit === '%' ? 2 : 2 })}${unit === '%' ? '%' : ` ${unit}`}`
 
 function ChangeMark({ change, unit }: { change: Change | null; unit: string }) {
-  const { t } = useUI()
+  const { t, paren } = useUI()
   if (!change) return null
   if (change.state === 'not_computable') return <small className="bf-change" data-state="none">{t('comparisonNotComputable')}</small>
   if (change.state !== 'compared' || change.absolute === null) return <small className="bf-change" data-state="none">{t('comparisonMissingBase')}</small>
@@ -36,7 +38,7 @@ function ChangeMark({ change, unit }: { change: Change | null; unit: string }) {
   // A metric that is already a ratio changes by points; a ratio of two ratios misleads (D7).
   const amount = change.basis === 'percentage_points'
     ? `${sign}${change.absolute.toFixed(2)} ${t('percentagePoints')}`
-    : `${sign}${number(change.absolute, unit)}${change.relative === null ? '' : `（${sign}${(change.relative * 100).toFixed(1)}%）`}`
+    : `${sign}${number(change.absolute, unit)}${change.relative === null ? '' : paren(`${sign}${(change.relative * 100).toFixed(1)}%`)}`
   return <small className="bf-change" data-state={change.absolute === 0 ? 'flat' : change.absolute > 0 ? 'up' : 'down'}>{amount}</small>
 }
 
@@ -44,11 +46,17 @@ export function GradeMark({ grade }: { grade: Grade }) {
   const { t } = useUI()
   const label = grade.grade ?? t('gradeMissing')
   const why = [...grade.chain, ...grade.missing].join('\n')
-  return <span className="bf-grade" data-grade={grade.grade ?? 'missing'} title={why} aria-label={`${t('evidenceGrade')} ${label}: ${why}`}>{label}</span>
+  // The code alone ("G3") asks the reader to remember a legend; the word says it in place.
+  const names: Record<string, string> = { G1: t('gradeName_G1'), G2: t('gradeName_G2'), G3: t('gradeName_G3'), G4: t('gradeName_G4') }
+  return <span className="bf-grade" data-grade={grade.grade ?? 'missing'} title={why} aria-label={`${t('evidenceGrade')} ${label}: ${why}`}>
+    <b>{label}</b>{grade.grade && names[grade.grade] && <small>{names[grade.grade]}</small>}</span>
 }
 
+const fill = (text: string, values: Record<string, string | number>) =>
+  Object.entries(values).reduce((out, [key, value]) => out.replaceAll(`{${key}}`, String(value)), text)
+
 export function MonthlyBrief({ batchId }: { batchId: string }) {
-  const { t } = useUI()
+  const { t, colon, paren, list } = useUI()
   const [brief, setBrief] = useState<Brief | null>(null), [error, setError] = useState(''), [needsReview, setNeedsReview] = useState(false), [revision, setRevision] = useState(0)
   const [exporting, setExporting] = useState(false), [exportError, setExportError] = useState('')
   // What the company says it is doing about each finding (E07-UC07). Read-only here: a
@@ -95,33 +103,40 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
       <button data-tour-id="brief-export" disabled={brief.stale || exporting} onClick={() => void exportReport()}>{t(exporting ? 'busy' : 'exportReport')}</button></div>
     {exportError && <p role="alert" className="bf-error">{exportError}</p>}
     {brief.stale && <div className="bf-callout" data-tone="warn"><p>{t('briefStale')}</p></div>}
-    {brief.missing_departments.length > 0 && <div className="bf-callout" data-tone="warn"><h3>{t('partial')}</h3><p>{t('briefMissing')}：{brief.missing_departments.map(d => t(d)).join('、')}</p></div>}
+    {brief.missing_departments.length > 0 && <div className="bf-callout" data-tone="warn"><h3>{t('partial')}</h3><p>{t('briefMissing')}{colon}{list(brief.missing_departments.map(d => t(d)))}</p></div>}
     <div className="bf-brief-layer" data-layer="1">{t('briefLayerOne')}</div>
     <p className="bf-brief-headline" role="status">
-      <strong>{brief.headline.attention}</strong> {t('briefAttention')} · <strong>{brief.headline.ok}</strong> {t('briefOk')} · <strong>{brief.headline.open_items}</strong> {t('briefOpenItems')}
+      <strong><CountUp value={brief.headline.attention} format={String} /></strong> {t('briefAttention')} · <strong><CountUp value={brief.headline.ok} format={String} /></strong> {t('briefOk')} · <strong><CountUp value={brief.headline.open_items} format={String} /></strong> {t('briefOpenItems')}
     </p>
-    <p className="bf-hint">{t('evidenceGrades')}：{grades}{brief.grade_summary.missing ? ` · ${t('gradeMissing')} ${brief.grade_summary.missing}` : ''} · {t('gradeLegend')}</p>
+    <p className="bf-hint">{t('evidenceGrades')}{colon}{grades}{brief.grade_summary.missing ? ` · ${t('gradeMissing')} ${brief.grade_summary.missing}` : ''}</p>
+    <Explain text={t('how_brief')} />
 
     <div className="bf-brief-layer" data-layer="2">{t('briefLayerTwo')}</div>
     <h4>{t('briefKeyMetrics')}</h4>
     <dl className="bf-brief-metrics">{brief.key_metrics.map(m => <div key={m.metric}>
       <dt>{m.title}</dt>
-      <dd><b>{number(m.value, m.unit)}</b> <Chip status={m.status} /> <GradeMark grade={m.grade} /> <ChangeMark change={m.change} unit={m.unit} /><small>{m.formula} · {t(m.owner)}</small></dd>
+      <dd><b><CountUp value={m.value} format={v => number(v, m.unit)} /></b> <Chip status={m.status} /> <GradeMark grade={m.grade} /> <ChangeMark change={m.change} unit={m.unit} /><small>{m.formula} · {t(m.owner)}</small></dd>
     </div>)}</dl>
 
     <h4>{t('briefAttentionItems')}</h4>
     {!brief.attention.length && <p className="bf-hint">{t('briefNoAttention')}</p>}
     <ol className="bf-brief-attention">{brief.attention.map(a => <li key={a.check_id}>
-      <div className="bf-check"><span className="bf-check-title">{a.title}</span><b>{number(a.value, a.unit)}</b><GradeMark grade={a.grade} />
+      <div className="bf-check"><span className="bf-check-title">{a.title}</span><b><CountUp value={a.value} format={v => number(v, a.unit)} /></b><GradeMark grade={a.grade} />
         {dispositions[a.check_id] && <span className="bf-disposition" data-closed={dispositions[a.check_id]!.closed}>{dispositions[a.check_id]!.state}</span>}</div>
-      <p className="bf-hint">{t(a.attention_when === 'above' ? 'briefAbove' : 'briefBelow')} {number(a.threshold, a.unit)} · {t('briefOwner')} {a.decision_owner}</p>
-      <p>{t('briefAction')}：{a.action} <GradeMark grade={a.advice_grade} /></p>
+      {/* Why this is on the list, in one line: the figure against its threshold, then who decides. */}
+      <p className="bf-why">{fill(t('briefWhy'), { value: number(a.value, a.unit), threshold: number(a.threshold, a.unit),
+        relation: t(a.attention_when === 'above' ? 'relationAbove' : 'relationBelow') })}
+        <span aria-hidden="true" className="bf-why-arrow">→</span>{fill(t('briefDecides'), { owner: a.decision_owner })}</p>
+      {a.formula && <p className="bf-hint bf-formula-line">{t('briefComputed')}{colon}<code>{a.formula}</code> · {fill(t('briefCells'), { count: a.source_count })}</p>}
+      <p>{t('briefAction')}{colon}{a.action} <GradeMark grade={a.advice_grade} /></p>
       <p className="bf-hint">{a.explanation}</p>
-      {a.sources.length > 0 && <details className="bf-brief-sources"><summary>{t('briefSources')}（{a.source_count}）</summary>
+      {a.sources.length > 0 && <details className="bf-brief-sources"><summary>{t('briefSources')}{paren(a.source_count)}</summary>
         <ul>{a.sources.map((source, i) => <li key={i}>
           <button onClick={() => navigate({ batch: batchId, view: 'source', source: source.department })}>
             {t(source.department)}</button>
-          <span className="bf-mono"> {source.filename}{source.sheet ? ` · ${source.sheet}` : ''} · {t('sourceRow')} {source.source_row ?? source.row} · {source.original_column ?? source.column}</span>
+          <span>{t('sourceRow')} {source.source_row ?? source.row}</span>
+          <span className="bf-mono">{source.original_column ?? source.column}</span>
+          <small title={`${source.filename ?? ''}${source.sheet ? ` · ${source.sheet}` : ''}`}>{source.filename}{source.sheet ? ` · ${source.sheet}` : ''}</small>
         </li>)}</ul>
         {a.source_count > a.sources.length && <p className="bf-hint">{t('briefSourcesMore')} {a.source_count}</p>}
       </details>}
@@ -145,7 +160,7 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
         <details><summary>{t('comparisonTotals')} · {brief.comparison.totals.length}</summary>
           <div className="bf-scroll"><table><thead><tr><th>{t('comparisonField')}</th><th>{brief.period}</th><th>{brief.comparison.base_period}</th><th>Δ</th><th>{t('comparisonTotals')}</th></tr></thead>
             <tbody>{brief.comparison.totals.map(row => <tr key={row.field}><td>{row.field}</td><td data-numeric="true">{number(row.current, '')}</td><td data-numeric="true">{number(row.base, '')}</td>
-              <td data-numeric="true">{number(row.absolute, '')}{row.relative === null ? '' : `（${(row.relative * 100).toFixed(1)}%）`}</td>
+              <td data-numeric="true">{number(row.absolute, '')}{row.relative === null ? '' : paren(`${(row.relative * 100).toFixed(1)}%`)}</td>
               <td data-numeric="true">{number(row.new_entities, '')} / {number(row.discontinued, '')} / {number(row.continuing, '')}</td></tr>)}</tbody></table></div>
         </details>
       </>}
@@ -153,11 +168,11 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
 
     <h4>{t('briefOpenItems')}</h4>
     <ul className="bf-brief-open">
-      <li>{t('masterOpenQuestions')}：{brief.open_items.master_issues} <button onClick={() => navigate({ batch: batchId, view: 'integration' })}>{t('integrationMaster')}</button></li>
-      <li>{t('quarantine')}：{brief.open_items.quarantined_rows}</li>
-      <li>{t('pendingColumnQuestions')}：{brief.open_items.column_questions}</li>
+      <li>{t('masterOpenQuestions')}{colon}{brief.open_items.master_issues} <button onClick={() => navigate({ batch: batchId, view: 'integration' })}>{t('integrationMaster')}</button></li>
+      <li>{t('quarantine')}{colon}{brief.open_items.quarantined_rows}</li>
+      <li>{t('pendingColumnQuestions')}{colon}{brief.open_items.column_questions}</li>
     </ul>
-    <p className="bf-hint">{t('briefCompleteness')}：{brief.completeness.complete_rows} / {brief.completeness.master_rows} {t('masterCompleteRows')} · {t('integrationAssumptions')} {brief.completeness.assumptions}</p>
+    <p className="bf-hint">{t('briefCompleteness')}{colon}{brief.completeness.complete_rows} / {brief.completeness.master_rows} {t('masterCompleteRows')} · {t('integrationAssumptions')} {brief.completeness.assumptions}</p>
     <details><summary>{t('briefDecisionAndLimits')}</summary><p>{brief.manager_decision}</p><ul>{brief.limitations.map((l, i) => <li key={i}>{l}</li>)}</ul></details>
     <details className="bf-brief-fold"><summary>{t('metricCharts')}</summary>
       <MetricCharts batchId={batchId} />

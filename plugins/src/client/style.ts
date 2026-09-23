@@ -284,17 +284,6 @@ export const style = `
   width: 100%; max-width: 774px;
 }
 .bf-hero h3 { font-size: 15px; margin: 0 0 2px }
-.bf-hero ol { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; counter-reset: bf-flow }
-.bf-hero li { position: relative; padding-left: 30px; font-size: 13px; line-height: 1.5 }
-.bf-hero li::before {
-  counter-increment: bf-flow; content: counter(bf-flow);
-  position: absolute; left: 0; top: 1px;
-  width: 20px; height: 20px; border-radius: 50%;
-  background: var(--bf-accent-soft); color: var(--bf-accent);
-  font-size: 11px; font-weight: 700; display: grid; place-items: center;
-}
-.bf-hero li b { font-weight: 620 }
-.bf-hero li span { color: var(--bf-muted) }
 
 /* ---- the decision card ------------------------------------------------- */
 
@@ -443,16 +432,17 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-chart-bar[data-breach=true] .bf-chart-bar-label { font-weight: 700; }
 .bf-chart-bar-value { text-align: right; font-variant-numeric: tabular-nums; }
 .bf-chart-table { margin-top: 6px; }
-.bf-inbox ul { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
-.bf-inbox li { border-left: 3px solid var(--bf-warn, #8a6100); padding: 4px 0 4px 10px; }
+.bf-inbox ul { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 10px; }
+.bf-inbox li { border-left: 3px solid var(--bf-warn, #8a6100); padding: 6px 0 6px 12px; line-height: 1.55; }
 .bf-inbox label { display: block; margin: 6px 0; }
-.bf-checklist ol { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
-.bf-checklist li { border-left: 3px solid currentColor; padding: 4px 0 4px 10px; }
+.bf-checklist ol { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 10px; }
+.bf-checklist li { border-left: 3px solid currentColor; padding: 6px 0 6px 12px; line-height: 1.55; }
 .bf-checklist li[data-state=done] { color: var(--bf-ok, #1c6b3a); }
 .bf-checklist li[data-state=open] { color: var(--bf-warn, #8a6100); }
 .bf-checklist li[data-state=blocked] { color: var(--bf-danger, #a12b2b); }
 .bf-checklist li[data-state=unknown] { color: var(--bf-muted, #6b6b6b); }
-.bf-checklist li b, .bf-checklist li .bf-hint, .bf-checklist li button { color: initial; }
+.bf-checklist li b, .bf-checklist li button { color: var(--bf-text); }
+.bf-checklist li .bf-hint { color: var(--bf-muted); }
 .bf-step-state { font-size: .85em; border: 1px solid currentColor; border-radius: .6em; padding: 0 .4em; margin-right: .4em; }
 .bf-convention { font-size: .85em; padding: 0 .4em; border-radius: .6em; border: 1px solid currentColor; }
 .bf-convention[data-state=unconfirmed] { color: var(--bf-warn, #8a6100); }
@@ -507,7 +497,7 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 
 .bf-data-steps {
   list-style: none; margin: 10px 0; padding: 0;
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(136px, 1fr)); gap: 8px;
 }
 .bf-data-steps li {
   display: flex; gap: 8px; align-items: flex-start;
@@ -646,4 +636,51 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-run-steps > li:nth-child(odd) { background: var(--bf-surface-2) }
 .bf-run-steps > li[data-outcome=refused] { box-shadow: inset 2px 0 var(--bf-danger) }
 .bf-run-step-reason { flex: 1 1 100%; color: var(--bf-text); line-height: 1.5 }
+
+/* ---- clarity pass: explanations, logic chains, evidence --------------------- */
+
+/* "How this works": the reasoning behind a page, one click from its instruction. */
+.bf-explain { margin: 6px 0 16px; font-size: 12px }
+.bf-explain > summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--bf-accent); list-style: none; font-weight: 560 }
+.bf-explain > summary::-webkit-details-marker { display: none }
+.bf-explain > summary::before { content: 'i'; display: grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid currentColor; font: 700 10px/1 var(--bf-serif, serif); font-style: italic }
+.bf-explain > ul { margin: 8px 0 0; padding: 10px 14px 10px 30px; background: var(--bf-surface-2); border-radius: 10px; color: var(--bf-text); line-height: 1.6 }
+.bf-explain > ul > li + li { margin-top: 6px }
+
+/* An evidence grade carries its meaning as a word, not only a code. */
+.bf-grade { display: inline-flex; align-items: baseline; gap: 4px }
+.bf-grade > b { font: inherit; font-weight: 700 }
+.bf-grade > small { font-size: 10px; font-weight: 500; letter-spacing: 0 }
+
+/* Attention items read as cards: figure, why it is here, how it was computed, what next. */
+.bf-brief-attention { list-style: none; padding: 0; margin: 0; counter-reset: bf-attention; display: grid; gap: 12px }
+.bf-brief-attention > li { counter-increment: bf-attention; margin: 0; border: 1px solid var(--bf-line); border-radius: 12px; padding: 12px 14px 10px; background: var(--bf-surface) }
+.bf-brief-attention .bf-check { margin-top: 0 }
+.bf-brief-attention .bf-check-title::before { content: counter(bf-attention) '  '; color: var(--bf-muted); font-weight: 500 }
+.bf-brief-attention p { margin: 4px 0 }
+.bf-why { font-size: 13px; line-height: 1.55; color: var(--bf-text) }
+.bf-why-arrow { color: var(--bf-muted); margin: 0 8px }
+.bf-formula-line code { font-size: 11px; background: var(--bf-surface-2); border-radius: 4px; padding: 1px 5px; overflow-wrap: anywhere }
+
+/* Source citations: department, row and column on one line, the file beneath. */
+.bf-brief-sources > summary { cursor: pointer; font-size: 12px; color: var(--bf-accent); margin-top: 4px }
+.bf-brief-sources ul { list-style: none; padding: 0; margin: 8px 0 4px; display: grid; gap: 6px }
+.bf-brief-sources li { display: grid; grid-template-columns: max-content max-content minmax(0, 1fr); gap: 2px 10px; align-items: baseline; font-size: 12px; padding: 6px 8px; border-radius: 8px; background: var(--bf-surface-2) }
+.bf-brief-sources li > button { border: 0 !important; background: transparent !important; color: var(--bf-accent) !important; padding: 0 !important; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; cursor: pointer }
+.bf-brief-sources li > small { grid-column: 1 / -1; color: var(--bf-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+
+/* Room to breathe: metrics sit in a grid once the studio is wide enough. */
+.bf-brief-metrics { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px }
+.bf-brief-metrics > div { padding: 10px 12px; border-radius: 10px }
+.bf-step-owner { display: block; margin-top: 2px }
+.bf-count { font-variant-numeric: tabular-nums }
+
+/* Tool-call marks are buttons; the generic button padding pushed their labels below the track. */
+.bf-run-lane-track > .bf-run-mark { display: flex; align-items: center; padding: 0 6px; margin: 0; line-height: 1 }
+/* Grades inside a big figure keep their own small size. */
+.bf-check .bf-grade > b, .bf-brief-metrics dd .bf-grade > b { font-size: 10px; font-weight: 700; letter-spacing: .02em }
+.bf-brief-attention .bf-brief-sources li { margin: 0 }
+/* File names in Sources stay on one line; the full name is in the tooltip. */
+.bf-resource-list strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.bf-run-mark-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 `

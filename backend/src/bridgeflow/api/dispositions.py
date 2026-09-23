@@ -37,7 +37,13 @@ def _report(batch_id: str, report_id: str | None, user: UserIdentity | None) -> 
 async def list_dispositions(batch_id: str, user: Annotated[UserIdentity | None, Depends(require_user)],
                             report_id: str | None = None) -> dict:
     dictionary, report = _report(batch_id, report_id, user)
-    return dispositions.current(dictionary, batch_id, report["report_id"], _findings(report))
+    result = dispositions.current(dictionary, batch_id, report["report_id"], _findings(report))
+    # A person reads the finding's title, not its check id; both come from the same report.
+    titles = {check["check_id"]: check.get("title", "") for role in report.get("roles", [])
+              for check in role.get("checks", [])}
+    for item in result.get("dispositions", []):
+        item.setdefault("title", titles.get(item.get("check_id", ""), ""))
+    return result
 
 
 @router.post("/tools/risk-dispositions")

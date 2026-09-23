@@ -9,8 +9,9 @@
  *   an honest "still loading".
  * - **Short and front-loaded.** 120 ms for state, 180–240 ms for arrivals, all on a
  *   decelerating curve, so a click never waits on an animation.
- * - **Only opacity and transform move.** Layout is never animated: panes are resized by
- *   dragging and tables are long, and animating either would stutter.
+ * - **Only opacity and transform move**, with one exception: when a studio page opens or
+ *   closes, the panes glide to the reading layout once. Dragging a divider and long tables
+ *   are never animated; that would stutter.
  * - **Reduced motion is respected.** With `prefers-reduced-motion: reduce`, arrivals and
  *   the loading pulse are removed and only colour changes remain.
  */
@@ -29,6 +30,8 @@ export const motion = `
 @keyframes bf-from-right { from { opacity: 0; transform: translateX(16px) } to { opacity: 1; transform: none } }
 @keyframes bf-from-left { from { opacity: 0; transform: translateX(-16px) } to { opacity: 1; transform: none } }
 @keyframes bf-notice-in { from { opacity: 0; transform: translate(-50%, -8px) } to { opacity: 1; transform: translate(-50%, 0) } }
+@keyframes bf-page-in { from { opacity: 0; transform: translateY(-6px) } to { opacity: 1; transform: none } }
+@keyframes bf-sweep { from { background-position: 120% 0 } to { background-position: -120% 0 } }
 @keyframes bf-pulse { 0%, 100% { opacity: 1 } 50% { opacity: .45 } }
 
 /* ---- state changes: cross-fade colour, border and shadow ---------------- */
@@ -59,6 +62,14 @@ export const motion = `
 
 /* Focus rings grow in instead of snapping. */
 .bf-panel input:focus-visible, .bf-card textarea:focus-visible { box-shadow: 0 0 0 4px var(--bf-accent-soft) }
+
+/* ---- reading layout ---------------------------------------------------- */
+
+/* Opening a studio page widens the studio and narrows Sources; the panes glide there
+   once. Only while the attribute is set, so dragging a divider never lags behind. */
+body[data-bf-reflow] .bf-shell-pane.bf-state { transition: width var(--bf-dur-panel) var(--bf-ease-in-out) }
+body[data-bf-reflow][data-bf-notebook] [data-slot="root"] > div { transition: padding var(--bf-dur-panel) var(--bf-ease-in-out) }
+body[data-bf-reflow] .bf-panel-resizer { transition: left var(--bf-dur-panel) var(--bf-ease-in-out), right var(--bf-dur-panel) var(--bf-ease-in-out) }
 
 /* ---- arrivals ----------------------------------------------------------- */
 
@@ -98,7 +109,36 @@ body[data-bf-notebook][data-bf-nav] [data-slot="root"] > div > div:has(> [data-s
   animation: bf-rise var(--bf-dur-enter) var(--bf-ease-out) both;
 }
 
+/* A studio page is remounted per destination, so switching pages reads as arriving
+   somewhere new: the page slides in from the tiles above, then its parts settle in order. */
+.bf-inline-preview { animation: bf-page-in var(--bf-dur-panel) var(--bf-ease-out) both }
+.bf-inline-preview > :not(header) > *, .bf-brief > * { animation: bf-rise var(--bf-dur-enter) var(--bf-ease-out) both }
+.bf-inline-preview > :not(header) > :nth-child(2), .bf-brief > :nth-child(2) { animation-delay: 40ms }
+.bf-inline-preview > :not(header) > :nth-child(3), .bf-brief > :nth-child(3) { animation-delay: 80ms }
+.bf-inline-preview > :not(header) > :nth-child(4), .bf-brief > :nth-child(4) { animation-delay: 120ms }
+.bf-inline-preview > :not(header) > :nth-child(n+5), .bf-brief > :nth-child(n+5) { animation-delay: 160ms }
+.bf-brief-attention > li { animation: bf-rise var(--bf-dur-enter) var(--bf-ease-out) both }
+.bf-brief-attention > li:nth-child(2) { animation-delay: 60ms }
+.bf-brief-attention > li:nth-child(n+3) { animation-delay: 120ms }
+.bf-explain[open] > ul { animation: bf-rise var(--bf-dur-enter) var(--bf-ease-out) both }
+
+/* The start page's flow is read top to bottom: each step arrives in turn and the line
+   to the next one draws after it, so the order is shown rather than stated. */
+@keyframes bf-draw { from { transform: scaleY(0) } to { transform: scaleY(1) } }
+.bf-flow > li { animation: bf-rise var(--bf-dur-enter) var(--bf-ease-out) both }
+.bf-flow > li:not(:last-child)::after { animation: bf-draw 260ms var(--bf-ease-out) both }
+.bf-flow > li:nth-child(1) { animation-delay: 60ms } .bf-flow > li:nth-child(1)::after { animation-delay: 180ms }
+.bf-flow > li:nth-child(2) { animation-delay: 200ms } .bf-flow > li:nth-child(2)::after { animation-delay: 320ms }
+.bf-flow > li:nth-child(3) { animation-delay: 340ms } .bf-flow > li:nth-child(3)::after { animation-delay: 460ms }
+.bf-flow > li:nth-child(4) { animation-delay: 480ms }
+
 /* ---- waiting ------------------------------------------------------------ */
+/* Work in flight says so by movement as well as by word: a light sweeps across the
+   chip while the captain is dispatching departments. */
+.bf-chip[data-status=dispatching], .bf-chip[data-status=running] {
+  background-image: linear-gradient(100deg, transparent 20%, color-mix(in srgb, var(--bf-accent) 22%, transparent) 50%, transparent 80%);
+  background-size: 220% 100%; animation: bf-sweep 1.6s var(--bf-ease-in-out) infinite;
+}
 
 .bf-loading { animation: bf-pulse 1.4s var(--bf-ease-in-out) infinite }
 
@@ -112,9 +152,13 @@ body[data-bf-notebook][data-bf-nav] [data-slot="root"] > div > div:has(> [data-s
   .bf-report, .bf-quotation-paper, .bf-hero, .bf-state-head, .bf-route-notice,
   .bf-report-roles > *, .bf-state-map > section, .bf-studio-tools > *,
   .bf-panel details[open] > :not(summary), .bf-report details[open] > :not(summary),
-  .bf-hero details[open] > :not(summary), .bf-formulas[open] > :not(summary), .bf-loading {
+  .bf-hero details[open] > :not(summary), .bf-formulas[open] > :not(summary), .bf-loading,
+  .bf-inline-preview > :not(header) > *, .bf-brief > *, .bf-brief-attention > li, .bf-explain[open] > ul,
+  .bf-chip[data-status=dispatching], .bf-chip[data-status=running], .bf-flow > li, .bf-flow > li::after {
     animation: none !important;
   }
+  body[data-bf-reflow] .bf-shell-pane.bf-state, body[data-bf-reflow][data-bf-notebook] [data-slot="root"] > div,
+  body[data-bf-reflow] .bf-panel-resizer { transition: none !important }
   .bf-panel button, .bf-card button, .bf-state button, .bf-drawer button, .bf-open,
   .bf-shell-top button, .bf-add-source, .bf-artifact, .bf-resource-list button, .bf-studio-tools button {
     transform: none !important;

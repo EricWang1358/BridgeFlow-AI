@@ -18,7 +18,7 @@ type Master = { version: string; columns: string[]; rows: Row[]; issues: Issue[]
 function origin(p: Record<string, unknown> | undefined): string {
   if (!p) return ''
   const assumed = (p.assumptions as string[] | undefined)?.length ? `\n${(p.assumptions as string[]).join('\n')}` : ''
-  if (p.formula || p.rule) return `= ${String(p.formula ?? p.rule)}（${(p.inputs as string[] | undefined)?.join('、') ?? ''}）${assumed}`
+  if (p.formula || p.rule) return `= ${String(p.formula ?? p.rule)} (${(p.inputs as string[] | undefined)?.join(', ') ?? ''})${assumed}`
   if (p.conflict) return JSON.stringify(p.conflict)
   const rows = (p.rows as number[] | undefined)?.length ? `rows ${(p.rows as number[]).join(',')} (${String(p.rollup)})` : p.row && `row ${p.row}`
   const verified = p.verified_by_formula === true || p.verified_by_rule === true ? ' ✓' : ''
@@ -26,7 +26,7 @@ function origin(p: Record<string, unknown> | undefined): string {
 }
 
 export function MasterTable({ batchId }: { batchId: string }) {
-  const { t } = useUI()
+  const { t, colon, paren } = useUI()
   const [master, setMaster] = useState<Master | null>(null), [error, setError] = useState(''), [revision, setRevision] = useState(0)
   const [selection, setSelection] = useState<{ row: Row; column: string } | null>(null)
   useEffect(() => {
@@ -62,17 +62,17 @@ export function MasterTable({ batchId }: { batchId: string }) {
     <div className="bf-card-head"><h3>{t('integrationMaster')}</h3><button data-tour-id="master-download" onClick={() => void download()}>{t('downloadMaster')}</button></div>
     <p data-tour-id="master-status" role="status">{master.rows.filter(row => row.complete).length} / {master.rows.length} {t('masterCompleteRows')} · {master.issues.length} {t('masterOpenQuestions')}</p>
     <p className="bf-hint">{t('integrationHelp')} · {master.version}</p>
-    {master.grade_summary && <p className="bf-hint">{t('evidenceGrades')}：{['G1', 'G2', 'G3', 'G4'].map(g => `${g} ${master.grade_summary![g] ?? 0}`).join(' · ')}{master.grade_summary.missing ? ` · ${t('gradeMissing')} ${master.grade_summary.missing}` : ''} · {t('gradeLegend')}</p>}
+    {master.grade_summary && <p className="bf-hint">{t('evidenceGrades')}{colon}{['G1', 'G2', 'G3', 'G4'].map(g => `${g} ${master.grade_summary![g] ?? 0}`).join(' · ')}{master.grade_summary.missing ? ` · ${t('gradeMissing')} ${master.grade_summary.missing}` : ''} · {t('gradeLegend')}</p>}
     {Object.keys(master.assumptions ?? {}).length > 0 && <details className="bf-callout" data-tone="info">
-      <summary>{t('integrationAssumptions')}（{Object.keys(master.assumptions!).length}）</summary>
+      <summary>{t('integrationAssumptions')}{paren(Object.keys(master.assumptions!).length)}</summary>
       <ul>{Object.entries(master.assumptions!).map(([name, text]) => {
         const decided = master.conventions?.find(c => c.id === name)
         return <li key={name}>
           <strong>{name}</strong> <span className="bf-convention" data-state={decided?.state ?? 'unconfirmed'}>{t(`conventionState_${decided?.state ?? 'unconfirmed'}`)}</span>
           {decided && <span className="bf-hint"> · {t(`conventionKind_${decided.kind}`)}{decided.affected_fields.length ? ` · ${t('conventionAffects')} ${decided.affected_fields.join('、')}` : ''}</span>}
           <div>{text}</div>
-          {decided && decided.state !== 'unconfirmed' && <div className="bf-hint">{t('conventionSource')}：{decided.source}（{decided.decided_by} · v{decided.version}）{decided.note ? ` · ${decided.note}` : ''}</div>}
-          {decided?.declaration_change && <div className="bf-hint">{t('conventionDeclarationChange')}：<code>{decided.declaration_change}</code></div>}
+          {decided && decided.state !== 'unconfirmed' && <div className="bf-hint">{t('conventionSource')}{colon}{decided.source}{paren(`${decided.decided_by} · v${decided.version}`)}{decided.note ? ` · ${decided.note}` : ''}</div>}
+          {decided?.declaration_change && <div className="bf-hint">{t('conventionDeclarationChange')}{colon}<code>{decided.declaration_change}</code></div>}
         </li>
       })}</ul>
       <p className="bf-hint">{t('conventionHelp')}</p>

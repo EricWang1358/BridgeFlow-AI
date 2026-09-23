@@ -97,3 +97,10 @@ def test_the_captain_sees_states_and_what_the_declaration_allows(client, batch):
     material = next(d for d in result["dispositions"] if d["check_id"] == "material_cost")
     assert material["state"] == "已确认" and material["available"] == ["assign"]
     assert "approval" in result["next_step"]
+
+
+def test_the_browser_list_names_each_finding_by_its_report_title(client, batch):
+    # The records page shows what a person recognises: the finding's title from the same report.
+    listed = client.get(f"/reviews/{batch}/dispositions").json()["dispositions"]
+    assert listed and all(item["title"] for item in listed)
+    assert {item["check_id"] for item in listed} == {"net_margin", "collection_gap", "material_cost"}

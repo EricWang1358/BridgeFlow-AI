@@ -149,20 +149,24 @@ function Shell({ ctx }: { ctx: Context }) {
       {session && notebook.loaded && <span className="bf-save-state" role="status" data-dirty={notebook.dirty}>{t(notebook.dirty?'unsavedNotebook':notebook.persisted?'savedNotebook':'draftNotebook')}</span>}
     </div>
       <nav aria-label={t('notebooks')}>
+        <span className="bf-top-group" data-kind="notebook">
         <button disabled={notebook.busy || !notebook.loaded} onClick={notebook.create}>{t('newNotebook')}</button>
         <button data-tour-id="notebook-save" disabled={notebook.busy || !session || !notebook.loaded || !notebook.title.trim()} onClick={notebook.save}>{t('saveNotebook')}</button>
         <button disabled={notebook.busy} onClick={notebook.openHistory}>{t('notebooks')}</button>
         <button disabled={notebook.busy || !session || !notebook.loaded} onClick={notebook.exit}>{t('exitNotebook')}</button>
+        </span>
+        <span className="bf-top-group" data-kind="panes">
         <button aria-expanded={viewport > 760 ? !hiddenSources : panel === 'sources'} onClick={() => viewport > 760 ? setHiddenSources(!hiddenSources) : setPanel(panel === 'sources' ? '' : 'sources')}>{t('sources')}</button>
         <button aria-expanded={viewport > 1100 ? !hiddenStudio : panel === 'studio'} onClick={() => viewport > 1100 ? setHiddenStudio(!hiddenStudio) : setPanel(panel === 'studio' ? '' : 'studio')}>{t('studio')}</button>
         <button aria-expanded={navigation.open} onClick={navigation.toggle}>{t('sessionsSettings')}</button>
+        </span>
         <TourHelpButton/>
       </nav>
     </header>
     <TourDriver session={session ?? ''} batch={batchId} sample={summary?.demo_case === 'mock-company-2024-07'} ready={notebook.loaded && !notebook.busy && !notebook.error && !error}
       reveal={pane => { if (pane === 'sources') { setHiddenSources(false); setPanel('sources') } if (pane === 'studio') { setHiddenStudio(false); setPanel('studio') } }}/>
     <TourLayer/>
-    <PanelResizers hiddenSources={hiddenSources} hiddenStudio={hiddenStudio}/>
+    <PanelResizers hiddenSources={hiddenSources} hiddenStudio={hiddenStudio} focus={viewing && !hiddenStudio}/>
     {notebook.dialogs}
     <aside className="bf-shell-pane bf-shell-sources bf-state" data-mobile-open={panel === 'sources'} aria-label={t('sources')}>
       <header><h2>{t('sources')}</h2><button className="bf-mobile-close" onClick={() => setPanel('')}>{t('close')}</button></header>
@@ -170,7 +174,7 @@ function Shell({ ctx }: { ctx: Context }) {
         <p className="bf-hint">{t('sourceUploadHelp')}</p>{summary?.demo_case && <p className="bf-sample-notice">{t('sampleNotebookTitle')} · {t('sampleNotebookHelp')}</p>}
         {summary && <div className="bf-source-batch"><span>{summary.period}</span><Chip status={summary.status}/><button title={batchId} onClick={() => void navigator.clipboard.writeText(batchId).then(() => setCopied(true)).catch(e => setError(describeError(e, t)))}>{t(copied ? 'copied' : 'copyId')}</button><code>{batchId}</code></div>}
         <ul className="bf-resource-list">{sources.map(source => <li key={source.id}><button aria-pressed={selected.source === source.id && selected.view === 'source'} onClick={() => openSource(source)} disabled={!source.preview_available}>
-          <span className="bf-file-icon" aria-hidden="true">▤</span><span><strong>{source.filename}</strong><small>{t(source.id)} · {source.preview_available ? `${source.total} ${t('rows')}` : t('originalUnavailable')}</small></span><span aria-hidden="true">↗</span>
+          <span className="bf-file-icon" aria-hidden="true">▤</span><span><strong title={source.filename}>{source.filename}</strong><small>{t(source.id)} · {source.preview_available ? `${source.total} ${t('rows')}` : t('originalUnavailable')}</small></span><span aria-hidden="true">↗</span>
         </button></li>)}</ul>
         {!sources.length && <div className="bf-shell-empty"><span aria-hidden="true">▤</span><strong>{t('emptySources')}</strong><p>{t('emptySourcesHelp')}</p><p>{t('sampleNotebookHelp')}</p></div>}
         <button data-tour-id="sample" disabled={notebook.busy || !notebook.loaded} onClick={notebook.sample}>{t('sampleNotebook')}</button>
@@ -194,7 +198,7 @@ function Shell({ ctx }: { ctx: Context }) {
         </div>
         {!summary && <p className="bf-hint">{t('studioStartHelp')}</p>}
         {(error || notebook.error) && <p role="alert" className="bf-error">{error || notebook.error}{notebook.error && <button onClick={notebook.retry}>{t('refresh')}</button>}</p>}
-        {viewing && <section className="bf-inline-preview" aria-label={t('preview')}><header><h3>{t('preview')}</h3>
+        {viewing && <section key={`${selected.view}:${selected.report ?? ''}:${selected.source ?? ''}`} className="bf-inline-preview" aria-label={t('preview')}><header><h3>{t('preview')}</h3>
           <button aria-pressed={wide} title={t('wideReadingHelp')} onClick={() => setWideReading(!wide)}>{t('wideReading')}</button>
           <button onClick={() => { setExpanded(true); viewer.current?.showModal() }}>{t('expandPreview')}</button>
           <button onClick={closePreview}>{t('close')}</button></header>

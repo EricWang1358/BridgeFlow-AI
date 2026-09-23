@@ -39,7 +39,11 @@ function Orientation({ session, input }: InputZone) {
   return <aside className="bf-hero" aria-label={t('heroTitle')}>
     <h3>{t('heroTitle')}</h3>
     <p className="bf-lead bf-hint">{t('heroLead')}</p>
-    <details><summary>{t('monthlySteps')}</summary><ol>{steps.map(n => <li key={n}><b>{t(`heroStep${n}`)}</b> <span>· {t(`heroStep${n}Hint`)}</span></li>)}</ol></details>
+    {/* The whole loop, visible before anything starts: what happens, and who does it. The
+        actor line is the point — rules compute, the agents explain, a person decides. */}
+    <h4 className="bf-flow-title">{t('monthlySteps')}</h4>
+    <ol className="bf-flow">{steps.map(n => <li key={n} data-actor={n === 1 ? 'rules' : n === 3 ? 'agents' : 'person'}>
+      <span className="bf-flow-actor">{t(`heroActor${n}`)}</span><b>{t(`heroStep${n}`)}</b><span>{t(`heroStep${n}Hint`)}</span></li>)}</ol>
     <div className="bf-actions" style={{ marginBottom: 0 }}>
       <button className="bf-primary" onClick={() => window.dispatchEvent(new Event('bridgeflow:add-sources'))}>{t('heroOpen')}</button><QuotationButton />
     </div>
