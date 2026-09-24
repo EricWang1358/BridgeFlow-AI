@@ -16,6 +16,8 @@ export function Discovery() {
   const { language, t } = useUI()
   const guest = useGuestMode().guest
   const tr = (zh: string, en: string) => language === 'zh' ? zh : en
+  // A record's state in words; an unexpected value is shown as it is rather than hidden.
+  const discoveryStatus = (value?: string) => { if (!value) return ''; const key = `discoveryStatus_${value}`; return t(key) === key ? value : t(key) }
   const [projectInput, setProjectInput] = useState(''), [project, setProject] = useState('')
   const [kind, setKind] = useState<'material' | 'opportunity' | 'graph' | 'score' | 'meeting' | 'decision'>('material'), [offset, setOffset] = useState(0)
   const [page, setPage] = useState<Page | null>(null), [revision, setRevision] = useState(0)
@@ -106,7 +108,7 @@ export function Discovery() {
       {kind === 'graph' && graphDraft?.project_id === project && <FlowEditor key={`${project}:${graphKey}`} initial={graphDraft} />}
       {kind === 'score' && <><ScoreBoard key={project} project={project} onEdit={score => { void api<Opportunity>(`/discovery/${project}/opportunity/${score.opportunity_id}`).then(candidate => { setScoringTarget({ candidate, initial: score }); setScoreKey(n => n + 1) }).catch(e => setError(describeError(e, t))) }} />{scoringTarget?.candidate.project_id === project && <ScoreEditor key={`${project}:${scoreKey}`} project={project} opportunity={scoringTarget.candidate} initial={scoringTarget.initial} />}</>}
       {page && <><p>{tr('总数', 'Total')}: {page.total}</p>{page.items.map(item => <article key={item.id}>
-        <strong>{item.title ?? item.filename ?? item.id} · {item.id} · v{item.version}</strong><p>{item.parser_status ?? item.status}</p>
+        <strong>{item.title ?? item.filename ?? item.id} · {item.id} · v{item.version}</strong><p>{discoveryStatus(item.parser_status ?? item.status)}</p>
         <button onClick={() => { void api<Record<string, unknown>>(`/discovery/${project}/${kind}/${item.id}?version=${item.version}`).then(setDetail).catch(e => setError(describeError(e, t))) }}>{tr('查看详情与依据', 'View details and evidence')}</button>
         {kind === 'opportunity' && <button onClick={() => { void api<Opportunity>(`/discovery/${project}/opportunity/${item.id}`).then(value => { setEditing(value); setEditorKey(n => n + 1) }).catch(e => setError(describeError(e, t))) }}>{tr('修订此候选', 'Revise this opportunity')}</button>}
         {kind === 'opportunity' && <button onClick={() => { void api<Opportunity>(`/discovery/${project}/opportunity/${item.id}`).then(value => { setGraphDraft({ id: '', project_id: project, opportunity_id: value.id, opportunity_version: value.seq, title: '', departments: value.departments, nodes: [], edges: [] }); setGraphKey(n => n + 1); setKind('graph'); setOffset(0) }).catch(e => setError(describeError(e, t))) }}>{tr('设计流程草图', 'Design flow draft')}</button>}

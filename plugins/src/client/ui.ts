@@ -12,6 +12,17 @@ export function configureLocale(value: Context['locale']) { locale = value }
 const subscribe = (fn: () => void) => locale.subscribe(fn)
 const current = () => locale.getSnapshot().active.startsWith('zh') ? 'zh' : 'en'
 const labels = {
+  discoveryStatus_parsed: ['已解析', 'Parsed'],
+  discoveryStatus_failed: ['解析失败', 'Could not be read'],
+  discoveryStatus_unsupported: ['格式不支持', 'Format not supported'],
+  discoveryStatus_proposed: ['已提出，待决定', 'Proposed, awaiting a decision'],
+  discoveryStatus_draft: ['草稿', 'Draft'],
+  discoveryStatus_approved: ['已批准', 'Approved'],
+  discoveryStatus_rejected: ['已否决', 'Rejected'],
+  discoveryStatus_conditional: ['有条件批准，待确认条件', 'Conditional, awaiting confirmations'],
+  discoveryStatus_needs_review: ['依据已变，需要重新核对', 'Sources changed; needs review'],
+  discoveryStatus_not_decided: ['未决定', 'Not decided'],
+  discoveryStatus_ready_for_discussion: ['可以讨论', 'Ready for discussion'],
   toolAwaitingApproval: ['等你在下方的审批卡上决定。批准之前什么都不会写入。', 'Waiting for your decision on the approval card below. Nothing is written until you approve.'],
   toolRunningHint: ['正在运行，结果出来后显示在这里。', 'Running; the result appears here when it is ready.'],
   factCompleteRows: ['完整行', 'Complete rows'], dictionaryFile: ['字典文件', 'Dictionary file'],
