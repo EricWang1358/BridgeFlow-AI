@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { api, describeError, formatNumber, navigate, useUI, type Summary } from './ui.ts'
 import { FLOW } from './workflow-flow.tsx'
 import { Explain } from './explain.tsx'
+import { SampleHistory } from './charts.tsx'
 
 /**
  * The month at a glance: one read-only page over what the other pages own.
@@ -107,12 +108,12 @@ function Spark({ chart }: { chart: Chart }) {
 
 export function Overview({ batchId }: { batchId: string }) {
   const { t, language } = useUI()
-  const [tables, setTables] = useState(false)
+  const [tables, setTables] = useState(false), [revision, setRevision] = useState(0)
   const summary = useSource<Summary>(batchId ? `/batches/${batchId}` : null, [])
   const period = summary && !(summary instanceof Error) ? summary.period : ''
   const checklist = useSource<Checklist>(period ? `/monthly/checklist?period=${encodeURIComponent(period)}` : null, [])
   const inbox = useSource<Inbox>(period ? `/monthly/inbox?period=${encodeURIComponent(period)}` : null, [])
-  const charts = useSource<{ charts: Chart[]; refusal?: string }>(batchId ? `/conclusions/batches/${batchId}/charts` : null, [])
+  const charts = useSource<{ charts: Chart[]; refusal?: string }>(batchId ? `/conclusions/batches/${batchId}/charts` : null, [revision])
   const board = useSource<{ rows: BoardRow[] }>('/workflow/board', [])
   const runs = useSource<{ runs: Run[] }>('/journal/runs?limit=12', [])
   const go = (view: string) => navigate({ ...(batchId ? { batch: batchId } : {}), view })
@@ -154,7 +155,7 @@ export function Overview({ batchId }: { batchId: string }) {
       {batchId && <Block wide title={t('ovTrends')} open={t('monthlyBrief')} onOpen={() => go('brief')}>
         {ok(charts) ? (charts.refusal ? <p className="bf-hint">{charts.refusal}</p> : trends.length || entityBars.length ? <>
           {trends.length > 0 && <div className="bf-ov-sparks">{trends.map(c => <Spark key={c.id} chart={c} />)}</div>}
-          {!trends.length && <p className="bf-hint">{t('chartNeedsPeriods')}</p>}
+          {!trends.length && (ok(summary) && summary.demo_case ? <SampleHistory onLoaded={() => setRevision(n => n + 1)} /> : <p className="bf-hint">{t('chartNeedsPeriods')}</p>)}
           {entityBars.length > 0 && <div className="bf-ov-sparks" data-bars="true">{entityBars.map(c => <figure key={c.id} className="bf-ov-spark">
             <figcaption><span>{chartName(c)}{c.unit ? ` · ${c.unit}` : ''}</span></figcaption>
             <BarList rows={c.points.map(p => ({ label: p.label, value: p.value ?? 0, note: p.breach ? `▲ ${t('chartBreach')}` : p.period }))} />

@@ -368,15 +368,46 @@ async def demo_batch(user: Annotated[UserIdentity | None, Depends(require_user)]
     chosen = registry["cases"].get(case)
     if chosen is None:
         raise HTTPException(404, f"No sample case {case!r}; available: {', '.join(registry['cases'])}")
-    folder, period = REPO_ROOT / chosen["folder"], str(registry["period"])
+    return await _import_demo(REPO_ROOT / chosen["folder"], str(registry["period"]),
+                              REPO_ROOT / registry["dictionary"], chosen["case_id"], user)
+
+
+@router.post("/demo/history")
+async def demo_history(user: Annotated[UserIdentity | None, Depends(require_user)]) -> dict:
+    """The sample supplier's earlier months, so trends have more than one point.
+
+    Each month is its own batch under the same sample dictionary, imported like any other
+    upload. A month this caller can already see is left alone, so pressing it twice imports
+    nothing new and never shadows a month someone imported themselves.
+    """
+    registry = yaml.safe_load(DEMO_CASES.read_text(encoding="utf-8"))
+    def visible(entry: dict) -> bool:
+        try:
+            _visible(load_batch(entry["batch_id"]), user)
+        except HTTPException:
+            return False
+        return True
+    imported, kept = [], []
+    for month in registry.get("history") or []:
+        period = str(month["period"])
+        if periods.latest_for(period, visible) is not None:
+            kept.append(period)
+            continue
+        batch = await _import_demo(REPO_ROOT / month["folder"], period, REPO_ROOT / registry["dictionary"],
+                                   month["case_id"], user)
+        imported.append({"period": period, "batch_id": batch.batch_id, "status": batch.status})
+    return {"imported": imported, "already_present": kept}
+
+
+async def _import_demo(folder: Path, period: str, dictionary: Path, case_id: str,
+                       user: UserIdentity | None) -> BatchSummary:
     departments: list[Department] = ["production", "procurement", "finance", "marketing"]
     labels = {"production": "生产部", "procurement": "物资部", "finance": "财务部", "marketing": "市场部"}
     _check_upload_scope(departments, user)
     files = [UploadFile(io.BytesIO((folder / f"{department}.xlsx").read_bytes()),
                         filename=f"模拟-{labels[department]}-{period}.xlsx") for department in departments]
     try:
-        return await _import_batch(period, departments, files, REPO_ROOT / registry["dictionary"],
-                                   chosen["case_id"], owner=user.sub if user else "")
+        return await _import_batch(period, departments, files, dictionary, case_id, owner=user.sub if user else "")
     finally:
         for upload in files:
             await upload.close()

@@ -11,6 +11,8 @@ held back — so the demo is three cases a person can switch between:
              department template missing a required column.
 - ``clean``  everything right: no planted error, and prices and collection plans set so
              every declared metric sits inside its threshold. It is ready to review.
+- ``history/2024-05``, ``history/2024-06``  the same supplier's two earlier months with
+             nothing planted, so the trend charts have more than one point.
 
 All three reuse the simulation in ``make_mock_business.py`` so the books still tie, and the
 dictionary of the retained sample (``data/mock_business/demo/dictionary.yaml``). The retained
@@ -54,11 +56,11 @@ def _headers(template: Path) -> list[str]:
     return [str(c.value or "").strip() for c in openpyxl.load_workbook(template).active[1]]
 
 
-def write(folder: Path, months: dict, planted: list) -> None:
+def write(folder: Path, months: dict, planted: list, month: str = MONTH) -> None:
     spec = load_spec(mock.TEMPLATES / "integration.yaml")
     folder.mkdir(parents=True, exist_ok=True)
     for department, decl in spec.departments.items():
-        mock._write_department(spec, department, MONTH, months[MONTH], _headers(mock.TEMPLATES / decl.template),
+        mock._write_department(spec, department, month, months[month], _headers(mock.TEMPLATES / decl.template),
                                folder / f"{department}.xlsx", planted)
 
 
@@ -113,7 +115,11 @@ def main() -> None:
     write(OUT / "other", default, [])
     plant_other(OUT / "other")
     write(OUT / "clean", mock.simulate(clean_projects(), CLEAN_PLAN), [])
-    print(f"wrote {OUT.relative_to(ROOT)}/{{core,other,clean}}")
+    # The same supplier's earlier months, nothing planted: history for the trends.
+    for month, _label in mock.MONTHS:
+        if month != MONTH:
+            write(OUT / "history" / month, default, [], month)
+    print(f"wrote {OUT.relative_to(ROOT)}/{{core,other,clean,history}}")
 
 
 if __name__ == "__main__":

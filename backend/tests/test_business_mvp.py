@@ -61,6 +61,12 @@ def test_four_departments_match_independent_standard_answers(client, case):
     assert api.status_code == 200, api.text
     assert api.json()["unit"] == "%"
     assert api.json()["value"] == expected["metric_values"]["capacity_utilisation"]
+    # With a batch the month is the batch's own: no extra read is needed to learn it.
+    implied = client.post("/tools/aggregate-metric", json={"batch_id": batch_id, "metric": "capacity_utilisation"})
+    assert implied.status_code == 200 and implied.json()["period"] == "2025-11" and implied.json()["value"] == api.json()["value"]
+    assert client.post("/tools/aggregate-metric", json={"batch_id": batch_id, "period": "2025-10", "metric": "capacity_utilisation"}).status_code == 409
+    unknown = client.post("/tools/aggregate-metric", json={"batch_id": batch_id, "metric": "not_a_metric"})
+    assert unknown.status_code == 409 and "capacity_utilisation" in unknown.json()["detail"]
     runs = [{"role": p["role"], "session_id": f"child-{p['role']}", "status": "completed", "judgement": judgement(p)} for p in context["roles"]]
     report = client.post("/tools/review-finalize", json={"batch_id": batch_id, "parent_session_id": "parent", "runs": runs}).json()
     assert report["status"] == "validated"

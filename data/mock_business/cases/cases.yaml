@@ -4,6 +4,11 @@
 # scripts/make_demo_cases.py (except `tour`, the retained guided-tour sample).
 dictionary: data/mock_business/demo/dictionary.yaml
 period: "2024-07"
+# Earlier months of the same supplier, nothing planted. "Load the earlier sample months"
+# imports the ones not already present, so trends have more than one point.
+history:
+  - {period: "2024-05", folder: data/mock_business/cases/history/2024-05, case_id: demo-history-2024-05}
+  - {period: "2024-06", folder: data/mock_business/cases/history/2024-06, case_id: demo-history-2024-06}
 cases:
   tour:
     folder: data/mock_business/demo

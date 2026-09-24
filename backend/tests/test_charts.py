@@ -128,3 +128,15 @@ def test_a_metric_resting_on_an_unconfirmed_convention_is_drawn_as_g3(client):
     _write(batch_path(batch), snapshot.model_dump(mode="json"))
     trend = charts_of(client, batch)["sign_rate_trend"]
     assert trend["grade"] == "G3"
+
+
+def test_the_earlier_sample_months_give_the_sample_a_trend_and_load_only_once(client):
+    batch = client.post("/batches/demo").json()["batch_id"]
+    first = client.post("/batches/demo/history")
+    assert first.status_code == 200, first.text
+    assert [m["period"] for m in first.json()["imported"]] == ["2024-05", "2024-06"]
+    again = client.post("/batches/demo/history").json()
+    assert again["imported"] == [] and again["already_present"] == ["2024-05", "2024-06"]
+    trend = charts_of(client, batch)["sign_rate_trend"]
+    assert trend["status"] == "ready"
+    assert [p["period"] for p in trend["points"] if p["value"] is not None] == ["2024-05", "2024-06", "2024-07"]
