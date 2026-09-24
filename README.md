@@ -317,15 +317,15 @@ concrete supplier for `2024-07`, filled in on the business side's v2 department 
 normal import and rule computation, and freezes the sample dictionary for that batch. No model call
 happens, so this costs nothing.
 
-![Sample notebook: four sources and the master table artifact](docs/images/02-sample-sources.png)
+![Sample notebook: four sources and a preview of the selected file](docs/images/02-sample-sources.png)
 
 What you should see:
 
 1. Left: four sources, `模拟-生产部-2024-07.xlsx` (production, 21 daily rows) and procurement, finance
    and marketing with 4 rows each (one per project), the period `2024-07`, a **Ready for AI review** badge, and the
    batch id.
-2. Right: under **Artifacts**, `2024-07 · Master table` with 4 rows.
-3. A **Preview** of the selected source: the parsed original with its row numbers and column names.
+2. Center: the notebook says it has data to explore and points to **This month’s tasks** and **Data**.
+3. Right: Studio offers those pages; selecting a file on the left shows its parsed original in **Preview**, with original row numbers and column names. The 4-row master-table artifact is listed below the preview.
 
 Open the file provenance to see which file, batch, worksheet and SHA-256 digest the preview belongs to.
 
