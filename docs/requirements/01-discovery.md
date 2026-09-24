@@ -264,7 +264,7 @@ Remaining: graphical co-design and business confirmation, model-assisted proposa
 
 Locators are structured header, workbook-row or text-line references; ranges are inclusive and one-based. Physical workbook rows retain blank-row positions. Unknown/uninspected sheets, absent headers, out-of-range positions and format mismatches are refused. Existence does not prove semantic support; claims still require human review.
 
-`GET /discovery/{project}/{material|opportunity}` 提供最多 50 条的分页摘要，total 仅计算授权对象。`GET /discovery/{project}/{kind}/{id}?version=N` 读取已授权详情/历史。复用门户 JWT 和 `workflow_departments`，跨部门候选须覆盖全部来源部门；无权限详情返回 404。DSH 浏览器代理只放行这些 GET，不开放写入或原件路径。清单查询项目名称使用精确前缀匹配，区分大小写且 `_` 不作为 SQL 通配符。当前存储枚举仍扫描项目流，未验证大规模性能。
+`GET /discovery/{project}/{material|opportunity}` 提供最多 50 条的分页摘要，total 仅计算授权对象。`GET /discovery/{project}/{kind}/{id}?version=N` 读取已授权详情/历史。复用门户 JWT 和 `workflow_departments`，跨部门候选须覆盖全部来源部门；无权限详情返回 404。DSH 浏览器代理只放行这些 GET，不开放写入或原件路径。清单查询项目名称使用精确前缀匹配，区分大小写且 `_` 不作为 SQL 通配符。当前存储枚举仍扫描项目流，未验证大规模性能。 （2026-09-24 起不再按部门过滤：登录员工可见全部，见 docs/27。）
 
 Read endpoints return scoped paginated summaries and authorized current/historical details. Portal JWT and explicit workflow departments are required; invisible objects return 404. The browser proxy allows only these GET routes. Project prefixes are literal and case-sensitive. Stream enumeration remains a project scan; large-scale performance is not yet validated.
 

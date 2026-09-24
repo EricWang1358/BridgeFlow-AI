@@ -126,12 +126,8 @@ def _reported_earlier(period: str, batch_id: str, user: UserIdentity | None) -> 
 
 
 def _scope(user: UserIdentity | None) -> inbox_module.Scope:
-    """An item whose departments the viewer may not see is neither shown nor counted."""
-    if user is None:
-        return inbox_module.Scope(all=True)
-    from bridgeflow.access import departments_for
-
-    return inbox_module.Scope(departments=departments_for(user.sub))
+    """Every signed-in employee sees every open item (2026-09-24, see api/batches._visible)."""
+    return inbox_module.Scope(all=True)
 
 
 @router.get("/monthly/inbox")

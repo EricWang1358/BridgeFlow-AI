@@ -32,7 +32,7 @@ async function port() {
   const p = s.address().port; await new Promise(r => s.close(r)); return p
 }
 const backendPort = await port(), webPort = await port()
-const env = { ...process.env, DSH_HOME: process.env.DSH_HOME, DSH_TOOLS_MODE: 'native',
+const env = { ...process.env, PORTAL_BASE_URL: '', DSH_HOME: process.env.DSH_HOME, DSH_TOOLS_MODE: 'native',
   BRIDGEFLOW_SERVICE_TOKEN: randomBytes(32).toString('hex'),
   PYTHONPATH: `${root}/backend/src`, RESULT_STORE_PATH: '/tmp/bfshot/outputs',
   MAPPING_MEMORY_PATH: '/tmp/bfshot/mappings.json',

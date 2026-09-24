@@ -1,18 +1,14 @@
 
 from test_discovery import material, opportunity
-from test_identity import auth, edit_role, make_token
+from test_identity import auth, make_token
 from test_identity import client as client  # noqa: PLC0414 -- pytest fixture re-export
 
 from bridgeflow.api.discovery import service
 from bridgeflow.config import settings
 
 
-def grant():
-    edit_role("ou_alice", "workflow_departments", ["production"])
-
-
-def test_inventory_filters_before_counting_and_pagination(client):
-    grant()
+def test_inventory_counts_and_pages_every_department_for_a_signed_in_employee(client):
+    # Owner decision 2026-09-24: Feishu department scope governs Feishu import/upload only.
     domain = service()
     for i, department in enumerate(["finance", "production", "production"]):
         domain.register(material(id=f"m{i}", department=department), b"a,b\n", "employee")
@@ -20,17 +16,15 @@ def test_inventory_filters_before_counting_and_pagination(client):
     assert client.get(route).status_code == 401
     response = client.get(route + "?limit=1", headers=auth(make_token()))
     assert response.status_code == 200
-    assert response.json()["total"] == 2 and response.json()["has_more"]
-    assert response.json()["items"][0]["id"] == "m1"
-    page = client.get(route + "?limit=1&offset=1", headers=auth(make_token())).json()
-    assert page["items"][0]["id"] == "m2" and not page["has_more"]
-    assert client.get(route, headers=auth(make_token(sub="ou_bob"))).json()["total"] == 0
-    assert client.get(route + "/m0", headers=auth(make_token())).status_code == 404
+    assert response.json()["total"] == 3 and response.json()["has_more"]
+    page = client.get(route + "?limit=1&offset=2", headers=auth(make_token())).json()
+    assert len(page["items"]) == 1 and not page["has_more"]
+    assert client.get(route, headers=auth(make_token(sub="ou_bob"))).json()["total"] == 3
+    assert client.get(route + "/m0", headers=auth(make_token())).status_code == 200
     assert client.get(route + "?limit=51", headers=auth(make_token())).status_code == 422
 
 
 def test_detail_retains_authorized_history_and_stale_references(client):
-    grant()
     domain = service()
     domain.register(material(), b"a,b\n", "employee")
     domain.propose(opportunity(), "employee")
@@ -41,11 +35,10 @@ def test_detail_retains_authorized_history_and_stale_references(client):
     old = client.get("/discovery/project/material/source?version=1", headers=headers)
     assert old.json()["version"] == 1
     assert client.get("/discovery/project/material/source?version=9", headers=headers).status_code == 404
-    assert client.get("/discovery/project/opportunity/candidate", headers=auth(make_token(sub="ou_bob"))).status_code == 404
+    assert client.get("/discovery/project/opportunity/candidate", headers=auth(make_token(sub="ou_bob"))).status_code == 200
 
 
 def test_project_prefix_is_literal_not_a_sql_pattern(client):
-    grant()
     domain = service()
     domain.register(material(project_id="a_b"), b"a,b\n", "employee")
     domain.register(material(project_id="axb", id="elsewhere"), b"a,b\n", "employee")
@@ -61,7 +54,6 @@ def test_proposal_write_requires_employee_and_native_approval(client, monkeypatc
 
     from test_employee_approval import grants, native, permit
 
-    grant()
     monkeypatch.setattr(settings, "bridgeflow_allow_workflow_write", True)
     domain = service()
     domain.register(material(), b"a,b\n", "employee")
@@ -81,19 +73,17 @@ def test_proposal_write_requires_employee_and_native_approval(client, monkeypatc
     assert client.post(route, content=payload, headers={"content-type": "application/json", "x-bridgeflow-approval": proof}).status_code == 403
 
 
-def test_proposal_cannot_hide_unauthorized_sources_or_execute_after_revocation(client, monkeypatch):
+def test_proposal_must_cite_existing_sources_and_cannot_execute_after_revocation(client, monkeypatch):
     import json
 
     from test_employee_approval import grants, native, permit
 
-    grant()
     grants("ou_alice", ["discovery_propose"])
     monkeypatch.setattr(settings, "bridgeflow_allow_workflow_write", True)
     domain = service()
-    domain.register(material(department="finance"), b"a,b\n", "employee")
     payload = json.dumps({"proposal": opportunity().model_dump(), "call_id": "proposal-test"}).encode()
-    assert permit(client, payload, "discovery_propose", "ou_alice").status_code == 404
-    domain.register(material(id="allowed"), b"a,b\n", "employee")
+    assert permit(client, payload, "discovery_propose", "ou_alice").status_code == 404  # its source is not registered
+    domain.register(material(id="allowed", department="finance"), b"a,b\n", "employee")
     proposed = opportunity().model_dump()
     proposed["claims"][0]["references"][0]["material_id"] = "allowed"
     payload = json.dumps({"proposal": proposed, "call_id": "proposal-test"}).encode()
@@ -157,13 +147,12 @@ def test_model_sheet_truncation_reports_actual_sheet_count(client):
 def test_original_download_checks_scope_version_and_integrity(client):
     import base64
 
-    grant()
     domain = service()
     first = domain.register(material(), b"a,b\n", "employee")
     domain.register(material(expected_seq=1), b"c,d\n", "employee")
     route = "/discovery/project/material/source/original?version=1"
     assert client.get(route).status_code == 401
-    assert client.get(route, headers=auth(make_token(sub="ou_bob"))).status_code == 404
+    assert client.get(route, headers=auth(make_token(sub="ou_bob"))).status_code == 200
     original = client.get(route, headers=auth(make_token()))
     assert original.status_code == 200
     assert original.json()["version"] == 1

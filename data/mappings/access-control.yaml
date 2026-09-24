@@ -11,8 +11,12 @@
 # - 人必须直接加进知识库：群组/部门型成员不会被展开。
 #
 # 文件缺失或非法、飞书不可达，服务都明确报「未配置」（503），绝不退回猜测。
-# 飞书里没有任何库籍的用户看不到任何批次。可见性规则不变：批次的部门集合 ⊆
-# 用户授权部门，或批次由该用户导入。
+#
+# 两项授权各管什么（2026-09-24 负责人拍板）：
+# - operations：能批准哪些写入（导入、映射、隔离处置、填报流转、立项……）；
+# - departments：只管与飞书之间的传输——能从飞书导入哪些部门的文件、能把哪些部门的
+#   结果上传到飞书。登录后在 BridgeFlow 内查看批次、填报流程与立项记录不再按部门过滤，
+#   本地上传也不需要部门授权。
 spaces:
   departments:                # 键必须是四个业务部门的固定 ID，缺一不可
     production:  {space_id: "7686136266059959272",  member: production_member,  admin: production_admin}
@@ -22,55 +26,43 @@ spaces:
   master_office: {space_id: "7686753513279343836", member: master_office_member, admin: master_office_admin}
 
 roles:
-  # 部门成员：本部门上传 + 读取。改/删文件走飞书原生申请，BridgeFlow 不参与。
-  # workflow_departments 是工作流目录的准确部门名，与上面的固定部门 ID 分开，
-  # 不做自动翻译；缺省为空即无工作流数据访问。
+  # 部门成员：可从飞书导入本部门文件。改/删飞书里的文件走飞书原生申请，BridgeFlow 不参与。
   production_member:
     departments: [production]
-    workflow_departments: [生产部]
     operations: [batch_import, review_note]
   # 部门主管 = 该知识库 admin，本部门完整权限。
   production_admin:
     departments: [production]
-    workflow_departments: [生产部]
     operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
                  workflow_record, workflow_approve_submit, workflow_handoff]
   procurement_member:
     departments: [procurement]
-    workflow_departments: [物资部]
     operations: [batch_import, review_note]
   procurement_admin:
     departments: [procurement]
-    workflow_departments: [物资部]
     operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
                  workflow_record, workflow_approve_submit, workflow_handoff]
   finance_member:
     departments: [finance]
-    workflow_departments: [财务部]
     operations: [batch_import, review_note]
   finance_admin:
     departments: [finance]
-    workflow_departments: [财务部]
     operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
                  workflow_record, workflow_approve_submit, workflow_handoff]
   marketing_member:
     departments: [marketing]
-    workflow_departments: [市场部]
     operations: [batch_import, review_note]
   marketing_admin:
     departments: [marketing]
-    workflow_departments: [市场部]
     operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
                  workflow_record, workflow_approve_submit, workflow_handoff]
-  # 总经办成员：四部门上传 + 读取。
+  # 总经办成员：可从飞书导入四个部门的文件。
   master_office_member:
     departments: [production, procurement, finance, marketing]
-    workflow_departments: [生产部, 物资部, 财务部, 市场部]
     operations: [batch_import, review_note]
   # 总表管理者 = 总经办知识库 admin。授 confirm_mapping 的角色必须声明全部四个部门。
   master_office_admin:
     departments: [production, procurement, finance, marketing]
-    workflow_departments: [生产部, 物资部, 财务部, 市场部]
     # convention_decide 只给总表管理者：口径是跨部门的总表声明，不属于任何单一部门。
     # workflow_accept_scope 同理：接收哪条立项决策作为流程范围，是跨部门的治理动作。
     # console_access 同理只给这里（#229）：AI 控制台是共用的一个 dsh 身份，进去的人

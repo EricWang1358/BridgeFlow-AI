@@ -49,7 +49,6 @@ class Resolved:
 
     roles: frozenset[str]
     departments: frozenset[str]
-    workflow_departments: frozenset[str]
     operations: frozenset[str]
 
 
@@ -79,7 +78,7 @@ def structure() -> dict:
         for name, role in roles.items():
             if not isinstance(role, dict):
                 raise TypeError(f"role {name!r} must be a mapping")
-            for field in ("departments", "workflow_departments", "operations"):
+            for field in ("departments", "operations"):
                 value = role.get(field, [])
                 if not isinstance(value, list) or any(not isinstance(v, str) or not v.strip() for v in value):
                     raise TypeError(f"role {name!r} {field} must be a list of nonempty names")
@@ -229,6 +228,5 @@ def resolve(union_id: str) -> Resolved:
     return Resolved(
         roles=frozenset(found),
         departments=frozenset(d for name in found for d in roles[name].get("departments", [])),
-        workflow_departments=frozenset(d for name in found for d in roles[name].get("workflow_departments", [])),
         operations=frozenset(o for name in found for o in roles[name].get("operations", [])),
     )

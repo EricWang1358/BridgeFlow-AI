@@ -7,9 +7,34 @@
 「每个数字都量过、可追溯」是本项目对评委的核心叙事，评委抓到一处对不上，整个叙事就打折。
 所以改数字只改这一处。
 
-最后更新：2026-09-23。新增一轮时照第三节的格式写，并附上复现命令。
+最后更新：2026-09-24。新增一轮时照第三节的格式写，并附上复现命令。
 
 ---
+
+## 当前评审 rubric 自评（2026-09-24）
+
+按主办方七项、每项 5 分估算，**31.5 / 35**。这是项目方自评，不是评委分数或企业验收；以已合入的代码及下列留存证据为准。工作区内尚未提交的身份、读取范围和审批界面改动不计入本次评分。
+
+| # | 项 | 自评（/5） | 已验证的依据 | 尚未证明的部分 |
+| --- | --- | ---: | --- | --- |
+| 1 | Goal & Scope Definition | 4.5 | [问题与范围](01-problem-and-hmw.md)、[需求追溯](requirements/traceability.md)和明确的演示边界 | 真实客户材料、成功判据与企业签核仍待业务方 |
+| 2 | Architecture & Reasoning Loop | 4.5 | 原生队长与四部门子代理的[真实模型研判](evidence/live-2026-09-23/risk/measurement.json)；立项范围接入、两跳流转的[真实模型运行](evidence/live-2026-09-24/workflow-two-hops/measurement.json) | 取消、恢复与正式签发状态机尚未完整验证 |
+| 3 | Tool Use & Integration | 4.5 | 类型化工具在真实批次上执行；[工具选择原始结果](evidence/live-2026-09-24/tool-selection-rerun/tool-selection.json)为 18/18 | 用例经针对性修订，尚无独立新题；token 成本没有随正确率下降，真实企业文件适配待验 |
+| 4 | Autonomy & Human-in-the-Loop | 4.5 | 两跳真实模型旅程经 8 次原生审批；写入回执与请求绑定、拒绝不写入 | 风险分级仍主要是读取/审批两档；多人真实并发的审批归属待验 |
+| 5 | Safety, Security & Guardrails | 4.5 | [单元格注入真实模型运行](evidence/live-2026-09-23/poison/measurement.json)未把注入文本送入会话；原始行隔离、操作授权及独立访客实例已有实现 | 真实企业权限、共享访客会话、部署配置和外部安全检验尚未完成；本地未提交的权限调整待验证 |
+| 6 | Observability & Evaluation | 4.5 | [决策日志](evidence/round1-e13-e14/decision-journal.png)、[代理泳道](evidence/round1-e13-e14/agent-run.png)及[正常/对抗验收记录](evidence/observability/acceptance-2026-09-20.txt)；真实模型旅程留有调用、审批、token 证据 | 已知生成案例和同套工具选择题不等于独立留出集；真实业务质量、长期费用待验 |
+| 7 | Platform & Tooling Usage | 4.5 | 官方 Web、原生工具/审批/会话与子代理在真实模型旅程中使用；[架构边界](13-golden-standard.md#六-rubric-符合性)明确 | 框架升级契约与企业部署验收未完成 |
+
+这次比 [09-20 自评](../HANDOFF.md#历史评审-rubric-自评2026-09-20)更有把握的部分是第 2、3、6 项：多步真实模型链路、全量工具选择评测及真实运行轨迹已经留证。第 3 项不因 18/18 直接给满分，第 6 项也不把脚本化回归当成模型质量证明。
+
+## 试用反馈修复与权限收窄（2026-09-24，分支 `fix/workflow-record-card`）
+
+| 项 | 结果 |
+| --- | --- |
+| 工作流全程（真实模型，`env.sh` 10:16 起改用 commandcode 端点，模型 `deepseek/deepseek-v4.1-flash`） | 通过：8 次原生审批，28 次模型请求，229 s，total 493,473 token |
+| 同日第一次真实运行 | 失败：每轮都报「Model "deepseek-v4-flash" is not supported on this endpoint」。原因是旅程用一个全新的 DSH_HOME，没有 settings.yaml，就回落到 dsh 内置的默认模型名。现在真实旅程读 `DSH_PROVIDER` / `DSH_MODEL`（`tests/dsh.mjs` 的 `liveModelPatch`） |
+| 后端 / 门户 / 插件 | 737 passed / 46 passed / 99 passed，typecheck 与 ruff 通过 |
+| 离线浏览器旅程 | 10 条全部通过；web-smoke 抓出一处键盘顺序回归（技术细节插在理由框前面），已把技术细节挪到按钮之后 |
 
 ## 工具选择评测 18/18 与示例前两个月（2026-09-24，分支 `feat/eval-and-second-month`）
 
@@ -18,7 +43,7 @@
 | 项 | 上一轮 | 本轮 |
 | --- | --- | --- |
 | 选对第一个工具 | 15/18 | **18/18** |
-| 每条中位步数 / token | 3 步 / 38,272 | 3 步 / 40,096 |
+| 每条中位步数 / token | 3 步 / 38,591 | 3 步 / 40,120 |
 | 总 token（18 条） | 727,112 | 846,515 |
 
 上一轮没选对的 3 条，都追到了工具或人设上，模型本身没有做错：

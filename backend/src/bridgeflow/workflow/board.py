@@ -115,7 +115,8 @@ def _handoff_row(service: WorkflowService, snapshot: HandoffSnapshot, notices: d
         summary = f"{stage.department}已完成"
     owed = service.missing_outputs(snapshot.stage, snapshot.key) if state in (HandoffState.WAITING, HandoffState.IN_PROGRESS) else []
     if owed:
-        summary += "；" + "、".join(service.catalogue.templates[t].title for t in owed) + "入库后才能完成"
+        summary += "；" + "、".join(f"{service.catalogue.templates[t].department}的{service.catalogue.templates[t].title}"
+                                  for t in owed) + "入库后才能完成"
     if snapshot.view.stale:
         summary += "；上游已修订，请按新版本复核"
     if notification in (NotificationState.FAILED, NotificationState.ABANDONED):

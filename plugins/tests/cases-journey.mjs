@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from '@playwright/test'
-import { assertClientModulesServed, resolveDsh } from './dsh.mjs'
+import { assertClientModulesServed, resolveDsh, liveModelPatch } from './dsh.mjs'
 import { switchLanguage } from './locale.mjs'
 
 const live = process.env.BRIDGEFLOW_LIVE === '1'
@@ -22,7 +22,7 @@ await mkdir(evidence, { recursive: true })
 const python = process.env.BRIDGEFLOW_PYTHON ?? resolve(root, '../.venv/bin/python')
 async function port() { const s = createServer(); await new Promise(r => s.listen(0, '127.0.0.1', r)); const p = s.address().port; await new Promise(r => s.close(r)); return p }
 const backendPort = await port(), webPort = await port()
-const env = { ...process.env, DSH_HOME: `${scratch}/dsh`, DSH_TOOLS_MODE: 'native',
+const env = { ...process.env, PORTAL_BASE_URL: '', DSH_HOME: `${scratch}/dsh`, DSH_TOOLS_MODE: 'native',
   BRIDGEFLOW_SERVICE_TOKEN: randomBytes(32).toString('hex'), PYTHONPATH: `${root}/backend/src`, RESULT_STORE_PATH: `${scratch}/outputs`,
   MAPPING_MEMORY_PATH: `${scratch}/mappings.json`, FIELD_DICTIONARY_PATH: `${root}/data/mock_business/demo/dictionary.yaml`,
   WORKFLOW_CATALOGUE_PATH: `${root}/data/workflow_demo/catalogue.yaml`,
@@ -42,7 +42,7 @@ try {
     .replace("'../plugins/src/index.ts'", JSON.stringify(`${root}/plugins/src/index.ts`))
     .replace('./dsh/presets', `${root}/dsh/presets`)
     .replace('http://127.0.0.1:8000', `http://127.0.0.1:${backendPort}`)
-    + (live ? '' : `\n- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n  config:\n    provider: bridgeflow-offline-test\n    model: offline\n- insert:\n    - id: scripted-test-model\n      name: ${JSON.stringify(`${root}/plugins/tests/fixtures/scripted-model/index.ts`)}\n`)
+    + (live ? liveModelPatch() : `\n- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n  config:\n    provider: bridgeflow-offline-test\n    model: offline\n- insert:\n    - id: scripted-test-model\n      name: ${JSON.stringify(`${root}/plugins/tests/fixtures/scripted-model/index.ts`)}\n`)
   await writeFile(`${scratch}/web.yml`, patch)
   start(python, ['-m', 'uvicorn', 'bridgeflow.api.main:app', '--host', '127.0.0.1', '--port', String(backendPort)])
   start(resolveDsh(), ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])

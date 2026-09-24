@@ -36,9 +36,9 @@ These are external facts that cannot be fabricated. Continue independent enginee
 
 ## 本轮读取权限契约 / Read authorization contract added this turn
 
-启用门户后：总表与 XLSX 使用与批次相同的可见性；工作流使用 ACL 中独立的 `workflow_departments`，值必须为 catalogue 中的准确部门名称。未声明则空集，不自动把 `production` 翻译成“生产部”。目录隐藏无权限模板、阶段、血缘；跨部门阶段必须能查看该阶段及全部输入输出模板；看板、草稿、落地信号同步过滤。无权限对象返回 404，不透露是否存在。
+启用门户后：总表与 XLSX 使用与批次相同的可见性；工作流使用 ACL 中独立的 `workflow_departments`，值必须为 catalogue 中的准确部门名称。未声明则空集，不自动把 `production` 翻译成“生产部”。目录隐藏无权限模板、阶段、血缘；跨部门阶段必须能查看该阶段及全部输入输出模板；看板、草稿、落地信号同步过滤。无权限对象返回 404，不透露是否存在。 **（2026-09-24 撤下：部门范围只管飞书导入/上传，读取只需登录；`workflow_departments` 已删除，见 docs/27。）**
 
-With the portal enabled, master/XLSX reads use batch visibility. Workflow reads require explicit `workflow_departments` matching exact catalogue labels, defaulting to no grants. There is no inferred translation from fixed import department IDs. Filter templates, stages, lineage, board rows, drafts and adoption signals. A cross-department stage requires scope for the stage and all input/output templates. Invisible objects return 404.
+With the portal enabled, master/XLSX reads use batch visibility. Workflow reads require explicit `workflow_departments` matching exact catalogue labels, defaulting to no grants. There is no inferred translation from fixed import department IDs. Filter templates, stages, lineage, board rows, drafts and adoption signals. A cross-department stage requires scope for the stage and all input/output templates. Invisible objects return 404. **(Withdrawn 2026-09-24: department scope now governs only Feishu import/upload; reads need a login only; `workflow_departments` removed — docs/27.)**
 
 模型读取仍使用可信主机权限。批准写入已接个人许可与原生审批，上传/备注有独立操作权限；拒绝审计与原生会话隔离尚未解决，不能宣称完整员工级授权。门户关闭时保留本地演示模式。
 

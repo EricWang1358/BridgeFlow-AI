@@ -336,7 +336,6 @@ classDiagram
     <<value object>>
     +user: UserIdentity
     +departments: set
-    +workflow_departments: set
     +allows(item) bool
   }
   class OpenItemInbox {

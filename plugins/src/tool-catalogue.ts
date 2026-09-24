@@ -9,6 +9,11 @@ export type ToolAccess =
     readonly reason: string
     readonly denialEffect: string
     readonly body: (args: Record<string, unknown>, agentId: string, callId: string | undefined) => unknown
+    /**
+     * Arguments that can never be approved (nothing to record, no target) are refused here,
+     * before a person is shown a card. Returns the refusal the model should act on, or null.
+     */
+    readonly precheck?: (args: Record<string, unknown>) => string | null
   }
 
 export type ProductTool = ToolDefinition & { readonly access: ToolAccess }

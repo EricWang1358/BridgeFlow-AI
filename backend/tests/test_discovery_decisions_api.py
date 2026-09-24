@@ -1,10 +1,9 @@
 import json
 
-from test_discovery_api import grant
 from test_discovery_decisions import policy, prepared, proposal
 from test_discovery_meetings import REF
 from test_employee_approval import grants, native, permit
-from test_identity import auth, edit_role, make_token
+from test_identity import auth, make_token
 from test_identity import client as client  # noqa: PLC0414 -- pytest fixture re-export
 
 from bridgeflow.api.discovery import DECISION_OPERATIONS, service
@@ -13,8 +12,6 @@ from bridgeflow.config import settings
 
 def setup(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "bridgeflow_allow_workflow_write", True)
-    grant()
-    edit_role("ou_bob", "workflow_departments", ["production"])
     for sub in ("ou_alice", "ou_bob"):
         grants(sub, list(DECISION_OPERATIONS))
     rules = policy(proposers=["ou_alice"], voters=["ou_alice", "ou_bob"],
@@ -66,8 +63,9 @@ def test_native_decision_lifecycle_and_scoped_handoff(client, monkeypatch, tmp_p
     assert view["agent2_handoff"]["decision_seq"] == 6
     assert set(view["votes"]) == {"ou_alice", "ou_bob"}
     assert client.get(path + "?version=4", headers=alice).json()["agent2_handoff"] is None
-    assert client.get(path, headers=auth(make_token(sub="outsider"))).status_code == 404
-    assert client.get("/discovery/project/decision", headers=auth(make_token(sub="outsider"))).json()["total"] == 0
+    # Any signed-in employee reads decisions (2026-09-24); only the declared policy roles act on them.
+    assert client.get(path, headers=auth(make_token(sub="outsider"))).status_code == 200
+    assert client.get("/discovery/project/decision", headers=auth(make_token(sub="outsider"))).json()["total"] == 1
     summary = client.get("/discovery/project/decision", headers=alice).json()["items"][0]
     assert summary["status"] == "approved" and "votes" not in summary
 

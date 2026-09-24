@@ -81,6 +81,9 @@ export function gate(ctx: Context, details: PendingDetails, receipts: ApprovalRe
   ctx.on('tools/pre-execute', async (exec, next) => {
     const access = catalogue.access(exec.name)
     if (access?.kind !== 'approval') return next()
+    // A call that could never be approved is not put in front of a person.
+    const invalid = access.precheck?.(exec.arguments as Record<string, unknown>)
+    if (invalid) return { kind: 'deny', reason: `${exec.name} was not sent for approval: ${invalid} Nothing was written.` }
 
     // The approval request carries no arguments, so the summary is stashed here and
     // collected by the answerer. Without it the operator is asked to approve a tool

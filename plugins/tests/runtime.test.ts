@@ -648,3 +648,23 @@ test('guest mode offers no Feishu tool to the model, and keeps the rest', async 
     else process.env.BRIDGEFLOW_GUEST_MODE = previous
   }
 })
+
+test('a record with nothing said is refused before any approval card, and says where fields are listed', async () => {
+  // The gate is exercised directly: the test runtime has no approval service to register it.
+  const { gate } = await import('../src/approval/gate.ts')
+  const { workflowRecord } = await import('../src/tools/workflow.ts')
+  const { ApprovalReceipts } = await import('../src/approval/receipts.ts')
+  const receipts = new ApprovalReceipts()
+  const tool = workflowRecord({ baseUrl: 'http://127.0.0.1:1', timeoutMs: 100 } as never, receipts)
+  let handler: ((exec: unknown, next: () => unknown) => Promise<unknown>) | undefined
+  const fake = { on: (_name: string, fn: typeof handler) => { handler = fn } }
+  gate(fake as never, new PendingDetails(), receipts, 100, new ApprovalNotes(),
+    { access: (name: string) => name === tool.name ? tool.access : undefined } as never)
+  let passedOn = false
+  const empty = await handler!({ name: 'workflow_record', arguments: { template: 'settlement_basis', said: [] },
+    callId: ToolCallId('c1'), agent: { id: 'captain' } }, () => { passedOn = true })
+  assert.equal((empty as { kind: string }).kind, 'deny')
+  assert.match((empty as { reason: string }).reason, /not sent for approval.*workflow_catalogue/)
+  assert.equal(passedOn, false)
+  assert.equal(tool.access.kind === 'approval' && tool.access.precheck?.({ template: 't', said: [{ label: 'a', value: '1' }] }), null)
+})

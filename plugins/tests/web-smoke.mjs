@@ -1,5 +1,5 @@
 import { coldReload } from './cold-reload.mjs'
-import { assertClientModulesServed, resolveDsh } from './dsh.mjs'
+import { assertClientModulesServed, resolveDsh, liveModelPatch } from './dsh.mjs'
 import { assertDefaultEnglish, switchLanguage } from './locale.mjs'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
@@ -30,7 +30,7 @@ async function port() {
   return value
 }
 const backendPort = await port(), webPort = await port()
-const env = { ...process.env, DSH_HOME: `${scratch}/dsh`, DSH_TOOLS_MODE: 'native',
+const env = { ...process.env, PORTAL_BASE_URL: '', DSH_HOME: `${scratch}/dsh`, DSH_TOOLS_MODE: 'native',
   BRIDGEFLOW_SERVICE_TOKEN: randomBytes(32).toString('hex'),
   PYTHONPATH: `${root}/backend/src`, RESULT_STORE_PATH: `${scratch}/outputs`,
   MAPPING_MEMORY_PATH: `${scratch}/mappings.json`, FIELD_DICTIONARY_PATH: `${root}/data/mappings/field-dictionary.example.yaml`,
@@ -88,8 +88,7 @@ try {
     await writeFile(env.ACCESS_CONTROL_PATH, JSON.stringify({ users: { 'offline-employee': {
       departments: ['production', 'procurement', 'finance', 'marketing'],
       operations: ['batch_import', 'confirm_mapping', 'review_note', 'discovery_upload', 'discovery_register', 'discovery_propose', 'discovery_graph_save', 'discovery_score_save', 'discovery_meeting_save', 'discovery_decision_propose', 'discovery_decision_vote', 'discovery_decision_resolve', 'discovery_decision_finalize'],
-      workflow_departments: ['production'],
-    }, 'offline-voter': { departments: ['production'], workflow_departments: ['production'], operations: ['discovery_decision_vote'] } } }))
+    }, 'offline-voter': { departments: ['production'], operations: ['discovery_decision_vote'] } } }))
     const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url')
     const makeEmployeeToken = subject => {
       const unsigned = `${encode({ alg: 'EdDSA', kid: jwk.kid })}.${encode({ sub: subject, iss: env.PORTAL_BASE_URL, aud: 'bridgeflow', iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 900 })}`
@@ -103,7 +102,7 @@ try {
     .replace('./dsh/presets', `${root}/dsh/presets`)
     .replace('http://127.0.0.1:8000', `http://127.0.0.1:${backendPort}`)
     .replace('approvalMode: native', 'approvalMode: native\n        decisionTimeoutMs: 5000')
-    + (live ? '' : `\n- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n  config:\n    provider: bridgeflow-offline-test\n    model: offline\n- insert:\n    - id: scripted-test-model\n      name: ${JSON.stringify(`${root}/plugins/tests/fixtures/scripted-model/index.ts`)}\n`)
+    + (live ? liveModelPatch() : `\n- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n  config:\n    provider: bridgeflow-offline-test\n    model: offline\n- insert:\n    - id: scripted-test-model\n      name: ${JSON.stringify(`${root}/plugins/tests/fixtures/scripted-model/index.ts`)}\n`)
   await writeFile(`${scratch}/web.yml`, patch)
   start(python, ['-m', 'uvicorn', 'bridgeflow.api.main:app', '--host', '127.0.0.1', '--port', String(backendPort)])
   const web = start(resolveDsh(), ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])
@@ -191,7 +190,7 @@ try {
   // #110: the approval card renders the structured decision summary localized —
   // labels translated, values verbatim — not just translated buttons.
   const decision = page.getByRole('region', { name: '映射审批' })
-  await decision.locator('.bf-approval-detail').waitFor({ timeout: 30_000 })
+  await decision.locator('.bf-approval-detail').first().waitFor({ timeout: 30_000 })
   await decision.getByText('sku:test-0', { exact: true }).waitFor()
   await decision.getByText('接受映射', { exact: true }).waitFor()
   await decision.getByText('决定时展示的依据', { exact: true }).waitFor()

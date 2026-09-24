@@ -52,8 +52,14 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> Resol
     from bridgeflow.api.batches import _visible, load_batch
 
     if operation in {"confirm_column_match", "quarantine_decide", "quarantine_apply",
-                     "convention_decide", "risk_disposition", "feishu_upload_report"}:
+                     "convention_decide", "risk_disposition"}:
         _visible(load_batch(str(body.get("batch_id", ""))), user)
+    elif operation == "feishu_upload_report":
+        # Crossing into Feishu is where department scope still applies (2026-09-24).
+        batch = _visible(load_batch(str(body.get("batch_id", ""))), user)
+        denied = {table.department for table in batch.clean_tables} - resolved.departments
+        if denied:
+            raise HTTPException(403, f"Uploading to Feishu needs every department in the batch; missing: {sorted(denied)}")
     elif operation == "dictionary_draft":
         # Drafting reads a batch's column statistics; the drafter must be able to see
         # the batch they draft from (D32: the master-table owner sees every department).
@@ -74,7 +80,7 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> Resol
             meeting = MeetingWrite.model_validate(body).meeting
         except ValidationError as exc:
             raise HTTPException(422, "Invalid discovery meeting") from exc
-        domain, allowed = service(), resolved.workflow_departments
+        domain = service()
         try:
             refs = [ref.model_dump() for statement in meeting.statements() for ref in statement.references]
             for binding in meeting.candidates:
@@ -82,21 +88,11 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> Resol
                 # not a way to resurrect access to an old candidate snapshot.
                 for version in (None, binding.version):
                     candidate = domain.read("opportunity", meeting.project_id, binding.id, version)
-                    if not set(candidate["departments"]) <= allowed:
-                        raise HTTPException(404, "Meeting candidate not found")
                     refs.extend(ref for claim in candidate["claims"] for ref in claim["references"])
             for ref in refs:
-                source = domain.read("material", meeting.project_id, ref["material_id"], ref["version"])
-                if source["department"] not in allowed:
-                    raise HTTPException(404, "Meeting source not found")
+                domain.read("material", meeting.project_id, ref["material_id"], ref["version"])
         except DiscoveryError as exc:
             raise HTTPException(404, "Meeting candidate or source not found") from exc
-        try:
-            old = domain.read("meeting", meeting.project_id, meeting.id)
-        except DiscoveryError:
-            old = None
-        if old is not None and not set(old["departments"]) <= allowed:
-            raise HTTPException(404, "Meeting not found")
     elif operation == "discovery_score_save":
         from pydantic import ValidationError
 
@@ -110,25 +106,15 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> Resol
         policy = scoring_policy(score.project_id, user)
         if score.policy_fingerprint != policy.fingerprint:
             raise HTTPException(409, "Scoring policy changed; read it again")
-        allowed, domain = resolved.workflow_departments, service()
+        domain = service()
         try:
             candidate = domain.read("opportunity", score.project_id, score.opportunity_id)
-            if not set(candidate["departments"]) <= allowed:
-                raise HTTPException(404, "Score candidate not found")
             refs = [ref for claim in candidate["claims"] for ref in claim["references"]]
             refs += [ref.model_dump() for rating in [score.effort, score.value] if rating for ref in rating.references]
             for ref in refs:
-                source = domain.read("material", score.project_id, ref["material_id"], ref["version"])
-                if source["department"] not in allowed:
-                    raise HTTPException(404, "Score source not found")
+                domain.read("material", score.project_id, ref["material_id"], ref["version"])
         except DiscoveryError as exc:
             raise HTTPException(404, "Score candidate or source not found") from exc
-        try:
-            old = domain.read("score", score.project_id, score.id)
-        except DiscoveryError:
-            old = None
-        if old is not None and not set(old["departments"]) <= allowed:
-            raise HTTPException(404, "Score not found")
     elif operation == "discovery_graph_save":
         from pydantic import ValidationError
 
@@ -139,28 +125,15 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> Resol
             graph = GraphWrite.model_validate(body).graph
         except ValidationError as exc:
             raise HTTPException(422, "Invalid discovery graph") from exc
-        allowed = resolved.workflow_departments
-        if not set(graph.departments) <= allowed:
-            raise HTTPException(403, "Graph departments are outside this employee's scope")
         domain = service()
         try:
             candidate = domain.read("opportunity", graph.project_id, graph.opportunity_id)
-            if not set(candidate["departments"]) <= allowed:
-                raise HTTPException(404, "Graph opportunity not found")
             refs = [ref for claim in candidate["claims"] for ref in claim["references"]]
             refs += [ref.model_dump() for item in [*graph.nodes, *graph.edges] for ref in item.references]
             for ref in refs:
-                source = domain.read("material", graph.project_id, ref["material_id"], ref["version"])
-                if source["department"] not in allowed:
-                    raise HTTPException(404, "Graph source not found")
+                domain.read("material", graph.project_id, ref["material_id"], ref["version"])
         except DiscoveryError as exc:
             raise HTTPException(404, "Graph opportunity or source not found") from exc
-        try:
-            old = domain.read("graph", graph.project_id, graph.id)
-        except DiscoveryError:
-            old = None
-        if old is not None and not set(old["departments"]) <= allowed:
-            raise HTTPException(404, "Graph not found")
     elif operation == "discovery_register":
         from pydantic import ValidationError
 
@@ -171,19 +144,10 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> Resol
             registration = MaterialRegistration.model_validate(body)
         except ValidationError as exc:
             raise HTTPException(422, "Invalid material registration") from exc
-        allowed = resolved.workflow_departments
-        if registration.material.department not in allowed:
-            raise HTTPException(403, "Material department is outside this employee's scope")
         try:
             uploads().checked(registration.upload_id, registration.material, registration.digest)
         except DiscoveryError as exc:
             raise HTTPException(404, "Matching staged upload not found") from exc
-        try:
-            old = service().read("material", registration.material.project_id, registration.material.id)
-        except DiscoveryError:
-            old = None
-        if old is not None and old["department"] not in allowed:
-            raise HTTPException(404, "Material not found")
     elif operation == "discovery_propose":
         from pydantic import ValidationError
 
@@ -194,22 +158,11 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> Resol
             proposal = ProposalWrite.model_validate(body).proposal
         except ValidationError as exc:
             raise HTTPException(422, "Invalid discovery proposal") from exc
-        allowed = resolved.workflow_departments
-        if not set(proposal.departments) <= allowed:
-            raise HTTPException(403, "Candidate departments are outside this employee's scope")
         domain = service()
         try:
             for claim in proposal.claims:
                 for ref in claim.references:
-                    material = domain.read("material", proposal.project_id, ref.material_id, ref.version)
-                    if material["department"] not in allowed:
-                        raise HTTPException(404, "Discovery source not found")
-            try:
-                previous = domain.read("opportunity", proposal.project_id, proposal.id)
-            except DiscoveryError:
-                previous = None
-            if previous is not None and not set(previous["departments"]) <= allowed:
-                raise HTTPException(404, "Discovery object not found")
+                    domain.read("material", proposal.project_id, ref.material_id, ref.version)
         except DiscoveryError as exc:
             raise HTTPException(404, "Discovery source or object not found") from exc
     elif operation == "confirm_mapping":
@@ -238,7 +191,11 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> Resol
             else:
                 permitted = visible.template(str(body.get("template", "")))
         if not permitted:
-            raise HTTPException(404, "Workflow object not found")
+            # One answer for both cases, so a refusal never confirms the object exists — but
+            # worded so the person knows what to do about it.
+            raise HTTPException(404, "Not found, or outside the departments your account may fill "
+                                     "(workflow access is granted per department; ask an administrator "
+                                     "if this should be yours)")
     return resolved
 
 
