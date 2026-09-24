@@ -6,6 +6,7 @@ import { OpportunityEditor, type Opportunity } from './opportunity-editor.tsx'
 import { useEffect, useState, type FormEvent } from 'react'
 import { tourEvent } from './tour/state.ts'
 import { api, describeError, useUI } from './ui.ts'
+import { useGuestMode } from './guest.tsx'
 
 type Item = { id: string; version: number; filename?: string; title?: string; parser_status?: string; status?: string }
 type Page = { items: Item[]; total: number; has_more: boolean }
@@ -13,6 +14,7 @@ type Staged = { upload_id: string; digest: string; material: Record<string, unkn
 
 export function Discovery() {
   const { language, t } = useUI()
+  const guest = useGuestMode().guest
   const tr = (zh: string, en: string) => language === 'zh' ? zh : en
   const [projectInput, setProjectInput] = useState(''), [project, setProject] = useState('')
   const [kind, setKind] = useState<'material' | 'opportunity' | 'graph' | 'score' | 'meeting' | 'decision'>('material'), [offset, setOffset] = useState(0)
@@ -58,7 +60,7 @@ export function Discovery() {
   }
   return <section className="bf-state bf-discovery" aria-label={tr('立项材料与候选', 'Discovery materials and opportunities')}>
     <h2>{tr('立项材料与候选', 'Discovery materials and opportunities')}</h2>
-    <p>{tr('上传的文件先暂存，在对话里批准后才登记。保存提案之后，立项仍要另行批准。', 'Uploads wait until you approve them in the chat. Saving a proposal leaves the project to be approved separately.')}</p>
+    <p>{guest ? t('guestUploadUnavailable') : tr('上传的文件先暂存，在对话里批准后才登记。保存提案之后，立项仍要另行批准。', 'Uploads wait until you approve them in the chat. Saving a proposal leaves the project to be approved separately.')}</p>
     <form onSubmit={e => { e.preventDefault(); setPage(null); setDetail(null); setEditing(undefined); setGraphDraft(null); setScoringTarget(null); setMeeting(null); setDecisionEdit(null); setProject(projectInput); setOffset(0); setStaged(null); setRevision(n => n + 1) }}>
       <label>{tr('项目标识', 'Project ID')}<input required pattern="[a-zA-Z0-9]([a-zA-Z0-9_]|-){0,79}" value={projectInput} onChange={e => setProjectInput(e.target.value)} /></label>
       <button type="submit" disabled={busy}>{tr('打开项目', 'Open project')}</button>
@@ -80,7 +82,7 @@ export function Discovery() {
     {project && <>
       <h3>{project}</h3>
       <div><button onClick={() => { setKind('material'); setOffset(0) }}>{tr('材料', 'Materials')}</button><button onClick={() => { setKind('opportunity'); setOffset(0) }}>{tr('候选', 'Opportunities')}</button><button onClick={() => { setKind('graph'); setOffset(0) }}>{tr('流程图', 'Flow graphs')}</button><button data-tour-id="discovery-kind-score" onClick={() => { setKind('score'); setOffset(0); tourEvent('discoveryScore', '') }}>{tr('评分四象限', 'Rating quadrants')}</button><button onClick={() => { setKind('meeting'); setOffset(0) }}>{tr('会议', 'Meetings')}</button><button onClick={() => { setKind('decision'); setOffset(0) }}>{tr('决策', 'Decisions')}</button>{kind !== 'score' && <button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button>}</div>
-      <form onSubmit={upload} hidden={kind !== 'material'} style={kind !== 'material' ? { display: 'none' } : undefined}>
+      {!guest && <form onSubmit={upload} hidden={kind !== 'material'} style={kind !== 'material' ? { display: 'none' } : undefined}>
         {(['id', 'department', 'period', 'source_description'] as const).map((name, index) => <label key={name}>
           {tr(['材料标识', '部门（准确名称）', '期间', '来源说明'][index]!, ['Material ID', 'Department (exact name)', 'Period', 'Provenance'][index]!)}
           <input name={name} required maxLength={name === 'source_description' ? 1200 : 200} {...(name === 'id' ? { pattern: '[a-zA-Z0-9]([a-zA-Z0-9_]|-){0,79}' } : {})} />
@@ -91,7 +93,7 @@ export function Discovery() {
         </select></label>
         <label>{tr('材料文件', 'Material file')}<input name="file" type="file" required /></label>
         <button type="submit" disabled={busy}>{tr(busy ? '上传中…' : '暂存材料', busy ? 'Uploading…' : 'Stage material')}</button>
-      </form>
+      </form>}
       {staged && <section aria-label={tr('待审批登记', 'Registration awaiting approval')}>
         <p>{tr('还没登记。把下面的请求粘贴到对话里，核对审批卡后再决定。到期：', 'Not registered yet. Paste this request into the chat, check the approval card, then decide. Expires: ')}{new Date(staged.expires_at * 1000).toLocaleString()}</p>
         <textarea readOnly rows={10} value={request} aria-label={tr('登记审批请求', 'Registration approval request')} />

@@ -31,6 +31,16 @@ def test_client_build_rejects_missing_and_outdated_artifacts(tmp_path):
     launcher.check_client_build(tmp_path)
 
 
+def test_web_launcher_rejects_a_stale_default_model_before_a_turn(tmp_path):
+    settings = tmp_path / "settings.yaml"
+    settings.write_text("agent-default-model:\n  provider: hyper-charm\n  model: old-model\n")
+    env = {"DSH_HOME": str(tmp_path), "DSH_PROVIDER": "deepseek-official", "DSH_MODEL": "new-model"}
+    with pytest.raises(SystemExit, match="conflicts with DSH_PROVIDER/DSH_MODEL"):
+        launcher.verify_web_model_settings(env)
+    settings.write_text("agent-default-model:\n  provider: deepseek-official\n  model: new-model\n")
+    launcher.verify_web_model_settings(env)
+
+
 def test_backend_death_and_web_exit_are_not_silent_success():
     with pytest.raises(SystemExit, match="Domain service stopped"):
         launcher.wait_services(Mock(poll=Mock(return_value=1)), Mock(poll=Mock(return_value=None)))

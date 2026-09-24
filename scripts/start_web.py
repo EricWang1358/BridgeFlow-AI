@@ -27,6 +27,8 @@ import time
 from pathlib import Path
 from urllib.request import Request, urlopen
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 
 # dsh web prints its per-boot launch token exactly once, on stdout:
@@ -53,6 +55,34 @@ GUEST_MODEL_STRIPPED = ("DEEPSEEK_", "ANTHROPIC_", "OPENAI_", "HERMES_", "HYPER_
 def web_token_path() -> Path:
     """Shared with the portal (PORTAL_DSH_TOKEN_FILE defaults to the same path)."""
     return Path(os.environ["DSH_HOME"]) / TOKEN_FILE_NAME
+
+
+def verify_web_model_settings(env: dict[str, str]) -> None:
+    """Catch a stale dsh Web default before its first paid model request.
+
+    DSH_PROVIDER/MODEL select the SDK route, but dsh Web reads its own default from
+    settings.yaml. An older Web selection can therefore ignore the new env.sh route.
+    """
+    provider, model = env.get("DSH_PROVIDER"), env.get("DSH_MODEL")
+    if not (provider and model):
+        return
+    path = Path(env["DSH_HOME"]) / "settings.yaml"
+    if not path.is_file():
+        return
+    try:
+        settings = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, UnicodeError, yaml.YAMLError) as exc:
+        raise SystemExit(f"Cannot read dsh Web model settings at {path}: {exc}") from exc
+    selected = settings.get("agent-default-model", {}) if isinstance(settings, dict) else {}
+    if not isinstance(selected, dict):
+        return
+    active = (selected.get("provider"), selected.get("model"))
+    if all(active) and active != (provider, model):
+        raise SystemExit(
+            f"dsh Web default model {active[0]}/{active[1]} conflicts with "
+            f"DSH_PROVIDER/DSH_MODEL={provider}/{model}. Update {path} or choose that "
+            "model in the dsh Web Models page before starting BridgeFlow."
+        )
 
 
 def guest_environment(env: dict[str, str]) -> Path:
@@ -220,6 +250,8 @@ def main() -> None:
     patch_path = "dsh/enterprise.patch.yml"
     if guest:
         patch_path = str(guest_environment(env))
+    if run_web:
+        verify_web_model_settings(env)
     backend_port = env.get("BRIDGEFLOW_BACKEND_PORT", "8000")
 
     # `--demo` points the service at the walkthrough's own dictionary.

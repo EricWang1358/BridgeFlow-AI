@@ -17,6 +17,7 @@ import yaml
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
+from bridgeflow.api.guest import require_user_file_uploads
 from bridgeflow.config import REPO_ROOT, settings
 from bridgeflow.identity import UserIdentity, require_user
 from bridgeflow.security import consume_approval
@@ -157,6 +158,7 @@ async def get_lineage(template: str, field: str, user: BrowserUser) -> dict[str,
 
 @router.post("/materials/inspect", response_model=materials.MaterialShape)
 async def inspect_material(file: Annotated[UploadFile, File()]) -> materials.MaterialShape:
+    require_user_file_uploads()
     payload = await file.read(settings.bridgeflow_max_upload_bytes + 1)
     if len(payload) > settings.bridgeflow_max_upload_bytes:
         raise HTTPException(413, "File exceeds configured upload size limit")

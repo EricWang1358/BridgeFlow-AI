@@ -25,6 +25,7 @@ from bridgeflow.access import departments_for, operations_for
 from bridgeflow.agents import DataSanitizerAgent, SanitizerInput
 from bridgeflow.agents.semantic_resolver import FieldDictionary, SemanticResolverAgent
 from bridgeflow.agents.sop_flow import MissingRollup, SOPFlowEngine, SOPInput, UnjoinableTables
+from bridgeflow.api.guest import require_user_file_uploads
 from bridgeflow.column_matches import AppliedMatch
 from bridgeflow.conclusions import periods
 from bridgeflow.config import REPO_ROOT, settings
@@ -269,6 +270,7 @@ async def upload_batch(
     sheets: Annotated[list[str] | None, Form(description="Per file, the worksheet to read; empty uses the declaration")] = None,
     header_rows: Annotated[list[str] | None, Form(description="Per file, the 1-based header row; empty uses the declaration")] = None,
 ) -> BatchSummary:
+    require_user_file_uploads()
     choices = [Layout.from_form(sheet, header) for sheet, header in
                zip(_aligned(sheets, len(files)), _aligned(header_rows, len(files)), strict=True)]
     return await _import_batch(period, departments, files, choices=choices,
@@ -534,6 +536,7 @@ async def self_check(
 
     Nothing is written: no batch, no retained original, no mapping memory.
     """
+    require_user_file_uploads()
     dictionary_raw, _, date_orders = _load_dictionary(dictionary_path())
     try:
         declared_layout = Layout.declared(dictionary_raw.get("sheet_layout"), department)
@@ -740,6 +743,7 @@ async def replace_department(
     digests do not change and nobody re-uploads for a mistake that was not theirs. The
     original batch, its master and its reports stay exactly as they were.
     """
+    require_user_file_uploads()
     batch = _visible(load_batch(batch_id), user)
     if department not in {table.department for table in batch.clean_tables}:
         raise HTTPException(404, "That department is not in this batch; import a batch that includes it")
