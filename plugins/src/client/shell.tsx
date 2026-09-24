@@ -36,6 +36,7 @@ function Shell({ ctx }: { ctx: Context }) {
   const { t, language } = useUI(), sessions = ctx.sessions as unknown as ISessions
   const guest = useGuestMode().guest
   const session = useSyncExternalStore(fn => sessions.list.subscribe(fn), () => sessions.list.getSnapshot().current)
+  const sessionRunning = useSyncExternalStore(fn => sessions.list.subscribe(fn), () => !!(session && sessions.list.getSnapshot().byId[session]?.running))
   const binding = session ? sessions.binding(session) : undefined
   const events = useSyncExternalStore<SessionEventWindow>(fn => binding?.eventSource.subscribe(fn) ?? (() => {}), () => binding?.eventSource.getSnapshot() ?? emptyWindow)
   const audit = useMemo(() => projectAudit(events.entries.filter(e => e.type === 'event').map(e => e.event) as AuditEvent[]), [events])
@@ -135,7 +136,7 @@ function Shell({ ctx }: { ctx: Context }) {
   const closePreview = () => { viewer.current?.close(); navigate({ ...(batchId ? { batch: batchId } : {}), view: 'state', kind:notebook.kind }) }
   const previewContent = selected.view === 'tasks' && batchId
     ? <TasksView batchId={batchId} summary={summary} audit={audit} savedReportStatus={artifacts[0]?.status}
-        notebookKind={notebook.kind} onImport={() => importer.current?.showModal()} onRefresh={() => setRevision(n => n + 1)} />
+        notebookKind={notebook.kind} sessionRunning={sessionRunning} onImport={() => importer.current?.showModal()} onRefresh={() => setRevision(n => n + 1)} />
     : selected.view === 'data' && batchId
       ? <DataView batchId={batchId} summary={summary} sources={sources}
           onImport={() => importer.current?.showModal()} onRefresh={() => setRevision(n => n + 1)} />
