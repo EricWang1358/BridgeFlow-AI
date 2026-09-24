@@ -1,5 +1,6 @@
-// Browser journey for the demo cases (data/mock_business/cases/cases.yaml). Offline, no
-// model calls: each case opens in its own notebook from Sources → More sample cases, and
+// Browser journey for the demo cases (data/mock_business/cases/cases.yaml). Normally no
+// model calls; BRIDGEFLOW_TEST_REVIEW_BUTTON=1 uses only the scripted offline model.
+// Each case opens in its own notebook from Sources → More sample cases, and
 // shows the states it exists for — the core case several kinds of open item, the other
 // case different ones named as review blockers, the clean case ready with nothing open.
 import assert from 'node:assert/strict'
@@ -15,6 +16,8 @@ import { assertClientModulesServed, resolveDsh, liveModelPatch } from './dsh.mjs
 import { switchLanguage } from './locale.mjs'
 
 const live = process.env.BRIDGEFLOW_LIVE === '1'
+const reviewButton = process.env.BRIDGEFLOW_TEST_REVIEW_BUTTON === '1'
+if (live && reviewButton) throw new Error('Review-button regression must use the offline model')
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const scratch = await mkdtemp(`${tmpdir()}/bridgeflow-cases-`)
 const evidence = process.env.BRIDGEFLOW_EVIDENCE ?? `${scratch}/evidence`
@@ -26,7 +29,8 @@ const env = { ...process.env, PORTAL_BASE_URL: '', DSH_HOME: `${scratch}/dsh`, D
   BRIDGEFLOW_SERVICE_TOKEN: randomBytes(32).toString('hex'), PYTHONPATH: `${root}/backend/src`, RESULT_STORE_PATH: `${scratch}/outputs`,
   MAPPING_MEMORY_PATH: `${scratch}/mappings.json`, FIELD_DICTIONARY_PATH: `${root}/data/mock_business/demo/dictionary.yaml`,
   WORKFLOW_CATALOGUE_PATH: `${root}/data/workflow_demo/catalogue.yaml`,
-  LLM_PROVIDER: 'mock', BRIDGEFLOW_ENABLE_LEGACY_CONSOLE: 'false', BRIDGEFLOW_ALLOW_SAMPLE_DATA: 'false' }
+  LLM_PROVIDER: 'mock', BRIDGEFLOW_ENABLE_LEGACY_CONSOLE: 'false', BRIDGEFLOW_ALLOW_SAMPLE_DATA: 'false',
+  ...(reviewButton ? { BRIDGEFLOW_TEST_SCENARIO: 'business', BRIDGEFLOW_TEST_REVIEW_DELAY_MS: '1200' } : {}) }
 const processes = []
 let logs = '', browser, page
 function start(command, args) {
@@ -124,6 +128,19 @@ try {
     results[id] = { status: summary.status, blockers: summary.review_blockers, quarantined: summary.departments.reduce((n, d) => n + d.quarantined, 0),
       column_questions: summary.column_questions, batch_id: batch, open_items: inbox.total }
     await shot(`case-${id}`)
+    if (id === 'clean' && reviewButton) {
+      await review.click()
+      await tasks.getByText('Request sent to the current session.', { exact: false }).waitFor()
+      const active = tasks.getByRole('button', { name: 'Processing…', exact: true })
+      await active.waitFor()
+      assert.equal(await active.isDisabled(), true, 'An active captain must not accept a second review click')
+      await page.waitForFunction(async batchId => {
+        const response = await fetch(`/bridgeflow/batches/${batchId}/review`)
+        if (!response.ok) return false
+        const report = await response.json()
+        return report.status === 'validated' && report.roles.length === 4
+      }, batch, { timeout: 30_000 })
+    }
     await guide.getByRole('button', { name: 'Inspect data and open items' }).click()
     await studio.getByRole('region', { name: 'Data' }).waitFor()
   }

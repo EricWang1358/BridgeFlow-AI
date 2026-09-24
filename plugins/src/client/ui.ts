@@ -451,6 +451,8 @@ const labels = {
   saved: ['批次已保存。清洗和聚合由规则执行，未调用模型。', 'Batch saved. Rules cleaned and totalled the data; the AI was not used.'],
   existing: ['打开已有批次', 'Open an existing batch'], batchId: ['批次编号', 'Batch ID'], open: ['打开', 'Open'], copyId: ['复制批次编号', 'Copy batch ID'], copied: ['已复制', 'Copied'],
   startReview: ['发起研判', 'Start the review'],
+  reviewSessionRunning: ['当前会话正在处理请求；请先在中间对话查看进度。', 'The current session is working. Check the conversation for progress before sending another request.'],
+  reviewRequestSent: ['请求已送到当前会话。结果或模型错误会出现在中间对话；系统不会自动重试。', 'Request sent to the current session. The result or model error appears in the conversation; the system will not retry automatically.'],
   startReviewHint: ['直接把研判请求发到当前会话，不用复制粘贴。没有会话就新建一个。',
                     'Sends the review request straight into the current conversation. A session is created if none is open.'],
   copy: ['改一改再发（复制）', 'Copy instead'], copiedRequest: ['研判请求已复制，关闭此面板后粘贴到会话。', 'Request copied. Close this panel and paste it into the conversation.'],

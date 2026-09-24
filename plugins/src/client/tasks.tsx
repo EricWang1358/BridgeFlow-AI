@@ -28,33 +28,36 @@ function DemoCaseGuide({ caseId, batchId }: { caseId: string; batchId: string })
  * that step is waiting on — so the count is read once and the person is never asked which of
  * two lists to believe.
  */
-export function TasksView({ batchId, summary, audit, savedReportStatus, notebookKind, onImport, onRefresh }: {
+export function TasksView({ batchId, summary, audit, savedReportStatus, notebookKind, sessionRunning, onImport, onRefresh }: {
   batchId: string
   summary: Summary | null
   audit: ReturnType<typeof projectAudit>
   savedReportStatus: string | undefined
   notebookKind: string
+  sessionRunning: boolean
   onImport: () => void
   onRefresh: () => void
 }) {
   const { t } = useUI()
   const guest = useGuestMode()
   const [focus, setFocus] = useState('')
-  const [busy, setBusy] = useState(false), [error, setError] = useState('')
+  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [requestSent, setRequestSent] = useState(false)
   if (!summary) return <p className="bf-hint">{t('studioStartHelp')}</p>
   const reviewReady = summary.status === 'ready'
   return <section className="bf-tasks" aria-label={t('closeChecklist')}>
     <div className="bf-card-head">
       <h3>{t('monthlyTasks')} · {summary.period}</h3>
-      <button className="bf-primary" disabled={busy || !reviewReady || (guest.guest && !guest.llm)} onClick={async () => {
-        setError(''); setBusy(true)
-        try { await startReview(batchId, summary.period); onRefresh() }
+      <button className="bf-primary" disabled={busy || sessionRunning || !reviewReady || (guest.guest && !guest.llm)} onClick={async () => {
+        setError(''); setRequestSent(false); setBusy(true)
+        try { await startReview(batchId, summary.period); setRequestSent(true); onRefresh() }
         catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
-      }} data-tour-id="review-start">{t(busy ? 'busy' : 'startReview')}</button>
+      }} data-tour-id="review-start">{t(busy || sessionRunning ? 'busy' : 'startReview')}</button>
     </div>
     {summary.demo_case && <DemoCaseGuide caseId={summary.demo_case} batchId={batchId} />}
     {!reviewReady && <p className="bf-hint" role="status">{t('reviewNeedsReady')}</p>}
     {reviewReady && guest.guest && !guest.llm && <p className="bf-hint" role="status">{t('guestReviewUnavailable')}</p>}
+    {reviewReady && (!guest.guest || guest.llm) && sessionRunning && <p className="bf-hint" role="status">{t('reviewSessionRunning')}</p>}
+    {requestSent && <p className="bf-hint" role="status">{t('reviewRequestSent')}</p>}
     <p className="bf-hint">{t('monthlyTasksHelp')}</p>
     <Explain text={t('how_tasks')} />
     {error && <p role="alert" className="bf-error">{error}</p>}
