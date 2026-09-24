@@ -67,7 +67,7 @@ Status checked 2026-09-24; delivery is due 27 September.
 | Safety: raw data rows never enter model context (three layers), prompt-injection defence | ✅ Built | Injected cell text reached no model session on the real model; bilingual injection cases | Third-party penetration test |
 | Observability: decision journal, per-run swimlanes with tokens, generated acceptance report 31/31 | ✅ Built | Records page; `test_journal.py` | — |
 | Tool-selection evaluation (real model; first step among ~50 tools) | ✅ 18/18 | Median 3 steps, ~40k tokens. The three earlier misses traced to tool contracts and the persona, not the model, and were fixed there (docs/00) | More cases |
-| Guest mode for people without a Feishu account (e.g. evaluators) | 🟡 Local guest works; public entry pending | A separate sample-only backend and console, with AI off by default. A local real-guest browser check opened the clean and workflow samples; the portal's "Continue as guest" option is implemented but not enabled publicly ([docs/00](docs/00-status.md)) | Enable and verify the portal entry, TLS, guest service and nightly reset on the server |
+| Guest mode for people without a Feishu account (e.g. evaluators) | 🟡 Local guest works; public entry pending | A separate shared demo backend and console with built-in samples, file uploads blocked and AI off by default. A local real-guest browser check opened the clean and workflow samples; the portal's "Continue as guest" option is implemented but not enabled publicly ([docs/00](docs/00-status.md)) | Enable and verify the portal entry, TLS, guest service and nightly reset on the server |
 | Model choice | ✅ dsh's own picker | Chooses among operator-configured models; adding providers or keys stays off | — |
 | Deployment: merge triggers tests and deploy, 7 seats | ✅ Live | GitHub Actions | Manual steps such as enabling the console gate (see HANDOFF) |
 | Feishu sheets / wiki / permissions | 🟡 In integration | Metadata and membership reads verified on the real tenant | End-to-end import, large-sheet paging (out of this round) |
@@ -219,7 +219,7 @@ source env.sh
 | Variable | What it does |
 | --- | --- |
 | `DSH_HOME` | Where dsh keeps profiles, plugins, credentials and sessions. Absolute path, outside the repository. Required: the SDK deliberately never discovers `~/.dsh` |
-| `DSH_PROFILE` / `DSH_PROVIDER` / `DSH_MODEL` | Which composition, provider and model the runtime boots with |
+| `DSH_PROFILE` / `DSH_PROVIDER` / `DSH_MODEL` | SDK route and expected dsh Web model. Web also keeps `agent-default-model` in `$DSH_HOME/settings.yaml`; if it differs, the launcher now stops before a paid turn and tells you to align the Models page or that file. Existing sessions can retain their own model selection. |
 | `DEEPSEEK_API_KEY` | The model credential |
 | `FIELD_DICTIONARY_PATH` | The domain dictionary: which column of which department holds which entity, what may be computed, and how it rolls up |
 
@@ -252,7 +252,7 @@ sources.
 ## 5 Start it
 
 No Feishu account? `python scripts/start_web.py --guest --port 3090` starts an isolated guest instance.
-It has sample data only, Feishu is off, and the AI model is off unless `BRIDGEFLOW_GUEST_LLM=1` is set.
+It starts from built-in samples: file uploads and Feishu are off, and the AI model is off unless `BRIDGEFLOW_GUEST_LLM=1` is set. The workspace is shared between guests, so do not enter real business data.
 On the server it is the portal's "Continue as guest" button ([docs/22 §9e](docs/22-lightsail-deploy.md)).
 
 ```bash

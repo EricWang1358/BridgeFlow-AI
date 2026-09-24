@@ -164,6 +164,15 @@ try {
   await guestTasks.getByText('AI review is off in this guest demo.', { exact: false }).waitFor()
   assert.equal(await guestCases.evaluate(el => el.open), false, 'The guest case picker should fold away after opening a case')
   assert.equal(await guestTasks.getByRole('button', { name: 'Start the review' }).isDisabled(), true)
+  await guestPage.getByText('This shared demo uses built-in samples.', { exact: false }).first().waitFor()
+  assert.equal(await guestPage.locator('.bf-add-source').count(), 0, 'Guests should see samples instead of a file upload action')
+  await guestPage.getByRole('complementary', { name: 'Studio', exact: true }).getByRole('button', { name: 'Data', exact: true }).click()
+  assert.equal(await guestPage.locator('.bf-data input[type="file"], .bf-data button:has-text("Upload")').count(), 0,
+    'The data page should not offer uploads into the shared guest instance')
+  await guestPage.getByRole('complementary', { name: 'Studio', exact: true }).getByRole('button', { name: 'Discovery materials and opportunities' }).click()
+  await guestPage.locator('.bf-discovery').getByText('This shared demo uses built-in samples.', { exact: false }).waitFor()
+  assert.equal(await guestPage.locator('.bf-discovery input[type="file"]').count(), 0,
+    'The discovery page should guide guests to its sample project instead of staging their files')
   await wait(450)
   await guestPage.screenshot({ path: `${evidence}/case-clean-guest.png` })
   await guestPage.close()

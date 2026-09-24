@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { departments, ResupplyForm, TemplateDownload } from './workspace.tsx'
 import { api, describeError, navigate, useUI, type Summary } from './ui.ts'
 import { Explain } from './explain.tsx'
+import { useGuestMode } from './guest.tsx'
 
 /**
  * 数据 — one timeline for a month's files: take the template, self-check, import, fix (E14).
@@ -27,6 +28,7 @@ export function DataView({ batchId, summary, sources, onImport, onRefresh }: {
   onRefresh: () => void
 }) {
   const { t } = useUI()
+  const guest = useGuestMode().guest
   const [quality, setQuality] = useState<Quality | null>(null), [error, setError] = useState('')
   useEffect(() => {
     if (!summary?.period) return
@@ -44,16 +46,16 @@ export function DataView({ batchId, summary, sources, onImport, onRefresh }: {
   return <section className="bf-data" aria-label={t('dataWorkspace')}>
     <div className="bf-card-head">
       <h3>{t('dataWorkspace')} · {summary.period}</h3>
-      <button onClick={onImport}>{t('addSources')}</button>
+      {!guest && <button onClick={onImport}>{t('addSources')}</button>}
     </div>
-    <p className="bf-hint">{t('dataHelp')}</p>
+    <p className="bf-hint">{t(guest ? 'guestUploadUnavailable' : 'dataHelp')}</p>
     <Explain text={t('how_data')} />
     {error && <p role="alert" className="bf-error">{error}</p>}
 
-    <ol className="bf-data-steps">
+    {!guest && <ol className="bf-data-steps">
       {STEPS.map((step, index) => <li key={step}><span aria-hidden="true">{index + 1}</span>
         <span><strong>{t(step)}</strong><small>{t(`${step}Hint`)}</small></span></li>)}
-    </ol>
+    </ol>}
 
     <div className="bf-data-split">
       <div className="bf-data-files">
@@ -67,15 +69,15 @@ export function DataView({ batchId, summary, sources, onImport, onRefresh }: {
                 : <span className="bf-hint">{t('departmentMissing')}</span>}
               <span className="bf-chip" data-status={row ? 'ready' : 'partial'}>{t(row ? 'fileSubmitted' : 'notSubmitted')}</span>
               <div className="bf-actions" style={{ marginBottom: 0 }}>
-                <TemplateDownload period={summary.period} department={name} />
+                {!guest && <TemplateDownload period={summary.period} department={name} />}
                 {row
                   ? file?.preview_available
                     ? <button onClick={() => navigate({ batch: batchId, view: 'source', source: name })}>{t('sourcePreview')}</button>
                     : null
-                  : <button className="bf-primary" onClick={onImport}>{t('upload')}</button>}
+                  : !guest && <button className="bf-primary" onClick={onImport}>{t('upload')}</button>}
               </div>
             </div>
-            {row && <ResupplyForm batch={summary} department={name} onDerived={id => { navigate({ batch: id, view: 'data' }); onRefresh() }} />}
+            {row && !guest && <ResupplyForm batch={summary} department={name} onDerived={id => { navigate({ batch: id, view: 'data' }); onRefresh() }} />}
           </article>
         })}
       </div>

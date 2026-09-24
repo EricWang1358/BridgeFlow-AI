@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Reques
 from pydantic import Field, ValidationError
 
 from bridgeflow.access import operations_for
+from bridgeflow.api.guest import require_user_file_uploads
 from bridgeflow.api.workflow_tools import _require_writes
 from bridgeflow.config import REPO_ROOT, settings
 from bridgeflow.identity import UserIdentity, require_user
@@ -260,6 +261,7 @@ class MaterialRegistration(Strict):
 @router.post("/uploads")
 async def upload_material(user: BrowserUser, metadata: Annotated[str, Form()],
                           file: Annotated[UploadFile, File()]) -> dict:
+    require_user_file_uploads()
     _require_writes()
     try:
         item = MaterialInput.model_validate_json(metadata)

@@ -22,6 +22,7 @@ from bridgeflow.api.discovery import tools_router as discovery_tools_router
 from bridgeflow.api.dispositions import router as dispositions_router
 from bridgeflow.api.documents import router as documents_router
 from bridgeflow.api.feishu_tools import router as feishu_tools_router
+from bridgeflow.api.guest import require_user_file_uploads
 from bridgeflow.api.integration import router as integration_router
 from bridgeflow.api.observability import router as observability_router
 from bridgeflow.api.quarantine_tools import router as quarantine_tools_router
@@ -159,6 +160,7 @@ async def analyze(
     files: Annotated[list[UploadFile], File()],
 ) -> PipelineResult:
     """Run the full pipeline over one month of departmental exports."""
+    require_user_file_uploads()
     if not settings.bridgeflow_enable_legacy_pipeline:
         raise HTTPException(403, "Legacy completion pipeline is disabled; use DSH domain tools")
     if len(departments) != len(files):
