@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
 import { api, formatDateTime, navigate, portalLoginUrl, route, startReview, takeRouteError, useUI, type Summary, describeError } from './ui.ts'
-import { ImportForm, Chip } from './workspace.tsx'
+import { ImportForm, Chip, BatchChip } from './workspace.tsx'
 import { TasksView } from './tasks.tsx'
 import { DataView } from './data.tsx'
 import { RecordsView } from './records.tsx'
@@ -140,7 +140,7 @@ function Shell({ ctx }: { ctx: Context }) {
     : selected.view === 'data' && batchId
       ? <DataView batchId={batchId} summary={summary} sources={sources}
           onImport={() => importer.current?.showModal()} onRefresh={() => setRevision(n => n + 1)} />
-      : selected.view === 'records' && batchId
+      : selected.view === 'records'
         ? <RecordsView batchId={batchId} summary={summary} artifacts={artifacts} language={language} />
         : selected.view === 'overview' ? <Overview key={batchId} batchId={batchId} /> : selected.view === 'discovery' ? <Discovery /> : selected.view === 'quotation' ? <Quotation /> : selected.view === 'handoff' ? <Handoff /> : selected.view === 'integration' && batchId ? <MasterTable batchId={batchId} /> : selected.view === 'brief' && batchId ? <MonthlyBrief key={batchId} batchId={batchId} /> : preview ? <section aria-label={t('sourcePreview')}>
     <h3>{preview.filename}</h3><p className="bf-hint">{t('parsedOriginal')} {preview.sheet}</p>
@@ -190,7 +190,7 @@ function Shell({ ctx }: { ctx: Context }) {
           <strong>{t('sampleNotebookTitle')}</strong><br/>
           {sampleCase ? <>{t('sampleCaseLabel')} · {sampleCase.title[language === 'zh' ? 0 : 1]}{language === 'zh' ? '。' : '. '}{sampleCase.summary[language === 'zh' ? 0 : 1]}</> : t('sampleNotebookHelp')}
         </p>}
-        {summary && <div className="bf-source-batch"><span>{summary.period}</span><Chip status={summary.status}/><button title={batchId} onClick={() => void navigator.clipboard.writeText(batchId).then(() => setCopied(true)).catch(e => setError(describeError(e, t)))}>{t(copied ? 'copied' : 'copyId')}</button><code>{batchId}</code></div>}
+        {summary && <div className="bf-source-batch"><span>{summary.period}</span><BatchChip status={summary.status}/><button title={batchId} onClick={() => void navigator.clipboard.writeText(batchId).then(() => setCopied(true)).catch(e => setError(describeError(e, t)))}>{t(copied ? 'copied' : 'copyId')}</button><code>{batchId}</code></div>}
         <label className="bf-notebook-purpose">{t('notebookKind')}<select disabled={notebook.busy || !notebook.loaded} value={notebook.kind} onChange={e=>{if(isNotebookKind(e.target.value))notebook.setKind(e.target.value)}}>{notebookKinds.map(kind=><option key={kind} value={kind}>{t(notebookPurposes[kind].label)}</option>)}</select></label><p className="bf-hint">{t('notebookPurposeHelp')}</p>
         <button data-tour-id="sample" disabled={notebook.busy || !notebook.loaded} onClick={() => notebook.sample()}>{t('sampleNotebook')}</button>
         <SampleCases key={batchId} disabled={notebook.busy || !notebook.loaded} open={(id, title) => notebook.sample(id, title)} />
@@ -213,7 +213,7 @@ function Shell({ ctx }: { ctx: Context }) {
           <button data-tour-id="state-open" data-tone="pink" aria-pressed={selected.view === 'tasks'} disabled={!summary || notebookSwitching} onClick={() => navigate({ batch: batchId, view: 'tasks' })}><span aria-hidden="true">◷</span><span>{t('monthlyTasks')}</span><span className="bf-badge">{openItems}</span><span aria-hidden="true">›</span></button>
           <button data-tone="blue" aria-pressed={selected.view === 'data'} disabled={!summary || notebookSwitching} onClick={() => navigate({ batch: batchId, view: 'data' })}><span aria-hidden="true">▤</span><span>{t('dataWorkspace')}</span><span aria-hidden="true">›</span></button>
           <button data-tone="green" aria-pressed={selected.view === 'brief'} disabled={!summary || notebookSwitching} onClick={() => navigate({ batch: batchId, view: 'brief' })}><span aria-hidden="true">◎</span><span>{t('monthlyBrief')}</span><span aria-hidden="true">›</span></button>
-          <button data-tone="teal" aria-pressed={selected.view === 'records'} disabled={!summary || notebookSwitching} onClick={() => navigate({ batch: batchId, view: 'records' })}><span aria-hidden="true">⇄</span><span>{t('records')}</span><span aria-hidden="true">›</span></button>
+          <button data-tone="teal" aria-pressed={selected.view === 'records'} disabled={notebookSwitching} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'records' })}><span aria-hidden="true">⇄</span><span>{t('records')}</span><span aria-hidden="true">›</span></button>
           <div className="bf-studio-group">{t('otherWorkspaces')}</div>
           <button data-tour-id="quotation-open" data-secondary="true" data-tone="gold" aria-pressed={selected.view === 'quotation'} disabled={notebookSwitching} onClick={() => { navigate({ ...(batchId ? { batch: batchId } : {}), view: 'quotation' }); window.dispatchEvent(new Event('bridgeflow:quotation-opened')) }}><span aria-hidden="true">▧</span><span>{t('quotationWorkspace')}</span><span aria-hidden="true">›</span></button>
           <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'discovery'} disabled={notebookSwitching} onClick={() => navigate({ view: 'discovery' })}><span aria-hidden="true">▥</span><span>{t('discoveryWorkspace')}</span><span aria-hidden="true">›</span></button>
@@ -230,7 +230,7 @@ function Shell({ ctx }: { ctx: Context }) {
             : previewContent}</section>}
         <section data-tour-id="artifacts" className="bf-artifacts" aria-label={t('artifacts')}><header><h3>{t('artifacts')} <span className="bf-badge">{artifactTotal + (summary?.master_rows ? 1 : 0)}</span></h3>{artifacts.length > 0 && <button disabled={guest} aria-label={t('feishuUpload')} title={guest ? `${t('feishuUpload')} · ${t('guestUnavailable')}` : t('feishuUpload')} onClick={() => { setFeishuNotice(''); feishuUploader.current?.showModal() }}>⇪</button>}<button aria-label={t('refreshArtifacts')} onClick={() => setRevision(n => n + 1)}>↻</button></header>
           {feishuNotice && <p className="bf-hint" role="status">{feishuNotice}</p>}
-          {!!summary?.master_rows && <button className="bf-artifact" data-kind="master" onClick={() => navigate({ batch: batchId, view: 'master' })}><span aria-hidden="true">▦</span><span><strong>{summary.period} · {t('master')}</strong><small>{summary.master_rows} {t('rows')}</small><Chip status={summary.status}/></span><span aria-hidden="true">↗</span></button>}
+          {!!summary?.master_rows && <button className="bf-artifact" data-kind="master" onClick={() => navigate({ batch: batchId, view: 'master' })}><span aria-hidden="true">▦</span><span><strong>{summary.period} · {t('master')}</strong><small>{summary.master_rows} {t('rows')}</small><BatchChip status={summary.status}/></span><span aria-hidden="true">↗</span></button>}
           {artifacts.map(item => item.kind === 'brief'
             ? <button className="bf-artifact" data-kind="brief" key={`brief-${item.report_id}`} aria-pressed={selected.view === 'brief' && selected.report === item.report_id} onClick={() => navigate({ batch: batchId, view: 'brief', report: item.report_id })}><span aria-hidden="true">◎</span><span><strong>{item.period} · {t('monthlyBrief')}</strong><small>{formatDateTime(item.created_at * 1000, language)}</small><Chip status={item.status}/></span><span aria-hidden="true">↗</span></button>
             : <button className="bf-artifact" data-kind="review" key={item.report_id} aria-pressed={selected.report === item.report_id} onClick={() => navigate({ batch: batchId, view: 'artifact', report: item.report_id })}><span aria-hidden="true">▤</span><span><strong>{item.period} · {t('review')}</strong><small>{formatDateTime(item.created_at * 1000, language)}</small><Chip status={item.status}/></span><span aria-hidden="true">↗</span></button>)}

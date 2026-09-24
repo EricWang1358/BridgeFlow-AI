@@ -146,7 +146,7 @@ export function DecisionJournal({ batchId }: { batchId: string }) {
     <div className="bf-actions">
       {OUTCOMES.map(value => <button key={value || 'all'} aria-pressed={outcome === value}
         onClick={() => setOutcome(value)}>{t(value ? `journal_${value}` : 'journalAll')}</button>)}
-      <button aria-pressed={mine} onClick={() => setMine(!mine)}>{t('journalThisBatch')}</button>
+      {batchId && <button aria-pressed={mine} onClick={() => setMine(!mine)}>{t('journalThisBatch')}</button>}
     </div>
 
     {!journal.entries.length && <p className="bf-hint">{t('journalEmpty')}</p>}

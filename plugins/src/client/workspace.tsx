@@ -4,7 +4,8 @@ import { NextStep } from './next-step.tsx'
 import { api, cellText, columnLabel, navigate, route, useUI, type Summary, describeError } from './ui.ts'
 export const departments = ['production', 'procurement', 'finance', 'marketing'] as const
 export const sections = ['master', 'corrections', 'mappings', 'columns', 'quarantine', 'review'] as const
-export function Chip({ status }: { status: string }) { const { t } = useUI(); return <span className="bf-chip" data-status={status}>{t(status.replaceAll('-', '_'))}</span> }
+export function Chip({ status, label }: { status: string; label?: string | undefined }) { const { t } = useUI(); return <span className="bf-chip" data-status={status}>{label ?? t(status.replaceAll('-', '_'))}</span> }
+export function BatchChip({ status }: { status: string }) { const { t } = useUI(); return <Chip status={status} label={status === 'ready' ? t('batchReadyForReview') : undefined} /> }
 export type Limits = { maxUploadBytes: number; maxRequestBytes: number; noteLimit: number; decisionTimeoutMs: number }
 type Finding = { check: string; message: string; row: number | null; column: string; count: number }
 type CheckReport = { department: string; filename: string; must_fix: Finding[]; review: Finding[]; passed: string[]; accepts: boolean }
@@ -218,7 +219,7 @@ export function DataWorkspace() {
       <p role="status">{notice}</p>{error && <p role="alert" className="bf-error">{error}</p>}
       {batch && <section>
         <div className="bf-band">
-          <span className="bf-period">{batch.period}</span> <Chip status={batch.status} />
+          <span className="bf-period">{batch.period}</span> <BatchChip status={batch.status} />
         </div>
         <NextStep batch={batch} />
         <p className="bf-hint" style={{ margin: 0 }}>{t('master')} {batch.master_rows} {t('rows')} · {t('mappings')} {batch.unresolved}{t('countSuffix')}</p>

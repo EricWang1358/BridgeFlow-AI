@@ -149,7 +149,7 @@ export function Overview({ batchId }: { batchId: string }) {
       {tile(t('ovWorkflow'), ok(board) ? formatNumber(inFlight, language) : '—',
         ok(board) ? (overdue ? <span className="bf-ov-critical">▲ {t('flowOverdue').replaceAll('{n}', String(overdue))}</span> : t('ovNoneOverdue')) : <Unread value={board} />, 'handoff', overdue ? 'critical' : '')}
       {tile(t('ovRuns'), ok(runs) ? formatNumber(runList.length, language) : '—',
-        ok(runs) ? <>{formatNumber(tokens, language)} tokens · {refused ? <span className="bf-ov-critical">✕ {refused} {t('ovRefused')}</span> : t('ovNoRefusals')}</> : <Unread value={runs} />, batchId ? 'records' : 'handoff')}
+        ok(runs) ? <>{formatNumber(tokens, language)} tokens · {refused ? <span className="bf-ov-critical">✕ {refused} {t('ovRefused')}</span> : t('ovNoRefusals')}</> : <Unread value={runs} />, 'records')}
     </div>
     <div className="bf-ov-grid">
       {batchId && <Block wide title={t('ovTrends')} open={t('monthlyBrief')} onOpen={() => go('brief')}>
