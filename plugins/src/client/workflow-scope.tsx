@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, askCaptain, describeError, formatDateTime, navigate, useUI } from './ui.ts'
+import { api, askCaptain, describeError, formatDateTime, navigate, route, useUI } from './ui.ts'
 import { useGuestMode } from './guest.tsx'
 
 /**
@@ -98,5 +98,6 @@ export function DecisionScopeLink({ project, decision, seq }: { project: string;
   const same = a?.project_id === project && a.decision_id === decision
   const key = same && a.decision_seq === seq && state.current ? 'linkAccepted' : same ? 'linkOutdated' : 'linkWaiting'
   return <p className="bf-callout" data-tone={key === 'linkAccepted' ? 'ok' : 'info'}>{t(key)}{' '}
-    <button onClick={() => navigate({ view: 'handoff' })}>{t('openHandoff')}</button></p>
+    {/* Keep the notebook's batch in the route: dropping it would unbind the open notebook. */}
+    <button onClick={() => { const batch = route().batch; navigate({ ...(batch ? { batch } : {}), view: 'handoff' }) }}>{t('openHandoff')}</button></p>
 }

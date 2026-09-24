@@ -135,6 +135,12 @@ try {
       await batchRecords.getByText('Batch lineage', { exact: true }).waitFor()
       assert.equal(await batchRecords.locator('.bf-records-list code').first().innerText(), batch)
       assert.equal(await batchRecords.getByText('No monthly batch is selected.', { exact: false }).count(), 0)
+      // Discovery is not tied to a batch, but visiting it must not unbind the open notebook:
+      // the route used to drop the batch, the sources emptied and the notebook turned Unsaved.
+      await studio.getByRole('button', { name: 'Discovery materials and opportunities' }).click()
+      await page.waitForFunction(() => location.hash.includes('view=discovery'))
+      assert.equal(new URLSearchParams(new URL(page.url()).hash.slice(12)).get('batch'), batch)
+      assert.equal(await sources.locator('.bf-source-batch code').innerText(), batch)
       await studio.getByRole('button', { name: /This month’s tasks/ }).first().click()
     }
     const tasks = studio.locator('.bf-tasks')

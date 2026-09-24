@@ -216,7 +216,7 @@ function Shell({ ctx }: { ctx: Context }) {
           <button data-tone="teal" aria-pressed={selected.view === 'records'} disabled={notebookSwitching} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'records' })}><span aria-hidden="true">⇄</span><span>{t('records')}</span><span aria-hidden="true">›</span></button>
           <div className="bf-studio-group">{t('otherWorkspaces')}</div>
           <button data-tour-id="quotation-open" data-secondary="true" data-tone="gold" aria-pressed={selected.view === 'quotation'} disabled={notebookSwitching} onClick={() => { navigate({ ...(batchId ? { batch: batchId } : {}), view: 'quotation' }); window.dispatchEvent(new Event('bridgeflow:quotation-opened')) }}><span aria-hidden="true">▧</span><span>{t('quotationWorkspace')}</span><span aria-hidden="true">›</span></button>
-          <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'discovery'} disabled={notebookSwitching} onClick={() => navigate({ view: 'discovery' })}><span aria-hidden="true">▥</span><span>{t('discoveryWorkspace')}</span><span aria-hidden="true">›</span></button>
+          <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'discovery'} disabled={notebookSwitching} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'discovery' })}><span aria-hidden="true">▥</span><span>{t('discoveryWorkspace')}</span><span aria-hidden="true">›</span></button>
           <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'handoff'} disabled={notebookSwitching} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'handoff' })}><span aria-hidden="true">⇄</span><span>{t('handoffWorkspace')}</span><span aria-hidden="true">›</span></button>
         </div>
         {!summary && <p className="bf-hint">{t('studioStartHelp')}</p>}
@@ -241,10 +241,10 @@ function Shell({ ctx }: { ctx: Context }) {
           <h3>{t('batchFacts')}</h3>
           <p className="bf-hint">{t('batchFactsHint')}</p>
           <dl className="bf-facts">
-            <dt>{t('masterCompleteRows')}</dt><dd>{summary.master_rows}</dd>
+            <dt>{t('factCompleteRows')}</dt><dd>{summary.master_rows}</dd>
             <dt>{t('openItems')}</dt><dd>{openItems}</dd>
             <dt>{t('mappings')}</dt><dd>{summary.unresolved}</dd>
-            <dt>{t('declarationSource')}</dt><dd><code className="bf-mono">{summary.dictionary}</code></dd>
+            <dt>{t('dictionaryFile')}</dt><dd><code className="bf-mono">{summary.dictionary}</code></dd>
           </dl>
           {!!summary.superseded_by?.length && <div className="bf-callout" data-tone="warn"><h3>{t('superseded')}</h3><p>{t('supersededHint')}</p>
             <div className="bf-actions" style={{ marginBottom: 0 }}><button onClick={() => navigate({ batch: summary.superseded_by!.at(-1)!, view: 'tasks' })}>{t('openNewest')}</button></div></div>}

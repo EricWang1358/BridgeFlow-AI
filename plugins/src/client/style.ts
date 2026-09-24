@@ -490,8 +490,9 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 
 .bf-studio-facts { margin-top: 14px }
 .bf-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 8px 0 }
-.bf-facts dt { font-size: 12px; color: var(--bf-muted) }
-.bf-facts dd { margin: 0; font-size: 13px; font-weight: 600 }
+.bf-facts dt { font-size: 12px; color: var(--bf-muted); white-space: nowrap }
+.bf-facts dd { margin: 0; font-size: 13px; font-weight: 600; min-width: 0; overflow-wrap: anywhere }
+.bf-facts dd code { white-space: normal; overflow-wrap: anywhere; font-weight: 400 }
 
 .bf-tasks-split { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start }
 .bf-tasks-split > * { flex: 1 1 340px; min-width: 0 }
