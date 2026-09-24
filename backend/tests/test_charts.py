@@ -51,6 +51,18 @@ def test_three_periods_draw_a_line_with_the_declared_threshold_and_drillable_poi
     assert client.get(f"/batches/{measured[-1]['batch_id']}").status_code == 200
 
 
+def test_current_trend_point_stays_with_the_selected_batch_when_another_case_is_newer(client):
+    core = client.post("/batches/demo?case=core").json()["batch_id"]
+    clean = client.post("/batches/demo?case=clean").json()["batch_id"]
+    assert core != clean
+    for batch in (core, clean):
+        response = client.get(f"/conclusions/batches/{batch}/charts")
+        assert response.status_code == 200, response.text
+        trend = next(chart for chart in response.json()["charts"] if chart["id"] == "sign_rate_trend")
+        assert trend["points"][-1]["period"] == "2024-07"
+        assert trend["points"][-1]["batch_id"] == batch
+
+
 def test_a_month_without_a_batch_is_a_gap_and_never_interpolated(client):
     import_month(client, MAY, "2024-05")
     batch = client.post("/batches/demo").json()["batch_id"]  # June is missing

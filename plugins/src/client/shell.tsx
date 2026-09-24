@@ -26,6 +26,7 @@ import { shellStyle } from './shell-style.ts'
 
 type Source = { id: string; filename: string; sheet: string; preview_available: boolean; total?: number; sha256?: string }
 type Artifact = { report_id: string; period: string; status: string; created_at: number; kind?: string }
+type BatchData = { batchId: string; summary: Summary; sources: Source[]; artifacts: Artifact[]; artifactTotal: number }
 type Preview = { filename: string; sheet: string; sha256: string; columns: string[]; rows: unknown[][]; row_numbers?: number[]; total: number; offset: number }
 const emptyWindow: SessionEventWindow = { entries: [], hasMore: false, revision: 0, change: { kind: 'replace', entries: [] } }
 const viewportSubscribe = (fn: () => void) => { window.addEventListener('resize', fn); return () => window.removeEventListener('resize', fn) }
@@ -41,9 +42,12 @@ function Shell({ ctx }: { ctx: Context }) {
   const hash = useSyncExternalStore(hashSubscribe, () => location.hash)
   const selected = useMemo(() => route(), [hash])
   const batchId = selected.batch || String(audit.review?.batch_id ?? '')
-  const [summary, setSummary] = useState<Summary | null>(null), [sources, setSources] = useState<Source[]>([])
+  const [batchData, setBatchData] = useState<BatchData | null>(null)
+  const currentData = batchData?.batchId === batchId ? batchData : null
+  const summary = currentData?.summary ?? null, sources = currentData?.sources ?? []
+  const artifacts = currentData?.artifacts ?? [], artifactTotal = currentData?.artifactTotal ?? 0
   const sampleCase = useDemoCase(summary?.demo_case ?? '')
-  const [artifacts, setArtifacts] = useState<Artifact[]>([]), [artifactTotal, setArtifactTotal] = useState(0), [artifactOffset, setArtifactOffset] = useState(0)
+  const [artifactOffset, setArtifactOffset] = useState(0)
   const [error, setError] = useState(''), [revision, setRevision] = useState(0), [busy, setBusy] = useState(false)
   const [preview, setPreview] = useState<Preview | null>(null), [report, setReport] = useState<Review | null>(null), [offset, setOffset] = useState(0)
   const [panel, setPanel] = useState(''), [copied, setCopied] = useState(false)
@@ -73,12 +77,14 @@ function Shell({ ctx }: { ctx: Context }) {
   const importer = useRef<HTMLDialogElement>(null), viewer = useRef<HTMLDialogElement>(null), feishuUploader = useRef<HTMLDialogElement>(null)
   const [feishuNotice, setFeishuNotice] = useState('')
   // One count for the tasks destination, read from the same projection its page shows.
-  const [openItems, setOpenItems] = useState(0)
+  const [openItemsResult, setOpenItemsResult] = useState({ batchId: '', total: 0 })
+  const openItems = openItemsResult.batchId === batchId ? openItemsResult.total : 0
   useEffect(() => {
-    if (!summary?.period) { setOpenItems(0); return }
+    if (!summary?.period) { setOpenItemsResult({ batchId: '', total: 0 }); return }
     const controller = new AbortController()
     void api<{ total: number }>(`/monthly/inbox?period=${encodeURIComponent(summary.period)}&batch_id=${encodeURIComponent(batchId)}`, { signal: controller.signal })
-      .then(value => setOpenItems(value.total)).catch(() => setOpenItems(0))
+      .then(value => setOpenItemsResult({ batchId, total: value.total }))
+      .catch(() => { if (!controller.signal.aborted) setOpenItemsResult({ batchId, total: 0 }) })
     return () => controller.abort()
   }, [summary?.period, batchId, revision])
   useEffect(() => {
@@ -95,14 +101,14 @@ function Shell({ ctx }: { ctx: Context }) {
   useEffect(() => { setOffset(0); setPreview(null); setReport(null); }, [batchId, selected.source, selected.report])
   useEffect(() => { setArtifactOffset(0); setCopied(false); setFeishuNotice('') }, [batchId])
   useEffect(() => {
-    setSummary(null); setSources([]); setArtifacts([]); setArtifactTotal(0); setError('')
+    setBatchData(null); setError('')
     if (!batchId) return
     const controller = new AbortController(), signal = controller.signal
     void Promise.all([
       api<Summary>(`/batches/${batchId}`, { signal }),
       api<{ sources: Source[] }>(`/batches/${batchId}/sources`, { signal }),
       api<{ artifacts: Artifact[]; total: number }>(`/batches/${batchId}/artifacts?offset=${artifactOffset}`, { signal }),
-    ]).then(([batch, files, outputs]) => { setSummary(batch); setSources(files.sources); setArtifacts(outputs.artifacts); setArtifactTotal(outputs.total) })
+    ]).then(([batch, files, outputs]) => { setBatchData({ batchId, summary: batch, sources: files.sources, artifacts: outputs.artifacts, artifactTotal: outputs.total }) })
       .catch(e => { if (!signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
   }, [batchId, revision, audit.review?.status, audit.review?.report_id, artifactOffset])
@@ -135,7 +141,7 @@ function Shell({ ctx }: { ctx: Context }) {
           onImport={() => importer.current?.showModal()} onRefresh={() => setRevision(n => n + 1)} />
       : selected.view === 'records' && batchId
         ? <RecordsView batchId={batchId} summary={summary} artifacts={artifacts} language={language} />
-        : selected.view === 'overview' ? <Overview batchId={batchId} /> : selected.view === 'discovery' ? <Discovery /> : selected.view === 'quotation' ? <Quotation /> : selected.view === 'handoff' ? <Handoff /> : selected.view === 'integration' && batchId ? <MasterTable batchId={batchId} /> : selected.view === 'brief' && batchId ? <MonthlyBrief batchId={batchId} /> : preview ? <section aria-label={t('sourcePreview')}>
+        : selected.view === 'overview' ? <Overview key={batchId} batchId={batchId} /> : selected.view === 'discovery' ? <Discovery /> : selected.view === 'quotation' ? <Quotation /> : selected.view === 'handoff' ? <Handoff /> : selected.view === 'integration' && batchId ? <MasterTable batchId={batchId} /> : selected.view === 'brief' && batchId ? <MonthlyBrief key={batchId} batchId={batchId} /> : preview ? <section aria-label={t('sourcePreview')}>
     <h3>{preview.filename}</h3><p className="bf-hint">{t('parsedOriginal')} {preview.sheet}</p>
     <div className="bf-source-table"><table><thead><tr><th>{t('sourceRow')}</th>{preview.columns.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>
       <tbody>{preview.rows.map((row, i) => <tr key={preview.offset + i}><th>{preview.row_numbers?.[i] ?? preview.offset + i + 2}</th>{row.map((cell, j) => <td key={j}>{cell === null ? '—' : String(cell)}</td>)}</tr>)}</tbody></table></div>
@@ -212,7 +218,7 @@ function Shell({ ctx }: { ctx: Context }) {
         </div>
         {!summary && <p className="bf-hint">{t('studioStartHelp')}</p>}
         {(error || notebook.error) && <p role="alert" className="bf-error">{error || notebook.error}{notebook.error && <button onClick={notebook.retry}>{t('refresh')}</button>}</p>}
-        {viewing && <section key={`${selected.view}:${selected.report ?? ''}:${selected.source ?? ''}`} className="bf-inline-preview" aria-label={t('preview')}><header><h3>{t('preview')}</h3>
+        {viewing && <section key={`${batchId}:${selected.view}:${selected.report ?? ''}:${selected.source ?? ''}`} className="bf-inline-preview" aria-label={t('preview')}><header><h3>{t('preview')}</h3>
           <button aria-pressed={wide} title={t('wideReadingHelp')} onClick={() => setWideReading(!wide)}>{t('wideReading')}</button>
           <button onClick={() => { setExpanded(true); viewer.current?.showModal() }}>{t('expandPreview')}</button>
           <button onClick={closePreview}>{t('close')}</button></header>

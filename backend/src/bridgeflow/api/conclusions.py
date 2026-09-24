@@ -92,8 +92,8 @@ async def monthly_brief(batch_id: str, user: Annotated[UserIdentity | None, Depe
 async def metric_charts(batch_id: str, user: Annotated[UserIdentity | None, Depends(require_user)]) -> dict:
     """The declared charts for this batch (E13-UC03).
 
-    Every number is recomputed from its batch; no chart keeps a copy. A trend reads each
-    period's own latest visible batch, so a month without one is a gap rather than a guess.
+    Every number is recomputed from its batch; no chart keeps a copy. A trend uses this
+    batch for its current month and the latest visible batch for each earlier month.
     """
     batch = _visible(load_batch(batch_id), user)
     dictionary = batch.dictionary_snapshot or {}
@@ -119,7 +119,7 @@ async def metric_charts(batch_id: str, user: Annotated[UserIdentity | None, Depe
     built = []
     for spec in specs:
         if spec.kind == "trend":
-            built.append(charts.trend(spec, dictionary, _metric_series(spec, batch, user), confirmed))
+            built.append(charts.trend(spec, dictionary, _metric_series(spec, batch_id, batch, user), confirmed))
         elif spec.kind == "variance":
             built.append(charts.variance(spec, comparison, batch_id=batch_id, period=batch.period))
         else:
@@ -130,8 +130,8 @@ async def metric_charts(batch_id: str, user: Annotated[UserIdentity | None, Depe
             "charts": [chart.model_dump(mode="json") for chart in built]}
 
 
-def _metric_series(spec: charts.ChartSpec, batch, user: UserIdentity | None) -> list[dict]:
-    """One declared metric across the last N periods, each from that period's own batch.
+def _metric_series(spec: charts.ChartSpec, batch_id: str, batch, user: UserIdentity | None) -> list[dict]:
+    """One declared metric across the last N periods, ending at the selected batch.
 
     A period with no visible batch, or one whose figures cannot be computed, is a point with
     no value: the chart shows a gap, because a line drawn through it would be an assertion
@@ -139,11 +139,12 @@ def _metric_series(spec: charts.ChartSpec, batch, user: UserIdentity | None) -> 
     """
     series = []
     for period in _recent_periods(batch.period, spec.periods):
-        entry = comparison_module.periods.latest_for(period, _visibility(user))
+        entry = ({"batch_id": batch_id} if period == batch.period else
+                 comparison_module.periods.latest_for(period, _visibility(user)))
         if entry is None:
             series.append({"period": period, "batch_id": "", "value": None, "unit": ""})
             continue
-        other = load_batch(entry["batch_id"]) if entry["batch_id"] != "" else None
+        other = batch if period == batch.period else load_batch(entry["batch_id"])
         value, unit = None, ""
         try:
             facts = business.context(entry["batch_id"], other)["facts"]

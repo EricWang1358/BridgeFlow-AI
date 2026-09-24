@@ -61,6 +61,12 @@ try {
   page.setDefaultTimeout(live ? 240_000 : 30_000)
   await page.goto(match[1])
   await switchLanguage(page, 'English')
+  // Make the route change visible before the next batch response arrives. The Sources
+  // pane must not briefly identify the new notebook with the previous case's data.
+  await page.route(/\/bridgeflow\/batches\/[a-f0-9]{32}$/, async route => {
+    if (route.request().method() === 'GET') await wait(250)
+    await route.continue()
+  })
   const studio = page.getByRole('complementary', { name: 'Studio', exact: true })
   const board = () => page.evaluate(async () => (await (await fetch('/bridgeflow/workflow/board')).json()).rows)
   const refresh = () => page.locator('.bf-card-head').getByRole('button', { name: 'Refresh', exact: true }).click()
@@ -87,6 +93,8 @@ try {
       await studio.getByRole('button', { name: /This month’s tasks/ }).first().click()
     }
     await page.waitForFunction(old => { const b = new URLSearchParams(location.hash.slice(12)).get('batch'); return !!b && b !== old && /[?&]view=tasks/.test(location.hash) }, previous)
+    const shownBatch = sources.locator('.bf-source-batch code')
+    if (await shownBatch.count()) assert.equal(await shownBatch.innerText(), new URLSearchParams(new URL(page.url()).hash.slice(12)).get('batch'))
     const chip = sources.locator('.bf-source-batch .bf-chip')
     await sources.locator(`.bf-source-batch .bf-chip[data-status="${expected}"]`).waitFor()
     const batch = new URLSearchParams(new URL(page.url()).hash.slice(12)).get('batch')
