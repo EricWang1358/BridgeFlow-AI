@@ -47,6 +47,9 @@ function Shell({ ctx }: { ctx: Context }) {
   const [preview, setPreview] = useState<Preview | null>(null), [report, setReport] = useState<Review | null>(null), [offset, setOffset] = useState(0)
   const [panel, setPanel] = useState(''), [copied, setCopied] = useState(false)
   const navigation = useNativeSidebar(ctx), notebook = useNotebook(ctx, selected, batchId)
+  // Opening a sample or restoring a notebook may still replace its route. Keep Studio
+  // navigation idle until that transition is complete, so a fast click is not lost.
+  const notebookSwitching = notebook.busy || !notebook.loaded
   const [expanded, setExpanded] = useState(false)
   // These pages were drawn at a working width; the studio column is 300–460px. A reader who
   // says "wide" once should not have to say it again, so the choice is remembered — and it
@@ -192,15 +195,15 @@ function Shell({ ctx }: { ctx: Context }) {
         <div className="bf-studio-tools" aria-label={t('tools')}>
           {/* Four destinations, named after what a person is doing, not after our modules.
               Everything that used to have two entries now has exactly one, inside one of these. */}
-          <button data-span="all" data-tone="blue" aria-pressed={selected.view === 'overview'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'overview' })}><span aria-hidden="true">▦</span><span>{t('overview')}</span><span aria-hidden="true">›</span></button>
-          <button data-tour-id="state-open" data-tone="pink" aria-pressed={selected.view === 'tasks'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'tasks' })}><span aria-hidden="true">◷</span><span>{t('monthlyTasks')}</span><span className="bf-badge">{openItems}</span><span aria-hidden="true">›</span></button>
-          <button data-tone="blue" aria-pressed={selected.view === 'data'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'data' })}><span aria-hidden="true">▤</span><span>{t('dataWorkspace')}</span><span aria-hidden="true">›</span></button>
-          <button data-tone="green" aria-pressed={selected.view === 'brief'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'brief' })}><span aria-hidden="true">◎</span><span>{t('monthlyBrief')}</span><span aria-hidden="true">›</span></button>
-          <button data-tone="teal" aria-pressed={selected.view === 'records'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'records' })}><span aria-hidden="true">⇄</span><span>{t('records')}</span><span aria-hidden="true">›</span></button>
+          <button data-span="all" data-tone="blue" aria-pressed={selected.view === 'overview'} disabled={notebookSwitching} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'overview' })}><span aria-hidden="true">▦</span><span>{t('overview')}</span><span aria-hidden="true">›</span></button>
+          <button data-tour-id="state-open" data-tone="pink" aria-pressed={selected.view === 'tasks'} disabled={!summary || notebookSwitching} onClick={() => navigate({ batch: batchId, view: 'tasks' })}><span aria-hidden="true">◷</span><span>{t('monthlyTasks')}</span><span className="bf-badge">{openItems}</span><span aria-hidden="true">›</span></button>
+          <button data-tone="blue" aria-pressed={selected.view === 'data'} disabled={!summary || notebookSwitching} onClick={() => navigate({ batch: batchId, view: 'data' })}><span aria-hidden="true">▤</span><span>{t('dataWorkspace')}</span><span aria-hidden="true">›</span></button>
+          <button data-tone="green" aria-pressed={selected.view === 'brief'} disabled={!summary || notebookSwitching} onClick={() => navigate({ batch: batchId, view: 'brief' })}><span aria-hidden="true">◎</span><span>{t('monthlyBrief')}</span><span aria-hidden="true">›</span></button>
+          <button data-tone="teal" aria-pressed={selected.view === 'records'} disabled={!summary || notebookSwitching} onClick={() => navigate({ batch: batchId, view: 'records' })}><span aria-hidden="true">⇄</span><span>{t('records')}</span><span aria-hidden="true">›</span></button>
           <div className="bf-studio-group">{t('otherWorkspaces')}</div>
-          <button data-tour-id="quotation-open" data-secondary="true" data-tone="gold" aria-pressed={selected.view === 'quotation'} onClick={() => { navigate({ ...(batchId ? { batch: batchId } : {}), view: 'quotation' }); window.dispatchEvent(new Event('bridgeflow:quotation-opened')) }}><span aria-hidden="true">▧</span><span>{t('quotationWorkspace')}</span><span aria-hidden="true">›</span></button>
-          <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'discovery'} onClick={() => navigate({ view: 'discovery' })}><span aria-hidden="true">▥</span><span>{t('discoveryWorkspace')}</span><span aria-hidden="true">›</span></button>
-          <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'handoff'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'handoff' })}><span aria-hidden="true">⇄</span><span>{t('handoffWorkspace')}</span><span aria-hidden="true">›</span></button>
+          <button data-tour-id="quotation-open" data-secondary="true" data-tone="gold" aria-pressed={selected.view === 'quotation'} disabled={notebookSwitching} onClick={() => { navigate({ ...(batchId ? { batch: batchId } : {}), view: 'quotation' }); window.dispatchEvent(new Event('bridgeflow:quotation-opened')) }}><span aria-hidden="true">▧</span><span>{t('quotationWorkspace')}</span><span aria-hidden="true">›</span></button>
+          <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'discovery'} disabled={notebookSwitching} onClick={() => navigate({ view: 'discovery' })}><span aria-hidden="true">▥</span><span>{t('discoveryWorkspace')}</span><span aria-hidden="true">›</span></button>
+          <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'handoff'} disabled={notebookSwitching} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'handoff' })}><span aria-hidden="true">⇄</span><span>{t('handoffWorkspace')}</span><span aria-hidden="true">›</span></button>
         </div>
         {!summary && <p className="bf-hint">{t('studioStartHelp')}</p>}
         {(error || notebook.error) && <p role="alert" className="bf-error">{error || notebook.error}{notebook.error && <button onClick={notebook.retry}>{t('refresh')}</button>}</p>}

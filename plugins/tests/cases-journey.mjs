@@ -78,6 +78,14 @@ try {
     // Opening a case leaves the current notebook: the leave dialog asks first.
     const leave = page.getByRole('dialog', { name: /^(Save this notebook before leaving\?|离开前保存笔记本？)$/ })
     await leave.waitFor({ timeout: 3000 }).then(() => leave.getByRole('button', { name: /^(Discard and continue|不保存并继续)$/ }).click(), () => {})
+    if (id === 'clean') {
+      // A quick next click used to be overwritten by the still-restoring notebook.
+      // The destination waits for the new notebook, then remains open.
+      await studio.getByRole('button', { name: 'Filling & handoff', exact: true }).click()
+      await page.waitForFunction(() => location.hash.includes('view=handoff')
+        && document.querySelector('.bf-notebook-title')?.value === 'All clear: ready to review')
+      await studio.getByRole('button', { name: /This month’s tasks/ }).first().click()
+    }
     await page.waitForFunction(old => { const b = new URLSearchParams(location.hash.slice(12)).get('batch'); return !!b && b !== old && /[?&]view=tasks/.test(location.hash) }, previous)
     const chip = sources.locator('.bf-source-batch .bf-chip')
     await sources.locator(`.bf-source-batch .bf-chip[data-status="${expected}"]`).waitFor()
