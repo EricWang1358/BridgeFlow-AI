@@ -185,6 +185,8 @@ const labels = {
   studioStateHelp: ['导入和报告状态属于所选批次，审批属于当前会话。详细过程在中间的轨迹里。', 'Import and report status belong to the selected batch; approvals belong to the current session. The trace in the middle has the details.'],
   welcomeTitle: ['从这里开始你的业务笔记本', 'Let’s start your business notebook'],
   welcomeHelp: ['把部门文件放到左侧，在这里与队长核对，在右侧查看产物与依据。', 'Add department files on the left, work with your captain here, and preview outputs and evidence on the right.'],
+  welcomeLoadedTitle: ['这本笔记本已经有数据', 'This notebook has data to explore'],
+  welcomeLoadedHelp: ['从右侧查看任务和数据；需要研判时再与队长对话。', 'Inspect tasks and data on the right; talk with the captain when a review is available.'],
   monthlySteps: ['月度对账怎么开始', 'How to start a monthly review'],
 
   notebookTitle: ['业务笔记本', 'Business notebook'], sessionsSettings: ['会话与设置', 'Sessions & settings'],
@@ -488,6 +490,13 @@ const labels = {
   heroStep4: ['审批要写入的决定', 'Approve anything that writes'],
   heroStep4Hint: ['你不点批准，什么都不会写入', 'Nothing is written until you approve it'],
   heroOpen: ['开始导入', 'Start an import'],
+  heroLoadedTitle: ['先看这本笔记本的依据', 'Start with this notebook’s evidence'],
+  heroLoadedLead: ['文件已经关联到这本笔记本。先看任务和来源，再决定下一步。', 'Files are linked to this notebook. Check its tasks and sources before choosing the next step.'],
+  heroLoadedActor: ['你', 'You'],
+  heroLoadedStep1: ['查看本月任务', 'See this month’s tasks'],
+  heroLoadedStep1Hint: ['看哪些事项还在等待，以及数据是否能发起研判', 'See what is still waiting and whether the data can be reviewed'],
+  heroLoadedStep2: ['追到来源数据', 'Trace the source data'],
+  heroLoadedStep2Hint: ['对照四部门文件、清洗结果与待确认项', 'Compare the four department files, corrections and open questions'],
 
   // --- a state is only useful next to the action it implies -------------------
   nextTitle: ['下一步', 'Next step'],

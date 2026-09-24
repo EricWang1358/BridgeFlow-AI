@@ -103,6 +103,10 @@ try {
     await guide.getByRole('heading', { name: `This sample shows · ${title}` }).waitFor()
     const sourceNote = sources.locator('.bf-sample-notice')
     await sourceNote.getByText(`This sample shows · ${title}`, { exact: false }).waitFor()
+    const orientation = page.locator('.bf-loaded-hero')
+    await orientation.getByText(`This sample shows · ${title}`, { exact: false }).waitFor()
+    assert.equal((await orientation.innerText()).includes('Start an import'), false, 'A loaded sample should not ask for another import')
+    await page.getByRole('heading', { name: 'This notebook has data to explore' }).waitFor()
     assert.equal((await sourceNote.innerText()).includes('Starting a review calls the AI model.'), false)
     const caseSwitch = sources.locator('.bf-sample-cases summary')
     const switchBox = await caseSwitch.boundingBox()
@@ -138,6 +142,7 @@ try {
   await switchLanguage(page, '中文')
   await page.locator('.bf-demo-guide').getByRole('heading', { name: /本示例展示.*多问题并发/ }).waitFor()
   await page.locator('.bf-sample-notice').getByText(/本示例展示.*多问题并发/).waitFor()
+  await page.locator('.bf-loaded-hero').getByText(/本示例展示.*多问题并发/).waitFor()
   assert.equal(await page.locator('.bf-tasks').getByRole('button', { name: '发起研判' }).isDisabled(), true)
   // The public guest console leaves AI off. A ready sample must not offer a model action
   // that can only produce the fixed guest notice; its data and guided paths remain usable.
