@@ -109,6 +109,15 @@ def test_a_report_left_on_corrected_data_shows_up_as_an_item(client):
     assert len(stale) == 1 and stale[0]["subject"] == batch and stale[0]["next_view"] == "state"
 
 
+def test_a_review_on_an_unrelated_sample_is_not_a_stale_report(client):
+    first = client.post("/batches/demo").json()["batch_id"]
+    finalize(client, first)
+    other = client.post("/batches/demo?case=clean").json()["batch_id"]
+    result = inbox(client, batch_id=other)
+    assert result["batch_id"] == other
+    assert not [item for item in result["items"] if item["kind"] == "stale_report"]
+
+
 def test_the_captain_sees_counts_by_kind_and_department(client):
     client.post("/batches/demo")
     result = client.post("/tools/monthly-inbox", json={"period": "2024-07"}).json()

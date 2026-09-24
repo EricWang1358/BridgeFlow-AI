@@ -73,7 +73,7 @@ function Shell({ ctx }: { ctx: Context }) {
   useEffect(() => {
     if (!summary?.period) { setOpenItems(0); return }
     const controller = new AbortController()
-    void api<{ total: number }>(`/monthly/inbox?period=${encodeURIComponent(summary.period)}`, { signal: controller.signal })
+    void api<{ total: number }>(`/monthly/inbox?period=${encodeURIComponent(summary.period)}&batch_id=${encodeURIComponent(batchId)}`, { signal: controller.signal })
       .then(value => setOpenItems(value.total)).catch(() => setOpenItems(0))
     return () => controller.abort()
   }, [summary?.period, batchId, revision])

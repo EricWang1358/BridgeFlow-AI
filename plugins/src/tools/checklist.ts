@@ -27,11 +27,12 @@ export function renderChecklist(result: { period?: string; batch_id?: string; re
 export function checklistTool(config: BackendConfig): ProductTool {
   return withAccess(defineTool({
     name: 'monthly_checklist',
-    description: 'The monthly close checklist for a period: the batch the month is bound to, each declared step with its state (done, open, blocked, unknown), how many things are outstanding, who owns it, and whether the month is ready to close. Counts and names only, never rows. Also the way to find a month\'s batch when someone names a month but no batch id.',
-    parameters: { period: { type: 'string', required: true, description: 'YYYY-MM' } },
+    description: 'The monthly close checklist for a period: the batch it is bound to, each step and who owns it. Pass batch_id when the person is looking at a specific notebook; without it, the latest batch for that period is used. Counts and names only, never rows.',
+    parameters: { period: { type: 'string', required: true, description: 'YYYY-MM' },
+      batch_id: { type: 'string', description: 'Exact batch from the current notebook, if known' } },
     output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => renderChecklist(value as Parameters<typeof renderChecklist>[0]) },
     async execute(args, exec) {
-      return callBackend<Record<string, Json>>(config, '/tools/monthly-checklist', { period: args.period }, exec)
+      return callBackend<Record<string, Json>>(config, '/tools/monthly-checklist', { period: args.period, batch_id: args.batch_id ?? '' }, exec)
     },
   }), { kind: 'read' })
 }
@@ -43,7 +44,7 @@ export function checklistTool(config: BackendConfig): ProductTool {
  * and settling happens in the module that holds the evidence and the approval.
  */
 type InboxArgs = { department?: string; kind?: string }
-type InboxText = { total?: number; by_kind?: Record<string, number>; by_department?: Record<string, number>
+type InboxText = { batch_id?: string; total?: number; by_kind?: Record<string, number>; by_department?: Record<string, number>
   items?: { kind: string; subject?: string; detail?: string; departments?: string[]; next_view?: string }[] }
 /**
  * The items themselves, not only their counts. Counts alone sent a real captain back for
@@ -57,7 +58,8 @@ export function renderInbox(args: InboxArgs, result: InboxText) {
   const filter = [args.department && `department=${args.department}`, args.kind && `kind=${args.kind}`].filter(Boolean).join(', ')
   const lines = items.slice(0, 15).map(item => `- ${item.kind}: ${item.subject || '(no subject)'}${item.detail ? ` — ${item.detail}` : ''}`
     + ` [departments: ${(item.departments ?? []).join('/') || 'all'}; settled in: ${item.next_view || 'its module'}]`)
-  return [{ type: 'text' as const, text: `${result.total ?? 0} open item(s) in the period (by kind: ${kinds || 'none'}). `
+  const scope = result.batch_id ? `batch ${result.batch_id}` : 'this period (no batch found)'
+  return [{ type: 'text' as const, text: `${result.total ?? 0} open item(s) in ${scope} (by kind: ${kinds || 'none'}). `
     + `${filter ? `Filtered by ${filter}: ` : ''}${items.length} listed${items.length > 15 ? ', first 15 shown' : ''}.`
     + (lines.length ? `\n${lines.join('\n')}` : '') }]
 }
@@ -65,16 +67,17 @@ export function renderInbox(args: InboxArgs, result: InboxText) {
 export function inboxTool(config: BackendConfig): ProductTool {
   return withAccess(defineTool({
     name: 'monthly_inbox',
-    description: 'Open items for a period across modules (master questions, quarantined rows, column questions, a review left on corrected data): counts by kind and department, and each item with where it is settled. Never rows or cell values; the inbox decides nothing.',
+    description: 'Open items for a period across modules. Pass batch_id when the person is looking at a specific notebook; without it, the latest batch for that period is used. Counts by kind and department, with where each item is settled. Never rows or cell values; the inbox decides nothing.',
     parameters: {
       period: { type: 'string', required: true, description: 'YYYY-MM' },
+      batch_id: { type: 'string', description: 'Exact batch from the current notebook, if known' },
       department: { type: 'string', description: 'Narrow the listing to one department' },
       kind: { type: 'string', description: 'Narrow the listing to one kind of item' },
     },
     output: { schema: { type: 'object', additionalProperties: true }, render: (args, value) => renderInbox(args as InboxArgs, value as InboxText) },
     async execute(args, exec) {
       return callBackend<Record<string, Json>>(config, '/tools/monthly-inbox',
-        { period: args.period, department: args.department ?? '', kind: args.kind ?? '' }, exec)
+        { period: args.period, batch_id: args.batch_id ?? '', department: args.department ?? '', kind: args.kind ?? '' }, exec)
     },
   }), { kind: 'read' })
 }

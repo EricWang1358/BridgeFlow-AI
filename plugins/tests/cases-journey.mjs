@@ -70,7 +70,7 @@ try {
   // Each case opens in its own notebook from Sources → More sample cases.
   const sources = page.getByRole('complementary', { name: 'Sources', exact: true })
   const results = {}
-  for (const [id, expected] of [['core', 'needs_review'], ['other', 'needs_review'], ['clean', 'ready']]) {
+  for (const [id, expected, title] of [['core', 'needs_review', 'Many problems at once'], ['other', 'needs_review', 'A different set of problems'], ['clean', 'ready', 'All clear: ready to review']]) {
     const more = sources.locator('.bf-sample-cases')
     if (!await more.evaluate(el => el.open)) await more.locator('summary').click()
     const previous = new URLSearchParams(new URL(page.url()).hash.slice(12)).get('batch')
@@ -82,14 +82,37 @@ try {
     const chip = sources.locator('.bf-source-batch .bf-chip')
     await sources.locator(`.bf-source-batch .bf-chip[data-status="${expected}"]`).waitFor()
     const batch = new URLSearchParams(new URL(page.url()).hash.slice(12)).get('batch')
+    const tasks = studio.locator('.bf-tasks')
+    const guide = tasks.locator('.bf-demo-guide')
+    await guide.getByRole('heading', { name: `This sample shows · ${title}` }).waitFor()
+    const review = tasks.getByRole('button', { name: 'Start the review', exact: true })
+    assert.equal(await review.isDisabled(), expected !== 'ready', `${id} review eligibility`)
+    if (expected !== 'ready') await tasks.getByText('This batch needs data fixes before a review.', { exact: false }).waitFor()
     const summary = await page.evaluate(async id => (await fetch(`/bridgeflow/batches/${id}`)).json(), batch)
+    const inbox = await page.evaluate(async id => (await fetch(`/bridgeflow/monthly/inbox?period=2024-07&batch_id=${id}`)).json(), batch)
+    assert.equal(inbox.batch_id, batch)
+    await page.waitForFunction(total => document.querySelector('.bf-inbox .bf-badge')?.textContent?.trim() === String(total), inbox.total)
     results[id] = { status: summary.status, blockers: summary.review_blockers, quarantined: summary.departments.reduce((n, d) => n + d.quarantined, 0),
-      column_questions: summary.column_questions }
+      column_questions: summary.column_questions, batch_id: batch, open_items: inbox.total }
     await shot(`case-${id}`)
+    await guide.getByRole('button', { name: 'Inspect data and open items' }).click()
+    await studio.getByRole('region', { name: 'Data' }).waitFor()
   }
   assert.equal(results.core.status, 'needs_review'); assert(results.core.quarantined >= 1)
   assert.equal(results.other.status, 'needs_review'); assert.equal(results.other.blockers.length, 3); assert.equal(results.other.column_questions, 1)
   assert.equal(results.clean.status, 'ready'); assert.deepEqual(results.clean.blockers, [])
+  const original = await page.evaluate(async id => (await (await fetch(`/bridgeflow/monthly/inbox?period=2024-07&batch_id=${id}`)).json()).total, results.core.batch_id)
+  assert.equal(original, results.core.open_items, 'Later sample notebooks must not change the first notebook’s open items')
+  await page.locator('.bf-shell-top').getByRole('button', { name: 'Notebooks', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Notebooks', exact: true }).getByRole('button', { name: /Many problems at once/ }).click()
+  await studio.getByRole('button', { name: /This month’s tasks/ }).first().click()
+  await page.waitForFunction(({ batch, total }) => {
+    const selected = new URLSearchParams(location.hash.slice(12)).get('batch')
+    return selected === batch && document.querySelector('.bf-inbox .bf-badge')?.textContent?.trim() === String(total)
+  }, { batch: results.core.batch_id, total: results.core.open_items })
+  await switchLanguage(page, '中文')
+  await page.locator('.bf-demo-guide').getByRole('heading', { name: /本示例展示.*多问题并发/ }).waitFor()
+  assert.equal(await page.locator('.bf-tasks').getByRole('button', { name: '发起研判' }).isDisabled(), true)
   assert.deepEqual(errors, [])
   await writeFile(`${evidence}/cases.json`, JSON.stringify(results, null, 2))
   console.log(JSON.stringify({ status: 'passed', results, evidence }))

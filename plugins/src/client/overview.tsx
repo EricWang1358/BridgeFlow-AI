@@ -111,8 +111,8 @@ export function Overview({ batchId }: { batchId: string }) {
   const [tables, setTables] = useState(false), [revision, setRevision] = useState(0)
   const summary = useSource<Summary>(batchId ? `/batches/${batchId}` : null, [])
   const period = summary && !(summary instanceof Error) ? summary.period : ''
-  const checklist = useSource<Checklist>(period ? `/monthly/checklist?period=${encodeURIComponent(period)}` : null, [])
-  const inbox = useSource<Inbox>(period ? `/monthly/inbox?period=${encodeURIComponent(period)}` : null, [])
+  const checklist = useSource<Checklist>(period ? `/monthly/checklist?period=${encodeURIComponent(period)}&batch_id=${encodeURIComponent(batchId)}` : null, [])
+  const inbox = useSource<Inbox>(period ? `/monthly/inbox?period=${encodeURIComponent(period)}&batch_id=${encodeURIComponent(batchId)}` : null, [])
   const charts = useSource<{ charts: Chart[]; refusal?: string }>(batchId ? `/conclusions/batches/${batchId}/charts` : null, [revision])
   const board = useSource<{ rows: BoardRow[] }>('/workflow/board', [])
   const runs = useSource<{ runs: Run[] }>('/journal/runs?limit=12', [])
