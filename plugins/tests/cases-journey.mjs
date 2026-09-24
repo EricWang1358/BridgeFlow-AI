@@ -61,6 +61,12 @@ try {
   page.setDefaultTimeout(live ? 240_000 : 30_000)
   await page.goto(match[1])
   await switchLanguage(page, 'English')
+  // Make the route change visible before the next batch response arrives. The Sources
+  // pane must not briefly identify the new notebook with the previous case's data.
+  await page.route(/\/bridgeflow\/batches\/[a-f0-9]{32}$/, async route => {
+    if (route.request().method() === 'GET') await wait(250)
+    await route.continue()
+  })
   const studio = page.getByRole('complementary', { name: 'Studio', exact: true })
   const board = () => page.evaluate(async () => (await (await fetch('/bridgeflow/workflow/board')).json()).rows)
   const refresh = () => page.locator('.bf-card-head').getByRole('button', { name: 'Refresh', exact: true }).click()
@@ -70,7 +76,7 @@ try {
   // Each case opens in its own notebook from Sources → More sample cases.
   const sources = page.getByRole('complementary', { name: 'Sources', exact: true })
   const results = {}
-  for (const [id, expected] of [['core', 'needs_review'], ['other', 'needs_review'], ['clean', 'ready']]) {
+  for (const [id, expected, title] of [['core', 'needs_review', 'Many problems at once'], ['other', 'needs_review', 'A different set of problems'], ['clean', 'ready', 'All clear: ready to review']]) {
     const more = sources.locator('.bf-sample-cases')
     if (!await more.evaluate(el => el.open)) await more.locator('summary').click()
     const previous = new URLSearchParams(new URL(page.url()).hash.slice(12)).get('batch')
@@ -78,18 +84,84 @@ try {
     // Opening a case leaves the current notebook: the leave dialog asks first.
     const leave = page.getByRole('dialog', { name: /^(Save this notebook before leaving\?|离开前保存笔记本？)$/ })
     await leave.waitFor({ timeout: 3000 }).then(() => leave.getByRole('button', { name: /^(Discard and continue|不保存并继续)$/ }).click(), () => {})
+    if (id === 'clean') {
+      // A quick next click used to be overwritten by the still-restoring notebook.
+      // The destination waits for the new notebook, then remains open.
+      await studio.getByRole('button', { name: 'Filling & handoff', exact: true }).click()
+      await page.waitForFunction(() => location.hash.includes('view=handoff')
+        && document.querySelector('.bf-notebook-title')?.value === 'All clear: ready to review')
+      await studio.getByRole('button', { name: /This month’s tasks/ }).first().click()
+    }
     await page.waitForFunction(old => { const b = new URLSearchParams(location.hash.slice(12)).get('batch'); return !!b && b !== old && /[?&]view=tasks/.test(location.hash) }, previous)
+    const shownBatch = sources.locator('.bf-source-batch code')
+    if (await shownBatch.count()) assert.equal(await shownBatch.innerText(), new URLSearchParams(new URL(page.url()).hash.slice(12)).get('batch'))
     const chip = sources.locator('.bf-source-batch .bf-chip')
     await sources.locator(`.bf-source-batch .bf-chip[data-status="${expected}"]`).waitFor()
     const batch = new URLSearchParams(new URL(page.url()).hash.slice(12)).get('batch')
+    const tasks = studio.locator('.bf-tasks')
+    const guide = tasks.locator('.bf-demo-guide')
+    await guide.getByRole('heading', { name: `This sample shows · ${title}` }).waitFor()
+    const sourceNote = sources.locator('.bf-sample-notice')
+    await sourceNote.getByText(`This sample shows · ${title}`, { exact: false }).waitFor()
+    const orientation = page.locator('.bf-loaded-hero')
+    await orientation.getByText(`This sample shows · ${title}`, { exact: false }).waitFor()
+    assert.equal((await orientation.innerText()).includes('Start an import'), false, 'A loaded sample should not ask for another import')
+    await page.getByRole('heading', { name: 'This notebook has data to explore' }).waitFor()
+    assert.equal((await sourceNote.innerText()).includes('Starting a review calls the AI model.'), false)
+    const caseSwitch = sources.locator('.bf-sample-cases summary')
+    const switchBox = await caseSwitch.boundingBox()
+    assert(switchBox && switchBox.y < 700, 'The sample switcher should remain in the first screen of Sources')
+    const review = tasks.getByRole('button', { name: 'Start the review', exact: true })
+    assert.equal(await review.isDisabled(), expected !== 'ready', `${id} review eligibility`)
+    if (expected !== 'ready') await tasks.getByText('This batch needs data fixes before a review.', { exact: false }).waitFor()
     const summary = await page.evaluate(async id => (await fetch(`/bridgeflow/batches/${id}`)).json(), batch)
+    const inbox = await page.evaluate(async id => (await fetch(`/bridgeflow/monthly/inbox?period=2024-07&batch_id=${id}`)).json(), batch)
+    assert.equal(inbox.batch_id, batch)
+    await page.waitForFunction(total => document.querySelector('.bf-inbox .bf-badge')?.textContent?.trim() === String(total), inbox.total)
     results[id] = { status: summary.status, blockers: summary.review_blockers, quarantined: summary.departments.reduce((n, d) => n + d.quarantined, 0),
-      column_questions: summary.column_questions }
+      column_questions: summary.column_questions, batch_id: batch, open_items: inbox.total }
     await shot(`case-${id}`)
+    await guide.getByRole('button', { name: 'Inspect data and open items' }).click()
+    await studio.getByRole('region', { name: 'Data' }).waitFor()
   }
   assert.equal(results.core.status, 'needs_review'); assert(results.core.quarantined >= 1)
   assert.equal(results.other.status, 'needs_review'); assert.equal(results.other.blockers.length, 3); assert.equal(results.other.column_questions, 1)
   assert.equal(results.clean.status, 'ready'); assert.deepEqual(results.clean.blockers, [])
+  const original = await page.evaluate(async id => (await (await fetch(`/bridgeflow/monthly/inbox?period=2024-07&batch_id=${id}`)).json()).total, results.core.batch_id)
+  assert.equal(original, results.core.open_items, 'Later sample notebooks must not change the first notebook’s open items')
+  await page.locator('.bf-shell-top').getByRole('button', { name: 'Notebooks', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Notebooks', exact: true }).getByRole('button', { name: /Many problems at once/ }).click()
+  await page.waitForFunction(batch => new URLSearchParams(location.hash.slice(12)).get('batch') === batch
+    && document.querySelector('.bf-notebook-title')?.value === 'Many problems at once', results.core.batch_id)
+  await studio.locator('.bf-data').waitFor() // the notebook restores its last-read Data view
+  await studio.getByRole('button', { name: /This month’s tasks/ }).first().click()
+  await page.waitForFunction(({ batch, total }) => {
+    const selected = new URLSearchParams(location.hash.slice(12)).get('batch')
+    return selected === batch && document.querySelector('.bf-inbox .bf-badge')?.textContent?.trim() === String(total)
+  }, { batch: results.core.batch_id, total: results.core.open_items })
+  await switchLanguage(page, '中文')
+  await page.locator('.bf-demo-guide').getByRole('heading', { name: /本示例展示.*多问题并发/ }).waitFor()
+  await page.locator('.bf-sample-notice').getByText(/本示例展示.*多问题并发/).waitFor()
+  await page.locator('.bf-loaded-hero').getByText(/本示例展示.*多问题并发/).waitFor()
+  assert.equal(await page.locator('.bf-tasks').getByRole('button', { name: '发起研判' }).isDisabled(), true)
+  // The public guest console leaves AI off. A ready sample must not offer a model action
+  // that can only produce the fixed guest notice; its data and guided paths remain usable.
+  const guestPage = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: 'en-US' })
+  guestPage.on('pageerror', e => errors.push(e.message))
+  await guestPage.route('**/bridgeflow/config', async route => {
+    const response = await route.fetch()
+    await route.fulfill({ response, json: { ...await response.json(), guestMode: true, guestLlm: false } })
+  })
+  await guestPage.goto(match[1])
+  await switchLanguage(guestPage, 'English')
+  const guestCases = guestPage.locator('.bf-sample-cases')
+  await guestCases.locator('summary').click()
+  await guestCases.locator('button[data-case="clean"]').click()
+  const guestTasks = guestPage.locator('.bf-tasks')
+  await guestTasks.getByText('AI review is off in this guest demo.', { exact: false }).waitFor()
+  assert.equal(await guestTasks.getByRole('button', { name: 'Start the review' }).isDisabled(), true)
+  await guestPage.screenshot({ path: `${evidence}/case-clean-guest.png` })
+  await guestPage.close()
   assert.deepEqual(errors, [])
   await writeFile(`${evidence}/cases.json`, JSON.stringify(results, null, 2))
   console.log(JSON.stringify({ status: 'passed', results, evidence }))

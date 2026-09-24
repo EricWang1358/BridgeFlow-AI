@@ -45,6 +45,22 @@ def test_scoring_policy_and_reads_require_a_login(client, monkeypatch, tmp_path)
     assert client.get("/discovery/project/score/rating", headers=auth(make_token(sub="ou_bob"))).status_code == 200
     listed = client.get("/discovery/project/score", headers=auth(make_token())).json()
     assert listed["items"][0]["coordinates"] == saved.json()["coordinates"]
+    assert listed["items"][0]["opportunity_title"] == opportunity().title
+
+
+def test_score_list_names_candidate_beyond_first_opportunity_page(client, monkeypatch, tmp_path):
+    prepare(monkeypatch, tmp_path)
+    domain = service()
+    for index in range(49):
+        domain.propose(opportunity(id=f"other-{index:02d}"), "employee")
+    domain.propose(opportunity(id="later", title="A later proposal"), "employee")
+    payload = json.dumps({"score": score(id="later-rating", opportunity_id="later").model_dump(mode="json")}).encode()
+    token = permit(client, payload, "discovery_score_save", "ou_alice").json()["permit"]
+    assert write(client, payload, token).status_code == 200
+    headers = auth(make_token())
+    assert client.get("/discovery/project/opportunity?offset=0&limit=50", headers=headers).json()["has_more"]
+    listed = client.get("/discovery/project/score?offset=0&limit=50", headers=headers).json()
+    assert listed["items"][0]["opportunity_title"] == "A later proposal"
 
 
 def test_policy_changes_between_authorization_and_execution_refuse_write(client, monkeypatch, tmp_path):

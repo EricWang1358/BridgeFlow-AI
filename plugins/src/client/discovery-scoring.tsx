@@ -6,7 +6,7 @@ type Axis = { title: string; unit: string; minimum: string; maximum: string; spl
 type Policy = { id: string; version: number; fingerprint: string; declared_by: string; declaration_ref: string; effort: Axis; value: Axis }
 type Rating = { score?: string | null; rationale: string; references: Ref[] }
 type Coordinates = { effort: { score: string; normalized: string; side: string }; value: { score: string; normalized: string; side: string } }
-export type Score = { id: string; project_id: string; opportunity_id: string; opportunity_version: number; seq: number; version: number; policy_fingerprint: string; effort: Rating | null; value: Rating | null; actor?: string; coordinates: Coordinates | null; not_plotted_reasons: string[] }
+export type Score = { id: string; project_id: string; opportunity_id: string; opportunity_title?: string; opportunity_version: number; seq: number; version: number; policy_fingerprint: string; effort: Rating | null; value: Rating | null; actor?: string; coordinates: Coordinates | null; not_plotted_reasons: string[] }
 const reasons: Record<string, [string, string]> = {
   candidate_or_evidence_revised: ['候选或依据已修订', 'Candidate or evidence revised'],
   policy_revised: ['量表已改变', 'Policy changed'],
@@ -64,15 +64,7 @@ export function ScoreBoard({ project, onEdit }: { project: string; onEdit: (scor
   const { language, t } = useUI(), zh = language === 'zh'
   const [page, setPage] = useState<{ items: Score[]; total: number; has_more: boolean } | null>(null), [policy, setPolicy] = useState<Policy | null>(null)
   const [offset, setOffset] = useState(0), [revision, setRevision] = useState(0), [error, setError] = useState(''), [selected, setSelected] = useState<Score | null>(null)
-  // Points are labelled with the candidate's title; the id stays in the list and the evidence.
-  const [titles, setTitles] = useState<Record<string, string>>({})
-  useEffect(() => {
-    const abort = new AbortController()
-    void api<{ items: { id: string; title?: string }[] }>(`/discovery/${project}/opportunity?offset=0&limit=50`, { signal: abort.signal })
-      .then(list => setTitles(Object.fromEntries(list.items.map(item => [item.id, item.title || item.id])))).catch(() => setTitles({}))
-    return () => abort.abort()
-  }, [project, revision])
-  const titled = (id: string) => { const name = titles[id] || id; return name.length > 18 ? `${name.slice(0, 17)}…` : name }
+  const titled = (score: Score) => { const name = score.opportunity_title || score.opportunity_id; return name.length > 18 ? `${name.slice(0, 17)}…` : name }
   useEffect(() => {
     const abort = new AbortController(); setPage(null); setPolicy(null); setSelected(null); setError('')
     void Promise.all([api<Policy>(`/discovery/${project}/scoring-policy`, { signal: abort.signal }), api<{ items: Score[]; total: number; has_more: boolean }>(`/discovery/${project}/score?offset=${offset}&limit=50`, { signal: abort.signal })]).then(([p, list]) => { setPolicy(p); setPage(list) }).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
@@ -83,10 +75,10 @@ export function ScoreBoard({ project, onEdit }: { project: string; onEdit: (scor
     catch (e) { setError(describeError(e, t)) }
   }
   const split = (axis: Axis) => (Number(axis.split) - Number(axis.minimum)) / (Number(axis.maximum) - Number(axis.minimum))
-  return <section data-tour-id="quadrant-chart" aria-label={zh ? '评分四象限' : 'Rating quadrants'}><h3>{zh ? '评分四象限' : 'Rating quadrants'}</h3><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button>
+  return <section aria-label={zh ? '评分四象限' : 'Rating quadrants'}><h3>{zh ? '评分四象限' : 'Rating quadrants'}</h3><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button>
     <p>{zh ? '只画出当前量表下依据齐全的评分；点的位置只是参考，立项要另行决定。重叠的点可以从列表里分别打开。' : 'Only complete scores under the current scale are plotted. A point\'s position is guidance; the project is decided separately. Open overlapping points from the list.'}</p>
     {error && <p role="alert">{error}</p>}{policy && page && <><PolicyView policy={policy} />
-      <svg role="img" aria-label={zh ? '投入与价值四象限' : 'Effort and value quadrants'} viewBox="0 0 400 340" style={{ width: '100%' }}>
+      <div data-tour-id="quadrant-chart"><svg role="img" aria-label={zh ? '投入与价值四象限' : 'Effort and value quadrants'} viewBox="0 0 400 340" style={{ width: '100%' }}>
         <rect x="45" y="25" width="320" height="270" fill="none" stroke="currentColor" />
         <path d={`M ${45 + split(policy.effort) * 320} 25 V 295 M 45 ${295 - split(policy.value) * 270} H 365`} stroke="#94a3b8" strokeDasharray="5 4" />
         <text x="200" y="326" textAnchor="middle" fontSize="12" fill="currentColor">{policy.effort.title} →</text><text x="45" y="16" fontSize="12" fill="currentColor">{policy.value.title} ↑</text>
@@ -97,8 +89,12 @@ export function ScoreBoard({ project, onEdit }: { project: string; onEdit: (scor
         <text x="45" y="310" fontSize="10" className="bf-quadrant-label">{policy.effort.minimum}</text><text x="365" y="310" textAnchor="end" fontSize="10" className="bf-quadrant-label">{policy.effort.maximum}</text>
         <text x="40" y="295" textAnchor="end" fontSize="10" className="bf-quadrant-label">{policy.value.minimum}</text><text x="40" y="30" textAnchor="end" fontSize="10" className="bf-quadrant-label">{policy.value.maximum}</text>
         {page.items.filter(s => s.coordinates && s.policy_fingerprint === policy.fingerprint).map(s => <circle key={s.id} role="button" tabIndex={0} aria-label={`${s.opportunity_id} · ${s.id}`} cx={45 + Number(s.coordinates!.effort.normalized) * 320} cy={295 - Number(s.coordinates!.value.normalized) * 270} r="7" className="bf-quadrant-dot" onClick={() => void select(s)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void select(s) } }}><title>{s.id}: {s.coordinates!.effort.score}, {s.coordinates!.value.score}</title></circle>)}
-        {page.items.filter(s => s.coordinates && s.policy_fingerprint === policy.fingerprint).map(s => <text key={`l${s.id}`} x={45 + Number(s.coordinates!.effort.normalized) * 320 + 11} y={295 - Number(s.coordinates!.value.normalized) * 270 + 4} fontSize="11" className="bf-quadrant-name">{titled(s.opportunity_id)}</text>)}
-      </svg>
+        {page.items.filter(s => s.coordinates && s.policy_fingerprint === policy.fingerprint).map(s => {
+          const x = 45 + Number(s.coordinates!.effort.normalized) * 320
+          const right = Number(s.coordinates!.effort.normalized) > .5
+          return <text key={`l${s.id}`} x={x + (right ? -11 : 11)} y={295 - Number(s.coordinates!.value.normalized) * 270 + 4} textAnchor={right ? 'end' : 'start'} fontSize="11" className="bf-quadrant-name">{titled(s)}</text>
+        })}
+      </svg></div>
       <p>{zh ? '评分总数' : 'Total ratings'}: {page.total} · {zh ? '当前页' : 'Page'} {Math.floor(offset / 50) + 1}</p>
       <ul>{page.items.map(s => <li key={s.id}><button onClick={() => void select(s)}>{s.opportunity_id} · {s.id} · v{s.version}</button>{(!s.coordinates || s.policy_fingerprint !== policy.fingerprint) && <span> {zh ? '未落点：' : 'Not plotted: '}{s.policy_fingerprint !== policy.fingerprint ? (zh ? '量表已改变' : 'Policy changed') : s.not_plotted_reasons.map(reason => reasons[reason]?.[zh ? 0 : 1] ?? reason).join('; ')}</span>}</li>)}</ul>
       <button disabled={!offset} onClick={() => setOffset(n => Math.max(0, n - 50))}>{zh ? '上一页' : 'Previous'}</button><button disabled={!page.has_more} onClick={() => setOffset(n => n + 50)}>{zh ? '下一页' : 'Next'}</button>

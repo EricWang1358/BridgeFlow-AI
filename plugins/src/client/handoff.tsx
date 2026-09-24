@@ -5,6 +5,7 @@ import { Chip } from './workspace.tsx'
 import { tourEvent } from './tour/state.ts'
 import { WorkflowFlow } from './workflow-flow.tsx'
 import { WorkflowScopeCard, WorkflowTimeline } from './workflow-scope.tsx'
+import { useGuestMode } from './guest.tsx'
 
 /**
  * Template filling and handoff, as people see it (#144, #145).
@@ -38,6 +39,8 @@ type Finding = { rule: string; category: string; scope: Record<string, string>; 
 
 export function Handoff() {
   const { t, paren } = useUI()
+  const guest = useGuestMode()
+  const modelOff = guest.guest && !guest.llm
   const [rows, setRows] = useState<Row[] | null>(null), [catalogue, setCatalogue] = useState<Catalogue | null>(null)
   const [findings, setFindings] = useState<Finding[]>([]), [draft, setDraft] = useState<Draft | null>(null)
   const [selected, setSelected] = useState(''), [error, setError] = useState(''), [revision, setRevision] = useState(0)
@@ -106,6 +109,7 @@ export function Handoff() {
     {error && <p role="alert" className="bf-error">{error}</p>}
     {!rows && !error && <p role="status" className="bf-loading">{t('loading')}</p>}
     <WorkflowScopeCard revision={revision} onChanged={() => setRevision(n => n + 1)} />
+    {modelOff && rows?.some(row => next(row)) && <p className="bf-hint" role="status">{t('guestModelActionUnavailable')}</p>}
     {rows && !rows.length && <p className="bf-hint">{t('handoffEmpty')}</p>}
     <WorkflowFlow counts={counts} overdue={overdue} />
     {rows && !rows.length && <div className="bf-notebook-empty"><p>{t('handoffEmptyHelp')}</p>
@@ -120,7 +124,7 @@ export function Handoff() {
           {t(row.overdue_hours > 0 ? 'overdueBy' : 'dueIn').replaceAll('{h}', String(Math.abs(Math.round(row.overdue_hours))))}</span>}</div>
       <p>{row.summary}</p>
       <span className="bf-hint">{row.business_key.join(' · ')}{row.kind === 'handoff' ? ` · ${row.owner_role}` : ''}</span>
-      {(() => { const step = next(row); return step && <button className="bf-primary" disabled={busy}
+      {(() => { const step = next(row); return step && <button className="bf-primary" disabled={busy || modelOff}
         onClick={() => void run(() => askCaptain(step[1]))}>{t(step[0])}</button> })()}
       {row.kind !== 'partial' && <div className="bf-row-actions">
         <button data-tour-id={i === 0 ? 'workflow-timeline' : undefined} aria-expanded={timeline === row.id} onClick={() => { setTimeline(timeline === row.id ? '' : row.id); tourEvent('workflowTimeline', '') }}>{t('timeline')}</button>

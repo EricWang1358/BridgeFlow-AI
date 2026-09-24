@@ -1,5 +1,5 @@
 import { Discovery } from './discovery.tsx'
-import { SampleCases } from './sample-cases.tsx'
+import { SampleCases, useDemoCase } from './sample-cases.tsx'
 import { TourDriver, TourHelpButton, TourLayer } from './tour/tour.tsx'
 import { tourEvent } from './tour/state.ts'
 import { notebookKinds, notebookPurposes, isNotebookKind } from '../notebook-capabilities.ts'
@@ -26,6 +26,7 @@ import { shellStyle } from './shell-style.ts'
 
 type Source = { id: string; filename: string; sheet: string; preview_available: boolean; total?: number; sha256?: string }
 type Artifact = { report_id: string; period: string; status: string; created_at: number; kind?: string }
+type BatchData = { batchId: string; summary: Summary; sources: Source[]; artifacts: Artifact[]; artifactTotal: number }
 type Preview = { filename: string; sheet: string; sha256: string; columns: string[]; rows: unknown[][]; row_numbers?: number[]; total: number; offset: number }
 const emptyWindow: SessionEventWindow = { entries: [], hasMore: false, revision: 0, change: { kind: 'replace', entries: [] } }
 const viewportSubscribe = (fn: () => void) => { window.addEventListener('resize', fn); return () => window.removeEventListener('resize', fn) }
@@ -41,12 +42,19 @@ function Shell({ ctx }: { ctx: Context }) {
   const hash = useSyncExternalStore(hashSubscribe, () => location.hash)
   const selected = useMemo(() => route(), [hash])
   const batchId = selected.batch || String(audit.review?.batch_id ?? '')
-  const [summary, setSummary] = useState<Summary | null>(null), [sources, setSources] = useState<Source[]>([])
-  const [artifacts, setArtifacts] = useState<Artifact[]>([]), [artifactTotal, setArtifactTotal] = useState(0), [artifactOffset, setArtifactOffset] = useState(0)
+  const [batchData, setBatchData] = useState<BatchData | null>(null)
+  const currentData = batchData?.batchId === batchId ? batchData : null
+  const summary = currentData?.summary ?? null, sources = currentData?.sources ?? []
+  const artifacts = currentData?.artifacts ?? [], artifactTotal = currentData?.artifactTotal ?? 0
+  const sampleCase = useDemoCase(summary?.demo_case ?? '')
+  const [artifactOffset, setArtifactOffset] = useState(0)
   const [error, setError] = useState(''), [revision, setRevision] = useState(0), [busy, setBusy] = useState(false)
   const [preview, setPreview] = useState<Preview | null>(null), [report, setReport] = useState<Review | null>(null), [offset, setOffset] = useState(0)
   const [panel, setPanel] = useState(''), [copied, setCopied] = useState(false)
   const navigation = useNativeSidebar(ctx), notebook = useNotebook(ctx, selected, batchId)
+  // Opening a sample or restoring a notebook may still replace its route. Keep Studio
+  // navigation idle until that transition is complete, so a fast click is not lost.
+  const notebookSwitching = notebook.busy || !notebook.loaded
   const [expanded, setExpanded] = useState(false)
   // These pages were drawn at a working width; the studio column is 300–460px. A reader who
   // says "wide" once should not have to say it again, so the choice is remembered — and it
@@ -69,12 +77,14 @@ function Shell({ ctx }: { ctx: Context }) {
   const importer = useRef<HTMLDialogElement>(null), viewer = useRef<HTMLDialogElement>(null), feishuUploader = useRef<HTMLDialogElement>(null)
   const [feishuNotice, setFeishuNotice] = useState('')
   // One count for the tasks destination, read from the same projection its page shows.
-  const [openItems, setOpenItems] = useState(0)
+  const [openItemsResult, setOpenItemsResult] = useState({ batchId: '', total: 0 })
+  const openItems = openItemsResult.batchId === batchId ? openItemsResult.total : 0
   useEffect(() => {
-    if (!summary?.period) { setOpenItems(0); return }
+    if (!summary?.period) { setOpenItemsResult({ batchId: '', total: 0 }); return }
     const controller = new AbortController()
-    void api<{ total: number }>(`/monthly/inbox?period=${encodeURIComponent(summary.period)}`, { signal: controller.signal })
-      .then(value => setOpenItems(value.total)).catch(() => setOpenItems(0))
+    void api<{ total: number }>(`/monthly/inbox?period=${encodeURIComponent(summary.period)}&batch_id=${encodeURIComponent(batchId)}`, { signal: controller.signal })
+      .then(value => setOpenItemsResult({ batchId, total: value.total }))
+      .catch(() => { if (!controller.signal.aborted) setOpenItemsResult({ batchId, total: 0 }) })
     return () => controller.abort()
   }, [summary?.period, batchId, revision])
   useEffect(() => {
@@ -91,14 +101,14 @@ function Shell({ ctx }: { ctx: Context }) {
   useEffect(() => { setOffset(0); setPreview(null); setReport(null); }, [batchId, selected.source, selected.report])
   useEffect(() => { setArtifactOffset(0); setCopied(false); setFeishuNotice('') }, [batchId])
   useEffect(() => {
-    setSummary(null); setSources([]); setArtifacts([]); setArtifactTotal(0); setError('')
+    setBatchData(null); setError('')
     if (!batchId) return
     const controller = new AbortController(), signal = controller.signal
     void Promise.all([
       api<Summary>(`/batches/${batchId}`, { signal }),
       api<{ sources: Source[] }>(`/batches/${batchId}/sources`, { signal }),
       api<{ artifacts: Artifact[]; total: number }>(`/batches/${batchId}/artifacts?offset=${artifactOffset}`, { signal }),
-    ]).then(([batch, files, outputs]) => { setSummary(batch); setSources(files.sources); setArtifacts(outputs.artifacts); setArtifactTotal(outputs.total) })
+    ]).then(([batch, files, outputs]) => { setBatchData({ batchId, summary: batch, sources: files.sources, artifacts: outputs.artifacts, artifactTotal: outputs.total }) })
       .catch(e => { if (!signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
   }, [batchId, revision, audit.review?.status, audit.review?.report_id, artifactOffset])
@@ -131,7 +141,7 @@ function Shell({ ctx }: { ctx: Context }) {
           onImport={() => importer.current?.showModal()} onRefresh={() => setRevision(n => n + 1)} />
       : selected.view === 'records' && batchId
         ? <RecordsView batchId={batchId} summary={summary} artifacts={artifacts} language={language} />
-        : selected.view === 'overview' ? <Overview batchId={batchId} /> : selected.view === 'discovery' ? <Discovery /> : selected.view === 'quotation' ? <Quotation /> : selected.view === 'handoff' ? <Handoff /> : selected.view === 'integration' && batchId ? <MasterTable batchId={batchId} /> : selected.view === 'brief' && batchId ? <MonthlyBrief batchId={batchId} /> : preview ? <section aria-label={t('sourcePreview')}>
+        : selected.view === 'overview' ? <Overview key={batchId} batchId={batchId} /> : selected.view === 'discovery' ? <Discovery /> : selected.view === 'quotation' ? <Quotation /> : selected.view === 'handoff' ? <Handoff /> : selected.view === 'integration' && batchId ? <MasterTable batchId={batchId} /> : selected.view === 'brief' && batchId ? <MonthlyBrief key={batchId} batchId={batchId} /> : preview ? <section aria-label={t('sourcePreview')}>
     <h3>{preview.filename}</h3><p className="bf-hint">{t('parsedOriginal')} {preview.sheet}</p>
     <div className="bf-source-table"><table><thead><tr><th>{t('sourceRow')}</th>{preview.columns.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>
       <tbody>{preview.rows.map((row, i) => <tr key={preview.offset + i}><th>{preview.row_numbers?.[i] ?? preview.offset + i + 2}</th>{row.map((cell, j) => <td key={j}>{cell === null ? '—' : String(cell)}</td>)}</tr>)}</tbody></table></div>
@@ -175,14 +185,18 @@ function Shell({ ctx }: { ctx: Context }) {
     <aside className="bf-shell-pane bf-shell-sources bf-state" data-mobile-open={panel === 'sources'} aria-label={t('sources')}>
       <header><h2>{t('sources')}</h2><button className="bf-mobile-close" onClick={() => setPanel('')}>{t('close')}</button></header>
       <div className="bf-shell-scroll"><GuestBanner /><label className="bf-notebook-purpose">{t('notebookKind')}<select disabled={notebook.busy || !notebook.loaded} value={notebook.kind} onChange={e=>{if(isNotebookKind(e.target.value))notebook.setKind(e.target.value)}}>{notebookKinds.map(kind=><option key={kind} value={kind}>{t(notebookPurposes[kind].label)}</option>)}</select></label><p className="bf-hint">{t('notebookPurposeHelp')}</p><button className="bf-add-source" onClick={() => importer.current?.showModal()}>＋ {t('addSources')}</button>
-        <p className="bf-hint">{t('sourceUploadHelp')}</p>{summary?.demo_case && <p className="bf-sample-notice">{t('sampleNotebookTitle')} · {t('sampleNotebookHelp')}</p>}
+        <p className="bf-hint">{t('sourceUploadHelp')}</p>
+        <button data-tour-id="sample" disabled={notebook.busy || !notebook.loaded} onClick={() => notebook.sample()}>{t('sampleNotebook')}</button>
+        <SampleCases key={batchId} disabled={notebook.busy || !notebook.loaded} open={(id, title) => notebook.sample(id, title)} />
+        {summary?.demo_case && <p className="bf-sample-notice" role="note">
+          <strong>{t('sampleNotebookTitle')}</strong><br/>
+          {sampleCase ? <>{t('sampleCaseLabel')} · {sampleCase.title[language === 'zh' ? 0 : 1]}{language === 'zh' ? '。' : '. '}{sampleCase.summary[language === 'zh' ? 0 : 1]}</> : t('sampleNotebookHelp')}
+        </p>}
         {summary && <div className="bf-source-batch"><span>{summary.period}</span><Chip status={summary.status}/><button title={batchId} onClick={() => void navigator.clipboard.writeText(batchId).then(() => setCopied(true)).catch(e => setError(describeError(e, t)))}>{t(copied ? 'copied' : 'copyId')}</button><code>{batchId}</code></div>}
         <ul className="bf-resource-list">{sources.map(source => <li key={source.id}><button aria-pressed={selected.source === source.id && selected.view === 'source'} onClick={() => openSource(source)} disabled={!source.preview_available}>
           <span className="bf-file-icon" aria-hidden="true">▤</span><span><strong title={source.filename}>{source.filename}</strong><small>{t(source.id)} · {source.preview_available ? `${source.total} ${t('rows')}` : t('originalUnavailable')}</small></span><span aria-hidden="true">↗</span>
         </button></li>)}</ul>
-        {!sources.length && <div className="bf-shell-empty"><span aria-hidden="true">▤</span><strong>{t('emptySources')}</strong><p>{t('emptySourcesHelp')}</p><p>{t('sampleNotebookHelp')}</p></div>}
-        <button data-tour-id="sample" disabled={notebook.busy || !notebook.loaded} onClick={() => notebook.sample()}>{t('sampleNotebook')}</button>
-        <SampleCases disabled={notebook.busy || !notebook.loaded} open={(id, title) => notebook.sample(id, title)} />
+        {!sources.length && <div className="bf-shell-empty"><span aria-hidden="true">▤</span><strong>{t('emptySources')}</strong><p>{t('emptySourcesHelp')}</p><p>{t('sampleNotebookPrompt')}</p></div>}
         <details className="bf-existing"><summary>{t('existing')}</summary><form onSubmit={e => { e.preventDefault(); const form = new FormData(e.currentTarget); navigate({ batch: String(form.get('batch')), view: 'tasks' }) }}><input name="batch" aria-label={t('batchId')} pattern="[a-f0-9]{32}" required/><button>{t('open')}</button></form></details>
       </div>
     </aside>
@@ -192,19 +206,19 @@ function Shell({ ctx }: { ctx: Context }) {
         <div className="bf-studio-tools" aria-label={t('tools')}>
           {/* Four destinations, named after what a person is doing, not after our modules.
               Everything that used to have two entries now has exactly one, inside one of these. */}
-          <button data-span="all" data-tone="blue" aria-pressed={selected.view === 'overview'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'overview' })}><span aria-hidden="true">▦</span><span>{t('overview')}</span><span aria-hidden="true">›</span></button>
-          <button data-tour-id="state-open" data-tone="pink" aria-pressed={selected.view === 'tasks'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'tasks' })}><span aria-hidden="true">◷</span><span>{t('monthlyTasks')}</span><span className="bf-badge">{openItems}</span><span aria-hidden="true">›</span></button>
-          <button data-tone="blue" aria-pressed={selected.view === 'data'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'data' })}><span aria-hidden="true">▤</span><span>{t('dataWorkspace')}</span><span aria-hidden="true">›</span></button>
-          <button data-tone="green" aria-pressed={selected.view === 'brief'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'brief' })}><span aria-hidden="true">◎</span><span>{t('monthlyBrief')}</span><span aria-hidden="true">›</span></button>
-          <button data-tone="teal" aria-pressed={selected.view === 'records'} disabled={!summary} onClick={() => navigate({ batch: batchId, view: 'records' })}><span aria-hidden="true">⇄</span><span>{t('records')}</span><span aria-hidden="true">›</span></button>
+          <button data-span="all" data-tone="blue" aria-pressed={selected.view === 'overview'} disabled={notebookSwitching} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'overview' })}><span aria-hidden="true">▦</span><span>{t('overview')}</span><span aria-hidden="true">›</span></button>
+          <button data-tour-id="state-open" data-tone="pink" aria-pressed={selected.view === 'tasks'} disabled={!summary || notebookSwitching} onClick={() => navigate({ batch: batchId, view: 'tasks' })}><span aria-hidden="true">◷</span><span>{t('monthlyTasks')}</span><span className="bf-badge">{openItems}</span><span aria-hidden="true">›</span></button>
+          <button data-tone="blue" aria-pressed={selected.view === 'data'} disabled={!summary || notebookSwitching} onClick={() => navigate({ batch: batchId, view: 'data' })}><span aria-hidden="true">▤</span><span>{t('dataWorkspace')}</span><span aria-hidden="true">›</span></button>
+          <button data-tone="green" aria-pressed={selected.view === 'brief'} disabled={!summary || notebookSwitching} onClick={() => navigate({ batch: batchId, view: 'brief' })}><span aria-hidden="true">◎</span><span>{t('monthlyBrief')}</span><span aria-hidden="true">›</span></button>
+          <button data-tone="teal" aria-pressed={selected.view === 'records'} disabled={!summary || notebookSwitching} onClick={() => navigate({ batch: batchId, view: 'records' })}><span aria-hidden="true">⇄</span><span>{t('records')}</span><span aria-hidden="true">›</span></button>
           <div className="bf-studio-group">{t('otherWorkspaces')}</div>
-          <button data-tour-id="quotation-open" data-secondary="true" data-tone="gold" aria-pressed={selected.view === 'quotation'} onClick={() => { navigate({ ...(batchId ? { batch: batchId } : {}), view: 'quotation' }); window.dispatchEvent(new Event('bridgeflow:quotation-opened')) }}><span aria-hidden="true">▧</span><span>{t('quotationWorkspace')}</span><span aria-hidden="true">›</span></button>
-          <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'discovery'} onClick={() => navigate({ view: 'discovery' })}><span aria-hidden="true">▥</span><span>{t('discoveryWorkspace')}</span><span aria-hidden="true">›</span></button>
-          <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'handoff'} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'handoff' })}><span aria-hidden="true">⇄</span><span>{t('handoffWorkspace')}</span><span aria-hidden="true">›</span></button>
+          <button data-tour-id="quotation-open" data-secondary="true" data-tone="gold" aria-pressed={selected.view === 'quotation'} disabled={notebookSwitching} onClick={() => { navigate({ ...(batchId ? { batch: batchId } : {}), view: 'quotation' }); window.dispatchEvent(new Event('bridgeflow:quotation-opened')) }}><span aria-hidden="true">▧</span><span>{t('quotationWorkspace')}</span><span aria-hidden="true">›</span></button>
+          <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'discovery'} disabled={notebookSwitching} onClick={() => navigate({ view: 'discovery' })}><span aria-hidden="true">▥</span><span>{t('discoveryWorkspace')}</span><span aria-hidden="true">›</span></button>
+          <button data-secondary="true" data-tone="teal" aria-pressed={selected.view === 'handoff'} disabled={notebookSwitching} onClick={() => navigate({ ...(batchId ? { batch: batchId } : {}), view: 'handoff' })}><span aria-hidden="true">⇄</span><span>{t('handoffWorkspace')}</span><span aria-hidden="true">›</span></button>
         </div>
         {!summary && <p className="bf-hint">{t('studioStartHelp')}</p>}
         {(error || notebook.error) && <p role="alert" className="bf-error">{error || notebook.error}{notebook.error && <button onClick={notebook.retry}>{t('refresh')}</button>}</p>}
-        {viewing && <section key={`${selected.view}:${selected.report ?? ''}:${selected.source ?? ''}`} className="bf-inline-preview" aria-label={t('preview')}><header><h3>{t('preview')}</h3>
+        {viewing && <section key={`${batchId}:${selected.view}:${selected.report ?? ''}:${selected.source ?? ''}`} className="bf-inline-preview" aria-label={t('preview')}><header><h3>{t('preview')}</h3>
           <button aria-pressed={wide} title={t('wideReadingHelp')} onClick={() => setWideReading(!wide)}>{t('wideReading')}</button>
           <button onClick={() => { setExpanded(true); viewer.current?.showModal() }}>{t('expandPreview')}</button>
           <button onClick={closePreview}>{t('close')}</button></header>

@@ -1,9 +1,23 @@
 import { useState } from 'react'
 import { CloseChecklist, OpenItemInbox } from './checklist.tsx'
 import { WorkflowProgress } from './workflow-progress.tsx'
-import { describeError, startReview, useUI, type Summary } from './ui.ts'
+import { describeError, navigate, startReview, useUI, type Summary } from './ui.ts'
 import { Explain } from './explain.tsx'
+import { useGuestMode } from './guest.tsx'
+import { useDemoCase } from './sample-cases.tsx'
 import type { projectAudit } from './audit.ts'
+
+function DemoCaseGuide({ caseId, batchId }: { caseId: string; batchId: string }) {
+  const { t, language } = useUI()
+  const sample = useDemoCase(caseId)
+  if (!sample) return null
+  const pick = (pair: [string, string]) => pair[language === 'zh' ? 0 : 1]
+  return <div className="bf-callout bf-demo-guide" data-tone="info" role="note">
+    <h3>{t('sampleCaseLabel')} · {pick(sample.title)}</h3>
+    <p>{pick(sample.summary)}</p>
+    <button onClick={() => navigate({ batch: batchId, view: 'data' })}>{t('sampleCaseOpenData')}</button>
+  </div>
+}
 
 /**
  * 本月任务 — the one page that answers "what is still on me this month" (E14-UC01 + E14-UC05).
@@ -24,18 +38,23 @@ export function TasksView({ batchId, summary, audit, savedReportStatus, notebook
   onRefresh: () => void
 }) {
   const { t } = useUI()
+  const guest = useGuestMode()
   const [focus, setFocus] = useState('')
   const [busy, setBusy] = useState(false), [error, setError] = useState('')
   if (!summary) return <p className="bf-hint">{t('studioStartHelp')}</p>
+  const reviewReady = summary.status === 'ready'
   return <section className="bf-tasks" aria-label={t('closeChecklist')}>
     <div className="bf-card-head">
       <h3>{t('monthlyTasks')} · {summary.period}</h3>
-      <button className="bf-primary" disabled={busy} onClick={async () => {
+      <button className="bf-primary" disabled={busy || !reviewReady || (guest.guest && !guest.llm)} onClick={async () => {
         setError(''); setBusy(true)
         try { await startReview(batchId, summary.period); onRefresh() }
         catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
       }} data-tour-id="review-start">{t(busy ? 'busy' : 'startReview')}</button>
     </div>
+    {summary.demo_case && <DemoCaseGuide caseId={summary.demo_case} batchId={batchId} />}
+    {!reviewReady && <p className="bf-hint" role="status">{t('reviewNeedsReady')}</p>}
+    {reviewReady && guest.guest && !guest.llm && <p className="bf-hint" role="status">{t('guestReviewUnavailable')}</p>}
     <p className="bf-hint">{t('monthlyTasksHelp')}</p>
     <Explain text={t('how_tasks')} />
     {error && <p role="alert" className="bf-error">{error}</p>}

@@ -7,13 +7,17 @@ import type { ToolCallViewProps } from '@deepseek-ai/dsh-client-ui-tool/client'
 import type { ComposerChainProps, InputZone } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { MappingApproval } from './approval.tsx'
 import { BusinessReview, type Review } from './review.tsx'
-import { configureRuntime, navigate, openSession, reportRouteError, route, useUI } from './ui.ts'
+import { api, configureRuntime, navigate, openSession, reportRouteError, route, useUI, type Summary } from './ui.ts'
 import { DataWorkspace } from './workspace.tsx'
 import { QuotationButton } from './quotation.tsx'
+import { useDemoCase } from './sample-cases.tsx'
 import { mountShell } from './shell.tsx'
 import { mountState } from './state.tsx'
 import { motion } from './motion.ts'
 import { style } from './style.ts'
+
+const subscribeHash = (fn: () => void) => { window.addEventListener('hashchange', fn); return () => window.removeEventListener('hashchange', fn) }
+const selectedBatch = () => route().batch ?? ''
 
 /**
  * What this product is, and what to do first.
@@ -28,14 +32,42 @@ import { style } from './style.ts'
  * already is, and it renders only while the session is blank.
  */
 function Orientation({ session, input }: InputZone) {
-  const { t } = useUI()
+  const { t, language } = useUI()
   const steps = [1, 2, 3, 4] as const
   // Orientation is for somebody who has not started. `blank` alone is not that
   // test: a session stays blank until its first durable event, so the card sat
   // there while the user was already typing their request into the box below it.
   // Anything drafted, queued or in flight means they have started.
-  const started = !session.blank || input.draft.trim() || input.queue.length || input.phase !== 'plain'
+  const started = Boolean(!session.blank || input.draft.trim() || input.queue.length || input.phase !== 'plain')
+  const batchId = useSyncExternalStore(subscribeHash, selectedBatch)
+  const [loaded, setLoaded] = useState<{ batchId: string; summary: Summary } | null>(null)
+  useEffect(() => {
+    setLoaded(null)
+    if (!batchId || started) return
+    const controller = new AbortController()
+    void api<Summary>(`/batches/${batchId}`, { signal: controller.signal })
+      .then(summary => setLoaded({ batchId, summary }))
+      .catch(() => { /* Tasks shows the read error; this card still gives a safe next step. */ })
+    return () => controller.abort()
+  }, [batchId, started])
+  const summary = loaded?.batchId === batchId ? loaded.summary : null
+  const sample = useDemoCase(summary?.demo_case ?? '')
   if (started) return null
+  if (batchId) {
+    const pick = (pair: [string, string]) => pair[language === 'zh' ? 0 : 1]
+    return <aside className="bf-hero bf-loaded-hero" aria-label={t('heroLoadedTitle')}>
+      <h4 className="bf-flow-title">{sample ? `${t('sampleCaseLabel')} · ${pick(sample.title)}` : t('heroLoadedTitle')}</h4>
+      <div className="bf-loaded-summary">{sample ? pick(sample.summary) : summary?.demo_case ? t('sampleNotebookHelp') : t('heroLoadedLead')}</div>
+      <ol className="bf-flow">
+        <li data-actor="person"><span className="bf-flow-actor">{t('heroLoadedActor')}</span><b>{t('heroLoadedStep1')}</b><span>{t('heroLoadedStep1Hint')}</span></li>
+        <li data-actor="rules"><span className="bf-flow-actor">{t('heroLoadedActor')}</span><b>{t('heroLoadedStep2')}</b><span>{t('heroLoadedStep2Hint')}</span></li>
+      </ol>
+      <div className="bf-actions" style={{ marginBottom: 0 }}>
+        <button className="bf-primary" onClick={() => navigate({ batch: batchId, view: 'tasks' })}>{t('monthlyTasks')}</button>
+        <button onClick={() => navigate({ batch: batchId, view: 'data' })}>{t('dataWorkspace')}</button>
+      </div>
+    </aside>
+  }
   return <aside className="bf-hero" aria-label={t('heroTitle')}>
     <h3>{t('heroTitle')}</h3>
     <p className="bf-lead bf-hint">{t('heroLead')}</p>
@@ -72,7 +104,8 @@ const APPROVAL_CARD_TOOLS = new Set(['confirm_mapping', 'confirm_column_match', 
 
 function Welcome() {
   const { t } = useUI()
-  return <div className="bf-welcome"><span aria-hidden="true">✦</span><h2>{t('welcomeTitle')}</h2><p>{t('welcomeHelp')}</p></div>
+  const batchId = useSyncExternalStore(subscribeHash, selectedBatch)
+  return <div className="bf-welcome"><span aria-hidden="true">✦</span><h2>{t(batchId ? 'welcomeLoadedTitle' : 'welcomeTitle')}</h2><p>{t(batchId ? 'welcomeLoadedHelp' : 'welcomeHelp')}</p></div>
 }
 
 function ToolCard({ block, toolName, inspect }: ToolCallViewProps) {

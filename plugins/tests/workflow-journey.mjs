@@ -96,6 +96,27 @@ try {
   assert.equal(await page.locator('.bf-pipeline > li[data-active=true]').count(), 2)
   await shot('02-sample-loaded')
 
+  // A guest with AI off can browse the sample, but captain actions must not appear runnable.
+  if (!live) {
+    const guestPage = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: 'en-US' })
+    guestPage.on('pageerror', e => errors.push(e.message))
+    await guestPage.route('**/bridgeflow/config', async route => {
+      const response = await route.fetch()
+      await route.fulfill({ response, json: { ...await response.json(), guestMode: true, guestLlm: false } })
+    })
+    await guestPage.goto(match[1])
+    await switchLanguage(guestPage, 'English')
+    await guestPage.getByRole('complementary', { name: 'Studio', exact: true }).getByRole('button', { name: 'Filling & handoff', exact: true }).click()
+    await guestPage.getByText('AI chat is off in this guest demo, so the captain cannot take this step.', { exact: false }).first().waitFor()
+    assert.equal(await guestPage.getByRole('region', { name: 'Workflow scope' }).getByRole('button', { name: 'Ask the captain to accept this scope' }).isDisabled(), true)
+    assert.equal(await guestPage.getByRole('button', { name: 'Ask the captain to submit for approval' }).first().isDisabled(), true)
+    await guestPage.locator('.bf-pipeline > li[data-active=true]').first().waitFor()
+    await guestPage.getByRole('region', { name: 'Workflow scope' }).scrollIntoViewIfNeeded()
+    await wait(450)
+    await guestPage.screenshot({ path: `${evidence}/02b-guest-sample.png` })
+    await guestPage.close()
+  }
+
   // Every record keeps its own timeline: what happened, when, by whom.
   await page.locator('article.bf-source-item').first().getByRole('button', { name: 'Timeline', exact: true }).click()
   await page.locator('.bf-timeline > li').first().waitFor()

@@ -42,6 +42,7 @@ body[data-bf-notebook] .bf-hero { box-sizing: border-box; width: 100%; backgroun
 body[data-bf-notebook] .bf-hero > h3, body[data-bf-notebook] .bf-hero > p { display: none }
 .bf-hero details { margin: 14px 0; font-size: 12px; color: var(--bf-shell-muted) }
 .bf-flow-title { margin: 18px 0 12px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--bf-shell-muted) }
+.bf-loaded-summary { max-width: 520px; margin: 0 0 18px; color: var(--bf-shell-muted); font-size: 13px; line-height: 1.6 }
 .bf-flow { list-style: none; margin: 0 0 22px; padding: 0; counter-reset: bf-flow; max-width: 520px }
 .bf-flow > li { counter-increment: bf-flow; position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 14px; padding: 0 0 18px; color: var(--bf-shell-text) }
 .bf-flow > li::before { content: counter(bf-flow); grid-column: 1; grid-row: 1 / span 3; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; font-size: 12px; font-weight: 700; background: var(--bf-flow-tone-soft); color: var(--bf-flow-tone) }

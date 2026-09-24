@@ -13,6 +13,7 @@ This README is a guided walkthrough. Follow it top to bottom and you will have t
 one review completed end to end, and one mapping decision recorded, on a machine you have never used
 before. Nothing is assumed beyond "you can open a terminal".
 
+- [Evaluator walkthrough](#evaluator-walkthrough)
 - [What is built today, and what is not](#what-is-built-today-and-what-is-not)
 - [Before you start](#before-you-start)
 - [1 Set up the machine](#1-set-up-the-machine)
@@ -33,9 +34,21 @@ before. Nothing is assumed beyond "you can open a terminal".
 - [16 Worked examples](#16-worked-examples)
 - [Where the real documentation is](#where-the-real-documentation-is)
 
-## Project status (2026-09-23, due 27 September)
+## Evaluator walkthrough
 
-"Offline" means the scripted test model (free and repeatable, used for regression); "real model" means the DeepSeek model configured in `env.sh` (`deepseek-v4-flash` this round). Every number and how to reproduce it is in [`docs/00-status.md`](docs/00-status.md); evidence files are in `docs/evidence/`.
+BridgeFlow demonstrates a concrete supplier whose Production, Procurement, Finance and Marketing teams keep separate spreadsheets. It combines their records under declared rules, leaves disagreements for a person to decide, and lets you trace a number back to its source. All cases below are fictional. You can explore the files, checks and guided tours without a model key.
+
+1. Open **Help & guided tours → First task · combine & verify** (or **Start guided task** on the welcome card). Follow the guided sample from four files to the combined table, one deliberately mismatched customer name, its source row, a downloaded workbook and a saved notebook.
+2. Under **Sources → More sample cases**, open **Many problems at once**, **A different set of problems** and **All clear**. Each opens its own notebook. The first screen says what the case was designed to show and links to its data. Their open-item totals are 15, 24 and 0 in the current offline run; one planted source problem can produce several downstream checks. The first two need data fixes, so their **Start the review** button is disabled. The clean case is ready for an AI review when a model is configured.
+3. Open **Help & guided tours → Explore · from an idea to a handoff between departments**. This model-free track loads the discovery and workflow samples: material → flow graph → scored idea → approved decision → filling records → handoff timeline → overview. Writes in real use still wait for a person's approval.
+
+The public guest entry requires the server setup in [docs/22 §9e](docs/22-lightsail-deploy.md); until it is enabled, use a demonstrator's session or the local installation below. Guest mode has AI calls off by default: sample data and guided tours work without model charges, and the review button says why it is unavailable. The [evidence and current delivery gates](docs/00-status.md) distinguish offline checks from real-model runs and remaining live setup.
+
+## What is built today, and what is not
+
+Status checked 2026-09-24; delivery is due 27 September.
+
+"Offline" means the scripted test model (free and repeatable, used for regression). The current local real-model route uses Command Code's OpenAI-compatible endpoint with `deepseek/deepseek-v4.1-flash`; earlier evidence in `docs/evidence/` used `deepseek-v4-flash` and is labelled by run. Every measured result and how to reproduce it is in [`docs/00-status.md`](docs/00-status.md).
 
 | Area | Status | Evidence | Still missing |
 | --- | --- | --- | --- |
@@ -54,7 +67,7 @@ before. Nothing is assumed beyond "you can open a terminal".
 | Safety: raw data rows never enter model context (three layers), prompt-injection defence | ✅ Built | Injected cell text reached no model session on the real model; bilingual injection cases | Third-party penetration test |
 | Observability: decision journal, per-run swimlanes with tokens, generated acceptance report 31/31 | ✅ Built | Records page; `test_journal.py` | — |
 | Tool-selection evaluation (real model; first step among ~50 tools) | ✅ 18/18 | Median 3 steps, ~40k tokens. The three earlier misses traced to tool contracts and the persona, not the model, and were fixed there (docs/00) | More cases |
-| Guest mode for people without a Feishu account (e.g. evaluators) | ✅ Built | A separate backend and console with sample data only, reset nightly. No Feishu or portal credentials reach it. The AI model is off unless the operator sets `BRIDGEFLOW_GUEST_LLM=1`. "Continue as guest" on the portal (docs/22 §9e) | Enabling it on the server (a one-time step) |
+| Guest mode for people without a Feishu account (e.g. evaluators) | 🟡 Local guest works; public entry pending | A separate sample-only backend and console, with AI off by default. A local real-guest browser check opened the clean and workflow samples; the portal's "Continue as guest" option is implemented but not enabled publicly ([docs/00](docs/00-status.md)) | Enable and verify the portal entry, TLS, guest service and nightly reset on the server |
 | Model choice | ✅ dsh's own picker | Chooses among operator-configured models; adding providers or keys stays off | — |
 | Deployment: merge triggers tests and deploy, 7 seats | ✅ Live | GitHub Actions | Manual steps such as enabling the console gate (see HANDOFF) |
 | Feishu sheets / wiki / permissions | 🟡 In integration | Metadata and membership reads verified on the real tenant | End-to-end import, large-sheet paging (out of this round) |

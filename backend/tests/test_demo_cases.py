@@ -31,7 +31,26 @@ def load(client, case):
 def test_the_case_list_names_every_case(client):
     cases = client.get("/batches/demo/cases").json()["cases"]
     assert [c["id"] for c in cases] == ["tour", "core", "other", "clean"]
+    assert [c["case_id"] for c in cases] == ["mock-company-2024-07", "demo-core-2024-07", "demo-other-2024-07", "demo-clean-2024-07"]
     assert all(len(c["title"]) == 2 and len(c["summary"]) == 2 for c in cases)
+
+
+def test_monthly_views_stay_bound_to_each_sample_notebook(client):
+    batches = {name: client.post(f"/batches/demo?case={name}").json()["batch_id"]
+               for name in ("core", "other", "clean")}
+    period = "2024-07"
+    inboxes = {name: client.get(f"/monthly/inbox?period={period}&batch_id={batch_id}").json()
+               for name, batch_id in batches.items()}
+    for name, batch_id in batches.items():
+        assert inboxes[name]["batch_id"] == batch_id
+        checklist = client.get(f"/monthly/checklist?period={period}&batch_id={batch_id}").json()
+        assert checklist["batch_id"] == batch_id
+    assert inboxes["core"]["total"] > inboxes["clean"]["total"]
+    assert inboxes["other"]["total"] > inboxes["clean"]["total"]
+    assert client.get(f"/monthly/inbox?period={period}").json()["batch_id"] == batches["clean"]
+    assert client.post("/tools/monthly-inbox", json={"period": period, "batch_id": batches["core"]}).json()["batch_id"] == batches["core"]
+    assert client.post("/tools/monthly-checklist", json={"period": period, "batch_id": batches["other"]}).json()["batch_id"] == batches["other"]
+    assert client.get(f"/monthly/inbox?period=2024-06&batch_id={batches['core']}").status_code == 422
 
 
 def test_the_core_case_shows_many_problems_at_once(client):

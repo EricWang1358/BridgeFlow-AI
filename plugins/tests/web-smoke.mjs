@@ -77,18 +77,42 @@ try {
   if (employeeMode) {
     const { privateKey, publicKey } = generateKeyPairSync('ed25519')
     const jwk = { ...publicKey.export({ format: 'jwk' }), kid: 'offline-employee', use: 'sig', alg: 'EdDSA' }
+    const departments = ['production', 'procurement', 'finance', 'marketing']
+    const spaces = Object.fromEntries(departments.map(department => [department, {
+      space_id: `offline-${department}`, member: 'voter', admin: 'voter',
+    }]))
     portalServer = createHttpServer((req, res) => {
-      res.writeHead(200, { 'content-type': 'application/json' })
-      res.end(JSON.stringify({ keys: [jwk] }))
+      const path = new URL(req.url ?? '/', 'http://localhost').pathname
+      let body, status = 200
+      if (path === '/.well-known/jwks.json') body = { keys: [jwk] }
+      else if (path === '/open-apis/auth/v3/tenant_access_token/internal') {
+        body = { code: 0, tenant_access_token: 'offline-test-token', expire: 7200 }
+      } else if (path.startsWith('/open-apis/wiki/v2/spaces/') && path.endsWith('/members')) {
+        const space = path.split('/')[5]
+        const members = space === 'offline-master'
+          ? [{ member_id: 'offline-employee', member_role: 'admin', member_type: 'openid' }]
+          : space === 'offline-production'
+            ? [{ member_id: 'offline-voter', member_role: 'member', member_type: 'openid' }]
+            : []
+        body = { code: 0, data: { members, has_more: false } }
+      } else { status = 404; body = { code: 404, msg: 'Not in the offline fixture' } }
+      res.writeHead(status, { 'content-type': 'application/json', 'access-control-allow-origin': '*' })
+      res.end(JSON.stringify(body))
     })
     await new Promise(resolve => portalServer.listen(0, '127.0.0.1', resolve))
     env.PORTAL_BASE_URL = `http://127.0.0.1:${portalServer.address().port}`
     env.PORTAL_AUDIENCE = 'bridgeflow'
+    env.FEISHU_BASE_URL = env.PORTAL_BASE_URL
+    env.FEISHU_APP_ID = 'offline-test'
+    env.FEISHU_APP_SECRET = 'offline-test'
     env.ACCESS_CONTROL_PATH = `${scratch}/access.yaml`
-    await writeFile(env.ACCESS_CONTROL_PATH, JSON.stringify({ users: { 'offline-employee': {
-      departments: ['production', 'procurement', 'finance', 'marketing'],
-      operations: ['batch_import', 'confirm_mapping', 'review_note', 'discovery_upload', 'discovery_register', 'discovery_propose', 'discovery_graph_save', 'discovery_score_save', 'discovery_meeting_save', 'discovery_decision_propose', 'discovery_decision_vote', 'discovery_decision_resolve', 'discovery_decision_finalize'],
-    }, 'offline-voter': { departments: ['production'], operations: ['discovery_decision_vote'] } } }))
+    await writeFile(env.ACCESS_CONTROL_PATH, JSON.stringify({ spaces: {
+      departments: spaces,
+      master_office: { space_id: 'offline-master', member: 'employee', admin: 'employee' },
+    }, roles: {
+      employee: { departments, operations: ['batch_import', 'confirm_mapping', 'review_note', 'discovery_upload', 'discovery_register', 'discovery_propose', 'discovery_graph_save', 'discovery_score_save', 'discovery_meeting_save', 'discovery_decision_propose', 'discovery_decision_vote', 'discovery_decision_resolve', 'discovery_decision_finalize'] },
+      voter: { departments: ['production'], operations: ['discovery_decision_vote'] },
+    } }))
     const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url')
     const makeEmployeeToken = subject => {
       const unsigned = `${encode({ alg: 'EdDSA', kid: jwk.kid })}.${encode({ sub: subject, iss: env.PORTAL_BASE_URL, aud: 'bridgeflow', iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 900 })}`
@@ -292,6 +316,7 @@ try {
     assert.equal(original.suggestedFilename(), 'material.csv')
     assert.equal(await readFile(await original.path(), 'utf8'), 'a,b\n')
     await discovery.getByRole('button', { name: '查看详情与依据', exact: true }).click()
+    await discovery.locator('details.bf-raw-record > summary').click()
     await discovery.locator('pre').getByText(/"detected_kind": "template"/).waitFor()
     await page.screenshot({ path: `${scratch}/discovery-registered.png`, fullPage: true })
     await discovery.getByRole('button', { name: '候选', exact: true }).click()
@@ -325,6 +350,7 @@ try {
     await approveProposal(6)
     await discovery.getByText('核对交接问题（待试点） · browser-opportunity · v2', { exact: true }).waitFor()
     await discovery.getByRole('button', { name: '查看详情与依据', exact: true }).click()
+    await discovery.locator('details.bf-raw-record > summary').click()
     await discovery.locator('pre').getByText(/"approval": "not_decided"/).waitFor()
     await page.screenshot({ path: `${scratch}/discovery-opportunity.png`, fullPage: true })
     await discovery.getByRole('button', { name: '设计流程草图', exact: true }).click()
@@ -364,7 +390,7 @@ try {
     await discovery.getByRole('button', { name: '查看详情与依据', exact: true }).click()
     const diagram = discovery.getByRole('region', { name: '流程草图', exact: true })
     await diagram.getByRole('img', { name: '信息流与文件流' }).waitFor()
-    await diagram.getByRole('button', { name: /stage1 → stage0.*缺失.*返工/ }).click()
+    await diagram.getByRole('button', { name: /阶段 1 → 阶段 0.*缺失.*返工/ }).click()
     await diagram.getByText('返工过程缺少实际材料，待负责人确认。', { exact: true }).waitFor()
     await diagram.getByRole('button', { name: '阶段 0', exact: true }).click()
     await diagram.getByText(/browser-material.*v1/).waitFor()

@@ -32,7 +32,7 @@ export function DataView({ batchId, summary, sources, onImport, onRefresh }: {
     if (!summary?.period) return
     const controller = new AbortController()
     setQuality(null)
-    void api<Quality>(`/monthly/inbox?period=${encodeURIComponent(summary.period)}`, { signal: controller.signal })
+    void api<Quality>(`/monthly/inbox?period=${encodeURIComponent(summary.period)}&batch_id=${encodeURIComponent(batchId)}`, { signal: controller.signal })
       .then(setQuality).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
   }, [summary?.period, batchId])

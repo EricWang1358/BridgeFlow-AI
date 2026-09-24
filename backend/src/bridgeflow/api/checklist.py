@@ -25,14 +25,19 @@ from bridgeflow.monthly import inbox as inbox_module
 router = APIRouter(tags=["checklist"])
 
 
-def _context(period: str, user: UserIdentity | None) -> tuple[checklist_module.Context, dict | None, str]:
+def _context(period: str, user: UserIdentity | None, batch_id: str = "") -> tuple[checklist_module.Context, dict | None, str]:
     """Gather what the steps read. Every read that can fail is caught and reported as such."""
     ctx = checklist_module.Context(period=period)
-    entry = periods.latest_for(period, _visibility(user))
-    if entry is None:
-        return ctx, None, ""
-    batch_id = entry["batch_id"]
-    batch = _visible(load_batch(batch_id), user)
+    if batch_id:
+        batch = _visible(load_batch(batch_id), user)
+        if batch.period != period:
+            raise HTTPException(422, "Batch does not belong to the requested period")
+    else:
+        entry = periods.latest_for(period, _visibility(user))
+        if entry is None:
+            return ctx, None, ""
+        batch_id = entry["batch_id"]
+        batch = _visible(load_batch(batch_id), user)
     ctx.batch_id, ctx.batch = batch_id, batch
     if batch.integration_snapshot is not None:
         from bridgeflow.api.integration import _result
@@ -62,8 +67,8 @@ def _visibility(user: UserIdentity | None):
     return allowed
 
 
-def _build(period: str, user: UserIdentity | None) -> checklist_module.Checklist:
-    ctx, dictionary, declaration = _context(period, user)
+def _build(period: str, user: UserIdentity | None, batch_id: str = "") -> checklist_module.Checklist:
+    ctx, dictionary, declaration = _context(period, user, batch_id)
     if ctx.batch is None:
         from bridgeflow.api.batches import _load_dictionary
         from bridgeflow.metrics import dictionary_path
@@ -74,8 +79,9 @@ def _build(period: str, user: UserIdentity | None) -> checklist_module.Checklist
 @router.get("/monthly/checklist", response_model=checklist_module.Checklist)
 async def monthly_checklist(user: Annotated[UserIdentity | None, Depends(require_user)],
                             period: Annotated[str, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")],
+                            batch_id: str = "",
                             ) -> checklist_module.Checklist:
-    return _build(period, user)
+    return _build(period, user, batch_id)
 
 
 @router.post("/tools/monthly-checklist")
@@ -84,7 +90,7 @@ async def monthly_checklist_tool(request: dict) -> dict:
     period = str(request.get("period", ""))
     if not period:
         raise HTTPException(422, "Give the period as YYYY-MM")
-    result = _build(period, None)
+    result = _build(period, None, str(request.get("batch_id") or ""))
     open_steps = [s for s in result.steps if s.state != "done"]
     return {
         "period": result.period, "batch_id": result.batch_id, "ready_to_close": result.ready_to_close,
@@ -99,8 +105,8 @@ async def monthly_checklist_tool(request: dict) -> dict:
     }
 
 
-def _inbox_context(period: str, user: UserIdentity | None) -> inbox_module.Context:
-    ctx, _dictionary, _declaration = _context(period, user)
+def _inbox_context(period: str, user: UserIdentity | None, batch_id: str = "") -> inbox_module.Context:
+    ctx, _dictionary, _declaration = _context(period, user, batch_id)
     return inbox_module.Context(batch_id=ctx.batch_id, period=period, batch=ctx.batch, master=ctx.master,
                                 has_report=ctx.report is not None,
                                 confirmed=sorted(conventions.confirmed(
@@ -109,19 +115,25 @@ def _inbox_context(period: str, user: UserIdentity | None) -> inbox_module.Conte
 
 
 def _reported_earlier(period: str, batch_id: str, user: UserIdentity | None) -> list[str]:
-    """Other batches of this month that carry a saved review."""
+    """Reviewed ancestors of this batch, excluding unrelated notebooks in the same month."""
     from bridgeflow.api.reviews import saved_review
 
     found = []
-    for entry in periods.batches_for(period):
-        other = entry["batch_id"]
-        if other == batch_id or not _visibility(user)(entry):
-            continue
+    entries = {entry["batch_id"]: entry for entry in periods.batches_for(period)}
+    ancestor = entries.get(batch_id, {}).get("derived_from")
+    seen = set()
+    while ancestor and ancestor in entries and ancestor not in seen:
+        seen.add(ancestor)
+        entry = entries[ancestor]
+        if not _visibility(user)(entry):
+            break
         try:
-            saved_review(other)
+            saved_review(ancestor)
         except HTTPException:
-            continue
-        found.append(other)
+            pass
+        else:
+            found.append(ancestor)
+        ancestor = entry.get("derived_from")
     return found
 
 
@@ -133,13 +145,13 @@ def _scope(user: UserIdentity | None) -> inbox_module.Scope:
 @router.get("/monthly/inbox")
 async def open_item_inbox(user: Annotated[UserIdentity | None, Depends(require_user)],
                           period: Annotated[str, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")],
-                          department: str = "", kind: str = "") -> dict:
+                          department: str = "", kind: str = "", batch_id: str = "") -> dict:
     """What is still waiting on someone, across modules (E14-UC05).
 
     Every item carries where to settle it and nothing else: the inbox never decides for the
     module that owns the evidence and the approval path.
     """
-    return inbox_module.collect(_inbox_context(period, user), _scope(user), department=department, kind=kind)
+    return inbox_module.collect(_inbox_context(period, user, batch_id), _scope(user), department=department, kind=kind)
 
 
 @router.post("/tools/monthly-inbox")
@@ -148,7 +160,7 @@ async def open_item_inbox_tool(request: dict) -> dict:
     period = str(request.get("period", ""))
     if not period:
         raise HTTPException(422, "Give the period as YYYY-MM")
-    result = inbox_module.collect(_inbox_context(period, None), inbox_module.Scope(all=True),
+    result = inbox_module.collect(_inbox_context(period, None, str(request.get("batch_id") or "")), inbox_module.Scope(all=True),
                                   department=str(request.get("department", "")), kind=str(request.get("kind", "")))
     return result | {"next_step": ("Say what is waiting, on whom, and where it is settled. The inbox itself decides "
                                    "nothing: each item is handled in its own module, with its own approval.")}

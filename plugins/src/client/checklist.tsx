@@ -31,7 +31,7 @@ export function OpenItemInbox({ period, batchId, focusView = '', onClearFocus }:
     if (!period) return
     const controller = new AbortController()
     setInbox(null); setError('')
-    const query = `period=${encodeURIComponent(period)}${department ? `&department=${encodeURIComponent(department)}` : ''}`
+    const query = `period=${encodeURIComponent(period)}&batch_id=${encodeURIComponent(batchId)}${department ? `&department=${encodeURIComponent(department)}` : ''}`
     void api<Inbox>(`/monthly/inbox?${query}`, { signal: controller.signal })
       .then(setInbox).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
@@ -71,7 +71,7 @@ export function CloseChecklist({ period, batchId, onImport, onFocus, focusView =
     if (!period) return
     const controller = new AbortController()
     setList(null); setError('')
-    void api<Checklist>(`/monthly/checklist?period=${encodeURIComponent(period)}`, { signal: controller.signal })
+    void api<Checklist>(`/monthly/checklist?period=${encodeURIComponent(period)}&batch_id=${encodeURIComponent(batchId)}`, { signal: controller.signal })
       .then(setList).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
   }, [period, batchId])

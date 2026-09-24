@@ -361,7 +361,7 @@ DEMO_CASES = REPO_ROOT / "data/mock_business/cases/cases.yaml"
 async def demo_cases() -> dict:
     """The sample cases a person can open, with what each one is meant to show."""
     registry = yaml.safe_load(DEMO_CASES.read_text(encoding="utf-8"))
-    return {"cases": [{"id": key, "title": case["title"], "summary": case["summary"]}
+    return {"cases": [{"id": key, "case_id": case["case_id"], "title": case["title"], "summary": case["summary"]}
                       for key, case in registry["cases"].items()]}
 
 

@@ -495,6 +495,7 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 
 .bf-tasks-split { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start }
 .bf-tasks-split > * { flex: 1 1 340px; min-width: 0 }
+.bf-demo-guide button { margin-top: 10px }
 .bf-checklist li[data-focused=true] { background: var(--bf-accent-soft); border-radius: 8px }
 .bf-tasks-workflow { margin-top: 14px }
 .bf-tasks-workflow > summary { font-size: 13px; color: var(--bf-muted); cursor: pointer }
