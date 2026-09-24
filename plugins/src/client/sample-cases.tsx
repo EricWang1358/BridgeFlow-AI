@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, useUI } from './ui.ts'
 
 type Case = { id: string; case_id: string; title: [string, string]; summary: [string, string] }
@@ -25,6 +25,7 @@ export function useDemoCase(caseId: string): Case | null {
  */
 export function SampleCases({ disabled, open }: { disabled: boolean; open: (id: string, title: string) => void }) {
   const { t, language } = useUI()
+  const picker = useRef<HTMLDetailsElement>(null)
   const [cases, setCases] = useState<Case[]>([])
   useEffect(() => {
     const controller = new AbortController()
@@ -34,11 +35,11 @@ export function SampleCases({ disabled, open }: { disabled: boolean; open: (id: 
   }, [])
   if (!cases.length) return null
   const pick = (pair: [string, string]) => pair[language === 'zh' ? 0 : 1]
-  return <details className="bf-sample-cases">
+  return <details ref={picker} className="bf-sample-cases">
     <summary>{t('sampleCases')}</summary>
     <p className="bf-hint">{t('sampleCasesHelp')}</p>
     <ul>{cases.map(c => <li key={c.id}>
-      <button data-case={c.id} disabled={disabled} onClick={() => open(c.id, pick(c.title))}><strong>{pick(c.title)}</strong><small>{pick(c.summary)}</small></button>
+      <button data-case={c.id} disabled={disabled} onClick={() => { if (picker.current) picker.current.open = false; open(c.id, pick(c.title)) }}><strong>{pick(c.title)}</strong><small>{pick(c.summary)}</small></button>
     </li>)}</ul>
   </details>
 }
