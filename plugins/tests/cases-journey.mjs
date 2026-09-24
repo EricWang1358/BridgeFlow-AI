@@ -171,6 +171,39 @@ try {
   assert.equal(results.core.status, 'needs_review'); assert(results.core.quarantined >= 1)
   assert.equal(results.other.status, 'needs_review'); assert.equal(results.other.blockers.length, 3); assert.equal(results.other.column_questions, 1)
   assert.equal(results.clean.status, 'ready'); assert.deepEqual(results.clean.blockers, [])
+  const quality = studio.locator('.bf-data-quality')
+  await page.waitForFunction(() => [...document.querySelectorAll('.bf-data-quality .bf-badge')].length === 4
+    && [...document.querySelectorAll('.bf-data-quality .bf-badge')].every(el => el.textContent?.trim() === '0'))
+  await studio.getByRole('button', { name: /This month’s tasks/ }).first().click()
+  await studio.locator('.bf-tasks').waitFor()
+  let releaseQuality
+  const qualityGate = new Promise(resolve => { releaseQuality = resolve })
+  const qualityPattern = /\/bridgeflow\/monthly\/inbox\?/
+  const failCleanQuality = async route => {
+    if (new URL(route.request().url()).searchParams.get('batch_id') === results.clean.batch_id) {
+      await qualityGate
+      await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'quality unavailable' }) })
+    } else await route.continue()
+  }
+  await page.route(qualityPattern, failCleanQuality)
+  const qualityRequest = page.waitForRequest(request => qualityPattern.test(request.url())
+    && new URL(request.url()).searchParams.get('batch_id') === results.clean.batch_id)
+  await studio.getByRole('button', { name: 'Data', exact: true }).click()
+  await qualityRequest
+  await quality.waitFor()
+  assert.deepEqual((await quality.locator('.bf-badge').allInnerTexts()).map(text => text.trim()), ['—', '—', '—', '—'],
+    'Data quality must not show zero while its counts are unreadable')
+  releaseQuality()
+  await studio.locator('.bf-data [role="alert"]').waitFor()
+  assert.deepEqual((await quality.locator('.bf-badge').allInnerTexts()).map(text => text.trim()), ['—', '—', '—', '—'],
+    'Data quality must not turn a failed request into zero')
+  await quality.screenshot({ path: `${evidence}/data-quality-unavailable.png` })
+  await page.unroute(qualityPattern, failCleanQuality)
+  await quality.getByText('The dashes below mean unknown, not zero.', { exact: false }).waitFor()
+  await quality.getByRole('button', { name: 'Refresh', exact: true }).click()
+  await page.waitForFunction(() => [...document.querySelectorAll('.bf-data-quality .bf-badge')].length === 4
+    && [...document.querySelectorAll('.bf-data-quality .bf-badge')].every(el => el.textContent?.trim() === '0'))
+  assert.equal(await studio.locator('.bf-data [role="alert"]').count(), 0)
   const original = await page.evaluate(async id => (await (await fetch(`/bridgeflow/monthly/inbox?period=2024-07&batch_id=${id}`)).json()).total, results.core.batch_id)
   assert.equal(original, results.core.open_items, 'Later sample notebooks must not change the first notebook’s open items')
   await page.locator('.bf-shell-top').getByRole('button', { name: 'Notebooks', exact: true }).click()

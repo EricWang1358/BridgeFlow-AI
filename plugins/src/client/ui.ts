@@ -296,6 +296,7 @@ const labels = {
   batchFacts: ['当前批次的事实', 'About this batch'],
   batchFactsHint: ['所选批次的关键数字。要修改什么，请打开它所属的页面。', 'Key numbers for the selected batch. To change anything, open the page it belongs to.'],
   batchQuality: ['本批次的数据质量', 'Data quality in this batch'],
+  batchQualityUnavailable: ['待办计数暂时读不到。下面的破折号表示未知，不是零。', 'Open-item counts are unavailable. The dashes below mean unknown, not zero.'],
   batchQualityHint: ['点开一项去处理；处理完它会自动从这里消失。', 'Open an item to fix it. It drops off this list once it is resolved.'],
   stepTemplate: ['取模板', 'Take the template'], stepTemplateHint: ['本月批准的表格，已填入上月数字', 'This month\'s approved form, with last month\'s figures filled in'],
   stepSelfCheck: ['提交前自检', 'Self-check'], stepSelfCheckHint: ['按导入规则检查，但不保存', 'Runs the import checks without saving anything'],

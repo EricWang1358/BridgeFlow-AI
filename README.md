@@ -322,7 +322,7 @@ happens, so this costs nothing.
 What you should see:
 
 1. Left: four sources, `模拟-生产部-2024-07.xlsx` (production, 21 daily rows) and procurement, finance
-   and marketing with 4 rows each (one per project), the period `2024-07`, a **Ready** badge, and the
+   and marketing with 4 rows each (one per project), the period `2024-07`, a **Ready for AI review** badge, and the
    batch id.
 2. Right: under **Artifacts**, `2024-07 · Master table` with 4 rows.
 3. A **Preview** of the selected source: the parsed original with its row numbers and column names.
@@ -333,7 +333,7 @@ Open the file provenance to see which file, batch, worksheet and SHA-256 digest 
 
 ### The cross-department master table
 
-Click **Cross-department master** in Studio.
+Click **Data** in Studio, then **Cross-department master** under **Data quality in this batch**.
 
 ![Cross-department master table with an open question and one cell's evidence](docs/images/12-cross-department-master.png)
 
