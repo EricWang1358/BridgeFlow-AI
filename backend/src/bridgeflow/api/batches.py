@@ -386,8 +386,8 @@ async def demo_history(user: Annotated[UserIdentity | None, Depends(require_user
     """The sample supplier's earlier months, so trends have more than one point.
 
     Each month is its own batch under the same sample dictionary, imported like any other
-    upload. A month this caller can already see is left alone, so pressing it twice imports
-    nothing new and never shadows a month someone imported themselves.
+    upload. An already-visible sample history month is left alone on repeat clicks; an
+    unrelated uploaded month does not replace this fictional supplier's history.
     """
     registry = yaml.safe_load(DEMO_CASES.read_text(encoding="utf-8"))
     def visible(entry: dict) -> bool:
@@ -399,7 +399,9 @@ async def demo_history(user: Annotated[UserIdentity | None, Depends(require_user
     imported, kept = [], []
     for month in registry.get("history") or []:
         period = str(month["period"])
-        if periods.latest_for(period, visible) is not None:
+        case_id = month["case_id"]
+        if periods.latest_for(period, lambda item, case_id=case_id: visible(item) and
+                              periods.demo_case(item) == case_id) is not None:
             kept.append(period)
             continue
         batch = await _import_demo(REPO_ROOT / month["folder"], period, REPO_ROOT / registry["dictionary"],

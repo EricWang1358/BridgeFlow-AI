@@ -252,7 +252,7 @@ Where the requirement left a choice open, it was decided during implementation. 
 
 | # | 判定 / Decision | 依据 / Evidence | 落在哪 / Where |
 | --- | --- | --- | --- |
-| D1 | 基期取该期间**最新导入且调用者可见**的批次，更早的仍可按批次号访问 | 批次不可变，同一月份的多个批次互为更正（隔离处置派生、E14-UC04 单部门补传）；人说「上月」指的是最新那份 | `periods.latest_for` |
+| D1 | 基期取该期间**同一数据线中最新导入且调用者可见**的批次：合成样例只取对应样例历史，真实上传不取样例；更早的仍可按批次号访问 | 批次不可变，同一月份的多个批次可能是更正，也可能是独立的虚构样例；不能把另一个样例或真实上传混成「上月」 | `periods.same_series`、`periods.latest_for` |
 | D2 | 两期是否可比，看**字段声明**是否相同，而不是版本字符串 | 版本字符串会因注释、口径等与字段无关的改动而变；据此拒绝会挡住本来成立的对比。字段声明不同才会把两个不同的东西相减 | `comparison.declaration_differences`，测试 `test_a_changed_field_declaration_refuses_the_comparison` |
 | D3 | 只有声明为 `additive` 的字段跨项目求和；合计再分解为新增、消失、持续三部分，三者之和恒等于总变化 | 单价与比率跨项目相加得到的数没有业务含义；分解让「总量降了」能追到是丢了项目还是存量项目下滑 | `integration.yaml` 的 `comparison.additive`；性质测试校验恒等式 |
 | D4 | 拒绝分四类：无基期、基期不可用、声明已变、该基准不可用；单个数字基期为 0 时标「无法计算」 | 四种情况对读者的含义完全不同：等数据、修数据、改声明、换基准。混为一谈会让人做错下一步 | `Comparison.status`；测试 `test_without_a_base_batch...`、`test_a_zero_base_is_not_computable...` |

@@ -1,4 +1,6 @@
 """Declared charts over declared numbers (E13-UC03). Nothing here calls a model."""
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 from test_comparison import JUNE, LABELS, XLSX
@@ -18,11 +20,22 @@ def client(monkeypatch, tmp_path):
         yield test_client
 
 
-def import_month(client, folder, period):
+def import_month(client, folder, period, *, sample=True):
     files = [("files", (f"{label}.xlsx", (folder / f"{label}.xlsx").read_bytes(), XLSX)) for label in LABELS.values()]
     response = client.post("/batches", data={"period": period, "departments": list(LABELS)}, files=files)
     assert response.status_code == 200, response.text
-    return response.json()["batch_id"]
+    batch_id = response.json()["batch_id"]
+    if sample:
+        # These older numeric fixtures belong to the fictional supplier. Give them
+        # the same marker as the sample-history endpoint used by the product.
+        from bridgeflow.api.batches import batch_path, load_batch
+        from bridgeflow.conclusions import periods
+        from bridgeflow.store import _write
+        snapshot = load_batch(batch_id)
+        snapshot.demo_case = f"demo-history-{period}"
+        _write(batch_path(batch_id), snapshot.model_dump(mode="json"))
+        periods.record(batch_id, snapshot)
+    return batch_id
 
 
 def charts_of(client, batch):
@@ -152,3 +165,27 @@ def test_the_earlier_sample_months_give_the_sample_a_trend_and_load_only_once(cl
     trend = charts_of(client, batch)["sign_rate_trend"]
     assert trend["status"] == "ready"
     assert [p["period"] for p in trend["points"] if p["value"] is not None] == ["2024-05", "2024-06", "2024-07"]
+
+
+def test_sample_history_and_comparison_do_not_borrow_an_uploaded_month(client):
+    real_june = import_month(client, JUNE, "2024-06", sample=False)
+    sample = client.post("/batches/demo?case=clean").json()["batch_id"]
+    history = client.post("/batches/demo/history").json()
+    assert [item["period"] for item in history["imported"]] == ["2024-05", "2024-06"]
+    sample_june = next(item["batch_id"] for item in history["imported"] if item["period"] == "2024-06")
+    assert sample_june != real_june
+    # A server upgraded with an older index can still identify sample history
+    # from the immutable batch files until the index is rebuilt.
+    from bridgeflow.conclusions import periods
+    index_path = periods._index_path()
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    for entry in index.values():
+        entry.pop("demo_case", None)
+    index_path.write_text(json.dumps(index), encoding="utf-8")
+    # A later real upload must not replace the fictional supplier's trend or base.
+    import_month(client, JUNE, "2024-06", sample=False)
+    trend = charts_of(client, sample)["sign_rate_trend"]
+    june = next(point for point in trend["points"] if point["period"] == "2024-06")
+    assert june["batch_id"] == sample_june
+    comparison = client.get(f"/conclusions/batches/{sample}/comparison").json()
+    assert comparison["base_batch_id"] == sample_june

@@ -23,11 +23,21 @@ def client(monkeypatch, tmp_path):
         yield test_client
 
 
-def import_june(client):
+def import_june(client, *, sample=True):
     files = [("files", (f"{label}.xlsx", (JUNE / f"{label}.xlsx").read_bytes(), XLSX)) for label in LABELS.values()]
     response = client.post("/batches", data={"period": "2024-06", "departments": list(LABELS)}, files=files)
     assert response.status_code == 200, response.text
-    return response.json()["batch_id"]
+    batch_id = response.json()["batch_id"]
+    if sample:
+        # The numeric comparison fixtures are the fictional supplier's June month.
+        from bridgeflow.api.batches import batch_path, load_batch
+        from bridgeflow.conclusions import periods
+        from bridgeflow.store import _write
+        snapshot = load_batch(batch_id)
+        snapshot.demo_case = "demo-history-2024-06"
+        _write(batch_path(batch_id), snapshot.model_dump(mode="json"))
+        periods.record(batch_id, snapshot)
+    return batch_id
 
 
 def test_the_period_shift_wraps_years():
@@ -40,6 +50,24 @@ def test_without_a_base_batch_the_comparison_says_so_rather_than_showing_zero(cl
     result = client.get(f"/conclusions/batches/{batch}/comparison").json()
     assert result["status"] == "no_base" and result["base_period"] == "2024-06"
     assert result["metrics"] == [] and "2024-06" in result["reason"]
+
+
+def test_an_uploaded_batch_does_not_compare_against_fictional_sample_history(client):
+    client.post("/batches/demo/history")
+    folder = REPO_ROOT / "data/mock_business/cases/clean"
+    files = [("files", (f"{label}.xlsx", (folder / f"{department}.xlsx").read_bytes(), XLSX))
+             for department, label in LABELS.items()]
+    response = client.post("/batches", data={"period": "2024-07", "departments": list(LABELS)}, files=files)
+    assert response.status_code == 200, response.text
+    batch = response.json()["batch_id"]
+    result = client.get(f"/conclusions/batches/{batch}/comparison").json()
+    assert result["status"] == "no_base"
+    chart = client.get(f"/conclusions/batches/{batch}/charts").json()
+    trend = next(item for item in chart["charts"] if item["id"] == "sign_rate_trend")
+    assert next(point for point in trend["points"] if point["period"] == "2024-06")["batch_id"] == ""
+    real_june = import_june(client, sample=False)
+    result = client.get(f"/conclusions/batches/{batch}/comparison").json()
+    assert result["base_batch_id"] == real_june
 
 
 def test_a_plan_comparison_is_refused_until_a_plan_source_is_declared(client):
