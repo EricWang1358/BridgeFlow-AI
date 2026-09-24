@@ -119,6 +119,7 @@ Linux 与 WSL2（Ubuntu）都可以。Windows 请用 WSL2，并读
 ~/Hackathon2026/
 ├── BridgeFlow-AI/     仓库（只放源码）
 ├── .venv/             Python 虚拟环境，故意放在仓库外
+├── .dsh-cli/          锁定版本的 dsh CLI，私有安装（scripts/install_dsh.sh）
 └── .dsh-bridgeflow/   DSH_HOME，在仓库外，也在你日常那套 dsh 之外
 ```
 
@@ -136,8 +137,14 @@ python3.12 -m venv ../.venv && source ../.venv/bin/activate
 pip install -U pip
 cd backend && pip install -e ".[dev]" && cd ..
 
-npm install -g @deepseek-ai/dsh@0.1.2-rc.1    # 用锁定的 npm CLI，不要用 Python 打包的那个二进制
+bash scripts/install_dsh.sh                   # 锁定版本的 dsh CLI，装在仓库旁边，不装全局
 ```
+
+**电脑里已经有 dsh？** 你自己的那套不会被改动。
+- BridgeFlow 需要的正好是 `@deepseek-ai/dsh@0.1.2-rc.1`（预发布版，不同版本之间不兼容），所以 `scripts/install_dsh.sh` 不用 `npm install -g`，而是装进 `~/Hackathon2026/.dsh-cli`。
+- 启动器和浏览器测试会先找这里，PATH 上其他版本的 dsh 一律跳过。
+- 你 `~/.dsh` 里的会话和设置也不受影响，因为 BridgeFlow 用自己的 `DSH_HOME`（`~/Hackathon2026/.dsh-bridgeflow`）。
+- `bash scripts/install_dsh.sh --check` 可以看 BridgeFlow 会用哪个 dsh。别处已经装了这个版本的话，把 `BRIDGEFLOW_DSH` 指过去即可。
 
 虚拟环境建在 `~/Hackathon2026/.venv`（注意是在仓库目录里执行、装到上一级）。这份指引后面的每条命令
 都默认你在当前 shell 里跑过 `source ../.venv/bin/activate` 和 `source ./env.sh`；
@@ -147,7 +154,7 @@ npm install -g @deepseek-ai/dsh@0.1.2-rc.1    # 用锁定的 npm CLI，不要用
 
 ```bash
 python -c "import bridgeflow, pandas, fastapi, deepseek_harness; print('imports ok')"
-dsh --version
+bash scripts/install_dsh.sh --check           # private dsh: … (0.1.2-rc.1)
 ```
 
 项目实际跑 Python 3.12（`requires-python = ">=3.11"`，因为代码用了 `datetime.UTC`）。

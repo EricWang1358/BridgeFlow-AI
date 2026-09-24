@@ -11,6 +11,7 @@ export const tourStyle = `
 .bf-tour-card button:disabled { opacity:.45;cursor:default; }
 .bf-tour-card button:focus-visible,.bf-tour-card summary:focus-visible { outline:3px solid #6ba3ff;outline-offset:3px; }
 .bf-tour-card .bf-tour-primary { color:white;background:#315ea7;border-color:#315ea7; }
+.bf-tour-card .bf-tour-secondary { display:block;width:100%;margin-top:10px;text-align:center; }
 .bf-tour-card .bf-tour-close { border:0;padding:4px 10px;font-size:20px; }
 .bf-tour-actions { display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:18px; }
 .bf-tour-actions button:last-child { margin-left:auto; }

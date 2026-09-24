@@ -73,7 +73,28 @@ Some states conflict (a batch that is ready cannot also be held back), so the de
 | A different set of problems | Errors that do not overlap the previous case | Needs review; three named review blockers (negative quantity, a June row, a renamed column), one column question, a missing template column |
 | All clear | What everything-right looks like | Ready; nothing open; all 10 checks inside their thresholds |
 | Sample workflow ("Load the sample workflow" on Filling & handoff) | The workflow end to end | One record missing its actual quantity, one awaiting review; the captain asks, submits and hands over, each step on your approval |
+| Discovery sample ("Load the sample project" on Discovery) | From an idea to an approved decision | A flow graph with confirmed, inferred and missing links; a scored idea on the quadrant chart; an approved MVP decision the workflow can accept |
 | Try it yourself (`data/mock_business/try-it-2024-08/`) | Manual upload, one-department correction, refusals | See that folder's README |
+
+**Feature coverage of the samples** (measured 2026-09-24 by importing each one offline; every sample ships in the repository, so any install can open it — nothing here needs a model key except the review row):
+
+| Feature | Guided | Many problems | Different set | All clear | Where else |
+| --- | --- | --- | --- | --- | --- |
+| Import, cleaning, the combined master table | ✅ ready, 4 rows | ✅ needs review | ✅ needs review, 5 rows | ✅ ready | — |
+| Master disagreements and open items | ✅ 2 | ✅ 15 of 8 kinds | ✅ | ✅ none (0) | — |
+| Held-back (quarantined) rows | — | ✅ 1 (text in a money field) | — | — | try-it folder |
+| Review refused with named blockers | — | — | ✅ 3 (negative quantity, a June row, renamed column) | — | — |
+| Renamed or missing template columns | — | — | ✅ 1 question, 1 missing column | — | — |
+| Conventions to confirm | ✅ 4 | ✅ 4 | ✅ 4 | ✅ 4 | — |
+| Month-end checklist | ✅ | ✅ | ✅ | ✅ all done except the review steps | — |
+| Charts: per-project bars | ✅ | ✅ | ✅ | ✅ | — |
+| Charts: trends and month-on-month variance | ✅ after "Load the two earlier sample months" | trends ✅, variance refused (not comparable) | trends ✅, variance refused (not comparable) | ✅ after loading | Overview page |
+| Four-department review, brief, dispositions (**needs a model key**) | ✅ reviewable | held back on purpose | held back on purpose | ✅ reviewable | `business-smoke` scripted |
+| Discovery: flow graph, quadrant chart, decision | — | — | — | — | Discovery sample |
+| Filling & handoff: two hops, due times, timelines | — | — | — | — | Sample workflow |
+| Guided tour | core track | — | — | — | workflow track uses the discovery and workflow samples |
+
+Not covered by any sample: Feishu import and upload (they need a Feishu tenant), dictionary drafting from scratch (needs a model key), and real customer data.
 
 | Test | Checks | Mode | Result |
 | --- | --- | --- | --- |
@@ -129,6 +150,7 @@ The layout this guide assumes:
 ~/Hackathon2026/
 ├── BridgeFlow-AI/     the repository (source only)
 ├── .venv/             Python virtualenv, deliberately outside the repo
+├── .dsh-cli/          the pinned dsh CLI, installed privately (scripts/install_dsh.sh)
 └── .dsh-bridgeflow/   DSH_HOME, outside the repo and outside your everyday dsh
 ```
 
@@ -147,8 +169,16 @@ python3.12 -m venv ../.venv && source ../.venv/bin/activate
 pip install -U pip
 cd backend && pip install -e ".[dev]" && cd ..
 
-npm install -g @deepseek-ai/dsh@0.1.2-rc.1    # the pinned npm CLI, not the Python-packed binary
+bash scripts/install_dsh.sh                   # the pinned dsh CLI, installed beside the repo (not global)
 ```
+
+**Already use dsh?** Nothing of yours changes. BridgeFlow needs exactly `@deepseek-ai/dsh@0.1.2-rc.1`
+(a pre-release; versions break each other), so `scripts/install_dsh.sh` installs it into
+`~/Hackathon2026/.dsh-cli` instead of `npm install -g`. The launcher and the browser tests look there
+first and skip a dsh of any other version on your PATH. Your own sessions and settings in `~/.dsh` are
+untouched as well, because BridgeFlow keeps its own `DSH_HOME` (`~/Hackathon2026/.dsh-bridgeflow`).
+`bash scripts/install_dsh.sh --check` shows which dsh BridgeFlow will use. If you already have the
+pinned version somewhere else, point `BRIDGEFLOW_DSH` at it instead.
 
 The virtualenv is created at `~/Hackathon2026/.venv` while you are inside the repository, and every
 later command in this guide assumes both `source ../.venv/bin/activate` and `source ./env.sh` have
@@ -158,7 +188,7 @@ Check it worked:
 
 ```bash
 python -c "import bridgeflow, pandas, fastapi, deepseek_harness; print('imports ok')"
-dsh --version
+bash scripts/install_dsh.sh --check           # private dsh: … (0.1.2-rc.1)
 ```
 
 The project runs on Python 3.12 (`requires-python = ">=3.11"`, because the code uses
@@ -262,7 +292,7 @@ The first time you open the workspace, a welcome card offers a guided task: open
 read the cross-department master table, follow one number to its original file, download the workbook
 and save the notebook. Each step only advances when the real action succeeded. **Help & guided tours**
 in the top bar resumes it, replays it, or explains the department review and the quotation path. The
-tour covers the monthly review only; the workflow features (discovery, filling & handoff) are not in it.
+tour's first track covers the monthly review. A second track, "Explore · from an idea to a handoff between departments" (Help & guided tours, or the welcome card), walks through the discovery sample's flow graph and quadrant chart, the filling page's scope, the sample workflow, its flow strip and timelines, and the Overview. It calls no model.
 
 ## 7 The fastest complete loop: the sample notebook
 

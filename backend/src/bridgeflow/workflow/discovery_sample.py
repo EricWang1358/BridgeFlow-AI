@@ -21,6 +21,7 @@ from bridgeflow.workflow.discovery_decisions import (
     DecisionProposal,
     DiscoveryDecisions,
 )
+from bridgeflow.workflow.discovery_graph import DiscoveryGraphs, FlowGraph
 from bridgeflow.workflow.discovery_meetings import DiscoveryMeetings, MeetingInput
 from bridgeflow.workflow.discovery_scoring import DiscoveryScores, ScoreDraft, ScoringPolicy
 
@@ -36,12 +37,15 @@ def seed(domain: Discovery, scoring: ScoringPolicy, decision: DecisionPolicy, sa
         raise DiscoveryError(f"The sample project {project} needs its own sample policies; "
                              f"this deployment's policies are for {decision.project_id}")
     decisions = DiscoveryDecisions(domain, decision)
-    try:
-        return decisions.read(project, sample["decision"]["id"])
-    except DiscoveryError:
-        pass  # not seeded yet
     m = sample["material"]
     ref = [{"material_id": m["id"], "version": 1, "locator": {"kind": "header", "sheet": "csv"}}]
+    try:
+        existing = decisions.read(project, sample["decision"]["id"])
+    except DiscoveryError:
+        existing = None  # not seeded yet
+    if existing is not None:
+        _graph(domain, project, sample)  # projects seeded before the graph existed gain it
+        return existing
     domain.register(MaterialInput.model_validate({
         "id": m["id"], "project_id": project, "department": m["department"], "period": m["period"],
         "filename": m["filename"], "declared_kind": m["declared_kind"],
@@ -51,6 +55,7 @@ def seed(domain: Discovery, scoring: ScoringPolicy, decision: DecisionPolicy, sa
         "id": o["id"], "project_id": project, "title": o["title"], "departments": o["departments"],
         "expected_seq": 0, "open_questions": o["open_questions"],
         "claims": [{**claim, "references": ref} for claim in o["claims"]]}), o["by"])
+    _graph(domain, project, sample)
     s = sample["score"]
     DiscoveryScores(domain, scoring).save(ScoreDraft.model_validate({
         "id": s["id"], "project_id": project, "opportunity_id": o["id"], "opportunity_version": 1,
@@ -75,3 +80,22 @@ def seed(domain: Discovery, scoring: ScoringPolicy, decision: DecisionPolicy, sa
         state = decisions.vote(project, d["id"], seq, 1, vote["voter"], vote["choice"], vote["reason"])
         seq = state["seq"]
     return decisions.decide(project, d["id"], seq, 1, d["approver"], "approve", d["approval_reason"])
+
+
+def _graph(domain: Discovery, project: str, sample: dict[str, Any]) -> None:
+    """The candidate's information and file flow, saved once through the real graph service."""
+    g, m, o = sample["graph"], sample["material"], sample["opportunity"]
+    graphs = DiscoveryGraphs(domain)
+    try:
+        graphs.read(project, g["id"])
+        return
+    except DiscoveryError:
+        pass
+    locators = {"header": {"kind": "header", "sheet": "csv"}, "rows": {"kind": "rows", "sheet": "csv", "start": 2, "end": 3}}
+    cite = lambda item: [{"material_id": m["id"], "version": 1, "locator": locators[item["locator"]]}] if item.get("locator") else []
+    strip = lambda item: {k: v for k, v in item.items() if k != "locator"}
+    graphs.save(FlowGraph.model_validate({
+        "id": g["id"], "project_id": project, "opportunity_id": o["id"], "opportunity_version": 1,
+        "title": g["title"], "departments": o["departments"], "expected_seq": 0,
+        "nodes": [{**strip(node), "references": cite(node)} for node in g["nodes"]],
+        "edges": [{**strip(edge), "references": cite(edge)} for edge in g["edges"]]}), g["by"])

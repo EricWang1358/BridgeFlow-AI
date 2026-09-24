@@ -19,14 +19,15 @@ test('venv-first PATH skips the packed wrapper; an explicit unsupported runtime 
     await chmod(join(venv, 'dsh'), 0o755); await chmod(join(native, 'dsh'), 0o755)
     const env = { ...process.env, PATH: [venv, native, process.env.PATH].join(delimiter) }
     delete env.BRIDGEFLOW_DSH
+    env.BRIDGEFLOW_PRIVATE_DSH = join(root, 'no-private-install', 'dsh')
     const probe = `import {resolveDsh} from ${JSON.stringify(moduleUrl)}; console.log(resolveDsh())`
     const run = (extra = {}) => execFileSync(process.execPath, ['--input-type=module', '-e', probe],
       { env: { ...env, ...extra }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
     assert.equal(run(), join(native, 'dsh'))
-    assert.throws(() => run({ BRIDGEFLOW_DSH: join(venv, 'dsh') }), /Install the native CLI/)
+    assert.throws(() => run({ BRIDGEFLOW_DSH: join(venv, 'dsh') }), /install_dsh\.sh/)
     await assert.rejects(access(marker))
     await writeFile(join(native, 'dsh'), `#!${process.execPath}\nconsole.log('unsupported')\n`)
-    assert.throws(() => run({ BRIDGEFLOW_DSH: join(native, 'dsh') }), /Install the native CLI/)
+    assert.throws(() => run({ BRIDGEFLOW_DSH: join(native, 'dsh') }), /install_dsh\.sh/)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 
@@ -52,4 +53,20 @@ test('client preflight redeems auth and refuses missing modules, redirect loops 
     await assert.rejects(assertClientModulesServed(base + '/external'), /cross-origin redirect/)
     await assert.rejects(assertClientModulesServed(base + '/stall'), (error: Error) => ['TimeoutError', 'AbortError'].includes(error.name))
   } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())) }
+})
+
+test('the private install beside the repository wins over a dsh on PATH', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'bf-runtime-private-'))
+  try {
+    const onPath = join(root, 'path'), privateDir = join(root, 'private')
+    await mkdir(onPath); await mkdir(privateDir)
+    for (const dir of [onPath, privateDir]) {
+      await writeFile(join(dir, 'dsh'), `#!${process.execPath}\nconsole.log('0.1.2-rc.1')\n`); await chmod(join(dir, 'dsh'), 0o755)
+    }
+    const env: Record<string, string | undefined> = { ...process.env, PATH: [onPath, process.env.PATH].join(delimiter), BRIDGEFLOW_PRIVATE_DSH: join(privateDir, 'dsh') }
+    delete env.BRIDGEFLOW_DSH
+    const probe = `import {resolveDsh} from ${JSON.stringify(moduleUrl)}; console.log(resolveDsh())`
+    const picked = execFileSync(process.execPath, ['--input-type=module', '-e', probe], { env, encoding: 'utf8' }).trim()
+    assert.equal(picked, join(privateDir, 'dsh'))
+  } finally { await rm(root, { recursive: true, force: true }) }
 })

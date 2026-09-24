@@ -103,3 +103,13 @@ def test_the_sample_score_lands_on_the_quadrant_chart(client):
     assert score["coordinates"] is not None and score["not_plotted_reasons"] == []
     policy = client.get("/discovery/demo-handoff/scoring-policy").json()
     assert score["policy_fingerprint"] == policy["fingerprint"]
+
+
+def test_the_sample_project_carries_its_flow_graph_with_every_edge_state(client):
+    client.post("/discovery/sample")
+    graph = client.get("/discovery/demo-handoff/graph/current-flow").json()
+    assert {e["kind"] for e in graph["edges"]} == {"information", "document"}
+    assert {e["status"] for e in graph["edges"]} >= {"confirmed", "inferred", "missing"}
+    assert all(e["confirmation"] for e in graph["edges"] if e["status"] == "confirmed")
+    again = client.post("/discovery/sample")  # idempotent: nothing duplicated, still approved
+    assert again.status_code == 200 and client.get("/discovery/demo-handoff/graph").json()["total"] == 1
