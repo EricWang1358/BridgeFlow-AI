@@ -184,15 +184,17 @@ function Shell({ ctx }: { ctx: Context }) {
     {notebook.dialogs}
     <aside className="bf-shell-pane bf-shell-sources bf-state" data-mobile-open={panel === 'sources'} aria-label={t('sources')}>
       <header><h2>{t('sources')}</h2><button className="bf-mobile-close" onClick={() => setPanel('')}>{t('close')}</button></header>
-      <div className="bf-shell-scroll"><GuestBanner /><label className="bf-notebook-purpose">{t('notebookKind')}<select disabled={notebook.busy || !notebook.loaded} value={notebook.kind} onChange={e=>{if(isNotebookKind(e.target.value))notebook.setKind(e.target.value)}}>{notebookKinds.map(kind=><option key={kind} value={kind}>{t(notebookPurposes[kind].label)}</option>)}</select></label><p className="bf-hint">{t('notebookPurposeHelp')}</p>{!guest && <button className="bf-add-source" onClick={() => importer.current?.showModal()}>＋ {t('addSources')}</button>}
-        <p className="bf-hint">{t(guest ? 'guestUploadUnavailable' : 'sourceUploadHelp')}</p>
-        <button data-tour-id="sample" disabled={notebook.busy || !notebook.loaded} onClick={() => notebook.sample()}>{t('sampleNotebook')}</button>
-        <SampleCases key={batchId} disabled={notebook.busy || !notebook.loaded} open={(id, title) => notebook.sample(id, title)} />
+      <div className="bf-shell-scroll"><GuestBanner />
         {summary?.demo_case && <p className="bf-sample-notice" role="note">
           <strong>{t('sampleNotebookTitle')}</strong><br/>
           {sampleCase ? <>{t('sampleCaseLabel')} · {sampleCase.title[language === 'zh' ? 0 : 1]}{language === 'zh' ? '。' : '. '}{sampleCase.summary[language === 'zh' ? 0 : 1]}</> : t('sampleNotebookHelp')}
         </p>}
         {summary && <div className="bf-source-batch"><span>{summary.period}</span><Chip status={summary.status}/><button title={batchId} onClick={() => void navigator.clipboard.writeText(batchId).then(() => setCopied(true)).catch(e => setError(describeError(e, t)))}>{t(copied ? 'copied' : 'copyId')}</button><code>{batchId}</code></div>}
+        <label className="bf-notebook-purpose">{t('notebookKind')}<select disabled={notebook.busy || !notebook.loaded} value={notebook.kind} onChange={e=>{if(isNotebookKind(e.target.value))notebook.setKind(e.target.value)}}>{notebookKinds.map(kind=><option key={kind} value={kind}>{t(notebookPurposes[kind].label)}</option>)}</select></label><p className="bf-hint">{t('notebookPurposeHelp')}</p>
+        <button data-tour-id="sample" disabled={notebook.busy || !notebook.loaded} onClick={() => notebook.sample()}>{t('sampleNotebook')}</button>
+        <SampleCases key={batchId} disabled={notebook.busy || !notebook.loaded} open={(id, title) => notebook.sample(id, title)} />
+        {!guest && <button className="bf-add-source" onClick={() => importer.current?.showModal()}>＋ {t('addSources')}</button>}
+        <p className="bf-hint">{t(guest ? 'guestUploadUnavailable' : 'sourceUploadHelp')}</p>
         <ul className="bf-resource-list">{sources.map(source => <li key={source.id}><button aria-pressed={selected.source === source.id && selected.view === 'source'} onClick={() => openSource(source)} disabled={!source.preview_available}>
           <span className="bf-file-icon" aria-hidden="true">▤</span><span><strong title={source.filename}>{source.filename}</strong><small>{t(source.id)} · {source.preview_available ? `${source.total} ${t('rows')}` : t('originalUnavailable')}</small></span><span aria-hidden="true">↗</span>
         </button></li>)}</ul>
