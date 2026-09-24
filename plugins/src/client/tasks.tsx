@@ -1,24 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { CloseChecklist, OpenItemInbox } from './checklist.tsx'
 import { WorkflowProgress } from './workflow-progress.tsx'
-import { api, describeError, navigate, startReview, useUI, type Summary } from './ui.ts'
+import { describeError, navigate, startReview, useUI, type Summary } from './ui.ts'
 import { Explain } from './explain.tsx'
 import { useGuestMode } from './guest.tsx'
+import { useDemoCase } from './sample-cases.tsx'
 import type { projectAudit } from './audit.ts'
-
-type DemoCase = { case_id: string; title: [string, string]; summary: [string, string] }
 
 function DemoCaseGuide({ caseId, batchId }: { caseId: string; batchId: string }) {
   const { t, language } = useUI()
-  const [sample, setSample] = useState<DemoCase | null>(null)
-  useEffect(() => {
-    const controller = new AbortController()
-    setSample(null)
-    void api<{ cases: DemoCase[] }>('/batches/demo/cases', { signal: controller.signal })
-      .then(value => setSample(value.cases.find(item => item.case_id === caseId) ?? null))
-      .catch(() => { if (!controller.signal.aborted) setSample(null) })
-    return () => controller.abort()
-  }, [caseId])
+  const sample = useDemoCase(caseId)
   if (!sample) return null
   const pick = (pair: [string, string]) => pair[language === 'zh' ? 0 : 1]
   return <div className="bf-callout bf-demo-guide" data-tone="info" role="note">

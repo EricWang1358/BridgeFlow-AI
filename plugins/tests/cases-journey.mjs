@@ -93,6 +93,9 @@ try {
     const tasks = studio.locator('.bf-tasks')
     const guide = tasks.locator('.bf-demo-guide')
     await guide.getByRole('heading', { name: `This sample shows · ${title}` }).waitFor()
+    const sourceNote = sources.locator('.bf-sample-notice')
+    await sourceNote.getByText(`This sample shows · ${title}`, { exact: false }).waitFor()
+    assert.equal((await sourceNote.innerText()).includes('Starting a review calls the AI model.'), false)
     const review = tasks.getByRole('button', { name: 'Start the review', exact: true })
     assert.equal(await review.isDisabled(), expected !== 'ready', `${id} review eligibility`)
     if (expected !== 'ready') await tasks.getByText('This batch needs data fixes before a review.', { exact: false }).waitFor()
@@ -123,6 +126,7 @@ try {
   }, { batch: results.core.batch_id, total: results.core.open_items })
   await switchLanguage(page, '中文')
   await page.locator('.bf-demo-guide').getByRole('heading', { name: /本示例展示.*多问题并发/ }).waitFor()
+  await page.locator('.bf-sample-notice').getByText(/本示例展示.*多问题并发/).waitFor()
   assert.equal(await page.locator('.bf-tasks').getByRole('button', { name: '发起研判' }).isDisabled(), true)
   // The public guest console leaves AI off. A ready sample must not offer a model action
   // that can only produce the fixed guest notice; its data and guided paths remain usable.

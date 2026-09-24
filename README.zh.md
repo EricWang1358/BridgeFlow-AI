@@ -32,7 +32,7 @@ BridgeFlow 读的是生产、采购、财务、市场四个部门各自维护的
 
 ## 项目进度总表（2026-09-23，9 月 27 日交付）
 
-「离线」指脚本化测试模型（不计费、结果可复现，用于回归）；「真实模型」指 `env.sh` 配置的 DeepSeek（本轮为 `deepseek-v4-flash`）。
+「离线」指脚本化测试模型（不计费、结果可复现，用于回归）。本机当前真实模型路由为 Command Code 的兼容接口，模型 `deepseek/deepseek-v4.1-flash`；证据目录中的较早运行使用 `deepseek-v4-flash`，各次记录按当时配置标注。
 所有数字的出处与复现命令在 [`docs/00-status.md`](docs/00-status.md)，证据文件在 `docs/evidence/`。
 
 | 部分 | 状态 | 证据 | 还缺什么 |

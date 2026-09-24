@@ -1,5 +1,5 @@
 import { Discovery } from './discovery.tsx'
-import { SampleCases } from './sample-cases.tsx'
+import { SampleCases, useDemoCase } from './sample-cases.tsx'
 import { TourDriver, TourHelpButton, TourLayer } from './tour/tour.tsx'
 import { tourEvent } from './tour/state.ts'
 import { notebookKinds, notebookPurposes, isNotebookKind } from '../notebook-capabilities.ts'
@@ -42,6 +42,7 @@ function Shell({ ctx }: { ctx: Context }) {
   const selected = useMemo(() => route(), [hash])
   const batchId = selected.batch || String(audit.review?.batch_id ?? '')
   const [summary, setSummary] = useState<Summary | null>(null), [sources, setSources] = useState<Source[]>([])
+  const sampleCase = useDemoCase(summary?.demo_case ?? '')
   const [artifacts, setArtifacts] = useState<Artifact[]>([]), [artifactTotal, setArtifactTotal] = useState(0), [artifactOffset, setArtifactOffset] = useState(0)
   const [error, setError] = useState(''), [revision, setRevision] = useState(0), [busy, setBusy] = useState(false)
   const [preview, setPreview] = useState<Preview | null>(null), [report, setReport] = useState<Review | null>(null), [offset, setOffset] = useState(0)
@@ -178,7 +179,10 @@ function Shell({ ctx }: { ctx: Context }) {
     <aside className="bf-shell-pane bf-shell-sources bf-state" data-mobile-open={panel === 'sources'} aria-label={t('sources')}>
       <header><h2>{t('sources')}</h2><button className="bf-mobile-close" onClick={() => setPanel('')}>{t('close')}</button></header>
       <div className="bf-shell-scroll"><GuestBanner /><label className="bf-notebook-purpose">{t('notebookKind')}<select disabled={notebook.busy || !notebook.loaded} value={notebook.kind} onChange={e=>{if(isNotebookKind(e.target.value))notebook.setKind(e.target.value)}}>{notebookKinds.map(kind=><option key={kind} value={kind}>{t(notebookPurposes[kind].label)}</option>)}</select></label><p className="bf-hint">{t('notebookPurposeHelp')}</p><button className="bf-add-source" onClick={() => importer.current?.showModal()}>＋ {t('addSources')}</button>
-        <p className="bf-hint">{t('sourceUploadHelp')}</p>{summary?.demo_case && <p className="bf-sample-notice">{t('sampleNotebookTitle')} · {t('sampleNotebookHelp')}</p>}
+        <p className="bf-hint">{t('sourceUploadHelp')}</p>{summary?.demo_case && <p className="bf-sample-notice" role="note">
+          <strong>{t('sampleNotebookTitle')}</strong><br/>
+          {sampleCase ? <>{t('sampleCaseLabel')} · {sampleCase.title[language === 'zh' ? 0 : 1]}{language === 'zh' ? '。' : '. '}{sampleCase.summary[language === 'zh' ? 0 : 1]}</> : t('sampleNotebookHelp')}
+        </p>}
         {summary && <div className="bf-source-batch"><span>{summary.period}</span><Chip status={summary.status}/><button title={batchId} onClick={() => void navigator.clipboard.writeText(batchId).then(() => setCopied(true)).catch(e => setError(describeError(e, t)))}>{t(copied ? 'copied' : 'copyId')}</button><code>{batchId}</code></div>}
         <ul className="bf-resource-list">{sources.map(source => <li key={source.id}><button aria-pressed={selected.source === source.id && selected.view === 'source'} onClick={() => openSource(source)} disabled={!source.preview_available}>
           <span className="bf-file-icon" aria-hidden="true">▤</span><span><strong title={source.filename}>{source.filename}</strong><small>{t(source.id)} · {source.preview_available ? `${source.total} ${t('rows')}` : t('originalUnavailable')}</small></span><span aria-hidden="true">↗</span>

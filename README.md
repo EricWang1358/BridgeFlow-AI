@@ -48,7 +48,7 @@ The public guest entry requires the server setup in [docs/22 §9e](docs/22-light
 
 Status checked 2026-09-24; delivery is due 27 September.
 
-"Offline" means the scripted test model (free and repeatable, used for regression); "real model" means the DeepSeek model configured in `env.sh` (`deepseek-v4-flash` this round). Every number and how to reproduce it is in [`docs/00-status.md`](docs/00-status.md); evidence files are in `docs/evidence/`.
+"Offline" means the scripted test model (free and repeatable, used for regression). The current local real-model route uses Command Code's OpenAI-compatible endpoint with `deepseek/deepseek-v4.1-flash`; earlier evidence in `docs/evidence/` used `deepseek-v4-flash` and is labelled by run. Every measured result and how to reproduce it is in [`docs/00-status.md`](docs/00-status.md).
 
 | Area | Status | Evidence | Still missing |
 | --- | --- | --- | --- |
