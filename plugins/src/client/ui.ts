@@ -125,6 +125,7 @@ const labels = {
   sampleCaseLabel: ['本示例展示', 'This sample shows'],
   sampleCaseOpenData: ['查看数据与待确认项', 'Inspect data and open items'],
   reviewNeedsReady: ['此批次尚需处理数据问题，完成下面的检查后才能发起研判；一处源数据问题可能带出多条下游待办。现在不会向模型发送请求。', 'This batch needs data fixes before a review. One source problem can create several downstream open items. No model request will be sent yet.'],
+  guestReviewUnavailable: ['这个访客演示没有开启 AI 研判。你仍可查看示例文件、核对结果和引导流程；若要看真实模型研判，请使用讲解者提供的证据。', 'AI review is off in this guest demo. You can still inspect the sample files, checks and guided tours; ask the presenter for the real-model evidence.'],
   reviewBlockers: ['研判会被拒绝，原因：', 'The review would refuse this batch:'],
   next_blocked: ['请修正源表，再用「单部门补传」替换出错部门的文件，这会生成新批次。', 'Correct the source file, then replace that department\'s file; that creates a new batch.'],
   workflowFlow: ['填报与流转流程', 'Filling and handoff flow'],

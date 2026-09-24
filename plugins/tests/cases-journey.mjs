@@ -105,6 +105,9 @@ try {
   assert.equal(original, results.core.open_items, 'Later sample notebooks must not change the first notebook’s open items')
   await page.locator('.bf-shell-top').getByRole('button', { name: 'Notebooks', exact: true }).click()
   await page.getByRole('dialog', { name: 'Notebooks', exact: true }).getByRole('button', { name: /Many problems at once/ }).click()
+  await page.waitForFunction(batch => new URLSearchParams(location.hash.slice(12)).get('batch') === batch
+    && document.querySelector('.bf-notebook-title')?.value === 'Many problems at once', results.core.batch_id)
+  await studio.locator('.bf-data').waitFor() // the notebook restores its last-read Data view
   await studio.getByRole('button', { name: /This month’s tasks/ }).first().click()
   await page.waitForFunction(({ batch, total }) => {
     const selected = new URLSearchParams(location.hash.slice(12)).get('batch')
@@ -113,6 +116,24 @@ try {
   await switchLanguage(page, '中文')
   await page.locator('.bf-demo-guide').getByRole('heading', { name: /本示例展示.*多问题并发/ }).waitFor()
   assert.equal(await page.locator('.bf-tasks').getByRole('button', { name: '发起研判' }).isDisabled(), true)
+  // The public guest console leaves AI off. A ready sample must not offer a model action
+  // that can only produce the fixed guest notice; its data and guided paths remain usable.
+  const guestPage = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: 'en-US' })
+  guestPage.on('pageerror', e => errors.push(e.message))
+  await guestPage.route('**/bridgeflow/config', async route => {
+    const response = await route.fetch()
+    await route.fulfill({ response, json: { ...await response.json(), guestMode: true, guestLlm: false } })
+  })
+  await guestPage.goto(match[1])
+  await switchLanguage(guestPage, 'English')
+  const guestCases = guestPage.locator('.bf-sample-cases')
+  await guestCases.locator('summary').click()
+  await guestCases.locator('button[data-case="clean"]').click()
+  const guestTasks = guestPage.locator('.bf-tasks')
+  await guestTasks.getByText('AI review is off in this guest demo.', { exact: false }).waitFor()
+  assert.equal(await guestTasks.getByRole('button', { name: 'Start the review' }).isDisabled(), true)
+  await guestPage.screenshot({ path: `${evidence}/case-clean-guest.png` })
+  await guestPage.close()
   assert.deepEqual(errors, [])
   await writeFile(`${evidence}/cases.json`, JSON.stringify(results, null, 2))
   console.log(JSON.stringify({ status: 'passed', results, evidence }))

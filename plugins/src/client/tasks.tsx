@@ -3,6 +3,7 @@ import { CloseChecklist, OpenItemInbox } from './checklist.tsx'
 import { WorkflowProgress } from './workflow-progress.tsx'
 import { api, describeError, navigate, startReview, useUI, type Summary } from './ui.ts'
 import { Explain } from './explain.tsx'
+import { useGuestMode } from './guest.tsx'
 import type { projectAudit } from './audit.ts'
 
 type DemoCase = { case_id: string; title: [string, string]; summary: [string, string] }
@@ -46,6 +47,7 @@ export function TasksView({ batchId, summary, audit, savedReportStatus, notebook
   onRefresh: () => void
 }) {
   const { t } = useUI()
+  const guest = useGuestMode()
   const [focus, setFocus] = useState('')
   const [busy, setBusy] = useState(false), [error, setError] = useState('')
   if (!summary) return <p className="bf-hint">{t('studioStartHelp')}</p>
@@ -53,7 +55,7 @@ export function TasksView({ batchId, summary, audit, savedReportStatus, notebook
   return <section className="bf-tasks" aria-label={t('closeChecklist')}>
     <div className="bf-card-head">
       <h3>{t('monthlyTasks')} · {summary.period}</h3>
-      <button className="bf-primary" disabled={busy || !reviewReady} onClick={async () => {
+      <button className="bf-primary" disabled={busy || !reviewReady || (guest.guest && !guest.llm)} onClick={async () => {
         setError(''); setBusy(true)
         try { await startReview(batchId, summary.period); onRefresh() }
         catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
@@ -61,6 +63,7 @@ export function TasksView({ batchId, summary, audit, savedReportStatus, notebook
     </div>
     {summary.demo_case && <DemoCaseGuide caseId={summary.demo_case} batchId={batchId} />}
     {!reviewReady && <p className="bf-hint" role="status">{t('reviewNeedsReady')}</p>}
+    {reviewReady && guest.guest && !guest.llm && <p className="bf-hint" role="status">{t('guestReviewUnavailable')}</p>}
     <p className="bf-hint">{t('monthlyTasksHelp')}</p>
     <Explain text={t('how_tasks')} />
     {error && <p role="alert" className="bf-error">{error}</p>}
