@@ -176,6 +176,7 @@ const labels = {
   notebookHistoryHelp: ['从 DSH 已保存的会话中打开笔记本；来源及产物按保存的批次恢复。未保存的空白笔记本不列入历史。', 'Reopen a saved notebook with its sources and results. Empty notebooks that were never saved are not listed.'],
   sampleNotebook: ['打开示例笔记本', 'Open sample notebook'], sampleNotebookTitle: ['业务演示 · 月度对账（模拟商砼公司 2024-07）', 'Business demo · monthly review (fictional concrete supplier, 2024-07)'],
   sampleNotebookHelp: ['虚构的混凝土供应商数据。可以浏览文件、主表和跨部门总表；到「本月任务」查看本示例展示的问题，以及当前能否发起研判。', 'Fictional data from a concrete supplier. Browse the files and combined table; open This month’s tasks to see what this sample shows and whether a review can start.'],
+  sampleNotebookPrompt: ['想直接试用？点上方「打开示例笔记本」；无需准备文件，也不调用 AI。', 'Want a ready-made example? Open the sample notebook above. No files or AI call are needed.'],
   draftNotebook: ['空白草稿', 'Empty draft'],
   unsavedNotebook: ['未保存', 'Unsaved'], savedNotebook: ['已保存', 'Saved'],
   resizeSources: ['调整来源栏宽度', 'Resize Sources'], resizeStudio: ['调整工作室宽度', 'Resize Studio'],
