@@ -159,4 +159,19 @@ else
   check "main site is gated by the portal on https://$DOMAIN" bash -c 'test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 https://'"$DOMAIN"'/)" = 401'
 fi
 check "portal health answers on https://portal.$DOMAIN" curl -fsS --max-time 10 "https://portal.$DOMAIN/health"
+# Guest is opt-in, but once either its service or portal entry is configured, a green
+# deploy must prove the whole evaluator path. Checking only service liveness missed the
+# case where Caddy/TLS or the portal link was still absent (docs/22 §9e).
+if systemctl is-enabled --quiet bridgeflow-guest 2>/dev/null || bash -c 'source env.sh && [[ -n "${PORTAL_GUEST_APP_URI:-}" ]]'; then
+  check "guest unit is enabled and active" bash -c 'systemctl is-enabled --quiet bridgeflow-guest && systemctl is-active --quiet bridgeflow-guest'
+  check "guest nightly reset is enabled and active" bash -c 'systemctl is-enabled --quiet bridgeflow-guest-reset.timer && systemctl is-active --quiet bridgeflow-guest-reset.timer'
+  check "guest backend answers on loopback" curl -fsS --max-time 5 http://127.0.0.1:8001/health
+  check "guest console listens on loopback" bash -c 'ss -tlnH | grep -q "127.0.0.1:3090 "'
+  check "portal points at this guest site and its captured token" bash -c '
+    source env.sh
+    [[ "${PORTAL_GUEST_APP_URI:-}" = "https://guest.$DOMAIN/" && -s "${PORTAL_GUEST_TOKEN_FILE:-/nonexistent}" ]]'
+  check "portal offers a guest entry" bash -c 'curl -fsS --max-time 5 http://127.0.0.1:8100/ | grep -Fq "href=\"/guest\""'
+  check "portal hands guests to the current console" bash -c 'curl -fsS --max-time 5 http://127.0.0.1:8100/guest | grep -Fq "https://guest.$DOMAIN/?token="'
+  check "guest site has working TLS and a session fence" bash -c 'test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 "https://guest.$DOMAIN/")" = 401'
+fi
 exit $failed
