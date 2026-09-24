@@ -8,7 +8,7 @@ import { api, claimActor, formatTime, labelText, navigate, route, useUI, type Su
 import { QuotationProgress } from './quotation-progress.tsx'
 import { Notebook } from './notebook.tsx'
 import { BusinessReview, type Review } from './review.tsx'
-import { Chip, type Limits } from './workspace.tsx'
+import { Chip, BatchChip, type Limits } from './workspace.tsx'
 import { NextStep } from './next-step.tsx'
 
 type Injected = { source: SessionEventSource; loadOlder: () => Promise<void> }
@@ -63,7 +63,7 @@ function MonthlyState({ source, loadOlder, openView }: ConvViewProps & Injected)
     </form>
     {error && <p role="alert" className="bf-error">{error}</p>}
     <p className="bf-band">{batch
-      ? <><span className="bf-period">{batch.period}</span> <Chip status={batch.status} /> <span className="bf-hint">{batch.master_rows} {t('rows')} · <code className="bf-mono">{batch.batch_id}</code></span></>
+      ? <><span className="bf-period">{batch.period}</span> <BatchChip status={batch.status} /> <span className="bf-hint">{batch.master_rows} {t('rows')} · <code className="bf-mono">{batch.batch_id}</code></span></>
       : <span className="bf-hint">{t('unknown')}</span>}</p>
     {batch && <NextStep batch={batch} />}
     <nav><button disabled={!batch} onClick={() => navigate({ batch: batchId, view: node === 'needs_review' ? 'mappings' : node === 'needs_configuration' ? 'corrections' : 'master' })}>{t('batchTables')} ↗</button>
@@ -72,7 +72,7 @@ function MonthlyState({ source, loadOlder, openView }: ConvViewProps & Injected)
     </>}
     studio={<>
     <p className="bf-hint">{t('sessionApprovals')}</p>
-    <div className="bf-state-map">{groups.map(group => <section key={group.title}><h3>{group.title}</h3>{group.items.map(id => <button key={id} data-current={current(id)} aria-pressed={node === id} onClick={() => setNode(id)}><Chip status={id} /> {count(id) !== undefined && <span className="bf-badge">{count(id)}</span>}</button>)}</section>)}</div>
+    <div className="bf-state-map">{groups.map(group => <section key={group.title}><h3>{group.title}</h3>{group.items.map(id => <button key={id} data-current={current(id)} aria-pressed={node === id} onClick={() => setNode(id)}>{id === 'ready' ? <BatchChip status={id} /> : <Chip status={id} />} {count(id) !== undefined && <span className="bf-badge">{count(id)}</span>}</button>)}</section>)}</div>
     <p className="bf-hint">{t('approval')} · {t('timeout')}: {limits ? limits.decisionTimeoutMs / 1000 : '—'} {t('seconds')}</p>
     <p className="bf-hint">{t('mappingHelp')} {t('quarantineHelp')}</p>
     <details><summary>{t('batchAudit')} · {selected.calls.length} Spawn · {t('dispatchCount')}</summary><p>{t('loadedWindow')}</p><ul>{selected.calls.map((e, i) => <li key={i}>{String(e.data.callId)} · {formatTime(e.time, language)}</li>)}</ul>{snapshot.hasMore && <button onClick={() => void loadOlder().catch(e => setError(describeError(e, t)))}>{t('loadOlder')}</button>}</details>

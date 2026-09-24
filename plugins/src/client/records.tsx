@@ -39,13 +39,14 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
       .catch(() => { if (!signal.aborted) setDispositionNote(t('recordsNoReview')) })
     return () => controller.abort()
   }, [batchId])
-  if (!summary) return <p className="bf-hint">{t('studioStartHelp')}</p>
+  if (batchId && !summary) return <p role="status" className="bf-loading">{t('loading')}</p>
   return <section className="bf-records" aria-label={t('records')}>
-    <div className="bf-card-head"><h3>{t('records')} · {summary.period}</h3></div>
+    <div className="bf-card-head"><h3>{t('records')}{summary ? ` · ${summary.period}` : ''}</h3></div>
     <p className="bf-hint">{t('recordsHelp')}</p>
     <Explain text={t('how_records')} />
     {error && <p role="alert" className="bf-error">{error}</p>}
 
+    {summary ? <>
     <h4>{t('recordsLineage')}</h4>
     <ul className="bf-records-list">
       <li><span>{t('batchId')}</span><code className="bf-mono">{batchId}</code></li>
@@ -87,6 +88,7 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
     </ul>
 
     <p className="bf-hint">{t('recordsReadOnly')}</p>
+    </> : <p className="bf-callout" role="note">{t('recordsNoBatch')}</p>}
 
     <AgentRuns batchId={batchId} />
     <DecisionJournal batchId={batchId} />
