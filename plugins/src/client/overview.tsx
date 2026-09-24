@@ -138,7 +138,7 @@ export function Overview({ batchId }: { batchId: string }) {
     <button className="bf-ov-tile" data-tone={tone} onClick={() => go(view)}><span>{label}</span><b>{value}</b><small>{note}</small></button>
 
   return <section className="bf-overview" aria-label={t('overview')}>
-    <header className="bf-ov-head"><div><h3>{t('overview')}</h3><p className="bf-hint">{period ? `${period} · ` : ''}{t('overviewIntro')}</p></div>
+    <header className="bf-ov-head"><div><h3>{t('overview')}</h3><p className="bf-hint">{period ? `${period} · ` : ''}{t(batchId ? 'overviewIntro' : 'overviewIntroNoBatch')}</p></div>
       <button aria-pressed={tables} onClick={() => setTables(!tables)}>{t(tables ? 'ovHideTables' : 'ovShowTables')}</button></header>
     <Explain text={t('overviewHow')} />
     {!batchId && <p className="bf-callout">{t('ovNoBatch')}</p>}
@@ -172,7 +172,7 @@ export function Overview({ batchId }: { batchId: string }) {
         {ok(board) ? <BarList rows={stages} /> : <Unread value={board} />}
         {tables && ok(board) && <DataTable rows={stages.map(s => [s.label, s.value, s.critical])} head={[t('ovStage'), t('ovRecords'), t('ovOverdue')]} />}
       </Block>
-      <Block title={t('ovRunTokens')} open={t('records')} onOpen={() => go(batchId ? 'records' : 'handoff')}>
+      <Block title={t('ovRunTokens')} open={t('records')} onOpen={() => go('records')}>
         {ok(runs) ? <BarList rows={runList.map(r => ({ label: new Date(r.started_at).toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-GB', { hour: '2-digit', minute: '2-digit' }),
           value: r.tokens?.total ?? 0, note: `${r.steps} ${t('ovSteps')}${r.refused ? ` · ✕ ${r.refused} ${t('ovRefused')}` : ''}` }))} empty={t('ovNoRuns')} /> : <Unread value={runs} />}
         {tables && ok(runs) && <DataTable rows={runList.map(r => [r.started_at, r.steps, r.tokens?.total ?? 0, r.refused])} head={[t('ovStarted'), t('ovSteps'), 'tokens', t('ovRefused')]} />}

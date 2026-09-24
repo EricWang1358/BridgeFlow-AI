@@ -81,6 +81,12 @@ try {
   assert.match(page.url(), /[?&]view=records(?:&|$)/, 'Recent agent runs should open Records even without a batch')
   await wait(450)
   await page.screenshot({ path: `${evidence}/records-without-batch.png` })
+  await studio.getByRole('button', { name: 'Overview', exact: true }).click()
+  await overview.getByText('See workflow and agent activity across the workspace.', { exact: false }).waitFor()
+  await overview.getByText('The workflow and run numbers below cover the whole workspace.', { exact: false }).waitFor()
+  await overview.getByRole('region', { name: 'Tokens per run' }).getByRole('button', { name: /Records/ }).click()
+  await globalRecords.getByText('No monthly batch is selected.', { exact: false }).waitFor()
+  assert.match(page.url(), /[?&]view=records(?:&|$)/, 'Tokens per run should open Records even without a batch')
   const board = () => page.evaluate(async () => (await (await fetch('/bridgeflow/workflow/board')).json()).rows)
   const refresh = () => page.locator('.bf-card-head').getByRole('button', { name: 'Refresh', exact: true }).click()
   // Arrivals ease in over ~200 ms; photograph the settled page, not the middle of a fade.

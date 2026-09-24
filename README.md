@@ -122,14 +122,17 @@ Not covered by any sample: Feishu import and upload (they need a Feishu tenant),
 
 **Public demo.** The deployed instance lives at <https://47.130.178.176.sslip.io/> (AWS Lightsail,
 `47.130.178.176`), with the sign-in portal at <https://portal.47.130.178.176.sslip.io/>. Merges to
-`main` deploy to it automatically ([docs/22](docs/22-lightsail-deploy.md)).
+`main` deploy to it automatically ([docs/22](docs/22-lightsail-deploy.md)). As of 2026-09-24,
+the public console requires an authorized Feishu sign-in; the separate guest entrance is not live.
+Reviewers without that access can follow the local sample walkthrough below.
 
 **What this is.** A business-use-case demonstration built for a hackathon. The data on screen is
 generated and labelled synthetic. It is not a certified enterprise deployment. On the deployed
 instance, sign-in is per-employee Feishu OAuth through the portal; data routes carry that identity,
-and an access-control map resolved live from Feishu wiki membership decides which batches and
-operations each employee may touch — an invisible batch answers 404, and every write still waits on
-a native approval. Still missing: per-employee isolation of the native chat session and of
+and Feishu wiki membership resolves a role for operation permissions. Signed-in employees can
+read local batches, workflow and discovery records; department scope applies to Feishu import and
+upload. Model-initiated writes require role permission and native approval. Still missing:
+per-employee isolation of the native chat session and of
 model-side reads, personal audit of rejections, and formal report sign-off — no full multi-tenant
 boundary is claimed. Locally, following this guide without the portal keeps the identity layer off
 (one shared DSH session, recorded as `dsh-authenticated-session`).
