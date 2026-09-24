@@ -50,9 +50,10 @@ export function aggregateMetric(config: BackendConfig) {
         type: 'string',
         required: true,
         description:
-          'Metric name. Ask list_metrics first if unsure — the set is configured, not fixed in code.',
+          'Metric name as the person said it. If it is not declared, the refusal lists the declared names — ' +
+          'call again with one of those, never an invented one. list_metrics is for explaining formulas.',
       },
-      period: { type: 'string', required: true, description: 'Month, e.g. 2025-11' },
+      period: { type: 'string', description: 'Month, e.g. 2025-11. Omit it with a batch_id: the batch\'s own month is used.' },
       batch_id: { type: 'string', description: 'Immutable batch id from the upload panel; always supply for uploaded data' },
       entity: {
         type: 'string',

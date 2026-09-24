@@ -12,6 +12,8 @@ export function configureLocale(value: Context['locale']) { locale = value }
 const subscribe = (fn: () => void) => locale.subscribe(fn)
 const current = () => locale.getSnapshot().active.startsWith('zh') ? 'zh' : 'en'
 const labels = {
+  sampleHistory: ['载入前两个月的示例', 'Load the two earlier sample months'],
+  sampleHistoryHelp: ['趋势至少要两个月。示例只有 2024-07，可以补上同一家供应商的 5 月和 6 月（没有埋错）。', 'A trend needs at least two months. The sample has only 2024-07; add the same supplier\u2019s May and June (nothing planted).'],
   ovNoRuns: ['今天还没有代理运行。在对话里让队长做一件事，这里会出现它用了多少 token。', 'No agent runs yet today. Ask the captain for something in the chat and its token use shows up here.'],
   overview: ['总览', 'Overview'],
   overviewIntro: ['这个月各处的进展一页看完。点任何一块，去负责它的页面处理。', 'Where the month stands across every page. Open any block to act on it where it lives.'],

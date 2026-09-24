@@ -45,11 +45,12 @@ export function columnCandidates(config: BackendConfig) {
   return withAccess(defineTool({
     name: 'column_candidates',
     description:
-      'For a batch that needs configuration: list each uploaded column the field dictionary does not know, ' +
+      'List each uploaded column of a batch that the field dictionary does not know (an empty list when it knows them all), ' +
       'with the columns the dictionary already declares for that department as its only possible matches, ' +
       'plus structural evidence (type fit, hashed value overlap). No cell values. ' +
       'Propose at most one match per column, explain the evidence, then call confirm_column_match so a person decides. ' +
-      'Never propose a target that is not listed; if nothing fits, say the dictionary owner must decide.',
+      'Never propose a target that is not listed; if nothing fits, say the dictionary owner must decide. ' +
+      'Call it directly when someone asks about unrecognised columns; reading batch_summary first is not needed.',
     parameters: {
       batch_id: { type: 'string', required: true, description: 'The batch to examine' },
     },

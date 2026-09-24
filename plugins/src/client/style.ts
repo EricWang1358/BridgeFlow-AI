@@ -742,6 +742,7 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-ov-spark { margin: 0; display: grid; gap: 4px }
 .bf-ov-spark figcaption { display: grid; gap: 1px; font-size: 12px; color: var(--bf-muted) }
 .bf-ov-spark figcaption b { font-size: 18px; color: var(--bf-text); font-variant-numeric: tabular-nums }
+.bf-ov-spark figcaption b .bf-ov-critical { display: block; font-size: 11px; font-weight: 600 }
 .bf-ov-spark svg { width: 100%; height: 64px; overflow: visible; cursor: crosshair }
 .bf-ov-line { fill: none; stroke: var(--bf-chart-mark); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round }
 .bf-ov-threshold { stroke: var(--bf-muted); stroke-width: 1; stroke-dasharray: 3 3 }

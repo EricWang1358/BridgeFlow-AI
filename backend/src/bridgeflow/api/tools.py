@@ -111,7 +111,8 @@ async def lookup_field_dictionary(request: LookupRequest) -> ColumnMeaning:
 
 class AggregateRequest(BaseModel):
     metric: str
-    period: str
+    #: Optional with a batch: the batch's own month. Given and different, it is refused.
+    period: str = ""
     entity: str | None = None
     batch_id: str | None = None
 
@@ -153,8 +154,9 @@ async def aggregate_metric(request: AggregateRequest) -> MetricResult:
     """
     if request.batch_id:
         batch = load_batch(request.batch_id)
-        if batch.period != request.period:
+        if request.period and batch.period != request.period:
             raise HTTPException(409, "Batch period does not match requested period")
+        request = request.model_copy(update={"period": batch.period})
         tables = batch.clean_tables
         dictionary = batch_dictionary(batch)
         if any(table.quarantine for table in tables):
@@ -165,7 +167,8 @@ async def aggregate_metric(request: AggregateRequest) -> MetricResult:
             if request.entity:
                 raise HTTPException(409, "Entity-scoped business formulas are not declared; cannot infer a filter")
             if request.metric not in facts:
-                raise HTTPException(409, f"Unknown metric; available: {', '.join(facts)}")
+                raise HTTPException(409, f"Unknown metric; available: {', '.join(facts)}. "
+                                         "Call again with one of these; do not invent names.")
             fact = facts[request.metric]
             return MetricResult(metric=request.metric, period=request.period, value=fact["value"],
                 unit=fact["unit"], formula=fact["formula"], evidence=[EvidenceCell(
@@ -174,6 +177,8 @@ async def aggregate_metric(request: AggregateRequest) -> MetricResult:
                     value=str(next(t for t in tables if t.department == ref["department"]).rows[ref["row"]].get(ref["column"])),
                 ) for ref in fact["sources"]], evidence_total=fact["source_count"], evidence_truncated=fact["truncated"])
     else:
+        if not request.period:
+            raise HTTPException(422, "period is required without a batch_id")
         tables = await _clean_tables(request.period)
         dictionary = _dictionary()
     try:
@@ -185,7 +190,7 @@ async def aggregate_metric(request: AggregateRequest) -> MetricResult:
         raise HTTPException(
             status_code=409,
             detail=f"{refused} Available metrics: {', '.join(available) or '(none configured)'}. "
-                   "Use list_metrics; do not retry undeclared names.",
+                   "Call again with one of these; do not invent names.",
         ) from refused
 
     return MetricResult(

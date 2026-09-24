@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { renderBoard, renderDraft } from '../src/tools/workflow.ts'
+import { renderChecklist } from '../src/tools/checklist.ts'
 import { renderDraftEntries } from '../src/tools/dictionary.ts'
 import { renderDispositions } from '../src/tools/dispositions.ts'
 
@@ -62,4 +63,10 @@ test('workflow_scope shows the ids and decision_seq that workflow_accept_scope t
   const stale = text(renderScope({ accepted: { project_id: 'demo-handoff', decision_id: 'mvp', decision_seq: 4, scope: ['试点'], exclusions: [] },
     current: false, stale_reasons: ['decision_revised'], runnable_candidates: [] }))
   assert.match(stale, /STALE \(decision_revised\)/)
+})
+
+test('monthly_checklist names the batch a month is bound to, so a month without an id can be looked up', () => {
+  const out = text(renderChecklist({ period: '2024-07', batch_id: 'b'.repeat(32), ready_to_close: false,
+    steps: [{ id: 'review', state: 'open', count: 1, owner_role: '总经办' }] }))
+  assert.match(out, /2024-07 \(batch_id=b{32}\)/)
 })

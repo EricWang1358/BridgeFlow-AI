@@ -77,14 +77,24 @@ function Bars({ chart, onPoint }: { chart: Chart; onPoint: (p: Point) => void })
 export function MetricCharts({ batchId }: { batchId: string }) {
   const { t } = useUI()
   const [charts, setCharts] = useState<{ charts: Chart[]; refusal?: string } | null>(null), [error, setError] = useState('')
-  const [tables, setTables] = useState<Record<string, boolean>>({})
+  const [tables, setTables] = useState<Record<string, boolean>>({}), [revision, setRevision] = useState(0)
+  // Only a sample batch is offered the sample's earlier months; a real batch never is.
+  const [sample, setSample] = useState(false)
+  const short = !!charts?.charts.some(c => c.status === 'needs_more_periods')
+  useEffect(() => {
+    if (!short) return
+    const controller = new AbortController()
+    void api<{ demo_case?: string | null }>(`/batches/${batchId}`, { signal: controller.signal })
+      .then(summary => setSample(!!summary.demo_case)).catch(() => setSample(false))
+    return () => controller.abort()
+  }, [batchId, short])
   useEffect(() => {
     const controller = new AbortController()
     setCharts(null); setError('')
     void api<{ charts: Chart[]; refusal?: string }>(`/conclusions/batches/${batchId}/charts`, { signal: controller.signal })
       .then(setCharts).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
-  }, [batchId])
+  }, [batchId, revision])
   if (error) return <p role="alert" className="bf-error">{error}</p>
   if (!charts) return <p role="status" className="bf-loading">{t('loading')}</p>
   if (charts.refusal) return <p className="bf-hint">{charts.refusal}</p>
@@ -94,6 +104,7 @@ export function MetricCharts({ batchId }: { batchId: string }) {
   }
   return <section className="bf-charts" aria-label={t('metricCharts')}>
     <h3>{t('metricCharts')}</h3>
+    {sample && short && <SampleHistory onLoaded={() => setRevision(n => n + 1)} />}
     {charts.charts.map(chart => <article key={chart.id} className="bf-chart-card">
       <h4>{t(`chart_${chart.id}`) === `chart_${chart.id}` ? chart.subject : t(`chart_${chart.id}`)}
         {chart.unit && <span className="bf-hint"> · {chart.unit}</span>}
@@ -112,4 +123,20 @@ export function MetricCharts({ batchId }: { batchId: string }) {
         </tr>)}</tbody></table>}
     </article>)}
   </section>
+}
+
+/**
+ * A sample batch has one month; its supplier's earlier months are one click away, so a
+ * trend can be seen without pretending the sample already had history.
+ */
+export function SampleHistory({ onLoaded }: { onLoaded: () => void }) {
+  const { t } = useUI()
+  const [busy, setBusy] = useState(false), [error, setError] = useState('')
+  return <p className="bf-hint">{t('sampleHistoryHelp')}{' '}
+    <button disabled={busy} onClick={() => {
+      setBusy(true); setError('')
+      void api('/batches/demo/history', { method: 'POST' }).then(onLoaded)
+        .catch(e => setError(describeError(e, t))).finally(() => setBusy(false))
+    }}>{t(busy ? 'busy' : 'sampleHistory')}</button>
+    {error && <span role="alert" className="bf-error"> {error}</span>}</p>
 }

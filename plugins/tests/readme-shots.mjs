@@ -75,8 +75,11 @@ try {
   // The overview reads the same sources as each page and links back to them.
   await studio.getByRole('button', { name: /^.?Overview/ }).first().click()
   await page.locator('.bf-ov-kpis .bf-ov-tile').first().waitFor()
+  // The sample has one month; its earlier months are one click away, and then the trends draw.
+  await page.getByRole('button', { name: 'Load the two earlier sample months', exact: true }).click()
+  await page.locator('.bf-ov-sparks svg').first().waitFor()
   await studio.getByRole('button', { name: 'Expand preview', exact: true }).click()
-  await page.locator('dialog[open] .bf-ov-spark, dialog[open] .bf-ov-bars').first().waitFor(); await page.waitForTimeout(1000)
+  await page.locator('dialog[open] .bf-ov-sparks svg').first().waitFor(); await page.waitForTimeout(1000)
   await shot('15-overview')
   assert.deepEqual(errors, [])
   console.log(JSON.stringify({ status: 'captured', out: evidence }))

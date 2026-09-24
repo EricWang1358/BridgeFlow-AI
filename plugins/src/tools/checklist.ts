@@ -13,20 +13,23 @@ import { callBackend, type BackendConfig } from '../backend.ts'
  */
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json }
 
+/** The period's state, led by the batch it is bound to so the next call can use that batch. */
+export function renderChecklist(result: { period?: string; batch_id?: string; ready_to_close?: boolean; refusal?: string
+  steps?: { id: string; state: string; count: number; owner_role: string }[] }) {
+  if (result.refusal) return [{ type: 'text' as const, text: result.refusal }]
+  const open = (result.steps ?? []).filter(s => s.state !== 'done')
+  const head = `${result.period}${result.batch_id ? ` (batch_id=${result.batch_id})` : ''}`
+  return [{ type: 'text' as const, text: result.ready_to_close
+    ? `${head}: every declared step is done.`
+    : `${head}: ${open.length} step(s) outstanding — ` + open.map(s => `${s.id} (${s.state}${s.count ? ` ×${s.count}` : ''}, ${s.owner_role || 'unassigned'})`).join(' | ') }]
+}
+
 export function checklistTool(config: BackendConfig): ProductTool {
   return withAccess(defineTool({
     name: 'monthly_checklist',
-    description: 'The monthly close checklist for a period: each declared step with its state (done, open, blocked, unknown), how many things are outstanding, who owns it, and whether the month is ready to close. Counts and names only, never rows.',
+    description: 'The monthly close checklist for a period: the batch the month is bound to, each declared step with its state (done, open, blocked, unknown), how many things are outstanding, who owns it, and whether the month is ready to close. Counts and names only, never rows. Also the way to find a month\'s batch when someone names a month but no batch id.',
     parameters: { period: { type: 'string', required: true, description: 'YYYY-MM' } },
-    output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => {
-      const result = value as { period?: string; ready_to_close?: boolean; refusal?: string
-        steps?: { id: string; state: string; count: number; owner_role: string }[] }
-      if (result.refusal) return [{ type: 'text', text: result.refusal }]
-      const open = (result.steps ?? []).filter(s => s.state !== 'done')
-      return [{ type: 'text', text: result.ready_to_close
-        ? `${result.period}: every declared step is done.`
-        : `${result.period}: ${open.length} step(s) outstanding — ` + open.map(s => `${s.id} (${s.state}${s.count ? ` ×${s.count}` : ''}, ${s.owner_role || 'unassigned'})`).join(' | ') }]
-    } },
+    output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => renderChecklist(value as Parameters<typeof renderChecklist>[0]) },
     async execute(args, exec) {
       return callBackend<Record<string, Json>>(config, '/tools/monthly-checklist', { period: args.period }, exec)
     },
