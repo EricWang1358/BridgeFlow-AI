@@ -13,7 +13,13 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 from bridgeflow import feishu, feishu_tabular
-from bridgeflow.api.batches import _check_upload_scope, _import_batch, _visible, load_batch
+from bridgeflow.api.batches import (
+    _check_feishu_batch,
+    _check_feishu_scope,
+    _import_batch,
+    _visible,
+    load_batch,
+)
 from bridgeflow.api.reviews import saved_review
 from bridgeflow.config import settings
 from bridgeflow.identity import UserIdentity, require_user
@@ -202,7 +208,7 @@ async def feishu_list(request: ListRequest, http_request: Request) -> dict:
 async def feishu_import_user(request: ImportRequest, http_request: Request,
                              user: Annotated[UserIdentity | None, Depends(require_user)]) -> dict:
     """Download the files the signed-in user picked and import them as one batch."""
-    _check_upload_scope([f.department for f in request.files], user)
+    _check_feishu_scope([f.department for f in request.files], user)
     return await _import_with(_user_client(http_request), request, user)
 
 
@@ -213,7 +219,7 @@ async def feishu_upload_user(request: UserUploadRequest, http_request: Request,
     wiki position (docs/31 — land in the Drive root, then attach)."""
     drive = _user_client(http_request)  # the token gate answers before anything exists
     try:
-        _visible(load_batch(request.batch_id), user)
+        _check_feishu_batch(_visible(load_batch(request.batch_id), user), user)
         report = saved_review(request.batch_id, request.report_id)
         filename = re.sub(r"[^A-Za-z0-9_.-]", "-", f"bridgeflow-review-{report['period']}-{report['report_id'][:8]}.json")
         payload = json.dumps(report, ensure_ascii=False, indent=2).encode("utf-8")

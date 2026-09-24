@@ -82,7 +82,7 @@ Some states conflict (a batch that is ready cannot also be held back), so the de
 | `tour-smoke` / `round1-journey` / `web-smoke` / `quotation-smoke` / `cases-journey` | Tour, brief, discovery chain, quotation and notebooks, the three cases | Offline browser | All pass |
 | `business-smoke` (risk / balanced / injection / department failure) | Four-department review and cross-operation chain | Offline browser; the first three also on the real model | All pass |
 | `workflow-journey` | Filling and handoff end to end | Real model | Passes |
-| `tool-selection-live` | Does the captain pick the right first tool | Real model | 15/18 |
+| `tool-selection-live` | Does the captain pick the right first tool | Real model | All cases passed in the latest run; see [docs/00](docs/00-status.md) |
 
 ## Before you start
 

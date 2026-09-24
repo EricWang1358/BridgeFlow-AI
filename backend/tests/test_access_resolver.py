@@ -11,7 +11,7 @@ import yaml
 from fastapi import HTTPException
 
 from bridgeflow import access_resolver, identity
-from bridgeflow.access import departments_for, operations_for, workflow_departments_for
+from bridgeflow.access import departments_for, operations_for
 from bridgeflow.config import settings
 from bridgeflow.feishu import FeishuError
 
@@ -191,7 +191,7 @@ def test_confirm_mapping_requires_all_departments(configured):
 
 @pytest.mark.parametrize("value", ["production", [123], [" "], None])
 def test_malformed_role_fields_are_invalid(configured, value):
-    _invalid(configured, lambda c: c["roles"]["production_member"].update(workflow_departments=value))
+    _invalid(configured, lambda c: c["roles"]["production_member"].update(operations=value))
 
 
 # --- HTTP level: the real fetcher against a fake Feishu transport -------------------------
@@ -267,15 +267,15 @@ def test_missing_feishu_credentials_fail_closed(monkeypatch, tmp_path):
     assert failure.value.status_code == 503 and "not configured" in failure.value.detail.lower()
 
 
-def test_workflow_departments_union_across_roles(configured):
+def test_department_grants_union_across_roles(configured):
     _, _, acl = configured
     config = yaml.safe_load(acl.read_text())
-    config["roles"]["production_member"]["workflow_departments"] = ["生产部"]
-    config["roles"]["master_office_member"]["workflow_departments"] = ["生产部", "物资部"]
+    config["roles"]["production_member"]["departments"] = ["production"]
+    config["roles"]["master_office_member"]["departments"] = ["production", "procurement"]
     acl.write_text(yaml.safe_dump(config))
     configured[0]["spc_production"] = {"ou_bob": "member"}
     configured[0]["spc_master"] = {"ou_bob": "member"}
-    assert workflow_departments_for("ou_bob") == {"生产部", "物资部"}
+    assert departments_for("ou_bob") == {"production", "procurement"}
 
 
 def test_the_repository_access_control_file_ships_valid():

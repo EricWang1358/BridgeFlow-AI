@@ -42,15 +42,18 @@ def execute(client, payload, proof):
                        headers={"content-type": "application/json", "x-bridgeflow-approval": proof})
 
 
-def test_employee_permit_requires_identity_operation_and_data_scope(client, monkeypatch):
+def test_employee_permit_requires_identity_and_the_operation_grant(client, monkeypatch):
     workflow_setup(monkeypatch)
     payload = body()
     assert client.post("/identity/authorize-write", json={"operation": "workflow_record", "body": payload.decode()}).status_code == 401
     assert permit(client, payload).status_code == 403
     grants("ou_bob", ["workflow_record"])
     assert permit(client, payload).status_code == 200
-    edit_role("ou_bob", "workflow_departments", [])
-    assert permit(client, payload).status_code == 404
+    grants("ou_bob", [])
+    assert permit(client, payload).status_code == 403  # revoking the grant revokes the permit
+    undeclared = payload.replace(b'"production_record"', b'"undeclared_template"')
+    grants("ou_bob", ["workflow_record"])
+    assert permit(client, undeclared).status_code == 404  # only declared templates exist
 
 
 @pytest.mark.parametrize("department", [[], {}, None, ""])

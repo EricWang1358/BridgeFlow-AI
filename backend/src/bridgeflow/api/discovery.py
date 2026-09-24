@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from pydantic import Field, ValidationError
 
-from bridgeflow.access import operations_for, workflow_departments_for
+from bridgeflow.access import operations_for
 from bridgeflow.api.workflow_tools import _require_writes
 from bridgeflow.config import REPO_ROOT, settings
 from bridgeflow.identity import UserIdentity, require_user
@@ -53,7 +53,8 @@ def visible(record: dict, allowed: set[str] | None) -> bool:
 
 
 def scope(user: UserIdentity | None) -> set[str] | None:
-    return None if user is None else workflow_departments_for(user.sub)
+    """Every signed-in employee sees every discovery record (2026-09-24, see workflow/visibility.py)."""
+    return None
 
 
 def scoring_policy(project: str, user: UserIdentity | None = None) -> ScoringPolicy:
@@ -260,11 +261,8 @@ async def upload_material(user: BrowserUser, metadata: Annotated[str, Form()],
         item = MaterialInput.model_validate_json(metadata)
     except ValidationError as exc:
         raise HTTPException(422, "Invalid material registration metadata") from exc
-    if user is not None:
-        if "discovery_upload" not in operations_for(user.sub):
-            raise HTTPException(403, "Material upload is not authorized")
-        if item.department not in workflow_departments_for(user.sub):
-            raise HTTPException(403, "Material department is outside this employee's scope")
+    if user is not None and "discovery_upload" not in operations_for(user.sub):
+        raise HTTPException(403, "Material upload is not authorized")
     if file.filename != item.filename:
         raise HTTPException(422, "Uploaded filename must match registration metadata")
     from bridgeflow.workflow.material_uploads import MAX_BYTES

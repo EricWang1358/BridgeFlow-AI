@@ -5,7 +5,7 @@ import type { Limits } from './workspace.tsx'
 import type { PendingApproval } from '@deepseek-ai/dsh-client-ui-approval/client'
 
 /** One label/value pair, matching the plugin's ApprovalDetail. */
-type Detail = { label: string; value: string }
+import { areaOf, isTechnical, useApprovalSummary, type Detail } from './approval-context.tsx'
 
 /** Presentation override only: the official pending request owns settlement. */
 export function MappingApproval({ matched }: { matched: PendingApproval }) {
@@ -44,14 +44,19 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
   // Argument names are this plugin's own closed set (tools/confirm-mapping.ts), so
   // they translate; a name outside the set shows verbatim rather than as arg_foo.
   // Values are the operator's evidence — shown exactly as declared, never rewritten.
+  // "said · 工程" → "你说的 · 工程": the part before the dot is the parameter, the rest is the person's own label.
   const argLabel = (label: string): string => {
-    const translated = t(`arg_${label}`)
-    return translated === `arg_${label}` ? label : translated
+    const [head, ...rest] = label.split(' · ')
+    const translated = t(`arg_${head}`)
+    return [translated === `arg_${head}` ? head : translated, ...rest].join(' · ')
   }
   const argValue = (detail: Detail): string =>
     detail.label === 'accepted'
       ? (detail.value === 'true' ? t('acceptMapping') : detail.value === 'false' ? t('rejectMapping') : detail.value)
+      : detail.label === 'action' && t(`actionValue_${detail.value}`) !== `actionValue_${detail.value}` ? t(`actionValue_${detail.value}`)
       : detail.value
+  const summary = useApprovalSummary(pending.toolName, details)
+  const visible = (details ?? []).filter(d => !isTechnical(d.label)), technical = (details ?? []).filter(d => isTechnical(d.label))
   async function answer(outcome: 'allowed-once' | 'rejected') {
     setBusy(true); setError('')
     try {
@@ -73,6 +78,7 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
   const kind = pending.toolName === 'confirm_mapping' ? '' : `_${pending.toolName}`
   return <section ref={card} tabIndex={-1} className="bf-card bf-decision" aria-label={t(`approval${kind}`)}>
     <header>
+      <span className="bf-approval-area">{t('approvalFrom')} · {t(areaOf(pending.toolName))}</span>
       <strong>{t(`approvalTitle${kind}`)}</strong>
       <span className="bf-hint">{t('timeout')} {timeout ?? '—'} {t('seconds')}</span>
     </header>
@@ -81,17 +87,19 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
         the raw reason string is the fallback for a call whose summary is gone and
         remains what the native console dialog shows. */}
     <div className="bf-callout" data-tone="info">
-      <p>{t('approvalIntro')}</p>
+      {summary && <p className="bf-approval-summary"><b>{t('approvalWhat')}</b>{' '}{summary}</p>}
+      <p>{kind === '' ? t('approvalIntro') : t(`approvalIntro${kind}`) === `approvalIntro${kind}` ? t('approvalIntroGeneric') : t(`approvalIntro${kind}`)}</p>
       {detailFailed
         ? <div role="alert"><p className="bf-error">{t('approvalDetailFailed')}</p><p>{pending.reason}</p>
             <button onClick={() => setAttempt(n => n + 1)}>{t('retry')}</button></div>
         : details === null
         ? <p className="bf-hint">{t('loading')}</p>
         : details.length
-          ? <dl className="bf-approval-detail">
-              <dt>{t('approvalTool')}</dt><dd><code className="bf-mono">{pending.toolName}</code></dd>
-              {details.map((detail, i) => <span key={i} style={{ display: 'contents' }}><dt>{argLabel(detail.label)}</dt><dd>{argValue(detail)}</dd></span>)}
-            </dl>
+          ? <>
+              {visible.length > 0 && <><p className="bf-approval-check">{t('approvalCheck')}</p><dl className="bf-approval-detail">
+                {visible.map((detail, i) => <span key={i} style={{ display: 'contents' }}><dt>{argLabel(detail.label)}</dt><dd>{argValue(detail)}</dd></span>)}
+              </dl></>}
+            </>
           : <p>{pending.reason}</p>}
     </div>
     {/* "Approve these values" shows the values: the arguments alone are an id and a digest. */}
@@ -111,5 +119,10 @@ function MappingApprovalForm({ pending }: { pending: PendingApproval }) {
       <button className="bf-danger-btn" disabled={busy || (!!note.trim() && !ticket)} onClick={() => void answer('rejected')}>{t('reject')}</button>
       <button className="bf-primary" disabled={busy || !ticket} onClick={() => void answer('allowed-once')}>{t('allow')}</button>
     </div>
+    {/* Audit plumbing sits last, after the decision, so keyboard order stays card → reason → Reject (#96). */}
+    {details && details.length > 0 && <details className="bf-approval-technical"><summary>{t('approvalTechnical')}</summary><dl className="bf-approval-detail">
+      <dt>{t('approvalTool')}</dt><dd><code className="bf-mono">{pending.toolName}</code></dd>
+      {technical.map((detail, i) => <span key={i} style={{ display: 'contents' }}><dt>{detail.label}</dt><dd><code className="bf-mono">{detail.value}</code></dd></span>)}
+    </dl></details>}
   </section>
 }

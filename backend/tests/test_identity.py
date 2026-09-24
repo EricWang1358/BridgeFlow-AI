@@ -126,35 +126,56 @@ def test_the_importer_sees_their_own_batch(client):
     assert client.get(f"/batches/{batch_id}", headers=auth(make_token())).status_code == 200
 
 
-def test_an_under_authorized_colleague_cannot_even_learn_the_batch_exists(client):
+def test_a_colleague_from_one_department_sees_a_four_department_batch(client):
+    # Owner decision 2026-09-24: Feishu department scope governs only Feishu import and
+    # upload. Inside BridgeFlow every signed-in employee sees every batch.
     batch_id = upload(client, auth(make_token()))
     bob = auth(make_token(sub="ou_bob"))  # production only; the batch spans four departments
-    assert client.get(f"/batches/{batch_id}", headers=bob).status_code == 404
-    assert client.get(f"/batches/{batch_id}/view", headers=bob).status_code == 404
-    assert client.get(f"/batches/{batch_id}/sources/production", headers=bob).status_code == 404
-    assert client.get(f"/batches/{batch_id}/artifacts", headers=bob).status_code == 404
+    for path in ("", "/view", "/sources/production", "/artifacts"):
+        assert client.get(f"/batches/{batch_id}{path}", headers=bob).status_code == 200, path
 
 
-def test_an_unlisted_user_sees_nothing(client):
+def test_signing_in_is_enough_to_see_a_batch(client):
     batch_id = upload(client, auth(make_token()))
-    assert client.get(f"/batches/{batch_id}", headers=auth(make_token(sub="ou_carol"))).status_code == 404
+    assert client.get(f"/batches/{batch_id}", headers=auth(make_token(sub="ou_carol"))).status_code == 200
+    assert client.get(f"/batches/{batch_id}").status_code == 401  # but signing in is still required
 
 
-def test_upload_is_limited_to_departments_you_may_see(client):
+def test_a_local_upload_needs_only_a_login_while_a_feishu_import_keeps_department_scope(client):
     files = [("files", ("finance.csv", (CASES / "risk" / "finance.csv").read_bytes(), "text/csv"))]
-    response = client.post("/batches", data={"period": "2025-11", "departments": ["finance"]},
-                           files=files, headers=auth(make_token(sub="ou_bob")))
-    assert response.status_code == 403 and "finance" in response.json()["detail"]
-    assert client.post("/batches/demo", headers=auth(make_token(sub="ou_bob"))).status_code == 403
+    local = client.post("/batches", data={"period": "2025-11", "departments": ["finance"]},
+                        files=files, headers=auth(make_token(sub="ou_bob")))
+    assert local.status_code == 200, local.text
+    from fastapi import HTTPException
+
+    from bridgeflow.api.batches import _check_feishu_scope
+    from bridgeflow.identity import UserIdentity
+    bob = UserIdentity(sub="ou_bob", name="bob", email="")
+    with pytest.raises(HTTPException) as refused:
+        _check_feishu_scope(["finance"], bob)  # production-only Bob may not pull finance from Feishu
+    assert refused.value.status_code == 403 and "finance" in refused.value.detail
+    _check_feishu_scope(["production"], bob)
 
 
-def test_a_missing_access_control_file_fails_loudly(client, monkeypatch, tmp_path):
+def test_a_sample_opens_for_any_signed_in_employee(client):
+    sample = client.post("/batches/demo?case=core", headers=auth(make_token(sub="ou_bob")))
+    assert sample.status_code == 200, sample.text
+    assert load_batch(sample.json()["batch_id"]).owner == "ou_bob"
+    assert client.post("/batches/demo?case=core").status_code == 401
+
+
+def test_a_missing_access_control_file_fails_loudly_where_it_still_decides(client, monkeypatch, tmp_path):
     batch_id = upload(client, auth(make_token()))
     monkeypatch.setattr(settings, "access_control_path", str(tmp_path / "missing.yaml"))
-    # The owner is unaffected; anyone else's visibility question gets "not configured".
-    assert client.get(f"/batches/{batch_id}", headers=auth(make_token())).status_code == 200
-    response = client.get(f"/batches/{batch_id}", headers=auth(make_token(sub="ou_carol")))
-    assert response.status_code == 503 and "not configured" in response.json()["detail"]
+    # Reading no longer asks it; a write grant and the Feishu scope still do, and say so.
+    assert client.get(f"/batches/{batch_id}", headers=auth(make_token(sub="ou_carol"))).status_code == 200
+    from fastapi import HTTPException
+
+    from bridgeflow.api.batches import _check_feishu_scope
+    from bridgeflow.identity import UserIdentity
+    with pytest.raises(HTTPException) as failure:
+        _check_feishu_scope(["finance"], UserIdentity(sub="ou_carol", name="c", email=""))
+    assert failure.value.status_code == 503 and "not configured" in failure.value.detail
 
 
 @pytest.mark.parametrize("suffix", ["", "/xlsx"])
@@ -163,12 +184,9 @@ def test_integration_views_enforce_identity_before_loading_business_content(clie
     path = f"/integration/batches/{batch_id}{suffix}"
     assert client.get(path).status_code == 401
     assert client.get(path, headers=auth(make_token(key=OTHER_PRIVATE))).status_code == 401
-    assert client.get(path, headers=auth(make_token(sub="ou_bob"))).status_code == 404
-    assert client.get(path, headers=auth(make_token(sub="ou_unknown"))).status_code == 404
-    # The same frozen batch remains usable by its authorized owner.
-    response = client.get(path, headers=auth(make_token()))
-    assert response.status_code == 200
-    assert ("base64" if suffix else "rows") in response.json()
+    for subject in ("ou_alice", "ou_bob", "ou_unknown"):  # any signed-in employee (2026-09-24)
+        response = client.get(path, headers=auth(make_token(sub=subject)))
+        assert response.status_code == 200 and ("base64" if suffix else "rows") in response.json()
 
 
 @pytest.mark.parametrize("missing", ["exp", "iat", "iss", "aud", "sub"])
@@ -194,10 +212,6 @@ def workflow_setup(monkeypatch):
     demo = REPO_ROOT / "data/workflow_demo/catalogue.yaml"
     monkeypatch.setattr(settings, "workflow_catalogue_path", str(demo))
     declared = yaml.safe_load(demo.read_text())
-    edit_role("ou_alice", "workflow_departments", sorted(
-        {t["department"] for t in declared["templates"].values()}
-        | {s["department"] for s in declared["stages"].values()}))
-    edit_role("ou_bob", "workflow_departments", [declared["templates"]["production_record"]["department"]])
     domain = service()
     draft = domain.receive("production_record", employee_submission())
     draft = domain.answer(draft.id, actual_answer(), draft.seq)
@@ -206,48 +220,35 @@ def workflow_setup(monkeypatch):
     return declared, draft.id
 
 
-def test_workflow_browser_views_require_login_and_explicit_catalogue_grants(client, monkeypatch):
+def test_workflow_browser_views_require_login_and_then_show_everything(client, monkeypatch):
     declared, artifact_id = workflow_setup(monkeypatch)
     for path in ["/workflow/catalogue", "/workflow/board", "/workflow/adoption",
                  f"/workflow/artifacts/{artifact_id}", "/workflow/lineage/production_record/actual_qty"]:
         assert client.get(path).status_code == 401
-    stranger = auth(make_token(sub="ou_unknown"))
-    catalogue = client.get("/workflow/catalogue", headers=stranger).json()
-    assert catalogue["templates"] == {} and catalogue["stages"] == {} and catalogue["lineage"] == []
-    assert catalogue["mvp"] == {"status": "restricted"}
-    assert client.get("/workflow/board", headers=stranger).json()["rows"] == []
-    assert client.get("/workflow/adoption", headers=stranger).json() == []
-    assert client.get(f"/workflow/artifacts/{artifact_id}", headers=stranger).status_code == 404
-    assert client.get("/workflow/lineage/production_record/actual_qty", headers=stranger).status_code == 404
-    alice = auth(make_token())
-    assert client.get(f"/workflow/artifacts/{artifact_id}", headers=alice).status_code == 200
-    assert set(client.get("/workflow/catalogue", headers=alice).json()["templates"]) == set(declared["templates"])
-    assert any(r["kind"] == "handoff" for r in client.get("/workflow/board", headers=alice).json()["rows"])
+    for subject in ("ou_alice", "ou_unknown"):
+        who = auth(make_token(sub=subject))
+        assert set(client.get("/workflow/catalogue", headers=who).json()["templates"]) == set(declared["templates"])
+        assert client.get(f"/workflow/artifacts/{artifact_id}", headers=who).status_code == 200
+        assert any(r["kind"] == "handoff" for r in client.get("/workflow/board", headers=who).json()["rows"])
 
 
-def test_workflow_department_scope_filters_cross_department_dependencies(client, monkeypatch):
-    declared, artifact_id = workflow_setup(monkeypatch)
+def test_workflow_refuses_what_the_catalogue_does_not_declare(client, monkeypatch):
+    workflow_setup(monkeypatch)
     bob = auth(make_token(sub="ou_bob"))
-    catalogue = client.get("/workflow/catalogue", headers=bob).json()
-    production = declared["templates"]["production_record"]["department"]
-    assert all(t["department"] == production for t in catalogue["templates"].values())
-    assert "market_review" not in catalogue["stages"]
-    assert catalogue["lineage"] == []
-    rows = client.get("/workflow/board", headers=bob).json()["rows"]
-    assert rows and all(r["kind"] == "artifact" and r["department"] == production for r in rows)
-    assert client.get(f"/workflow/artifacts/{artifact_id}", headers=bob).status_code == 200
+    assert client.get("/workflow/lineage/invented_template/actual_qty", headers=bob).status_code == 404
+    assert client.get("/workflow/artifacts/" + "f" * 32, headers=bob).status_code == 404
 
 
 @pytest.mark.parametrize("grant", ["production", [123], [" "], None])
 def test_malformed_access_grants_fail_closed(client, grant):
-    edit_role("ou_bob", "workflow_departments", grant)
-    # Access rules are validated before data is exposed, independently of which
-    # employee owns another batch. A list-shaped contract cannot become a string.
+    edit_role("ou_bob", "departments", grant)
+    # Access rules are validated before they decide anything. A list-shaped contract
+    # cannot become a string.
     from fastapi import HTTPException
 
-    from bridgeflow.access import workflow_departments_for
+    from bridgeflow.access import departments_for
     with pytest.raises(HTTPException) as failure:
-        workflow_departments_for("ou_bob")
+        departments_for("ou_bob")
     assert failure.value.status_code == 503
 
 
@@ -272,11 +273,12 @@ async def test_invalid_portal_key_sets_report_configuration_failure(monkeypatch,
     assert failure.value.status_code == 503
 
 
-def test_read_scope_does_not_grant_batch_import_permission(client):
+def test_write_grants_still_come_from_the_role(client):
+    # Seeing and uploading need only a login; approving a write still needs the operation.
     batch_id = upload(client, auth(make_token()))
     edit_role("ou_alice", "operations", [])
     assert client.get(f"/batches/{batch_id}", headers=auth(make_token())).status_code == 200
-    assert client.post("/batches/demo", headers=auth(make_token())).status_code == 403
+    assert client.post("/batches/demo", headers=auth(make_token())).status_code == 200
 
 
 def test_review_notes_require_identity_write_grant_and_scope(client):
@@ -291,7 +293,7 @@ def test_review_notes_require_identity_write_grant_and_scope(client):
     body = {"batch_id": batch_id, "report_id": report_id, "parent_session_id": "session",
             "note_id": "note-identity", "note": "Needs business confirmation"}
     assert client.post("/tools/review-note", json=body).status_code == 401
-    assert client.post("/tools/review-note", json=body, headers=auth(make_token(sub="ou_bob"))).status_code == 404
+    assert client.post("/tools/review-note", json=body, headers=auth(make_token(sub="ou_bob"))).status_code == 403  # no review_note grant
     assert client.post("/tools/review-note", json=body, headers=auth(make_token())).status_code == 403
     edit_role("ou_alice", "operations", ["batch_import", "review_note"])
     assert client.post("/tools/review-note", json=body, headers=auth(make_token())).status_code == 200

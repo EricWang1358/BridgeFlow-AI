@@ -217,6 +217,8 @@ export function workflowRecord(config: BackendConfig, receipts: ApprovalReceipts
     description:
       'Record what the person told you. Without artifact_id it starts a draft for `template`; with artifact_id ' +
       'it answers that draft\'s open questions (pass expected_seq from the draft you read). ' +
+      'Call it only once the person has actually given values: to see which fields a template needs, or which ' +
+      'department fills it, read workflow_catalogue — never start an empty draft to find out. ' +
       'Relay their words only — never a value you guessed, copied from another field, or calculated. ' +
       'The person confirms each value in the approval. Returns the updated draft and its open questions.',
     parameters: {
@@ -237,6 +239,13 @@ export function workflowRecord(config: BackendConfig, receipts: ApprovalReceipts
     reason: 'Record these values as what the person said. Check each one; nothing is written without approval.',
     denialEffect: 'Nothing was recorded. Ask the person to restate the values; do NOT claim they were saved',
     body: recordBody,
+    precheck: args => {
+      const said = Array.isArray(args.said) ? args.said : []
+      if (!said.length) return 'there is nothing to record — `said` is empty. Ask the person for the values first; ' +
+        'to see which fields the template needs (and which department fills it), read workflow_catalogue.'
+      if (!args.artifact_id && !args.template) return 'name the template to start (from workflow_catalogue) or the artifact_id to answer.'
+      return null
+    },
   })
 }
 

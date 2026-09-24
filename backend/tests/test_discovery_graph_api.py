@@ -1,7 +1,6 @@
 import json
 
 from test_discovery import material, opportunity
-from test_discovery_api import grant
 from test_discovery_graph import graph
 from test_employee_approval import grants, native, permit
 from test_identity import auth, make_token
@@ -14,7 +13,6 @@ from bridgeflow.workflow.discovery_graph import DiscoveryGraphs
 
 def prepare(monkeypatch):
     monkeypatch.setattr(settings, "bridgeflow_allow_workflow_write", True)
-    grant()
     grants("ou_alice", ["discovery_graph_save"])
     domain = service()
     domain.register(material(), b"a,b\n", "employee")
@@ -39,8 +37,8 @@ def test_graph_native_write_and_scoped_historical_reads(client, monkeypatch):
     assert "nodes" not in result.json()
     base = "/discovery/project/graph"
     assert client.get(base).status_code == 401
-    assert client.get(base, headers=auth(make_token(sub="ou_bob"))).json()["total"] == 0
-    assert client.get(base + "/diagram", headers=auth(make_token(sub="ou_bob"))).status_code == 404
+    assert client.get(base, headers=auth(make_token(sub="ou_bob"))).json()["total"] == 1  # any signed-in employee
+    assert client.get(base + "/diagram", headers=auth(make_token(sub="ou_bob"))).status_code == 200
     assert client.get(base, headers=auth(make_token())).json()["total"] == 1
     detail = client.get(base + "/diagram?version=1", headers=auth(make_token()))
     assert detail.status_code == 200 and len(detail.json()["edges"]) == 3
@@ -48,11 +46,10 @@ def test_graph_native_write_and_scoped_historical_reads(client, monkeypatch):
     assert client.get(base + "/diagram", headers=auth(make_token())).json()["stale_sources"] == ["source"]
 
 
-def test_graph_write_rejects_hidden_sources_and_revoked_permission(client, monkeypatch):
+def test_graph_write_rejects_missing_sources_and_revoked_permission(client, monkeypatch):
     domain = prepare(monkeypatch)
-    domain.register(material(id="hidden", department="finance"), b"a,b\n", "employee")
     value = graph().model_dump()
-    value["nodes"][0]["references"][0]["material_id"] = "hidden"
+    value["nodes"][0]["references"][0]["material_id"] = "never-registered"
     payload = json.dumps({"graph": value}).encode()
     assert permit(client, payload, "discovery_graph_save", "ou_alice").status_code == 404
     payload = json.dumps({"graph": graph().model_dump()}).encode()

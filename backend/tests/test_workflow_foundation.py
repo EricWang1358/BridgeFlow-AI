@@ -532,7 +532,7 @@ def test_a_stage_that_produces_a_record_cannot_complete_before_that_record_is_re
     [handoff] = service.handoffs()
     handoff = service.act(handoff.id, "start", "", handoff.seq)
     [row] = [r for r in board.project(service).rows if isinstance(r, board.HandoffRow)]
-    assert row.awaiting_outputs == ["settlement_basis"] and "入库后才能完成" in row.summary
+    assert row.awaiting_outputs == ["settlement_basis"] and "市场部的结算依据入库后才能完成" in row.summary
     with pytest.raises(TransitionError, match="not recorded"):
         service.act(handoff.id, "complete", "市场部负责人确认已处理", handoff.seq)
     record_output(service, project="演示项目B")  # another project's output does not count

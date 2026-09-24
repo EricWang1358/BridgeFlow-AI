@@ -79,13 +79,14 @@ class BatchSnapshot(PipelineResult):
 
 
 def _visible(batch: BatchSnapshot, user: UserIdentity | None) -> BatchSnapshot:
-    """The batch if this identity may see it. Invisible means 404, never 403:
-    whether a batch exists is itself information."""
-    if user is None or batch.owner == user.sub:
-        return batch
-    if {table.department for table in batch.clean_tables} <= departments_for(user.sub):
-        return batch
-    raise HTTPException(404, "Batch not found")
+    """Every signed-in employee may see every batch; `require_user` already demanded the login.
+
+    Owner decision 2026-09-24: the department scope that Feishu knowledge-base membership
+    grants controls only what crosses into or out of Feishu (import from Feishu, upload to
+    Feishu — see `_check_feishu_scope`), not what employees see inside BridgeFlow. Kept as the
+    one place every batch read goes through, so a later rule has one home.
+    """
+    return batch
 
 
 def load_batch(batch_id: str) -> BatchSnapshot:
@@ -239,8 +240,8 @@ def _relative_dictionary() -> str:
         return str(path)
 
 
-def _check_upload_scope(departments: list[Department], user: UserIdentity | None) -> None:
-    """With the identity layer on, you may only upload departments you may also see."""
+def _check_feishu_scope(departments: list[Department], user: UserIdentity | None) -> None:
+    """Importing from Feishu: only departments this employee's knowledge bases grant."""
     if user is None:
         return
     if "batch_import" not in operations_for(user.sub):
@@ -248,6 +249,15 @@ def _check_upload_scope(departments: list[Department], user: UserIdentity | None
     denied = set(departments) - departments_for(user.sub)
     if denied:
         raise HTTPException(403, f"Not authorized for departments: {sorted(denied)}")
+
+
+def _check_feishu_batch(batch: BatchSnapshot, user: UserIdentity | None) -> None:
+    """Uploading a batch's report to Feishu: every department in it must be this employee's."""
+    if user is None:
+        return
+    denied = {table.department for table in batch.clean_tables} - departments_for(user.sub)
+    if denied:
+        raise HTTPException(403, f"Uploading to Feishu needs every department in the batch; missing: {sorted(denied)}")
 
 
 @router.post("", response_model=BatchSummary)
@@ -259,7 +269,6 @@ async def upload_batch(
     sheets: Annotated[list[str] | None, Form(description="Per file, the worksheet to read; empty uses the declaration")] = None,
     header_rows: Annotated[list[str] | None, Form(description="Per file, the 1-based header row; empty uses the declaration")] = None,
 ) -> BatchSummary:
-    _check_upload_scope(departments, user)
     choices = [Layout.from_form(sheet, header) for sheet, header in
                zip(_aligned(sheets, len(files)), _aligned(header_rows, len(files)), strict=True)]
     return await _import_batch(period, departments, files, choices=choices,
@@ -403,7 +412,6 @@ async def _import_demo(folder: Path, period: str, dictionary: Path, case_id: str
                        user: UserIdentity | None) -> BatchSummary:
     departments: list[Department] = ["production", "procurement", "finance", "marketing"]
     labels = {"production": "生产部", "procurement": "物资部", "finance": "财务部", "marketing": "市场部"}
-    _check_upload_scope(departments, user)
     files = [UploadFile(io.BytesIO((folder / f"{department}.xlsx").read_bytes()),
                         filename=f"模拟-{labels[department]}-{period}.xlsx") for department in departments]
     try:
@@ -524,7 +532,6 @@ async def self_check(
 
     Nothing is written: no batch, no retained original, no mapping memory.
     """
-    _check_upload_scope([department], user)
     dictionary_raw, _, date_orders = _load_dictionary(dictionary_path())
     try:
         declared_layout = Layout.declared(dictionary_raw.get("sheet_layout"), department)
@@ -732,7 +739,6 @@ async def replace_department(
     original batch, its master and its reports stay exactly as they were.
     """
     batch = _visible(load_batch(batch_id), user)
-    _check_upload_scope([department], user)
     if department not in {table.department for table in batch.clean_tables}:
         raise HTTPException(404, "That department is not in this batch; import a batch that includes it")
     if period != batch.period:

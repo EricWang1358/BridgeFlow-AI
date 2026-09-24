@@ -1,7 +1,6 @@
 import json
 
 from test_discovery import material, opportunity
-from test_discovery_api import grant
 from test_discovery_meetings import REF, meeting
 from test_employee_approval import grants, native, permit
 from test_identity import auth, make_token
@@ -13,7 +12,6 @@ from bridgeflow.config import settings
 
 def prepare(monkeypatch):
     monkeypatch.setattr(settings, "bridgeflow_allow_workflow_write", True)
-    grant()
     grants("ou_alice", ["discovery_meeting_save"])
     domain = service()
     domain.register(material(), b"a,b\n", "employee")
@@ -42,8 +40,8 @@ def test_meeting_native_save_and_scoped_history(client, monkeypatch):
     path = "/discovery/project/meeting"
     assert client.get(path).status_code == 401
     bob = auth(make_token(sub="ou_bob"))
-    assert client.get(path, headers=bob).json()["total"] == 0
-    assert client.get(path + "/workshop", headers=bob).status_code == 404
+    assert client.get(path, headers=bob).json()["total"] == 1  # any signed-in employee (2026-09-24)
+    assert client.get(path + "/workshop", headers=bob).status_code == 200
     alice = auth(make_token())
     summary = client.get(path, headers=alice).json()["items"][0]
     assert summary["phase"] == "preparation" and "candidate_snapshots" not in summary
@@ -60,9 +58,8 @@ def test_meeting_native_save_and_scoped_history(client, monkeypatch):
 
 def test_meeting_approval_checks_all_sources_and_operation_grants(client, monkeypatch):
     domain = prepare(monkeypatch)
-    domain.register(material(id="secret", department="finance"), b"a,b\n", "employee")
-    payload = body(risks=[{"text": "Unauthorized reference", "basis": "reported",
-                         "references": [{**REF, "material_id": "secret"}]}])
+    payload = body(risks=[{"text": "Reference to nothing", "basis": "reported",
+                         "references": [{**REF, "material_id": "never-registered"}]}])
     assert permit(client, payload, "discovery_meeting_save", "ou_alice").status_code == 404
     grants("ou_alice", [])
     assert permit(client, body(), "discovery_meeting_save", "ou_alice").status_code == 403

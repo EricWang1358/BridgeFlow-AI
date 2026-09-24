@@ -95,3 +95,11 @@ def test_accepting_needs_a_fresh_approval(client):
     body = json.dumps({"project_id": "demo-handoff", "decision_id": "mvp", "decision_seq": seq}).encode()
     unapproved = client.post("/tools/workflow-accept-scope", content=body, headers={"content-type": "application/json"})
     assert unapproved.status_code == 403
+
+
+def test_the_sample_score_lands_on_the_quadrant_chart(client):
+    client.post("/discovery/sample")
+    [score] = client.get("/discovery/demo-handoff/score?offset=0&limit=50").json()["items"]
+    assert score["coordinates"] is not None and score["not_plotted_reasons"] == []
+    policy = client.get("/discovery/demo-handoff/scoring-policy").json()
+    assert score["policy_fingerprint"] == policy["fingerprint"]

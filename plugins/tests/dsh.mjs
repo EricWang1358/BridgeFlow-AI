@@ -97,3 +97,16 @@ export async function assertClientModulesServed(url) {
   }
   return html
 }
+
+/**
+ * The model a live (billed) run should use: the operator's DSH_PROVIDER / DSH_MODEL from
+ * env.sh. A journey starts dsh on a fresh DSH_HOME with no settings.yaml, so without this
+ * the agent falls back to dsh's built-in default model id — which only the official DeepSeek
+ * endpoint accepts (2026-09-24: a gateway endpoint refused it and every live turn failed).
+ */
+export function liveModelPatch() {
+  const model = process.env.DSH_MODEL
+  if (!model) return ''
+  const provider = process.env.DSH_PROVIDER || 'deepseek-official'
+  return `\n- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n  config:\n    provider: ${JSON.stringify(provider)}\n    model: ${JSON.stringify(model)}\n`
+}

@@ -30,7 +30,7 @@ const decisions = []
 while (true) {
   const card = page.getByRole('region', { name: /列匹配审批|Column match approval/ })
   try { await card.waitFor({ timeout: decisions.length ? 90_000 : 240_000 }) } catch { break }
-  await card.locator('.bf-approval-detail').waitFor()
+  await card.locator('.bf-approval-detail').first().waitFor()
   const detail = await card.innerText()
   await page.screenshot({ path: `${out}/live-approval-${decisions.length + 1}.png`, fullPage: false })
   const allow = /\bproject\b/.test(detail) && /project_code/.test(detail)

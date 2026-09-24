@@ -229,6 +229,7 @@ body[data-ds-dark-theme] .bf-save-state[data-dirty=true] { color: #dfbd76 }
   .bf-top-group { flex-shrink: 0 }
   .bf-shell-top button { padding: 5px 7px; font-size: 11px }
 }
+.bf-route-notice.bf-state { height: auto; min-height: 0; padding: 14px 18px; max-height: calc(100vh - 96px); overflow: auto }
 .bf-route-notice { position: fixed; z-index: 2147483000; top: 64px; left: 50%; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px)); display: flex; gap: 12px; align-items: center; box-shadow: 0 8px 24px rgb(0 0 0 / 30%) }
 /* Feishu user-identity browser (docs/30) */
 .bf-feishu { margin-top: 14px; border-top: 1px solid #ffffff1a; padding-top: 10px }

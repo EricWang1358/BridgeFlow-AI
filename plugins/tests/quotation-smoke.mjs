@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { notebookWalkthrough } from './notebook-walkthrough.mjs'
-import { assertClientModulesServed, resolveDsh } from './dsh.mjs'
+import { assertClientModulesServed, resolveDsh, liveModelPatch } from './dsh.mjs'
 import { assertDefaultEnglish, switchLanguage } from './locale.mjs'
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
@@ -23,7 +23,7 @@ async function port() {
   return value
 }
 const backendPort = await port(), webPort = await port()
-const env = { ...process.env, DSH_HOME: `${scratch}/dsh`, DSH_TOOLS_MODE: 'native',
+const env = { ...process.env, PORTAL_BASE_URL: '', DSH_HOME: `${scratch}/dsh`, DSH_TOOLS_MODE: 'native',
   BRIDGEFLOW_SERVICE_TOKEN: randomBytes(32).toString('hex'),
   PYTHONPATH: `${root}/backend/src`, RESULT_STORE_PATH: `${scratch}/outputs`,
   MAPPING_MEMORY_PATH: `${scratch}/mappings.json`, FIELD_DICTIONARY_PATH: `${root}/data/quotation_demo/dictionary.yaml`,
@@ -55,7 +55,7 @@ try {
     .replace('./dsh/presets', `${root}/dsh/presets`)
     .replace('http://127.0.0.1:8000', `http://127.0.0.1:${backendPort}`)
     .replace('approvalMode: native', 'approvalMode: native\n        decisionTimeoutMs: 5000')
-    + (live ? '' : `\n- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n  config:\n    provider: bridgeflow-offline-test\n    model: offline\n- insert:\n    - id: scripted-test-model\n      name: ${JSON.stringify(`${root}/plugins/tests/fixtures/scripted-model/index.ts`)}\n`)
+    + (live ? liveModelPatch() : `\n- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n  config:\n    provider: bridgeflow-offline-test\n    model: offline\n- insert:\n    - id: scripted-test-model\n      name: ${JSON.stringify(`${root}/plugins/tests/fixtures/scripted-model/index.ts`)}\n`)
   await writeFile(`${scratch}/web.yml`, patch)
   start(python, ['-m', 'uvicorn', 'bridgeflow.api.main:app', '--host', '127.0.0.1', '--port', String(backendPort)])
   const web = start(resolveDsh(), ['web', '--patch', `${scratch}/web.yml`, '--no-open', '--port', String(webPort)])

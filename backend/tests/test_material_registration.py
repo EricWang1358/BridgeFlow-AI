@@ -12,7 +12,6 @@ from bridgeflow.config import settings
 
 def setup(monkeypatch):
     monkeypatch.setattr(settings, "bridgeflow_allow_workflow_write", True)
-    edit_role("ou_alice", "workflow_departments", ["production"])
     edit_role("ou_alice", "operations", ["discovery_upload", "discovery_register"])
 
 
@@ -62,9 +61,10 @@ def test_registration_rejects_changed_metadata_digest_and_expiry(client, monkeyp
     assert service().store.streams("discovery:material:") == []
 
 
-def test_upload_scope_operation_and_deployment_switch(client, monkeypatch):
+def test_upload_operation_and_deployment_switch(client, monkeypatch):
     setup(monkeypatch)
-    assert upload(client, material(department="finance")).status_code == 403
+    # Any department may be staged by a granted employee (2026-09-24: no department scope).
+    assert upload(client, material(id="finance-file", department="finance")).status_code == 200
     grants("ou_alice", ["discovery_register"])
     assert upload(client).status_code == 403
     grants("ou_alice", ["discovery_upload"])

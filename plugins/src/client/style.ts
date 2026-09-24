@@ -766,4 +766,14 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-guest-pill { margin-left: 10px; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; background: rgb(230 150 40 / 20%); color: #b86e00 }
 .bf-guest-banner strong { font-size: 12px }
 .bf-guest-off { opacity: .8 }
+/* Approval card: where it came from, what will happen, what to check; plumbing folded away. */
+.bf-decision header { flex-wrap: wrap }
+.bf-approval-area { flex-basis: 100%; display: block; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--bf-muted); margin-bottom: 2px }
+.bf-approval-summary { font-size: 14px; line-height: 1.5; margin: 0 0 6px }
+.bf-approval-check { margin: 8px 0 4px; font-size: 12px; font-weight: 600 }
+.bf-approval-technical { margin-top: 8px; font-size: 12px; color: var(--bf-muted) }
+.bf-approval-technical summary { cursor: pointer }
+.bf-quadrant-label { fill: var(--bf-muted) }
+.bf-quadrant-name { fill: var(--bf-text); font-weight: 600 }
+.bf-quadrant-dot { fill: var(--bf-chart-mark); stroke: var(--bf-surface); stroke-width: 2; cursor: pointer }
 `
