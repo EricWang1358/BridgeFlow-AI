@@ -497,6 +497,47 @@ python scripts/feishu_membership_check.py
 
 ---
 
+### 9e 访客模式（评委等没有飞书账号的人，可选）
+
+访客实例是一套**独立的**后端加控制台，由 `scripts/start_web.py --guest` 启动，与正式服务物理隔离：
+- **数据**：全部放在 `data/guest/` 下（后端 `127.0.0.1:8001`、自己的 DSH_HOME、自己的一份示例字典），每次启动清空。
+- **凭据**：启动器会去掉所有 `FEISHU_*`、`PORTAL_*` 变量，访客实例拿不到飞书和门户的任何凭据，飞书接口一律返回「访客模式不可用」。
+- **大模型**：是否允许访客用由 `BRIDGEFLOW_GUEST_LLM` 决定，默认不允许。
+  - 不允许时，所有模型密钥都会被去掉，对话由一个固定回复代替，不花钱，也不会消耗服务器上的 API token。
+  - 设为 `1` 才会用运营方的模型和费用。
+- **入口**：门户登录页的「以访客身份进入」按钮，不签发会话，也不签发身份令牌。
+
+**原则是凡是访客能碰到的，都只是示例数据。** 访客之间共用一个控制台，能看到彼此的会话；页面上写明了只有示例数据、每晚清空。
+
+一次性装配：
+
+1. DNS 加一条 `guest.<domain>` 指向本机，和其他子域名一样。
+2. `env.sh` 追加以下内容，然后重启门户：
+
+   ```bash
+   export PORTAL_GUEST_APP_URI="https://guest.<domain>/"
+   export PORTAL_GUEST_TOKEN_FILE="$HOME/Hackathon2026/BridgeFlow-AI/data/guest/dsh-home/.web-launch-token"
+   # export BRIDGEFLOW_GUEST_LLM=1   # 只有愿意承担访客模型费用时才打开
+   ```
+
+3. 启用访客单元和每晚重置定时器（`deploy.sh` 会安装单元文件，但只会重启已经启用的访客单元）：
+
+   ```bash
+   bash deploy/deploy.sh origin/main <domain>    # 安装单元文件
+   sudo systemctl enable --now bridgeflow-guest bridgeflow-guest-reset.timer
+   bash deploy/deploy.sh origin/main <domain>    # 这次访客已启用，会给 Caddyfile 加上 guest.<domain> 站点
+   sudo systemctl restart bridgeflow-portal
+   ```
+
+验收：
+- 门户首页出现「以访客身份进入」，点进去能看到「访客模式」横幅；
+- 「添加来源」里飞书两项显示「访客模式下不可用」；
+- 对话发一句话，回复是访客提示（没开 `BRIDGEFLOW_GUEST_LLM` 时）；
+- 「打开示例笔记本」能用；
+- `curl -s 127.0.0.1:8001/tools/feishu-list -X POST` 在带服务令牌时返回 403「guest mode」。
+
+关闭：`sudo systemctl disable --now bridgeflow-guest bridgeflow-guest-reset.timer`，再跑一次 `deploy.sh` 去掉 Caddy 站点，并从 `env.sh` 删掉两个 `PORTAL_GUEST_*` 变量。
+
 ## 10 GitHub 仓库侧配置
 
 | 项 | 位置 | 值 |

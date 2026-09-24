@@ -1,0 +1,10 @@
+# Nightly reset of the guest instance (docs/22 §9e).
+[Unit]
+Description=Nightly reset of the BridgeFlow guest instance
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

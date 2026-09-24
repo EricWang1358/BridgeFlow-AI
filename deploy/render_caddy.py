@@ -56,6 +56,14 @@ def seat_site(host: str, port: int, portal_port: int) -> str:
 }}"""
 
 
+def guest_site(domain: str, port: int) -> str:
+    """The guest console (docs/22 §9e). No forward_auth: it is public on purpose and holds
+    sample data only; browsers arrive from the portal's /guest with its launch token."""
+    return f"""guest.{domain} {{
+    reverse_proxy 127.0.0.1:{port}
+}}"""
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("domain")
@@ -64,12 +72,15 @@ def main() -> int:
     parser.add_argument("--portal-port", type=int, default=8100)
     parser.add_argument("--web-port", type=int, default=3080,
                         help="only used in the legacy shape")
+    parser.add_argument("--guest-port", type=int, default=0,
+                        help="add guest.<domain> for the guest instance (docs/22 §9e); 0 = none")
     args = parser.parse_args()
+    guest = f"\n{guest_site(args.domain, args.guest_port)}\n" if args.guest_port else ""
 
     template = (ROOT / "deploy/Caddyfile.template").read_text(encoding="utf-8")
     seats_path = Path(args.seats)
     if not seats_path.exists():
-        sys.stdout.write(render_legacy(template, args.domain, args.web_port, args.portal_port))
+        sys.stdout.write(render_legacy(template, args.domain, args.web_port, args.portal_port) + guest)
         return 0
     try:
         registry = yaml.safe_load(seats_path.read_text(encoding="utf-8")) or {}
@@ -78,7 +89,7 @@ def main() -> int:
         return 1
     seats = registry.get("seats") or []
     if not seats:
-        sys.stdout.write(render_legacy(template, args.domain, args.web_port, args.portal_port))
+        sys.stdout.write(render_legacy(template, args.domain, args.web_port, args.portal_port) + guest)
         return 0
 
     apex_redirect = "    redir https://portal." + args.domain + "{uri} permanent"
@@ -102,7 +113,7 @@ def main() -> int:
             return 1
         blocks.append("")
         blocks.append(seat_site(f"{name}.console.{args.domain}", int(port), args.portal_port))
-    sys.stdout.write("\n".join(blocks) + "\n")
+    sys.stdout.write("\n".join(blocks) + "\n" + guest)
     return 0
 
 

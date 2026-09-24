@@ -633,3 +633,18 @@ test('MVP decision tools bind exact versions and cannot bypass native employee a
   assert.throws(() => summarise({ ...common, rationale: 'x'.repeat(64001) }), /approval display limit/)
   await ctx.fiber.dispose()
 })
+
+test('guest mode offers no Feishu tool to the model, and keeps the rest', async () => {
+  const previous = process.env.BRIDGEFLOW_GUEST_MODE
+  process.env.BRIDGEFLOW_GUEST_MODE = '1'
+  try {
+    const ctx = await runtime()
+    const names = ctx.tools.schemas().map(tool => tool.name)
+    assert(!names.includes('feishu_import') && !names.includes('feishu_upload_report'))
+    assert(names.includes('batch_summary') && names.includes('workflow_record'))
+    await ctx.fiber.dispose()
+  } finally {
+    if (previous === undefined) delete process.env.BRIDGEFLOW_GUEST_MODE
+    else process.env.BRIDGEFLOW_GUEST_MODE = previous
+  }
+})

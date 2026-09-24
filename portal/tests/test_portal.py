@@ -715,3 +715,18 @@ def test_the_seat_assignments_env_name_is_the_one_the_scripts_write(tmp_path, mo
     doc) writes PORTAL_SEAT_ASSIGNMENTS. The alias is the contract — pin it."""
     monkeypatch.setenv("PORTAL_SEAT_ASSIGNMENTS", "/tmp/claims.json")
     assert Settings().seat_assignments_path == "/tmp/claims.json"
+
+
+def test_guest_entry_is_offered_only_when_configured_and_issues_nothing(tmp_path):
+    with TestClient(make_portal(tmp_path)) as client:
+        assert "/guest" not in client.get("/").text
+        assert client.get("/guest").status_code == 404
+    token_file = tmp_path / "guest-token"
+    token_file.write_text("guest-launch\n", encoding="utf-8")
+    portal = make_portal(tmp_path / "g", guest_app_uri="http://guest.test/", guest_token_file=str(token_file))
+    with TestClient(portal) as client:
+        assert 'href="/guest"' in client.get("/").text
+        entered = client.get("/guest")
+        assert entered.status_code == 200 and "http://guest.test/?token=guest-launch" in entered.text
+        assert "set-cookie" not in entered.headers  # no session, no identity
+        assert client.get("/me").status_code == 401

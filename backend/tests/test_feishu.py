@@ -453,3 +453,11 @@ def test_tenant_endpoint_refuses_sheets_and_bitables(client, tenant):
                     sheet_import_payload(confirmed_by="captain", call_id="c1"))
     assert response.status_code == 422
     assert "user endpoint" in response.json()["detail"]
+
+
+def test_guest_mode_refuses_every_feishu_route_before_it_reaches_the_tenant(client, tenant, monkeypatch):
+    monkeypatch.setattr(settings, "bridgeflow_guest_mode", True)
+    for path in ("/tools/feishu-import", "/tools/feishu-list", "/tools/feishu-wiki-spaces"):
+        refused = post(client, path, import_payload())
+        assert refused.status_code == 403 and "guest mode" in refused.json()["detail"], path
+    assert tenant.token_calls == 0 and tenant.uploaded == {}  # nothing reached the tenant

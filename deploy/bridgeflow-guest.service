@@ -1,0 +1,29 @@
+# Guest instance (docs/22 §9e): an isolated, sample-only backend + console for people
+# without a Feishu account (evaluators). Opt-in: deploy.sh installs this file but only
+# restarts the unit once it is enabled:
+#
+#   sudo systemctl enable --now bridgeflow-guest bridgeflow-guest-reset.timer
+#
+# `start_web.py --guest` wipes data/guest on every start, runs its own backend on
+# 127.0.0.1:8001 with its own data paths and a copy of the sample dictionary, strips every
+# FEISHU_*/PORTAL_* variable, and — unless env.sh sets BRIDGEFLOW_GUEST_LLM=1 — every model
+# key too, answering chat with a fixed note instead of calling a model. Nothing the real
+# service stores is reachable from here.
+[Unit]
+Description=BridgeFlow guest instance (sample data only, reset nightly)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Hackathon2026/BridgeFlow-AI
+ExecStart=/home/ubuntu/Hackathon2026/BridgeFlow-AI/run.sh --guest --host 127.0.0.1 --port 3090 --trusted-host guest.<domain> --trusted-host guest.<domain>:443
+Restart=on-failure
+RestartSec=5
+MemoryHigh=700M
+MemoryMax=900M
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

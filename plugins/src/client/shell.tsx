@@ -12,6 +12,7 @@ import { TasksView } from './tasks.tsx'
 import { DataView } from './data.tsx'
 import { RecordsView } from './records.tsx'
 import { FeishuImport, FeishuUpload, WikiFileUpload } from './feishu-picker.tsx'
+import { GuestBanner, GuestPill, GuestUnavailable, useGuestMode } from './guest.tsx'
 import { Quotation } from './quotation.tsx'
 import { Handoff } from './handoff.tsx'
 import { MasterTable } from './master.tsx'
@@ -32,6 +33,7 @@ const hashSubscribe = (fn: () => void) => { window.addEventListener('hashchange'
 
 function Shell({ ctx }: { ctx: Context }) {
   const { t, language } = useUI(), sessions = ctx.sessions as unknown as ISessions
+  const guest = useGuestMode().guest
   const session = useSyncExternalStore(fn => sessions.list.subscribe(fn), () => sessions.list.getSnapshot().current)
   const binding = session ? sessions.binding(session) : undefined
   const events = useSyncExternalStore<SessionEventWindow>(fn => binding?.eventSource.subscribe(fn) ?? (() => {}), () => binding?.eventSource.getSnapshot() ?? emptyWindow)
@@ -146,7 +148,7 @@ function Shell({ ctx }: { ctx: Context }) {
     </details>
   </section> : report ? <BusinessReview key={report.report_id} report={report} /> : <p role="status">{t(error || !batchId || selected.view === 'source' && !selected.source || selected.view === 'artifact' && !selected.report ? 'previewUnavailable' : 'loading')}</p>
   return <>
-    <header className="bf-shell-top"><div className="bf-shell-brand"><span aria-hidden="true">B</span><strong>BridgeFlow</strong>
+    <header className="bf-shell-top"><div className="bf-shell-brand"><span aria-hidden="true">B</span><strong>BridgeFlow</strong>{guest && <GuestPill />}
       <input data-tour-id="notebook-name" onFocus={e => { e.currentTarget.dataset.initialTitle = e.currentTarget.value }} onBlur={e => { if (e.currentTarget.value.trim() && e.currentTarget.value !== e.currentTarget.dataset.initialTitle) tourEvent('named', batchId) }} className="bf-notebook-title" aria-label={t('notebookName')} value={notebook.title} placeholder={t('untitledNotebook')} maxLength={120} disabled={!session || !notebook.loaded} onChange={e=>notebook.setTitle(e.target.value)}/>
       {session && notebook.loaded && <span className="bf-save-state" role="status" data-dirty={notebook.dirty}>{t(notebook.dirty?'unsavedNotebook':notebook.persisted?'savedNotebook':'draftNotebook')}</span>}
     </div>
@@ -172,7 +174,7 @@ function Shell({ ctx }: { ctx: Context }) {
     {notebook.dialogs}
     <aside className="bf-shell-pane bf-shell-sources bf-state" data-mobile-open={panel === 'sources'} aria-label={t('sources')}>
       <header><h2>{t('sources')}</h2><button className="bf-mobile-close" onClick={() => setPanel('')}>{t('close')}</button></header>
-      <div className="bf-shell-scroll"><label className="bf-notebook-purpose">{t('notebookKind')}<select disabled={notebook.busy || !notebook.loaded} value={notebook.kind} onChange={e=>{if(isNotebookKind(e.target.value))notebook.setKind(e.target.value)}}>{notebookKinds.map(kind=><option key={kind} value={kind}>{t(notebookPurposes[kind].label)}</option>)}</select></label><p className="bf-hint">{t('notebookPurposeHelp')}</p><button className="bf-add-source" onClick={() => importer.current?.showModal()}>＋ {t('addSources')}</button>
+      <div className="bf-shell-scroll"><GuestBanner /><label className="bf-notebook-purpose">{t('notebookKind')}<select disabled={notebook.busy || !notebook.loaded} value={notebook.kind} onChange={e=>{if(isNotebookKind(e.target.value))notebook.setKind(e.target.value)}}>{notebookKinds.map(kind=><option key={kind} value={kind}>{t(notebookPurposes[kind].label)}</option>)}</select></label><p className="bf-hint">{t('notebookPurposeHelp')}</p><button className="bf-add-source" onClick={() => importer.current?.showModal()}>＋ {t('addSources')}</button>
         <p className="bf-hint">{t('sourceUploadHelp')}</p>{summary?.demo_case && <p className="bf-sample-notice">{t('sampleNotebookTitle')} · {t('sampleNotebookHelp')}</p>}
         {summary && <div className="bf-source-batch"><span>{summary.period}</span><Chip status={summary.status}/><button title={batchId} onClick={() => void navigator.clipboard.writeText(batchId).then(() => setCopied(true)).catch(e => setError(describeError(e, t)))}>{t(copied ? 'copied' : 'copyId')}</button><code>{batchId}</code></div>}
         <ul className="bf-resource-list">{sources.map(source => <li key={source.id}><button aria-pressed={selected.source === source.id && selected.view === 'source'} onClick={() => openSource(source)} disabled={!source.preview_available}>
@@ -209,7 +211,7 @@ function Shell({ ctx }: { ctx: Context }) {
           {expanded && viewer.current?.open
             ? <p className="bf-hint" role="status">{t('shownWide')} <button onClick={() => viewer.current?.close()}>{t('backToColumn')}</button></p>
             : previewContent}</section>}
-        <section data-tour-id="artifacts" className="bf-artifacts" aria-label={t('artifacts')}><header><h3>{t('artifacts')} <span className="bf-badge">{artifactTotal + (summary?.master_rows ? 1 : 0)}</span></h3>{artifacts.length > 0 && <button aria-label={t('feishuUpload')} title={t('feishuUpload')} onClick={() => { setFeishuNotice(''); feishuUploader.current?.showModal() }}>⇪</button>}<button aria-label={t('refreshArtifacts')} onClick={() => setRevision(n => n + 1)}>↻</button></header>
+        <section data-tour-id="artifacts" className="bf-artifacts" aria-label={t('artifacts')}><header><h3>{t('artifacts')} <span className="bf-badge">{artifactTotal + (summary?.master_rows ? 1 : 0)}</span></h3>{artifacts.length > 0 && <button disabled={guest} aria-label={t('feishuUpload')} title={guest ? `${t('feishuUpload')} · ${t('guestUnavailable')}` : t('feishuUpload')} onClick={() => { setFeishuNotice(''); feishuUploader.current?.showModal() }}>⇪</button>}<button aria-label={t('refreshArtifacts')} onClick={() => setRevision(n => n + 1)}>↻</button></header>
           {feishuNotice && <p className="bf-hint" role="status">{feishuNotice}</p>}
           {!!summary?.master_rows && <button className="bf-artifact" data-kind="master" onClick={() => navigate({ batch: batchId, view: 'master' })}><span aria-hidden="true">▦</span><span><strong>{summary.period} · {t('master')}</strong><small>{summary.master_rows} {t('rows')}</small><Chip status={summary.status}/></span><span aria-hidden="true">↗</span></button>}
           {artifacts.map(item => item.kind === 'brief'
@@ -232,7 +234,7 @@ function Shell({ ctx }: { ctx: Context }) {
         </section>}
       </div>
     </aside>
-    <dialog data-tour-surface="import" className="bf-panel bf-source-import" aria-label={t('addSources')} ref={importer}><header className="bf-panel-head"><h2>{t('addSources')}</h2><button onClick={() => importer.current?.close()}>{t('close')}</button></header><div className="bf-panel-body"><ImportForm onSaved={batch => { importer.current?.close(); navigate({ batch: batch.batch_id, view: 'data' }); setRevision(n => n + 1) }}/><details className="bf-feishu"><summary>{t('feishuPick')}</summary><FeishuImport onSaved={batch => { importer.current?.close(); navigate({ batch: batch.batch_id, view: 'data' }); setRevision(n => n + 1) }}/></details><details className="bf-feishu"><summary>{t('feishuUploadFileWiki')}</summary><WikiFileUpload /></details></div><TourLayer surface="import"/></dialog>
+    <dialog data-tour-surface="import" className="bf-panel bf-source-import" aria-label={t('addSources')} ref={importer}><header className="bf-panel-head"><h2>{t('addSources')}</h2><button onClick={() => importer.current?.close()}>{t('close')}</button></header><div className="bf-panel-body"><ImportForm onSaved={batch => { importer.current?.close(); navigate({ batch: batch.batch_id, view: 'data' }); setRevision(n => n + 1) }}/>{guest ? <GuestUnavailable feature={t('feishuPick')} /> : <details className="bf-feishu"><summary>{t('feishuPick')}</summary><FeishuImport onSaved={batch => { importer.current?.close(); navigate({ batch: batch.batch_id, view: 'data' }); setRevision(n => n + 1) }}/></details>}{guest ? <GuestUnavailable feature={t('feishuUploadFileWiki')} /> : <details className="bf-feishu"><summary>{t('feishuUploadFileWiki')}</summary><WikiFileUpload /></details>}</div><TourLayer surface="import"/></dialog>
     <dialog className="bf-panel bf-feishu-upload-dialog" aria-label={t('feishuUpload')} ref={feishuUploader}><header className="bf-panel-head"><h2>{t('feishuUpload')}</h2><button onClick={() => feishuUploader.current?.close()}>{t('close')}</button></header><div className="bf-panel-body">{batchId && <FeishuUpload batchId={batchId} reportId={selected.report ?? artifacts[0]?.report_id ?? null} onDone={name => { feishuUploader.current?.close(); setFeishuNotice(`${t('feishuUploaded')} · ${name}`) }}/>}</div></dialog>
     <dialog data-tour-surface="viewer" className="bf-panel bf-expanded-preview" aria-label={t('preview')} ref={viewer} onClose={() => setExpanded(false)}><header className="bf-panel-head"><h2>{t('preview')}</h2><button onClick={() => viewer.current?.close()}>{t('close')}</button></header><div className="bf-panel-body">{viewing && expanded && previewContent}</div><TourLayer surface="viewer"/></dialog>
   </>

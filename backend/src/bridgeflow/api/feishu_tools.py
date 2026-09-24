@@ -20,7 +20,14 @@ from bridgeflow.identity import UserIdentity, require_user
 from bridgeflow.schemas import Department
 from bridgeflow.security import consume_approval
 
-router = APIRouter(prefix="/tools", tags=["feishu"])
+
+def _not_in_guest_mode() -> None:
+    """A guest instance never reaches Feishu, and says so rather than "not configured"."""
+    if settings.bridgeflow_guest_mode:
+        raise HTTPException(403, "Feishu is not available in guest mode")
+
+
+router = APIRouter(prefix="/tools", tags=["feishu"], dependencies=[Depends(_not_in_guest_mode)])
 
 Token = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{6,64}$")]
 
