@@ -6,7 +6,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type { Notebook } from '../notebooks.ts'
-import { api, createNotebookSession, formatDateTime, navigate, route, useUI, type Route, type Summary, describeError } from './ui.ts'
+import { api, createNotebookSession, formatDateTime, navigate, route, useUI, type Route, type Summary, describeError, labelVariants } from './ui.ts'
 
 function bookmark(title: string, selected: Route, batch: string, kind: NonNullable<Notebook['kind']>): Notebook {
   return { title, kind, ...(batch ? { batch } : {}), view: selected.view ?? 'state',
@@ -15,6 +15,8 @@ function bookmark(title: string, selected: Route, batch: string, kind: NonNullab
 }
 
 /** DSH owns sessions and its domain store owns bookmarks; drafts remain local until saved. */
+const untitled = (value: string) => labelVariants('untitledNotebook').includes(value)
+
 export function useNotebook(ctx: Context, selected: Route, batch: string) {
   const { t, language } = useUI(), sessions = ctx.sessions as unknown as ISessions
   const list = useSyncExternalStore<SessionListState>(fn => sessions.list.subscribe(fn), () => sessions.list.getSnapshot())
@@ -31,7 +33,10 @@ export function useNotebook(ctx: Context, selected: Route, batch: string) {
   const ready = loaded && loadedId === id
   const dirty = Boolean(id && ready && (saved
     ? saved.title !== title || saved.batch !== (batch || undefined) || (saved.kind ?? defaultNotebookKind) !== kind
-    : Boolean(batch) || title !== t('untitledNotebook') || kind !== defaultNotebookKind))
+    : Boolean(batch) || !untitled(title) || kind !== defaultNotebookKind))
+  // A default name in either language is still "untitled": switching language must not turn a
+  // blank notebook into an unsaved one (and ask to save it), and the default follows the language.
+  useEffect(() => { if (untitled(title) && title !== t('untitledNotebook')) setTitle(t('untitledNotebook')) }, [language, title])
   useEffect(() => {
     if (ready && route().kind !== kind) navigate({...route(),kind})
   }, [ready, kind, selected.kind])

@@ -121,12 +121,16 @@ function ToolCard({ block, toolName, inspect }: ToolCallViewProps) {
       <strong>{t(toolName)}</strong>
       <span role="status" className="bf-chip" data-status={state === 'completed' ? 'ok' : state === 'failed' ? 'rejected' : 'partial'}>{t(state)}</span>
     </header>
-    <p>{text.slice(0, 180)}{text.length > 180 ? '…' : ''}</p>
+    {/* While running, the text is the call's raw JSON arguments: a person reads one sentence
+        instead, and the arguments stay one click away. An approval tool's decision card sits below. */}
+    {state === 'running'
+      ? <p className="bf-hint">{t(APPROVAL_CARD_TOOLS.has(toolName) ? 'toolAwaitingApproval' : 'toolRunningHint')}</p>
+      : <p>{text.slice(0, 180)}{text.length > 180 ? '…' : ''}</p>}
     <div className="bf-actions" style={{ margin: '10px 0 0' }}>
-      {text.length > 180 && <button className="bf-quiet" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{t('details')}</button>}
+      {(state === 'running' ? text.length > 0 : text.length > 180) && <button className="bf-quiet" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{t('details')}</button>}
       {inspect && <button className="bf-quiet" onClick={inspect}>{t('inspect')}</button>}
     </div>
-    {expanded && text.length > 180 && <pre>{text.slice(0, 2400)}{text.length > 2400 ? '\n…' : ''}</pre>}
+    {expanded && (state === 'running' || text.length > 180) && <pre>{text.slice(0, 2400)}{text.length > 2400 ? '\n…' : ''}</pre>}
   </section>
 }
 export const inject = ['slots', 'locale', 'sessions', 'uiConversation', 'conversation', 'layout']

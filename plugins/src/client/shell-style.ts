@@ -87,7 +87,14 @@ body[data-bf-notebook] [data-slot="root"] > [data-details-collapsed] > div:has(>
 .bf-top-group[data-kind=panes] { border: 1px solid var(--bf-shell-border); border-radius: 24px; padding: 2px; background: var(--bf-shell-pane) }
 .bf-top-group[data-kind=panes] button { border-color: transparent }
 .bf-shell-top button, .bf-shell-pane button { font: inherit; cursor: pointer; color: inherit }
-.bf-shell-top button { border: 1px solid var(--bf-shell-border); background: transparent; border-radius: 24px; padding: 5px 12px; font-size: 12px }
+.bf-shell-top button { border: 1px solid var(--bf-shell-border); background: transparent; border-radius: 24px; padding: 5px 12px; font-size: 12px; white-space: nowrap }
+/* A 1280-wide laptop or projector: labels stay on one line and the groups tighten
+   instead of wrapping "Create notebook" into two lines. */
+@media (max-width: 1400px) {
+  .bf-shell-top nav { gap: 8px }
+  .bf-shell-top button { padding: 4px 9px }
+  .bf-shell-brand { gap: 8px }
+}
 .bf-shell-pane.bf-state {
   position: fixed; top: var(--bf-shell-top-height); bottom: 14px; height: auto; margin: 0; border-radius: 16px; padding: 0;
   display: flex; flex-direction: column; overflow: hidden; pointer-events: auto;

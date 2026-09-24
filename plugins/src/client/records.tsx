@@ -54,7 +54,7 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
         <button onClick={() => navigate({ batch: summary.derived_from!, view: 'records' })}><code className="bf-mono">{summary.derived_from}</code></button></li>}
       {summary.superseded_by?.map(id => <li key={id}><span>{t('superseded')}</span>
         <button onClick={() => navigate({ batch: id, view: 'records' })}><code className="bf-mono">{id}</code></button></li>)}
-      <li><span>{t('declarationSource')}</span><code className="bf-mono">{summary.dictionary}</code></li>
+      <li><span>{t('dictionaryFile')}</span><code className="bf-mono">{summary.dictionary}</code></li>
     </ul>
 
     <h4>{t('integrationAssumptions')}</h4>

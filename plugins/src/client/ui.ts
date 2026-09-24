@@ -12,6 +12,9 @@ export function configureLocale(value: Context['locale']) { locale = value }
 const subscribe = (fn: () => void) => locale.subscribe(fn)
 const current = () => locale.getSnapshot().active.startsWith('zh') ? 'zh' : 'en'
 const labels = {
+  toolAwaitingApproval: ['等你在下方的审批卡上决定。批准之前什么都不会写入。', 'Waiting for your decision on the approval card below. Nothing is written until you approve.'],
+  toolRunningHint: ['正在运行，结果出来后显示在这里。', 'Running; the result appears here when it is ready.'],
+  factCompleteRows: ['完整行', 'Complete rows'], dictionaryFile: ['字典文件', 'Dictionary file'],
   actionValue_start: ['开始处理', 'Start'], actionValue_complete: ['标记完成', 'Complete'],
   actionValue_return: ['退回上游', 'Return upstream'], actionValue_acknowledge: ['确认上游修订', 'Acknowledge revision'],
   approvalFrom: ['来自', 'From'],
@@ -592,6 +595,8 @@ const labels = {
 export function currentLanguage(): 'zh' | 'en' { return current() }
 /** Every defined label key. For the guard test that keeps copy from dying unwired (#244). */
 export function labelKeys(): string[] { return Object.keys(labels) }
+/** Every language's text for one key — e.g. to recognise a default name whatever language set it. */
+export function labelVariants(key: string): string[] { return [...((labels as Record<string, readonly string[]>)[key] ?? [])] }
 export function labelText(key: string): string {
   return labels[key as keyof typeof labels]?.[current() === 'zh' ? 0 : 1] ?? key
 }
