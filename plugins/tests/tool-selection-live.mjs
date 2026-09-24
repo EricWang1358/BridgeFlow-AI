@@ -71,6 +71,9 @@ try {
   const shot = async name => { await wait(450); await page.screenshot({ path: `${evidence}/${name}.png` }) }
 
   const fixture = JSON.parse(await readFile(`${root}/plugins/tests/fixtures/tool-selection.json`, 'utf8'))
+  // A one-case route check catches a broken provider before paying for all 18 cases.
+  const limit = Number(process.env.BRIDGEFLOW_CASE_LIMIT || fixture.cases.length)
+  assert(Number.isInteger(limit) && limit > 0 && limit <= fixture.cases.length, 'BRIDGEFLOW_CASE_LIMIT must be between 1 and the fixture size')
   const sessionsDir = `${scratch}/dsh/sessions`
   const listSessions = async () => (await readdir(sessionsDir, { recursive: true }).catch(() => [])).filter(p => p.endsWith('session.jsonl'))
   const events = async file => (await readFile(`${sessionsDir}/${file}`, 'utf8')).trim().split('\n').filter(Boolean).map(l => JSON.parse(l))
@@ -79,7 +82,7 @@ try {
   await page.evaluate(async () => { await fetch('/bridgeflow/workflow/sample', { method: 'POST' }) })
   const top = page.locator('.bf-shell-top')
   const results = []
-  for (const item of fixture.cases) {
+  for (const item of fixture.cases.slice(0, limit)) {
     const prompt = item.prompt.replaceAll('{batch}', batch.batch_id).replaceAll('{period}', batch.period)
     const before = new Set(await listSessions())
     await top.getByRole('button', { name: 'Create notebook', exact: true }).click()
