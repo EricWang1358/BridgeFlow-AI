@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, askCaptain, describeError, formatDateTime, navigate, useUI } from './ui.ts'
+import { useGuestMode } from './guest.tsx'
 
 /**
  * Which approved MVP decision from discovery the workflow runs under (discovery → workflow).
@@ -14,6 +15,8 @@ export type ScopeState = { accepted: Accepted | null; current: boolean; stale_re
 
 export function WorkflowScopeCard({ revision, onChanged }: { revision: number; onChanged: () => void }) {
   const { t, language } = useUI()
+  const guest = useGuestMode()
+  const modelOff = guest.guest && !guest.llm
   const [state, setState] = useState<ScopeState | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false)
   useEffect(() => {
     const controller = new AbortController()
@@ -41,13 +44,15 @@ export function WorkflowScopeCard({ revision, onChanged }: { revision: number; o
   if (state.accepted) return <section data-tour-id="workflow-scope" className="bf-callout bf-scope" data-tone="warn" aria-label={t('scopeTitle')}>
     <h3>{t('scopeStale')}</h3>
     <p>{t('scopeStaleHelp')} <span className="bf-hint">({state.stale_reasons.join(', ')})</span></p>
-    {waiting && <button className="bf-primary" disabled={busy} onClick={() => void run(() => askCaptain(acceptRequest(waiting)))}>{t('askAcceptScope')}</button>}
+    {waiting && <><button className="bf-primary" disabled={busy || modelOff} onClick={() => void run(() => askCaptain(acceptRequest(waiting)))}>{t('askAcceptScope')}</button>
+      {modelOff && <p className="bf-hint" role="status">{t('guestModelActionUnavailable')}</p>}</>}
   </section>
   if (waiting) return <section data-tour-id="workflow-scope" className="bf-callout bf-scope" data-tone="info" aria-label={t('scopeTitle')}>
     <h3>{t('scopeWaiting')}</h3>
     <p className="bf-hint">{t('scopeDecision')} <b>{waiting.project_id} / {waiting.decision_id}</b> v{waiting.decision_seq} · {waiting.candidates.join(', ')}</p>
     {list(waiting.scope)}
-    <button className="bf-primary" disabled={busy} onClick={() => void run(() => askCaptain(acceptRequest(waiting)))}>{t('askAcceptScope')}</button>
+    <button className="bf-primary" disabled={busy || modelOff} onClick={() => void run(() => askCaptain(acceptRequest(waiting)))}>{t('askAcceptScope')}</button>
+    {modelOff && <p className="bf-hint" role="status">{t('guestModelActionUnavailable')}</p>}
   </section>
   return <section data-tour-id="workflow-scope" className="bf-callout bf-scope" aria-label={t('scopeTitle')}>
     <h3>{t('scopeNone')}</h3>
