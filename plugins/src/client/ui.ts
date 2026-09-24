@@ -124,6 +124,7 @@ const labels = {
   runTokens: ['tokens（发起工具调用的模型步骤）', 'tokens (model steps that called tools)'],
   sampleCases: ['更多示例', 'More sample cases'],
   sampleCasesHelp: ['同一家虚构公司的 2024-07，分别展示不同的问题；有些状态不能放在同一个批次里。每个示例打开成一个新笔记本。', 'The same fictional company in 2024-07, each showing different problems, because some states cannot share one batch. Each opens in a new notebook.'],
+  sampleCasesUnavailable: ['示例列表暂时读不到。请刷新重试。', 'Sample cases could not be loaded. Refresh to try again.'],
   sampleCaseLabel: ['本示例展示', 'This sample shows'],
   sampleCaseOpenData: ['查看数据与待确认项', 'Inspect data and open items'],
   reviewNeedsReady: ['此批次尚需处理数据问题，完成下面的检查后才能发起研判；一处源数据问题可能带出多条下游待办。现在不会向模型发送请求。', 'This batch needs data fixes before a review. One source problem can create several downstream open items. No model request will be sent yet.'],

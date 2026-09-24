@@ -31,7 +31,7 @@
 
 **当前仍是待验收，不把上面的技术自评当成交付分数。** 新功能和新需求先暂停，只处理演示主路径的故障、错误表述及其回归。
 
-[PR #272](https://github.com/EricWang1358/BridgeFlow-AI/pull/272) 已合并；[main 测试、CD、公网健康检查和实例预检](https://github.com/EricWang1358/BridgeFlow-AI/actions/runs/35974805518)全部通过。合并后只读探测：门户 `/health` 返回 200、`/guest` 返回 404。CD 已部署主站，独立访客入口尚未完成服务器装配。
+[PR #273](https://github.com/EricWang1358/BridgeFlow-AI/pull/273) 已合并；[main 测试、CD、公网健康检查和实例预检](https://github.com/EricWang1358/BridgeFlow-AI/actions/runs/35976507006)全部通过。合并后只读探测：门户 `/health` 返回 200、`/guest` 返回 404。CD 已部署主站，独立访客入口尚未完成服务器装配。
 
 | 闸门 | 当前证据与结论 |
 | --- | --- |

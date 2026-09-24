@@ -63,8 +63,19 @@ try {
   const errors = []
   page.on('pageerror', e => { errors.push(e.message); logs += '\nBROWSER: ' + e.message })
   page.setDefaultTimeout(live ? 240_000 : 30_000)
+  const unavailableCases = async route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'temporarily unavailable' }) })
+  const cataloguePattern = /\/bridgeflow\/batches\/demo\/cases(?:\?|$)/
+  await page.route(cataloguePattern, unavailableCases)
   await page.goto(match[1])
   await switchLanguage(page, 'English')
+  const samplePicker = page.locator('.bf-sample-cases')
+  await samplePicker.getByRole('alert').getByText('Sample cases could not be loaded.', { exact: false }).waitFor()
+  assert.equal(await samplePicker.evaluate(el => el.open), true, 'A failed sample catalogue must explain itself without another click')
+  await samplePicker.screenshot({ path: `${evidence}/sample-cases-retry.png` })
+  await page.unroute(cataloguePattern, unavailableCases)
+  await samplePicker.getByRole('button', { name: 'Refresh', exact: true }).click()
+  await samplePicker.locator('button[data-case="core"]').waitFor()
+  await samplePicker.locator('summary').click()
   // Make the route change visible before the next batch response arrives. The Sources
   // pane must not briefly identify the new notebook with the previous case's data.
   await page.route(/\/bridgeflow\/batches\/[a-f0-9]{32}$/, async route => {
