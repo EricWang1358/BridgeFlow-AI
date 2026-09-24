@@ -138,9 +138,11 @@ def _metric_series(spec: charts.ChartSpec, batch_id: str, batch, user: UserIdent
     nobody made.
     """
     series = []
+    visible = _visibility(user)
     for period in _recent_periods(batch.period, spec.periods):
         entry = ({"batch_id": batch_id} if period == batch.period else
-                 comparison_module.periods.latest_for(period, _visibility(user)))
+                 comparison_module.periods.latest_for(period, lambda item, period=period: visible(item) and
+                                                      comparison_module.periods.same_series(item, batch.demo_case, period)))
         if entry is None:
             series.append({"period": period, "batch_id": "", "value": None, "unit": ""})
             continue

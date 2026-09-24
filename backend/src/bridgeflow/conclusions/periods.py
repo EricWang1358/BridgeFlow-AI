@@ -28,11 +28,12 @@ def _index_path():
 
 
 def entry(batch_id: str, snapshot: Any) -> dict:
-    """What lookup needs: period, owner and departments for visibility, nothing else."""
+    """Small lookup record for a batch's period, visibility and data series."""
     return {"batch_id": batch_id, "period": snapshot.period,
             "owner": getattr(snapshot, "owner", "") or "",
             "departments": sorted({t.department for t in snapshot.clean_tables}),
-            "derived_from": getattr(snapshot, "derived_from", None)}
+            "derived_from": getattr(snapshot, "derived_from", None),
+            "demo_case": getattr(snapshot, "demo_case", None)}
 
 
 def record(batch_id: str, snapshot: Any) -> None:
@@ -101,12 +102,26 @@ def batches_for(period: str) -> list[dict]:
     return sorted(found, key=imported_at, reverse=True)
 
 
+def demo_case(item: dict) -> str:
+    """The indexed sample marker, with a fallback for indexes written before it existed."""
+    if "demo_case" in item:
+        return str(item["demo_case"] or "")
+    from bridgeflow.api.batches import load_batch  # local: batches imports this module
+    return str(load_batch(item["batch_id"]).demo_case or "")
+
+
+def same_series(item: dict, current_demo_case: str | None, period: str) -> bool:
+    """Keep synthetic supplier history apart from uploaded business months."""
+    candidate = demo_case(item)
+    return candidate == f"demo-history-{period}" if current_demo_case else not candidate
+
+
 def latest_for(period: str, visible) -> dict | None:
     """The newest batch of that period this caller may see.
 
     Several batches for one month are corrections of each other (a re-import, a
-    single-department replacement), so the newest is the one a person means by "last
-    month"; earlier ones stay addressable by id. Recorded in docs/requirements/13 D1.
+    single-department replacement), so the newest visible one in the caller's series is
+    the base; earlier ones stay addressable by id. Recorded in docs/requirements/13 D1.
     """
     for item in batches_for(period):
         if visible(item):

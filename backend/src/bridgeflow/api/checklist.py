@@ -196,7 +196,8 @@ async def department_template(department: str, user: Annotated[UserIdentity | No
     if not rules:
         reason = "本部门没有声明任何沿用字段，本模板不预填。/ No carry-over is declared for this department."
     else:
-        entry = periods.latest_for(prior_period, _visibility(user))
+        visible = _visibility(user)
+        entry = periods.latest_for(prior_period, lambda item: visible(item) and not periods.demo_case(item))
         if entry is None:
             reason = (f"没有 {prior_period} 的批次，本次不预填沿用字段。/ No batch for {prior_period}; nothing was prefilled.")
         else:

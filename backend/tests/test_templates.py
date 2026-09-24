@@ -72,6 +72,13 @@ def test_without_a_prior_batch_nothing_is_prefilled_and_the_notes_say_why(client
     assert "没有 2024-06 的批次" in notes
 
 
+def test_a_real_department_template_does_not_carry_values_from_sample_history(client):
+    client.post("/batches/demo/history")
+    body, book = template(client)
+    assert body["prefilled_from"] == ""
+    assert book.worksheets[0].max_row == 1
+
+
 def test_a_department_without_a_carry_over_declaration_is_not_prefilled_but_still_downloadable(client):
     import_june(client)
     body, book = template(client, department="finance")

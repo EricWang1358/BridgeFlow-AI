@@ -258,7 +258,8 @@ def build(*, batch_id: str, batch, base_kind: str, metrics: list[str], master,
     period = base.period_for(batch.period)
     if period is None:
         return Comparison(base_kind=base_kind, status="unavailable", reason=base.unavailable())
-    found = periods.latest_for(period, visible)
+    found = periods.latest_for(period, lambda item: visible(item) and
+                               periods.same_series(item, getattr(batch, "demo_case", None), period))
     if found is None:
         return Comparison(base_kind=base_kind, base_period=period, status="no_base",
                           reason=f"No batch has been imported for {period}")
