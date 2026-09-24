@@ -24,7 +24,7 @@ export function WorkflowFlow({ counts, overdue = {} }: { counts: Record<string, 
     recorded: t('flowStage_recorded'), handed: t('flowStage_handed'), working: t('flowStage_working'), done: t('flowStage_done') }
   const actors: Record<string, string> = { flowActorPerson: t('flowActorPerson'), flowActorYou: t('flowActorYou'),
     flowActorSystem: t('flowActorSystem'), flowActorDownstream: t('flowActorDownstream') }
-  return <ol className="bf-pipeline" aria-label={t('workflowFlow')}>
+  return <ol data-tour-id="workflow-flow" className="bf-pipeline" aria-label={t('workflowFlow')}>
     {FLOW.map(stage => {
       const count = stage.states.reduce((n, state) => n + (counts[state] ?? 0), 0)
       const late = stage.states.reduce((n, state) => n + (overdue[state] ?? 0), 0)

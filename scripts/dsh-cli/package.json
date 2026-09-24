@@ -1,0 +1,1 @@
+{"name":"bridgeflow-dsh-cli","private":true,"description":"The dsh CLI BridgeFlow is pinned to, with the exact dependency tree it was verified on.","dependencies":{"@deepseek-ai/dsh":"0.1.2-rc.1"}}

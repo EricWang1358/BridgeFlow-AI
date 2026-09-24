@@ -22,6 +22,21 @@ opportunity:
     - {kind: value_hypothesis, text: 按模板填报并经审核后自动交接，市场部按时限处理, basis: inferred}
   open_questions: [结算用出厂量还是实际量？需要业务方确认]
   by: 示例-立项负责人
+graph:
+  # The information and file flow the candidate rests on (#143). Edge states show what is
+  # confirmed by a person, what is only inferred from the material, and what is missing.
+  id: current-flow
+  title: 生产 → 市场的数量交接（现状）
+  by: 示例-立项负责人
+  nodes:
+    - {id: production_report, title: 生产填报发货记录, department: 生产部, role: 生产统计员, trigger: 每次发货后, inputs: [发货单], outputs: [发货周报], locator: header}
+    - {id: market_check, title: 市场部核对数量, department: 市场部, role: 市场部负责人, trigger: 收到发货周报, inputs: [发货周报], outputs: [结算依据], locator: rows}
+    - {id: phone_followup, title: 电话追问实际量, department: 市场部, role: 市场部负责人, trigger: 周报缺实际量, inputs: [发货周报], outputs: [实际量口头确认], locator: rows}
+  edges:
+    - {id: weekly_file, source: production_report, target: market_check, kind: document, status: confirmed, rationale: 发货周报作为文件每周交给市场部, locator: header, confirmation: 示例-生产经理在启动会上确认}
+    - {id: actual_qty, source: production_report, target: market_check, kind: information, status: inferred, rationale: 实际量随周报传递，但部分行为空, locator: rows}
+    - {id: followup, source: market_check, target: phone_followup, kind: information, status: inferred, rationale: 实际量缺失时市场部电话追问, locator: rows}
+    - {id: rework, source: phone_followup, target: production_report, kind: information, status: missing, rework: true, rationale: 追问结果是否回填到生产部的记录，材料里没有依据}
 score:
   id: handoff-rating
   effort: {score: 3, rationale: 只涉及生产部和市场部两张表，模板已有草案}

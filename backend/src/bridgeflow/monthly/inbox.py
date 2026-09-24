@@ -95,15 +95,20 @@ def _column_questions(ctx: Context) -> list[OpenItem]:
         return []
     from bridgeflow import column_matches
 
+    # One item per declared column that is missing while unrecognised columns could be it —
+    # the same basis as the batch's own count (`column_matches.count_questions`). Listing every
+    # unrecognised header made one renamed column look like twenty questions.
     items = []
     for table in ctx.batch.clean_tables:
         unknown, missing = column_matches.open_columns(ctx.batch.dictionary_snapshot, table)
-        if not missing:
+        if not unknown:
             continue
-        for column in unknown:
+        for column in missing:
             items.append(OpenItem(id=f"column:{table.department}:{column}", kind="column_question",
                                   source="column_matches", batch_id=ctx.batch_id, period=ctx.period,
-                                  departments=[table.department], subject=column, next_view="columns"))
+                                  departments=[table.department], subject=column,
+                                  detail=f"{len(unknown)} unrecognised uploaded column(s) could be it",
+                                  next_view="columns"))
     return items
 
 

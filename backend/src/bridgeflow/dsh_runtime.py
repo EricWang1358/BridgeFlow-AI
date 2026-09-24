@@ -6,11 +6,17 @@ import shutil
 import subprocess
 from pathlib import Path
 
+#: Where scripts/install_dsh.sh puts the pinned CLI: beside the repository, like .venv.
+PRIVATE_DSH = Path(__file__).resolve().parents[3].parent / ".dsh-cli" / "node_modules" / ".bin" / "dsh"
+
 
 def native_command() -> str:
     """Never let the SDK's packed default overwrite a live Web's shared proxies."""
     configured = os.environ.get("BRIDGEFLOW_DSH")
-    candidates = [configured] if configured else [str(Path(p) / "dsh") for p in os.get_exec_path()]
+    # The private install beside the repository (scripts/install_dsh.sh) comes before PATH, so a
+    # person's own global dsh — any version — is never replaced or picked up by accident.
+    private = str(PRIVATE_DSH)
+    candidates = [configured] if configured else [private, *(str(Path(p) / "dsh") for p in os.get_exec_path())]
     for candidate in candidates:
         if not candidate:
             continue
@@ -29,6 +35,6 @@ def native_command() -> str:
         except (OSError, UnicodeError, subprocess.SubprocessError):
             continue
     raise RuntimeError(
-        "Install the native CLI: npm install -g @deepseek-ai/dsh@0.1.2-rc.1; "
-        "or set BRIDGEFLOW_DSH to its executable. Web and SDK must use this same installation."
+        "Install the pinned dsh privately (leaves any other dsh alone): bash scripts/install_dsh.sh; "
+        "or set BRIDGEFLOW_DSH to a dsh 0.1.2-rc.1 executable. Web and SDK must use this same installation."
     )

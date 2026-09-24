@@ -164,14 +164,15 @@ export function TourLayer({ surface = 'shell' }: { surface?: string }) {
         <div className="bf-tour-actions"><button disabled={p.index === 0} onClick={() => moveTour(-1)}>{t('tourBack')}</button><button onClick={exitTour}>{t('tourExit')}</button><button className="bf-tour-primary" disabled={wait || !intro && !p.done.includes(step.event!)} onClick={() => moveTour(1)}>{t(p.index === tours[p.track].length - 1 ? 'tourFinish' : 'tourNext')}</button></div>
       </> : <>
         <div className="bf-tour-mark" aria-hidden="true">{complete ? '✓' : '▥'}</div>
-        <h2>{t(complete ? p.track === 'core' ? 'tourComplete' : 'tourSupplementDone' : welcome ? 'tourWelcome' : 'tourHelp')}</h2>
-        <p id={`tour-description-${surface}`}>{t(complete ? p.track === 'core' ? 'tourCompleteBody' : 'tourSupplementBody' : welcome ? 'tourWelcomeBody' : p.status === 'completed' ? 'tourHelpCompleted' : 'tourSkipped')}</p>
+        <h2>{t(complete ? p.track === 'core' ? 'tourComplete' : p.track === 'workflow' ? 'tourWorkflowDone' : 'tourSupplementDone' : welcome ? 'tourWelcome' : 'tourHelp')}</h2>
+        <p id={`tour-description-${surface}`}>{t(complete ? p.track === 'core' ? 'tourCompleteBody' : p.track === 'workflow' ? 'tourWorkflowDoneBody' : 'tourSupplementBody' : welcome ? 'tourWelcomeBody' : p.status === 'completed' ? 'tourHelpCompleted' : 'tourSkipped')}</p>
         {welcome && <div className="bf-tour-task">{t('tourWelcomeResult')}</div>}
         {help && <div className="bf-tour-list">
           {p.status !== 'notStarted' && p.status !== 'completed' && <button className="bf-tour-primary" onClick={() => startTour(p.track, true)}>{t('tourResume')}</button>}
-          {p.track !== 'core' && <button onClick={() => startTour('core', true)}>{t('tourResumeCore')}</button>}<button onClick={() => startTour('core')}>{t('tourCore')}</button><button onClick={() => startTour('review')}>{t('tourReview')}</button><button onClick={() => startTour('quotation')}>{t('tourQuotation')}</button>
+          {p.track !== 'core' && <button onClick={() => startTour('core', true)}>{t('tourResumeCore')}</button>}<button onClick={() => startTour('core')}>{t('tourCore')}</button><button onClick={() => startTour('review')}>{t('tourReview')}</button><button onClick={() => startTour('quotation')}>{t('tourQuotation')}</button><button onClick={() => startTour('workflow')}>{t('tourWorkflow')}</button>
           <details><summary>{t('tourReset')}</summary><p>{t('tourResetHelp')}</p><button onClick={resetTour}>{t('tourReset')}</button></details>
         </div>}
+        {welcome && <button className="bf-tour-secondary" onClick={() => startTour('workflow')}>{t('tourWelcomeWorkflow')}</button>}
         {!help && <div className="bf-tour-actions"><button onClick={complete ? () => startTour(p.track) : exitTour}>{t(complete ? 'tourRestart' : 'tourLater')}</button><button className="bf-tour-primary" onClick={complete ? () => { if (p.track === 'core' && p.batch) navigate({ batch: p.batch, view: 'integration' }); closeTourCard() } : () => startTour('core')}>{t(complete ? 'tourExplore' : 'tourStart')}</button></div>}
         <p className="bf-tour-storage">{t(state.storageOK ? 'tourStorage' : 'tourStorageUnavailable')}</p>
       </>}

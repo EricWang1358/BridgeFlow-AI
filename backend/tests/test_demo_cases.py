@@ -52,6 +52,10 @@ def test_the_other_case_shows_different_problems_named_where_they_are(client):
     assert "marketing: 累计收款 is missing or unreadable" in blockers
     assert "missing_column" in kinds
     assert batch["column_questions"] == 1  # the renamed column, not every undeclared header
+    # The inbox asks the same one question the batch counts, about the declared column.
+    inbox = client.get(f"/monthly/inbox?period={batch['period']}").json()
+    questions = [item for item in inbox["items"] if item["kind"] == "column_question"]
+    assert [q["subject"] for q in questions] == ["累计收款"]
     # The status never promises a review that would then be refused.
     assert context.status_code == 409 and context.json()["detail"] in batch["review_blockers"]
 

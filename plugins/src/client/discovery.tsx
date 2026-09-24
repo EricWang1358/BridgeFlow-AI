@@ -4,6 +4,7 @@ import { ScoreBoard, ScoreEditor, type Score } from './discovery-scoring.tsx'
 import { FlowDiagram, FlowEditor, type FlowGraph } from './flow-graph.tsx'
 import { OpportunityEditor, type Opportunity } from './opportunity-editor.tsx'
 import { useEffect, useState, type FormEvent } from 'react'
+import { tourEvent } from './tour/state.ts'
 import { api, describeError, useUI } from './ui.ts'
 
 type Item = { id: string; version: number; filename?: string; title?: string; parser_status?: string; status?: string }
@@ -63,17 +64,22 @@ export function Discovery() {
       <button type="submit" disabled={busy}>{tr('打开项目', 'Open project')}</button>
       <button type="button" disabled={busy} onClick={() => {
         setBusy(true); setError('')
-        void api<{ project_id: string; id: string; seq: number }>('/discovery/sample', { method: 'POST' }).then(decision => {
+        // Lands on the project's flow graph: the information and file flow is what a newcomer needs first.
+        void api<{ project_id: string; id: string; seq: number }>('/discovery/sample', { method: 'POST' }).then(async decision => {
           setPage(null); setDetail(null); setEditing(undefined); setGraphDraft(null); setScoringTarget(null); setMeeting(null); setDecisionEdit(null)
-          setProjectInput(decision.project_id); setProject(decision.project_id); setKind('decision'); setOffset(0); setStaged(null); setRevision(n => n + 1)
+          setProjectInput(decision.project_id); setProject(decision.project_id); setKind('graph'); setOffset(0); setStaged(null); setRevision(n => n + 1)
+          tourEvent('discoverySample', '')
+          const graphs = await api<Page>(`/discovery/${decision.project_id}/graph?offset=0&limit=10`)
+          const first = graphs.items[0]
+          if (first) setDetail(await api<Record<string, unknown>>(`/discovery/${decision.project_id}/graph/${first.id}?version=${first.version}`))
         }).catch(e => setError(describeError(e, t))).finally(() => setBusy(false))
-      }}>{tr('载入示例项目', 'Load the sample project')}</button>
+      }} data-tour-id="discovery-sample">{tr('载入示例项目', 'Load the sample project')}</button>
     </form>
     <p className="bf-hint">{tr('示例项目从一份部门材料走到一条已批准的立项决策；人名和投票都是示例数据。', 'The sample project goes from one department file to an approved MVP decision. Its people and votes are sample data.')}</p>
     {error && <p role="alert">{error}</p>}
     {project && <>
       <h3>{project}</h3>
-      <div><button onClick={() => { setKind('material'); setOffset(0) }}>{tr('材料', 'Materials')}</button><button onClick={() => { setKind('opportunity'); setOffset(0) }}>{tr('候选', 'Opportunities')}</button><button onClick={() => { setKind('graph'); setOffset(0) }}>{tr('流程图', 'Flow graphs')}</button><button onClick={() => { setKind('score'); setOffset(0) }}>{tr('评分四象限', 'Rating quadrants')}</button><button onClick={() => { setKind('meeting'); setOffset(0) }}>{tr('会议', 'Meetings')}</button><button onClick={() => { setKind('decision'); setOffset(0) }}>{tr('决策', 'Decisions')}</button>{kind !== 'score' && <button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button>}</div>
+      <div><button onClick={() => { setKind('material'); setOffset(0) }}>{tr('材料', 'Materials')}</button><button onClick={() => { setKind('opportunity'); setOffset(0) }}>{tr('候选', 'Opportunities')}</button><button onClick={() => { setKind('graph'); setOffset(0) }}>{tr('流程图', 'Flow graphs')}</button><button data-tour-id="discovery-kind-score" onClick={() => { setKind('score'); setOffset(0); tourEvent('discoveryScore', '') }}>{tr('评分四象限', 'Rating quadrants')}</button><button onClick={() => { setKind('meeting'); setOffset(0) }}>{tr('会议', 'Meetings')}</button><button onClick={() => { setKind('decision'); setOffset(0) }}>{tr('决策', 'Decisions')}</button>{kind !== 'score' && <button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button>}</div>
       <form onSubmit={upload} hidden={kind !== 'material'} style={kind !== 'material' ? { display: 'none' } : undefined}>
         {(['id', 'department', 'period', 'source_description'] as const).map((name, index) => <label key={name}>
           {tr(['材料标识', '部门（准确名称）', '期间', '来源说明'][index]!, ['Material ID', 'Department (exact name)', 'Period', 'Provenance'][index]!)}
@@ -112,7 +118,7 @@ export function Discovery() {
       {detail && detail.project_id === project && kind === 'graph' && 'nodes' in detail && 'edges' in detail && <FlowDiagram graph={detail as unknown as FlowGraph} />}
       {detail && detail.project_id === project && kind === 'meeting' && 'stages' in detail && 'minutes' in detail && <MeetingView meeting={detail as unknown as Meeting} />}
       {detail && detail.project_id === project && kind === 'decision' && 'proposal_version' in detail && <DecisionPanel key={`${project}:${detail.id}:${detail.seq}`} initial={detail as unknown as Decision} onRevise={value => { setDecisionEdit({ meetingId: value.meeting_id, initial: value }); setDecisionKey(n => n + 1) }} />}
-      {detail && detail.project_id === project && kind !== 'meeting' && kind !== 'decision' && <section><h3>{tr('版本详情与来源依据', 'Version details and sources')}</h3><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(detail, null, 2)}</pre></section>}
+      {detail && detail.project_id === project && kind !== 'meeting' && kind !== 'decision' && <details className="bf-raw-record"><summary>{tr('版本详情与来源依据（原始记录）', 'Version details and sources (raw record)')}</summary><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(detail, null, 2)}</pre></details>}
     </>}
   </section>
 }

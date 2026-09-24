@@ -31,25 +31,25 @@ export function WorkflowScopeCard({ revision, onChanged }: { revision: number; o
   if (!state) return null
   const list = (items: string[]) => <ul className="bf-scope-list">{items.map(item => <li key={item}>{item}</li>)}</ul>
   const waiting = state.pending.find(w => w.decision_id !== state.accepted?.decision_id || w.decision_seq !== state.accepted?.decision_seq)
-  if (state.accepted && state.current) return <section className="bf-callout bf-scope" data-tone="ok" aria-label={t('scopeTitle')}>
+  if (state.accepted && state.current) return <section data-tour-id="workflow-scope" className="bf-callout bf-scope" data-tone="ok" aria-label={t('scopeTitle')}>
     <h3>{t('scopeCurrent')}</h3>
     <p className="bf-hint">{t('scopeDecision')} <b>{state.accepted.project_id} / {state.accepted.decision_id}</b> v{state.accepted.decision_seq}
       {' · '}{t('scopeAcceptedBy')} {state.accepted.by || '—'}{state.accepted.accepted_at ? ` · ${formatDateTime(state.accepted.accepted_at, language)}` : ''}</p>
     {list(state.accepted.scope)}
     {state.accepted.exclusions.length > 0 && <p className="bf-hint">{t('scopeExclusions')}: {state.accepted.exclusions.join('；')}</p>}
   </section>
-  if (state.accepted) return <section className="bf-callout bf-scope" data-tone="warn" aria-label={t('scopeTitle')}>
+  if (state.accepted) return <section data-tour-id="workflow-scope" className="bf-callout bf-scope" data-tone="warn" aria-label={t('scopeTitle')}>
     <h3>{t('scopeStale')}</h3>
     <p>{t('scopeStaleHelp')} <span className="bf-hint">({state.stale_reasons.join(', ')})</span></p>
     {waiting && <button className="bf-primary" disabled={busy} onClick={() => void run(() => askCaptain(acceptRequest(waiting)))}>{t('askAcceptScope')}</button>}
   </section>
-  if (waiting) return <section className="bf-callout bf-scope" data-tone="info" aria-label={t('scopeTitle')}>
+  if (waiting) return <section data-tour-id="workflow-scope" className="bf-callout bf-scope" data-tone="info" aria-label={t('scopeTitle')}>
     <h3>{t('scopeWaiting')}</h3>
     <p className="bf-hint">{t('scopeDecision')} <b>{waiting.project_id} / {waiting.decision_id}</b> v{waiting.decision_seq} · {waiting.candidates.join(', ')}</p>
     {list(waiting.scope)}
     <button className="bf-primary" disabled={busy} onClick={() => void run(() => askCaptain(acceptRequest(waiting)))}>{t('askAcceptScope')}</button>
   </section>
-  return <section className="bf-callout bf-scope" aria-label={t('scopeTitle')}>
+  return <section data-tour-id="workflow-scope" className="bf-callout bf-scope" aria-label={t('scopeTitle')}>
     <h3>{t('scopeNone')}</h3>
     <p className="bf-hint">{t('scopeNoneHelp')}</p>
     <button disabled={busy} onClick={() => void run(() => api('/discovery/sample', { method: 'POST' }))}>{t('loadDiscoverySample')}</button>

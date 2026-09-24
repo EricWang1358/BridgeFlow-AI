@@ -27,10 +27,12 @@ export function FlowDiagram({ graph }: { graph: FlowGraph }) {
   const [selected, setSelected] = useState<Node | Edge | null>(null)
   useEffect(() => setSelected(null), [graph])
   const positions = new Map(graph.nodes.map((node, i) => [node.id, { x: 130 + i % 3 * 270, y: 70 + Math.floor(i / 3) * 180 }]))
-  return <section aria-label={zh ? '流程草图' : 'Flow diagram'}>
+  // People read step names, not ids; the id stays in the evidence detail.
+  const named = (id: string) => graph.nodes.find(node => node.id === id)?.title || id
+  return <section data-tour-id="flow-diagram" aria-label={zh ? '流程草图' : 'Flow diagram'}>
     <p>{zh ? '图上的位置只是排版，先后看箭头和条件。点节点或连线查看依据。' : 'Position on the page is layout only; follow the arrows and conditions for order. Click a node or link to see its evidence.'}</p>
     {(graph.opportunity_stale || graph.stale_sources?.length) ? <p role="alert">{zh ? '候选或来源已修改，请重新核对。' : 'The candidate or its sources changed; check again.'} {graph.stale_sources?.join(', ')}</p> : null}
-    <div style={{ overflow: 'auto' }}><svg role="img" aria-label={zh ? '信息流与文件流' : 'Information and document flow'} viewBox={`0 0 830 ${Math.max(200, Math.ceil(graph.nodes.length / 3) * 180)}`} style={{ minWidth: 650, width: '100%' }}>
+    <div style={{ overflow: 'auto' }}><svg role="img" aria-label={zh ? '信息流与文件流' : 'Information and document flow'} viewBox={`0 0 830 ${Math.max(200, Math.ceil(graph.nodes.length / 3) * 180)}`} style={{ minWidth: 0, width: '100%' }}>
       <defs><marker id={marker} markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="currentColor" /></marker></defs>
       {graph.edges.map((edge, i) => {
         const a = positions.get(edge.source), b = positions.get(edge.target); if (!a || !b) return null
@@ -42,8 +44,8 @@ export function FlowDiagram({ graph }: { graph: FlowGraph }) {
         <text x={p.x} y={p.y - 4} textAnchor="middle" fill="currentColor" fontSize={13}>{(node.title || node.id).slice(0, 24)}</text><text x={p.x} y={p.y + 16} textAnchor="middle" fill="currentColor" fontSize={11}>{node.department.slice(0, 22)}</text><title>{node.title} · {node.role}</title>
       </g> })}
     </svg></div>
-    <ul>{graph.edges.map(edge => <li key={edge.id}><button style={{ borderLeft: `5px solid ${colors[edge.status]}` }} onClick={() => setSelected(edge)}>{edge.source} → {edge.target} · {edge.kind === 'document' ? (zh ? '文件流' : 'Document') : (zh ? '信息流' : 'Information')} · {({ confirmed: zh ? '已确认' : 'Confirmed', inferred: zh ? '推断' : 'Inferred', missing: zh ? '缺失' : 'Missing', conflict: zh ? '冲突' : 'Conflict' })[edge.status]}{edge.rework ? (zh ? ' · 返工' : ' · Rework') : ''}</button></li>)}</ul>
-    {selected && <div aria-label={zh ? '图元素详情' : 'Graph element details'}><h4>{'title' in selected ? selected.title : `${selected.source} → ${selected.target}`}</h4><p>{'trigger' in selected ? `${selected.role} · ${selected.trigger}` : selected.rationale}</p>{'condition' in selected && <p>{selected.condition}</p>}{'confirmation' in selected && <p>{selected.confirmation}</p>}{'inputs' in selected && <p>{zh ? '输入 / 输出' : 'Inputs / outputs'}: {selected.inputs.join(', ')} / {selected.outputs.join(', ')}</p>}<ul>{selected.references.map((r, i) => <li key={i}>{r.material_id} · v{r.version} · {r.locator.sheet} · {r.locator.kind} {r.locator.start}–{r.locator.end}</li>)}</ul></div>}
+    <ul>{graph.edges.map(edge => <li key={edge.id}><button style={{ borderLeft: `5px solid ${colors[edge.status]}` }} onClick={() => setSelected(edge)}>{named(edge.source)} → {named(edge.target)} · {edge.kind === 'document' ? (zh ? '文件流' : 'Document') : (zh ? '信息流' : 'Information')} · {({ confirmed: zh ? '已确认' : 'Confirmed', inferred: zh ? '推断' : 'Inferred', missing: zh ? '缺失' : 'Missing', conflict: zh ? '冲突' : 'Conflict' })[edge.status]}{edge.rework ? (zh ? ' · 返工' : ' · Rework') : ''}</button></li>)}</ul>
+    {selected && <div aria-label={zh ? '图元素详情' : 'Graph element details'}><h4>{'title' in selected ? selected.title : `${named(selected.source)} → ${named(selected.target)}`}</h4><p>{'trigger' in selected ? `${selected.role} · ${selected.trigger}` : selected.rationale}</p>{'condition' in selected && <p>{selected.condition}</p>}{'confirmation' in selected && <p>{selected.confirmation}</p>}{'inputs' in selected && <p>{zh ? '输入 / 输出' : 'Inputs / outputs'}: {selected.inputs.join(', ')} / {selected.outputs.join(', ')}</p>}<ul>{selected.references.map((r, i) => <li key={i}>{r.material_id} · v{r.version} · {r.locator.sheet} · {r.locator.kind} {r.locator.start}–{r.locator.end}</li>)}</ul></div>}
   </section>
 }
 

@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 /**
  * Resolve the dsh executable the browser smokes are allowed to boot, and a
  * serve-time assertion that the host actually composed the official client
@@ -21,16 +22,20 @@ import { accessSync, closeSync, constants, openSync, readSync, realpathSync } fr
 import { delimiter, join } from 'node:path'
 
 const PINNED_VERSION = '0.1.2-rc.1'
-const INSTALL_HINT = 'Install the native CLI: npm install -g @deepseek-ai/dsh@0.1.2-rc.1; ' +
-  'or set BRIDGEFLOW_DSH to its executable. Web and SDK must use this same installation.'
+const INSTALL_HINT = 'Install the pinned dsh privately (leaves any other dsh alone): bash scripts/install_dsh.sh; ' +
+  'or set BRIDGEFLOW_DSH to a dsh 0.1.2-rc.1 executable. Web and SDK must use this same installation.'
+// BRIDGEFLOW_PRIVATE_DSH moves it — for tests that must not see the developer's own install.
+const PRIVATE_DSH = process.env.BRIDGEFLOW_PRIVATE_DSH ?? fileURLToPath(new URL('../../../.dsh-cli/node_modules/.bin/dsh', import.meta.url))
 
 let resolved
 export function resolveDsh() {
   if (resolved) return resolved
   const configured = process.env.BRIDGEFLOW_DSH
+  // The private install beside the repository (scripts/install_dsh.sh) first, then PATH —
+  // the same order as backend/src/bridgeflow/dsh_runtime.py.
   const candidates = configured
     ? [configured]
-    : (process.env.PATH ?? '').split(delimiter).filter(Boolean).map(dir => join(dir, 'dsh'))
+    : [PRIVATE_DSH, ...(process.env.PATH ?? '').split(delimiter).filter(Boolean).map(dir => join(dir, 'dsh'))]
   for (const candidate of candidates) {
     let path
     try {

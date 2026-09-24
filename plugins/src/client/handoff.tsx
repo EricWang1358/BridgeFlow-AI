@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, askCaptain, useUI, describeError } from './ui.ts'
 import { Notebook } from './notebook.tsx'
 import { Chip } from './workspace.tsx'
+import { tourEvent } from './tour/state.ts'
 import { WorkflowFlow } from './workflow-flow.tsx'
 import { WorkflowScopeCard, WorkflowTimeline } from './workflow-scope.tsx'
 
@@ -48,7 +49,10 @@ export function Handoff() {
     void Promise.all([
       api<{ rows: Row[] }>('/workflow/board', { signal }), api<Catalogue>('/workflow/catalogue', { signal }),
       api<Finding[]>('/workflow/adoption', { signal }),
-    ]).then(([board, declared, signals]) => { setRows(board.rows); setCatalogue(declared); setFindings(signals) })
+    ]).then(([board, declared, signals]) => {
+      setRows(board.rows); setCatalogue(declared); setFindings(signals)
+      if (board.rows.length) tourEvent('workflowSample', '')  // records already exist: the tour's load step is done
+    })
       .catch(e => { if (!signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
   }, [revision])
@@ -106,8 +110,8 @@ export function Handoff() {
     <WorkflowFlow counts={counts} overdue={overdue} />
     {rows && !rows.length && <div className="bf-notebook-empty"><p>{t('handoffEmptyHelp')}</p>
       <p className="bf-hint">{t('workflowSampleHelp')}</p>
-      <button className="bf-primary" disabled={busy} onClick={() => void run(() => api('/workflow/sample', { method: 'POST' }))}>{t(busy ? 'busy' : 'workflowSample')}</button></div>}
-    {rows && rows.map((row, i) => <article className="bf-source-item" key={row.kind === 'partial' ? `p${i}` : row.id}>
+      <button data-tour-id="workflow-sample" className="bf-primary" disabled={busy} onClick={() => void run(async () => { await api('/workflow/sample', { method: 'POST' }); tourEvent('workflowSample', '') })}>{t(busy ? 'busy' : 'workflowSample')}</button></div>}
+    {rows && rows.map((row, i) => <article data-tour-id={i === 0 ? 'workflow-sample' : undefined} className="bf-source-item" key={row.kind === 'partial' ? `p${i}` : row.id}>
       <div className="bf-handoff-head"><strong>{row.department} · {row.title}</strong>
         <Chip status={row.kind === 'partial' ? 'partial' : row.state}/>
         {row.kind === 'handoff' && row.notification !== 'none' && <Chip status={`notice_${row.notification}`}/>}
@@ -119,7 +123,7 @@ export function Handoff() {
       {(() => { const step = next(row); return step && <button className="bf-primary" disabled={busy}
         onClick={() => void run(() => askCaptain(step[1]))}>{t(step[0])}</button> })()}
       {row.kind !== 'partial' && <div className="bf-row-actions">
-        <button aria-expanded={timeline === row.id} onClick={() => setTimeline(timeline === row.id ? '' : row.id)}>{t('timeline')}</button>
+        <button data-tour-id={i === 0 ? 'workflow-timeline' : undefined} aria-expanded={timeline === row.id} onClick={() => { setTimeline(timeline === row.id ? '' : row.id); tourEvent('workflowTimeline', '') }}>{t('timeline')}</button>
         {row.kind === 'artifact' && <button aria-expanded={selected === row.id} onClick={() => setSelected(selected === row.id ? '' : row.id)}>{t(selected === row.id ? 'close' : 'viewDraft')}</button>}
       </div>}
       {row.kind !== 'partial' && timeline === row.id && <WorkflowTimeline kind={row.kind} id={row.id} />}

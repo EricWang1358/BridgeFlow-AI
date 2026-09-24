@@ -18,6 +18,8 @@ const env = { ...process.env, PORTAL_BASE_URL: '', DSH_HOME: `${scratch}/dsh`, D
   BRIDGEFLOW_SERVICE_TOKEN: randomBytes(32).toString('hex'), PYTHONPATH: `${root}/backend/src`, RESULT_STORE_PATH: `${scratch}/outputs`,
   MAPPING_MEMORY_PATH: `${scratch}/mappings.json`, COLUMN_MATCH_PATH: `${scratch}/column-matches.json`,
   FIELD_DICTIONARY_PATH: `${root}/data/mock_business/demo/dictionary.yaml`, INTEGRATION_SPEC_PATH: `${root}/data/company_templates/integration.yaml`,
+  WORKFLOW_CATALOGUE_PATH: `${root}/data/workflow_demo/catalogue.yaml`,
+  DISCOVERY_SCORING_POLICY_PATH: `${root}/data/discovery_demo/scoring-policy.yaml`, DISCOVERY_DECISION_POLICY_PATH: `${root}/data/discovery_demo/decision-policy.yaml`,
   LLM_PROVIDER: 'mock', BRIDGEFLOW_ENABLE_LEGACY_CONSOLE: 'false', BRIDGEFLOW_ALLOW_SAMPLE_DATA: 'false' }
 const processes = []; let logs = '', browser, page
 function start(cmd, args) { const p = spawn(cmd, args, { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] }); p.stdout.on('data', d => { logs += d }); p.stderr.on('data', d => { logs += d }); processes.push(p); return p }
@@ -148,6 +150,27 @@ try {
   await card().getByRole('button',{name:'Next',exact:true}).click(); await step('reviewState')
   await card().getByRole('button',{name:'Next',exact:true}).click(); await step('reviewHistory')
   await card().getByRole('button',{name:'Finish tour',exact:true}).click()
+  await page.keyboard.press('Escape')
+  // From an idea to a handoff (#143 → workflow): each action step waits for the real result.
+  const next = () => card().getByRole('button',{name:'Next',exact:true}).click()
+  await help(); await card().getByRole('button',{name:'Explore · from an idea to a handoff between departments',exact:true}).click(); await step('wfSample')
+  await target('discovery-sample').click(); await step('wfGraph')
+  await page.locator('[data-tour-id="flow-diagram"] g path').first().waitFor()
+  await page.screenshot({ path: `${evidence}/workflow-graph.png` })
+  await next(); await step('wfScore')
+  await target('discovery-kind-score').click(); await step('wfQuadrant')
+  await page.locator('[data-tour-id="quadrant-chart"] .bf-quadrant-dot').first().waitFor()
+  await page.screenshot({ path: `${evidence}/workflow-quadrant.png` })
+  await next(); await step('wfScope')
+  assert.match(await target('workflow-scope').innerText(), /demo-handoff/)
+  await next(); await step('wfRecords')
+  await target('workflow-sample').click(); await page.locator('[data-tour-step="wfFlow"] [data-tour-card]').waitFor()
+  await page.locator('.bf-pipeline > li[data-active=true]').nth(1).waitFor()  // the board refreshes after the load
+  await page.screenshot({ path: `${evidence}/workflow-flow.png` })
+  await next(); await step('wfTimeline')
+  await target('workflow-timeline').click(); await step('wfOverview')
+  await card().getByRole('button',{name:'Finish tour',exact:true}).click()
+  await page.locator('[data-tour-mode="complete"] [data-tour-card]').getByText('You have followed an idea all the way to a handoff').waitFor()
   await page.keyboard.press('Escape')
   await help(); await card().getByText('Reset this notebook’s tour',{exact:true}).first().click()
   await card().getByRole('button',{name:'Reset this notebook’s tour',exact:true}).click()

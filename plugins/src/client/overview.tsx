@@ -142,7 +142,7 @@ export function Overview({ batchId }: { batchId: string }) {
       <button aria-pressed={tables} onClick={() => setTables(!tables)}>{t(tables ? 'ovHideTables' : 'ovShowTables')}</button></header>
     <Explain text={t('overviewHow')} />
     {!batchId && <p className="bf-callout">{t('ovNoBatch')}</p>}
-    <div className="bf-ov-kpis">
+    <div data-tour-id="overview-kpis" className="bf-ov-kpis">
       {batchId && tile(t('ovClose'), ok(checklist) ? `${done} / ${total}` : '—',
         ok(checklist) ? <><span className="bf-ov-meter" aria-hidden="true"><span style={{ width: `${total ? (done / total) * 100 : 0}%` }} /></span>{checklist.ready_to_close ? t('ovReady') : t('ovNotReady')}</> : <Unread value={checklist} />, 'tasks')}
       {batchId && tile(t('ovOpenItems'), ok(inbox) ? formatNumber(inbox.total, language) : '—', ok(inbox) ? t('ovOpenItemsNote') : <Unread value={inbox} />, 'tasks')}
