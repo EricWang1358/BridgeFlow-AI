@@ -761,4 +761,9 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 @media (prefers-reduced-motion: reduce) { .bf-ov-tile, .bf-ov-bar { transition: none } }
 .bf-row-actions { display: flex; gap: 8px; flex-wrap: wrap }
 .bf-row-actions > button { flex: 0 0 auto; width: auto; padding: 4px 12px; font-size: 12px }
+/* Guest mode: say what this instance is, and where Feishu would have been. */
+.bf-guest-banner { display: grid; gap: 4px; margin: 0 0 14px; padding: 10px 12px; font-size: 12px; line-height: 1.5; border-radius: 10px; background: var(--bf-warn-bg); color: var(--bf-warn); border-left: 3px solid var(--bf-warn) }
+.bf-guest-pill { margin-left: 10px; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; background: rgb(230 150 40 / 20%); color: #b86e00 }
+.bf-guest-banner strong { font-size: 12px }
+.bf-guest-off { opacity: .8 }
 `

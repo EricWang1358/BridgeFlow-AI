@@ -67,6 +67,13 @@ class Settings(BaseSettings):
     # single request. Failures are never cached.
     console_check_ttl_seconds: int = 60
 
+    # Guest mode (docs/22 §9e): an isolated, sample-only console for people without a
+    # Feishu account. Both set = the sign-in page offers "continue as guest" and /guest
+    # hands the browser over with that console's own launch token. No session, no
+    # identity: the guest instance holds nothing a guest may not see.
+    guest_app_uri: str = ""
+    guest_token_file: str = ""
+
     # Seat fleet (docs/35): a fixed capacity of generic console instances,
     # claimed first-come-first-served by authorized people. Empty seats_path =
     # single-console behaviour, unchanged. seats.yaml declares the fleet

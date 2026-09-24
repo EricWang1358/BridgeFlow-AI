@@ -217,7 +217,20 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
     # response_model=None: the union return annotation is not a Pydantic field type.
     @app.get("/", response_model=None)
     async def index(request: Request) -> HTMLResponse:
-        return HTMLResponse(pages.index(read_session(request), registry, bool(cfg.feishu_app_id)))
+        return HTMLResponse(pages.index(read_session(request), registry, bool(cfg.feishu_app_id),
+                                        guest=bool(cfg.guest_app_uri)))
+
+    @app.get("/guest", response_model=None)
+    async def guest() -> HTMLResponse:
+        """Into the guest console (docs/22 §9e), without signing in.
+
+        Nothing is issued: no session cookie, no app token. The guest instance is a
+        separate backend and console with sample data only, so entering it grants
+        nothing the real service guards.
+        """
+        if not cfg.guest_app_uri:
+            return error(404, "访客模式未开启", "这个部署没有提供访客入口，请用飞书登录。")
+        return handover(cfg.guest_app_uri, cfg.guest_token_file, cfg.guest_token_file or "PORTAL_GUEST_TOKEN_FILE unset")
 
     @app.get("/login", response_model=None)
     async def login(request: Request, app: Annotated[str, Query()] = "") -> HTMLResponse | RedirectResponse:

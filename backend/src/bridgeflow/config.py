@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     bridgeflow_enable_legacy_pipeline: bool = False
     bridgeflow_allow_mapping_write: bool = True
     bridgeflow_allow_workflow_write: bool = True
+    # Guest mode (docs/22 §9e): an isolated sample-only instance started by
+    # `scripts/start_web.py --guest`. Feishu is refused outright; the launcher also strips
+    # its credentials. Whether guests may reach the model is decided by the launcher.
+    bridgeflow_guest_mode: bool = False
     # Feishu Drive shortcuts (#140). Exported by the launching shell, never committed.
     feishu_app_id: str = ""
     feishu_app_secret: str = ""

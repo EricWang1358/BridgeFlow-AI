@@ -1,0 +1,7 @@
+# Restarting the guest instance is its reset: start_web.py --guest wipes data/guest.
+[Unit]
+Description=Reset the BridgeFlow guest instance
+
+[Service]
+Type=oneshot
+ExecStart=/bin/systemctl try-restart bridgeflow-guest.service

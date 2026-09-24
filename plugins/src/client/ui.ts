@@ -12,6 +12,12 @@ export function configureLocale(value: Context['locale']) { locale = value }
 const subscribe = (fn: () => void) => locale.subscribe(fn)
 const current = () => locale.getSnapshot().active.startsWith('zh') ? 'zh' : 'en'
 const labels = {
+  guestBannerTitle: ['访客模式', 'Guest mode'],
+  guestBannerData: ['只有示例数据，与正式环境隔离，每晚清空。', 'Sample data only, separate from the real service, cleared every night.'],
+  guestBannerFeishu: ['飞书登录、导入与上传在访客模式下不可用。', 'Feishu sign-in, import and upload are not available in guest mode.'],
+  guestBannerLlmOff: ['AI 对话已关闭：工作室里的页面都能用，队长不会调用模型。', 'AI chat is off: every Studio page works, but the captain does not call a model.'],
+  guestBannerLlmOn: ['AI 对话已开启，由运营方承担费用，请勿输入真实数据。', 'AI chat is on at the operator\u2019s cost; please do not enter real data.'],
+  guestUnavailable: ['访客模式下不可用', 'not available in guest mode'],
   sampleHistory: ['载入前两个月的示例', 'Load the two earlier sample months'],
   sampleHistoryHelp: ['趋势至少要两个月。示例只有 2024-07，可以补上同一家供应商的 5 月和 6 月（没有埋错）。', 'A trend needs at least two months. The sample has only 2024-07; add the same supplier\u2019s May and June (nothing planted).'],
   ovNoRuns: ['今天还没有代理运行。在对话里让队长做一件事，这里会出现它用了多少 token。', 'No agent runs yet today. Ask the captain for something in the chat and its token use shows up here.'],

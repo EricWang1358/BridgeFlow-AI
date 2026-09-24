@@ -123,6 +123,9 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
             portalUrl: process.env.PORTAL_BASE_URL ?? '',
             maxUploadBytes: Math.min(Number(process.env.BRIDGEFLOW_MAX_UPLOAD_BYTES) || 25 * 1024 * 1024, 25 * 1024 * 1024),
             maxRequestBytes: 26 * 1024 * 1024, noteLimit: 240, decisionTimeoutMs,
+            // Guest mode (docs/22 §9e): an isolated sample-only instance with no Feishu, and
+            // the model only when the operator allowed it.
+            guestMode: process.env.BRIDGEFLOW_GUEST_MODE === '1', guestLlm: process.env.BRIDGEFLOW_GUEST_LLM === '1',
           }))
           return
         }
@@ -244,6 +247,7 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
         const feishuAuth = feishuOk ? { 'x-feishu-user-token': String(feishuToken) } : {}
         // No generic proxy. Browser requests cannot mint approval receipts or call writes.
         if (!read && !upload && !feishuOk) { res.writeHead(403).end('Route not authorized'); return }
+        if (feishuUser && process.env.BRIDGEFLOW_GUEST_MODE === '1') { res.writeHead(403).end('Feishu is not available in guest mode'); return }
         const abort = new AbortController()
         req.on('aborted', () => abort.abort())
         res.on('close', () => { if (!res.writableEnded) abort.abort() })

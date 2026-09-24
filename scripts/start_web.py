@@ -18,6 +18,7 @@ import importlib.metadata
 import os
 import re
 import secrets
+import shutil
 import signal
 import subprocess
 import sys
@@ -37,10 +38,66 @@ ROOT = Path(__file__).resolve().parents[1]
 TOKEN_LOG = re.compile(r"dsh web: \S+\?token=(\S+)")
 TOKEN_FILE_NAME = ".web-launch-token"
 
+# Guest mode (docs/22 §9e): an isolated instance for people without a Feishu account.
+# Everything it writes lives under GUEST_ROOT and is wiped on every start; the operator's
+# data, dictionary and credentials are never reachable from it.
+GUEST_ROOT = ROOT / "data" / "guest"
+GUEST_BACKEND_PORT = 8001
+# Never handed to a guest instance: Feishu and the login portal.
+GUEST_ALWAYS_STRIPPED = ("FEISHU_", "PORTAL_")
+# Also stripped unless BRIDGEFLOW_GUEST_LLM=1: every way to reach a paid model.
+GUEST_MODEL_STRIPPED = ("DEEPSEEK_", "ANTHROPIC_", "OPENAI_", "HERMES_", "HYPER_CHARM_", "OPENCODE_", "COMMANDCODE_",
+                        "DSH_PROVIDER", "DSH_MODEL")
+
 
 def web_token_path() -> Path:
     """Shared with the portal (PORTAL_DSH_TOKEN_FILE defaults to the same path)."""
     return Path(os.environ["DSH_HOME"]) / TOKEN_FILE_NAME
+
+
+def guest_environment(env: dict[str, str]) -> Path:
+    """Point this launch at a fresh, isolated guest instance; returns the dsh patch to use."""
+    allow_llm = env.get("BRIDGEFLOW_GUEST_LLM") == "1"
+    shutil.rmtree(GUEST_ROOT, ignore_errors=True)
+    outputs, home = GUEST_ROOT / "outputs", GUEST_ROOT / "dsh-home"
+    outputs.mkdir(parents=True)
+    home.mkdir(parents=True)
+    for key in list(env):
+        paid_model = key.startswith(GUEST_MODEL_STRIPPED) or key.endswith("_API_KEY")
+        if key.startswith(GUEST_ALWAYS_STRIPPED) or (paid_model and not allow_llm):
+            del env[key]
+    if allow_llm:
+        # The operator's model routes (not credentials: those stay in the environment).
+        source = Path(os.environ.get("DSH_HOME", "")) / "settings.yaml"
+        if source.is_file():
+            shutil.copy2(source, home / "settings.yaml")
+    # A copy of the sample dictionary: publishing a dictionary rewrites the active file,
+    # and a guest must only ever rewrite its own copy.
+    dictionary = GUEST_ROOT / "dictionary.yaml"
+    shutil.copy2(ROOT / "data/mock_business/demo/dictionary.yaml", dictionary)
+    env.update({
+        "DSH_HOME": str(home), "BRIDGEFLOW_GUEST_MODE": "1", "BRIDGEFLOW_GUEST_LLM": "1" if allow_llm else "0",
+        "BRIDGEFLOW_BACKEND_PORT": str(GUEST_BACKEND_PORT), "FIELD_DICTIONARY_PATH": str(dictionary),
+        "RESULT_STORE_PATH": str(outputs), "MAPPING_MEMORY_PATH": str(outputs / "mappings.json"),
+        "COLUMN_MATCH_PATH": str(outputs / "column-matches.json"),
+        "DICTIONARY_DRAFT_PATH": str(outputs / "dictionary-drafts"),
+    })
+    os.environ["DSH_HOME"] = str(home)  # web_token_path() reads it
+    patch = (ROOT / "dsh/enterprise.patch.yml").read_text(encoding="utf-8")
+    patch = (patch.replace("'../plugins/src/index.ts'", repr(str(ROOT / "plugins/src/index.ts")))
+             .replace("./dsh/presets", str(ROOT / "dsh/presets"))
+             .replace("http://127.0.0.1:8000", f"http://127.0.0.1:{GUEST_BACKEND_PORT}"))
+    if not allow_llm:
+        patch += ("\n# Guest mode without the model: every turn is answered by a fixed note, at no cost.\n"
+                  "- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n"
+                  "  config:\n    provider: bridgeflow-guest-notice\n    model: guest-notice\n"
+                  f"- insert:\n    - id: bridgeflow-guest-notice-model\n"
+                  f"      name: {str(ROOT / 'plugins/src/guest-model/index.ts')!r}\n")
+    path = GUEST_ROOT / "web.yml"
+    path.write_text(patch, encoding="utf-8")
+    print(f"BridgeFlow guest mode: data under {GUEST_ROOT} (wiped on start), "
+          f"Feishu off, AI model {'ON (operator pays)' if allow_llm else 'off'}", flush=True)
+    return path
 
 
 def warn_if_token_missing(web: subprocess.Popen, token_path: Path, seconds: float = 20) -> None:
@@ -96,7 +153,7 @@ def warn_if_backend_absent(env: dict) -> None:
     invisible until the first tool call — one request now turns both into a
     line on the unit's console instead of a silent 401 later."""
     try:
-        request = Request("http://127.0.0.1:8000/tools/list-metrics", data=b"{}", headers={
+        request = Request(f"http://127.0.0.1:{env.get('BRIDGEFLOW_BACKEND_PORT', '8000')}/tools/list-metrics", data=b"{}", headers={
             "content-type": "application/json", "authorization": f"Bearer {env['BRIDGEFLOW_SERVICE_TOKEN']}",
         })
         with urlopen(request, timeout=1) as response:
@@ -137,6 +194,12 @@ def main() -> None:
         while flag in sys.argv:
             sys.argv.remove(flag)
     run_web, run_backend = not backend_only, not web_only
+    guest = "--guest" in sys.argv
+    if guest:
+        sys.argv.remove("--guest")
+        if backend_only or web_only:
+            raise SystemExit("--guest runs its own backend and console together; drop --backend-only/--web-only")
+        os.environ.setdefault("DSH_HOME", str(GUEST_ROOT / "dsh-home"))
     if run_web:
         if not os.environ.get("DSH_HOME"):
             raise SystemExit("Export DSH_HOME in the launching shell (see env.sh.example)")
@@ -154,6 +217,10 @@ def main() -> None:
     env["BRIDGEFLOW_ALLOW_SAMPLE_DATA"] = "false"
     env["DSH_TOOLS_MODE"] = "native"
     env["PYTHONPATH"] = str(ROOT / "backend/src")
+    patch_path = "dsh/enterprise.patch.yml"
+    if guest:
+        patch_path = str(guest_environment(env))
+    backend_port = env.get("BRIDGEFLOW_BACKEND_PORT", "8000")
 
     # `--demo` points the service at the walkthrough's own dictionary.
     #
@@ -168,7 +235,8 @@ def main() -> None:
         # The sample notebook's case: the business side's v2 templates filled with the
         # fictional concrete supplier (data/mock_business/demo). The older English CSV case
         # in data/business_demo stays as the browser smokes' fixture with its own dictionary.
-        env["FIELD_DICTIONARY_PATH"] = str(ROOT / "data/mock_business/demo/dictionary.yaml")
+        if not guest:  # a guest instance already points at its own copy of this dictionary
+            env["FIELD_DICTIONARY_PATH"] = str(ROOT / "data/mock_business/demo/dictionary.yaml")
 
     # The template-filling and handoff workflow is a core flow, and without a catalogue its
     # page is a 503 — deployed, that meant the flow was invisible. No business catalogue
@@ -200,15 +268,15 @@ def main() -> None:
         web: subprocess.Popen | None = None
         if run_backend:
             backend = subprocess.Popen(
-                [sys.executable, "-m", "uvicorn", "bridgeflow.api.main:app", "--host", "127.0.0.1", "--port", "8000"],
+                [sys.executable, "-m", "uvicorn", "bridgeflow.api.main:app", "--host", "127.0.0.1", "--port", backend_port],
                 cwd=ROOT, env=env,
             )
             processes.append(backend)
             for _ in range(100):
                 if backend.poll() is not None:
-                    raise SystemExit("Domain service failed to start; check whether port 8000 is occupied")
+                    raise SystemExit(f"Domain service failed to start; check whether port {backend_port} is occupied")
                 try:
-                    request = Request("http://127.0.0.1:8000/tools/list-metrics", data=b"{}", headers={
+                    request = Request(f"http://127.0.0.1:{backend_port}/tools/list-metrics", data=b"{}", headers={
                         "content-type": "application/json", "authorization": f"Bearer {env['BRIDGEFLOW_SERVICE_TOKEN']}",
                     })
                     with urlopen(request, timeout=.5) as response:
@@ -222,7 +290,7 @@ def main() -> None:
             if web_only:
                 warn_if_backend_absent(env)
             web = subprocess.Popen(
-                [dsh, "web", "--patch", "dsh/enterprise.patch.yml", "--no-open", *sys.argv[1:]],
+                [dsh, "web", "--patch", patch_path, "--no-open", *sys.argv[1:]],
                 cwd=ROOT, env=env, stdout=subprocess.PIPE, text=True, bufsize=1,
             )
             processes.append(web)

@@ -116,8 +116,11 @@ export function apply(ctx: Context, config: Config): void {
     catalogue.register(ctx, workflowApproveSubmit(backend, receipts))
     catalogue.register(ctx, workflowHandoff(backend, receipts))
     catalogue.register(ctx, workflowAcceptScope(backend, receipts))
-    catalogue.register(ctx, feishuImport(backend, receipts))
-    catalogue.register(ctx, feishuUploadReport(backend, receipts))
+    // Guest mode never talks to Feishu: the tools are not offered at all (docs/22 §9e).
+    if (process.env.BRIDGEFLOW_GUEST_MODE !== '1') {
+      catalogue.register(ctx, feishuImport(backend, receipts))
+      catalogue.register(ctx, feishuUploadReport(backend, receipts))
+    }
   }
 
   // Final deny applies even when a preset or a later policy exposes another tool.

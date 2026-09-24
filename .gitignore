@@ -39,6 +39,7 @@ data/mappings/field-dictionary.yaml
 # per-instance facts, never reviewed in a PR; seats.yaml (the capacity list,
 # no person in it) stays tracked.
 data/homes/
+data/guest/
 data/seats-assigned.json
 *.xlsx
 *.xls

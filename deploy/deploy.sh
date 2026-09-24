@@ -47,8 +47,17 @@ if [ -n "$units_domain" ]; then
     printf '%s\n' "$rendered" | sudo tee /etc/systemd/system/bridgeflow.service >/dev/null
     units_changed=1
   fi
+  # The guest instance (docs/22 §9e) is opt-in: its units are always installed, but only an
+  # operator's `systemctl enable` turns it on, and only then does the Caddyfile get its site.
+  guest_rendered=$(sed "s#<domain>#$units_domain#g" deploy/bridgeflow-guest.service)
+  if [ "$guest_rendered" != "$(sudo cat /etc/systemd/system/bridgeflow-guest.service 2>/dev/null || true)" ]; then
+    printf '%s\n' "$guest_rendered" | sudo tee /etc/systemd/system/bridgeflow-guest.service >/dev/null
+    units_changed=1
+  fi
   for pair in "portal.service:bridgeflow-portal.service" "bridgeflow-dsh.slice:bridgeflow-dsh.slice" \
-              "bridgeflow-dsh@.service:bridgeflow-dsh@.service"; do
+              "bridgeflow-dsh@.service:bridgeflow-dsh@.service" \
+              "bridgeflow-guest-reset.service:bridgeflow-guest-reset.service" \
+              "bridgeflow-guest-reset.timer:bridgeflow-guest-reset.timer"; do
     src="deploy/${pair%%:*}" dst="/etc/systemd/system/${pair##*:}"
     if ! sudo diff -q "$src" "$dst" >/dev/null 2>&1; then
       sudo cp "$src" "$dst"
@@ -62,7 +71,9 @@ if [ -n "$units_domain" ]; then
   # (2026-09-21, docs/22). Same shape as above: render, diff, reload only on a
   # change. Skipped when caddy is absent (a box bootstrap has not reached yet).
   if command -v caddy >/dev/null; then
-    caddyfile=$("$VENV" deploy/render_caddy.py "$units_domain")
+    guest_args=()
+    systemctl is-enabled --quiet bridgeflow-guest 2>/dev/null && guest_args=(--guest-port 3090)
+    caddyfile=$("$VENV" deploy/render_caddy.py "$units_domain" "${guest_args[@]}")
     if [ "$caddyfile" != "$(sudo cat /etc/caddy/Caddyfile 2>/dev/null || true)" ]; then
       printf '%s\n' "$caddyfile" | sudo tee /etc/caddy/Caddyfile >/dev/null
       sudo systemctl reload caddy
@@ -75,6 +86,11 @@ fi
 [ "$units_changed" = 1 ] && sudo systemctl daemon-reload
 
 sudo systemctl restart bridgeflow bridgeflow-portal
+# The guest instance restarts with each deploy so it serves this deploy's code; restarting
+# is also its reset (data/guest is wiped), which is fine for sample-only data.
+if systemctl is-enabled --quiet bridgeflow-guest 2>/dev/null; then
+  sudo systemctl restart bridgeflow-guest
+fi
 # Seat consoles load the host-side plugin and the client bundle at their own
 # boot; without this they keep serving the previous deploy's code until an
 # unlucky per-unit restart (docs/35 §8: backend and portal first, then seats).

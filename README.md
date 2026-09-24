@@ -54,6 +54,7 @@ before. Nothing is assumed beyond "you can open a terminal".
 | Safety: raw data rows never enter model context (three layers), prompt-injection defence | ✅ Built | Injected cell text reached no model session on the real model; bilingual injection cases | Third-party penetration test |
 | Observability: decision journal, per-run swimlanes with tokens, generated acceptance report 31/31 | ✅ Built | Records page; `test_journal.py` | — |
 | Tool-selection evaluation (real model; first step among ~50 tools) | ✅ 18/18 | Median 3 steps, ~40k tokens. The three earlier misses traced to tool contracts and the persona, not the model, and were fixed there (docs/00) | More cases |
+| Guest mode for people without a Feishu account (e.g. evaluators) | ✅ Built | A separate backend and console with sample data only, reset nightly. No Feishu or portal credentials reach it. The AI model is off unless the operator sets `BRIDGEFLOW_GUEST_LLM=1`. "Continue as guest" on the portal (docs/22 §9e) | Enabling it on the server (a one-time step) |
 | Model choice | ✅ dsh's own picker | Chooses among operator-configured models; adding providers or keys stays off | — |
 | Deployment: merge triggers tests and deploy, 7 seats | ✅ Live | GitHub Actions | Manual steps such as enabling the console gate (see HANDOFF) |
 | Feishu sheets / wiki / permissions | 🟡 In integration | Metadata and membership reads verified on the real tenant | End-to-end import, large-sheet paging (out of this round) |
@@ -206,6 +207,10 @@ The Client bundle has to exist before the Web starts; the launcher tells you if 
 sources.
 
 ## 5 Start it
+
+No Feishu account? `python scripts/start_web.py --guest --port 3090` starts an isolated guest instance.
+It has sample data only, Feishu is off, and the AI model is off unless `BRIDGEFLOW_GUEST_LLM=1` is set.
+On the server it is the portal's "Continue as guest" button ([docs/22 §9e](docs/22-lightsail-deploy.md)).
 
 ```bash
 python scripts/start_web.py --demo --port 3082

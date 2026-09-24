@@ -27,6 +27,8 @@ a.method { display: flex; align-items: center; justify-content: center; gap: 10p
   width: 100%; padding: 13px 16px; border-radius: 10px; text-decoration: none;
   font-size: 15px; font-weight: 600; background: #3370ff; color: #fff; }
 a.method:hover { background: #295fd4; }
+a.method.guest { margin-top: 14px; background: #fff; color: #1f2329; border: 1px solid #d0d3d6; }
+a.method.guest:hover { background: #f2f3f5; }
 .method-note { margin-top: 10px; font-size: 12px; color: #8f959e; text-align: center; }
 a.enter { display: flex; align-items: center; justify-content: space-between;
   width: 100%; padding: 13px 16px; margin-top: 10px; border-radius: 10px;
@@ -65,7 +67,7 @@ def _layout(title: str, body: str) -> str:
 </main></body></html>"""
 
 
-def index(session: dict | None, registry: dict[str, dict], feishu_ready: bool) -> str:
+def index(session: dict | None, registry: dict[str, dict], feishu_ready: bool, guest: bool = False) -> str:
     """The one page: sign-in methods when anonymous, the way into apps when signed in.
 
     The app is never a choice here — BridgeFlow is fixed, the visitor only picks
@@ -78,9 +80,13 @@ def index(session: dict | None, registry: dict[str, dict], feishu_ready: bool) -
         else:
             method = ""
             note = '<p class="method-note">飞书登录未配置，请联系管理员。</p>'
+        visitor = ('<a class="method guest" href="/guest">以访客身份进入 · Continue as guest</a>'
+                   '<p class="method-note">没有飞书账号也能试用：只有示例数据，与正式环境隔离，每晚清空；'
+                   '飞书相关功能不可用。No Feishu account needed: sample data only, separate from the '
+                   'real service, reset nightly; Feishu features are unavailable.</p>') if guest else ""
         return _layout("统一登录门户", f"""<p class="subtitle">统一登录门户</p>
 <p class="section">选择登录方式</p>
-{method}{note}""")
+{method}{note}{visitor}""")
 
     name = html.escape(str(session.get("name") or session["sub"]))
     email = html.escape(str(session.get("email") or ""))
