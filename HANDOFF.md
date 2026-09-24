@@ -4,6 +4,15 @@
 
 **27 日前收口**：以 [当前演示闸门](docs/00-status.md)为准。暂停新增功能和未经业务原件支持的需求；只修现有演示链路的阻断、错误表述与回归。#261 继续放在交付后；#228 先保留已测上限与样例边界，#247 不因口头要求直接合入。
 
+## 2026-09-25 安装健康检查按 README 逐条执行（分支 `fix/health-check-shots`）
+
+- README §14 让人排查时用 `pnpm --dir plugins shots`，但它指向的 `tests/screenshots.mjs` 早已过时：
+  - 还在找工作室改版前的「导入与数据」按钮，跑到一半就超时；
+  - 没有给 dsh 独立的数据目录，没 source `env.sh` 时会读个人的 `~/.dsh`，遇到新版 dsh 写的压缩会话就起不来，source 了则会写进项目的工作目录。
+  - 现在 `pnpm shots` 改用一直在维护的 `readme-shots.mjs`，用临时 DSH_HOME，截图写到 `/tmp/bridgeflow-shots`，不覆盖 `docs/images`。过时脚本已删除。
+- 中英文 §14 都加了 `bash scripts/install_dsh.sh --check`。
+- 中文 README 还写着「三条浏览器 smoke 目前是红的」和「#97 是已知未解问题」，而 #97 早已关闭，英文版也已更新。已改成和英文版一致，排错表的这一行也换成了可以照做的检查。
+
 ## 2026-09-25 第二轮走查：示例模式的报价页、立项状态文字（分支 `fix/demo-quotation-and-status`）
 
 - **演示死胡同：示例模式下报价页显示「未配置」**。报价页读的是当前字典里的 `quotation:` 段。示例模式（`start_web.py --demo`、访客实例、各条旅程）用的是 `data/mock_business/demo/dictionary.yaml`，而同一家虚构商砼公司的报价声明另放在 `data/mock_business/quotation/dictionary.yaml`，所以评委点进报价页只能看到「未配置」。报价自己的旅程一直绿，是因为它单独指定了报价字典。
