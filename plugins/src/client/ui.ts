@@ -307,6 +307,8 @@ const labels = {
   upload: ['上传', 'Upload'],
   workflowProgress: ['工作流状态', 'Workflow state'],
   inboxFocused: ['只显示所选步骤在等的事项。', 'Showing only the items the focused step is waiting on.'],
+  inboxShowingOf: ['当前显示 {shown} / 全部 {total} 条待确认事项。', 'Showing {shown} of {total} open items.'],
+  inboxDepartmentFilter: ['涉及部门', 'Department involved'],
   inboxClearFocus: ['显示全部', 'Show all'],
   stepShowItems: ['只看这几条', 'Show its items'],
   briefSources: ['这个数字的出处', 'Where this figure came from'],

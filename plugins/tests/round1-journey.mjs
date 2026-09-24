@@ -92,16 +92,12 @@ try {
   await sources.locator('li button').first().waitFor()
   await shot('brief')
 
-  // E13-UC02: import the base period through the host API, then the brief compares against it
-  const june = `${root}/data/mock_business/monthly/2024-06-调优B`
-  const form = new FormData()
-  form.set('period', '2024-06')
-  for (const [department, label] of Object.entries({ production: '生产部', procurement: '物资部', finance: '财务部', marketing: '市场部' })) {
-    form.append('departments', department)
-    form.append('files', new Blob([await readFile(`${june}/${label}.xlsx`)]), `${label}.xlsx`)
-  }
-  const imported = await fetch(`http://127.0.0.1:${backendPort}/batches`, { method: 'POST', headers: { authorization: `Bearer ${env.BRIDGEFLOW_SERVICE_TOKEN}` }, body: form })
-  assert.equal(imported.status, 200, await imported.text())
+  // E13-UC02: the guided sample compares against its own supplier's sample history.
+  // A real uploaded June belongs to a different cohort and must not become this base.
+  const imported = await fetch(`http://127.0.0.1:${backendPort}/batches/demo/history`, {
+    method: 'POST', headers: { authorization: `Bearer ${env.BRIDGEFLOW_SERVICE_TOKEN}` } })
+  assert.equal(imported.status, 200, await imported.clone().text())
+  assert.deepEqual((await imported.json()).imported.map(item => item.period).sort(), ['2024-05', '2024-06'])
   await page.reload()
   await page.locator('.bf-brief').waitFor()
   await page.getByText('2024-06', { exact: false }).first().waitFor()
@@ -186,7 +182,7 @@ try {
   await checklist.locator('li[data-state=open]').first().waitFor()
   await shot('close-checklist')
 
-  // Focusing a step narrows the items to the ones that step is waiting on, and the total stays.
+  // Focusing a step with an inbox source narrows the list and shows its share of the total.
   const before = await page.locator('.bf-inbox li').count()
   await checklist.locator('li[data-state=open] button', { hasText: 'Show its items' }).first().click()
   await page.locator('.bf-inbox [role=status]').filter({ hasText: 'focused step' }).waitFor()

@@ -152,6 +152,33 @@ try {
     results[id] = { status: summary.status, blockers: summary.review_blockers, quarantined: summary.departments.reduce((n, d) => n + d.quarantined, 0),
       column_questions: summary.column_questions, batch_id: batch, open_items: inbox.total }
     await shot(`case-${id}`)
+    if (id === 'core') {
+      const department = Object.keys(inbox.by_department).find(name => inbox.by_department[name] > 0 && inbox.by_department[name] < inbox.total)
+      assert(department, 'The core case should have a department with fewer items than the full batch')
+      const filteredCount = inbox.items.filter(item => item.departments.includes(department)).length
+      const openItems = tasks.locator('.bf-inbox')
+      await openItems.locator('select').selectOption(department)
+      await page.waitForFunction(count => document.querySelector('.bf-inbox .bf-badge')?.textContent?.trim() === String(count), filteredCount)
+      await openItems.getByText(`Showing ${filteredCount} of ${inbox.total} open items.`, { exact: true }).waitFor()
+      assert.equal(await openItems.getByRole('combobox', { name: 'Department involved' }).inputValue(), department)
+      await openItems.screenshot({ path: `${evidence}/case-core-filtered-inbox.png` })
+      await openItems.locator('select').selectOption('')
+      await page.waitForFunction(count => document.querySelector('.bf-inbox .bf-badge')?.textContent?.trim() === String(count), inbox.total)
+      const intakeStep = tasks.locator('.bf-checklist li').filter({ hasText: 'Intake checks accepted' })
+      assert.equal(await intakeStep.getByRole('button', { name: 'Show its items' }).count(), 0,
+        'An intake step without inbox items must not offer an empty filter')
+      await tasks.locator('.bf-checklist').getByRole('button', { name: 'Show its items' }).first().click()
+      const focusedCount = await openItems.locator('ul > li').count()
+      assert.equal(focusedCount, inbox.items.filter(item => item.source === 'quarantine').length)
+      assert.equal(await openItems.locator('.bf-badge').innerText(), String(focusedCount))
+      await openItems.getByText(`Showing ${focusedCount} of ${inbox.total} open items.`, { exact: true }).waitFor()
+      await openItems.getByRole('button', { name: 'Show all' }).click()
+      assert.equal(await openItems.locator('.bf-badge').innerText(), String(inbox.total))
+      await tasks.locator('.bf-checklist li').filter({ hasText: 'Master open items cleared' }).getByRole('button', { name: 'Show its items' }).click()
+      const masterCount = inbox.items.filter(item => item.source === 'integration').length
+      assert.equal(await openItems.locator('.bf-badge').innerText(), String(masterCount))
+      await openItems.getByRole('button', { name: 'Show all' }).click()
+    }
     if (id === 'clean' && reviewButton) {
       await review.click()
       await tasks.getByText('Request sent to the current session.', { exact: false }).waitFor()

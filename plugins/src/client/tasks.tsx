@@ -40,7 +40,7 @@ export function TasksView({ batchId, summary, audit, savedReportStatus, notebook
 }) {
   const { t } = useUI()
   const guest = useGuestMode()
-  const [focus, setFocus] = useState('')
+  const [focusSource, setFocusSource] = useState('')
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [requestSent, setRequestSent] = useState(false)
   if (!summary) return <p className="bf-hint">{t('studioStartHelp')}</p>
   const reviewReady = summary.status === 'ready'
@@ -70,8 +70,8 @@ export function TasksView({ batchId, summary, audit, savedReportStatus, notebook
 
     <div className="bf-tasks-split">
       <CloseChecklist period={summary.period} batchId={batchId} onImport={onImport}
-        onFocus={view => setFocus(current => current === view ? '' : view)} focusView={focus} />
-      <OpenItemInbox period={summary.period} batchId={batchId} focusView={focus} onClearFocus={() => setFocus('')} />
+        onFocus={source => setFocusSource(current => current === source ? '' : source)} focusSource={focusSource} />
+      <OpenItemInbox period={summary.period} batchId={batchId} focusSource={focusSource} onClearFocus={() => setFocusSource('')} />
     </div>
 
     <details className="bf-tasks-workflow">
