@@ -27,6 +27,7 @@ export function OpenItemInbox({ period, batchId, focusSource = '', onClearFocus 
   { period: string; batchId: string; focusSource?: string; onClearFocus?: () => void }) {
   const { t, colon } = useUI()
   const [inbox, setInbox] = useState<Inbox | null>(null), [error, setError] = useState(''), [department, setDepartment] = useState('')
+  const [retry, setRetry] = useState(0)
   useEffect(() => {
     if (!period) return
     const controller = new AbortController()
@@ -35,26 +36,32 @@ export function OpenItemInbox({ period, batchId, focusSource = '', onClearFocus 
     void api<Inbox>(`/monthly/inbox?${query}`, { signal: controller.signal })
       .then(setInbox).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
-  }, [period, batchId, department])
+  }, [period, batchId, department, retry])
   if (!period) return null
-  if (error) return <p role="alert" className="bf-error">{error}</p>
+  if (error) return <section className="bf-inbox" aria-label={t('openItems')}>
+    <h3>{t('openItems')}</h3>
+    <p role="alert" className="bf-error">{t('inboxUnavailable')}</p>
+    <p className="bf-hint">{error}</p>
+    <button onClick={() => setRetry(value => value + 1)}>{t('refresh')}</button>
+  </section>
   if (!inbox) return <p role="status" className="bf-loading">{t('loading')}</p>
   // Only steps backed by an inbox source offer a focus action. A shared destination such as
   // "state" can cover unrelated facts and is not a safe filter key.
   const shown = focusSource ? inbox.items.filter(item => item.source === focusSource) : inbox.items
   const filtered = Boolean(focusSource || department)
+  const clearFilters = () => { setDepartment(''); onClearFocus?.() }
   return <section className="bf-inbox" aria-label={t('openItems')}>
     <h3>{t('openItems')} <span className="bf-badge">{shown.length}</span></h3>
-    {filtered && <p className="bf-hint" role="status">{t('inboxShowingOf').replace('{shown}', String(shown.length)).replace('{total}', String(inbox.total))}</p>}
+    {filtered && <p className="bf-hint" role="status">{t('inboxShowingOf').replace('{shown}', String(shown.length)).replace('{total}', String(inbox.total))} <button onClick={clearFilters}>{t('inboxClearFocus')}</button></p>}
     {focusSource
-      ? <p className="bf-hint" role="status">{t('inboxFocused')} <button onClick={() => onClearFocus?.()}>{t('inboxClearFocus')}</button></p>
+      ? <p className="bf-hint" role="status">{t('inboxFocused')}</p>
       : <p className="bf-hint">{t('openItemsHint')}</p>}
     <label>{t('inboxDepartmentFilter')} <select value={department} onChange={e => setDepartment(e.target.value)}>
       <option value="">{t('allDepartments')}</option>
       {Object.keys(inbox.by_department).map(name => <option key={name} value={name}>{t(name)} · {inbox.by_department[name]}</option>)}
     </select></label>
     {inbox.unreadable.map(reason => <p key={reason} className="bf-hint">{t('inboxUnreadable')}{colon}{reason}</p>)}
-    {!shown.length && <p className="bf-hint">{t('inboxEmpty')}</p>}
+    {!shown.length && <p className="bf-hint">{filtered && inbox.total > 0 ? t('inboxNoMatches') : t('inboxEmpty')}</p>}
     <ul>{shown.map(item => <li key={item.id}>
       <b>{t(`item_${item.kind}`) === `item_${item.kind}` ? item.kind : t(`item_${item.kind}`)}</b>
       {item.subject && <span className="bf-mono"> · {item.subject}</span>}

@@ -330,6 +330,8 @@ const labels = {
   chartGapCell: ['该月无批次，不插值', 'No batch that month; not interpolated'], allDepartments: ['全部部门', 'All departments'],
   openItemsHint: ['本月还在等人处理的事项。点开一项，直接去处理它的地方。', 'Everything still waiting on someone this month. Open an item to go straight to where it is resolved.'],
   inboxEmpty: ['当前范围内没有待确认事项。', 'Nothing is waiting in this scope.'],
+  inboxUnavailable: ['待办暂时读不到，数量未知。请刷新重试。', 'Open items could not be loaded, so their count is unknown. Refresh to try again.'],
+  inboxNoMatches: ['当前筛选没有匹配的事项；本批次仍有待确认项。点「显示全部」查看。', 'No items match these filters. This batch still has open items; choose Show all to see them.'],
   inboxUnreadable: ['有一个来源读不到', 'One source could not be read'],
   openToSettle: ['打开处理', 'Open to settle'],
   item_master_disagreement: ['跨部门不一致', 'Departments disagree'],
