@@ -30,19 +30,21 @@ export function DataView({ batchId, summary, sources, onImport, onRefresh }: {
   const { t } = useUI()
   const guest = useGuestMode().guest
   const [quality, setQuality] = useState<Quality | null>(null), [error, setError] = useState('')
+  const [qualityRevision, setQualityRevision] = useState(0)
   useEffect(() => {
     if (!summary?.period) return
     const controller = new AbortController()
-    setQuality(null)
+    setQuality(null); setError('')
     void api<Quality>(`/monthly/inbox?period=${encodeURIComponent(summary.period)}&batch_id=${encodeURIComponent(batchId)}`, { signal: controller.signal })
       .then(setQuality).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
-  }, [summary?.period, batchId])
+  }, [summary?.period, batchId, qualityRevision])
   if (!summary) return <p className="bf-hint">{t('studioStartHelp')}</p>
   const present = new Map(summary.departments.map(d => [d.department, d]))
   const fileOf = new Map(sources.map(s => [s.id, s]))
   const kinds = quality?.by_kind ?? {}
   const masterIssues = Object.entries(kinds).filter(([kind]) => kind.startsWith('master_')).reduce((n, [, v]) => n + v, 0)
+  const count = (value: number) => quality ? value : '—'
   return <section className="bf-data" aria-label={t('dataWorkspace')}>
     <div className="bf-card-head">
       <h3>{t('dataWorkspace')} · {summary.period}</h3>
@@ -84,15 +86,17 @@ export function DataView({ batchId, summary, sources, onImport, onRefresh }: {
 
       <aside className="bf-data-quality">
         <h4>{t('batchQuality')}</h4>
+        {!quality && !error && <p className="bf-hint" role="status">{t('loading')}</p>}
+        {!quality && error && <p className="bf-hint" role="status">{t('batchQualityUnavailable')} <button onClick={() => setQualityRevision(n => n + 1)}>{t('refresh')}</button></p>}
         <ul>
           <li><button onClick={() => navigate({ batch: batchId, view: 'integration' })}>
-            <span>{t('item_master_disagreement')}</span><span className="bf-badge" data-open={masterIssues > 0}>{masterIssues}</span></button></li>
+            <span>{t('item_master_disagreement')}</span><span className="bf-badge" data-open={masterIssues > 0}>{count(masterIssues)}</span></button></li>
           <li><button onClick={() => navigate({ batch: batchId, view: 'quarantine' })}>
-            <span>{t('quarantine')}</span><span className="bf-badge" data-open={(kinds.quarantined_row ?? 0) > 0}>{kinds.quarantined_row ?? 0}</span></button></li>
+            <span>{t('quarantine')}</span><span className="bf-badge" data-open={(kinds.quarantined_row ?? 0) > 0}>{count(kinds.quarantined_row ?? 0)}</span></button></li>
           <li><button onClick={() => navigate({ batch: batchId, view: 'columns' })}>
-            <span>{t('pendingColumnQuestions')}</span><span className="bf-badge" data-open={(kinds.column_question ?? 0) > 0}>{kinds.column_question ?? 0}</span></button></li>
+            <span>{t('pendingColumnQuestions')}</span><span className="bf-badge" data-open={(kinds.column_question ?? 0) > 0}>{count(kinds.column_question ?? 0)}</span></button></li>
           <li><button onClick={() => navigate({ batch: batchId, view: 'integration' })}>
-            <span>{t('item_missing_provenance')}</span><span className="bf-badge" data-open={(kinds.missing_provenance ?? 0) > 0}>{kinds.missing_provenance ?? 0}</span></button></li>
+            <span>{t('item_missing_provenance')}</span><span className="bf-badge" data-open={(kinds.missing_provenance ?? 0) > 0}>{count(kinds.missing_provenance ?? 0)}</span></button></li>
         </ul>
         <div className="bf-actions">
           <button className="bf-primary" data-tour-id="master-open" disabled={!summary.master_rows}
