@@ -483,6 +483,7 @@ BridgeFlow field dictionary: /home/you/Hackathon2026/BridgeFlow-AI/data/mock_bus
 ## 14 检查安装是否健康
 
 ```bash
+bash scripts/install_dsh.sh --check          # private dsh: … (0.1.2-rc.1)
 cd backend && pytest -q && ruff check src tests ../scripts/start_web.py
 cd ../plugins && pnpm run typecheck && pnpm test && pnpm run build
 pnpm run smoke:web && pnpm run smoke:business
@@ -491,11 +492,9 @@ BRIDGEFLOW_TEST_FAULT=step-limit pnpm run smoke:business
 
 预期：Python 与 TS 单测离线全绿，不调模型、不产生费用。
 
-**已知是红的**：三条浏览器 smoke 目前在开发机上失败，控制台都是
-`client-modules: HTML did not preload @deepseek-ai/dsh-client-modules/client.js`，
-跟踪在 [#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97)。不是产品坏了：同一份补丁、
-同一条 `dsh web` 命令，指向一个真实 `DSH_HOME` 就能正常渲染。修好之前，看界面请用
-`pnpm --dir plugins shots`，别以为自己弄坏了什么。
+**浏览器 smoke**：历史上的 `client-modules` 预加载失败（[#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97)）
+已经关闭。启动器现在会选用锁定版本的 dsh，并在打开浏览器前检查官方客户端模块；万一再出现，诊断会写明缺的是哪个模块。
+排查时可以用 `pnpm --dir plugins shots`：它离线打开示例笔记本和工作室各页，截图写到 `/tmp/bridgeflow-shots`。
 
 「量到了什么、花了多少、哪些还没验证」一律看 [`docs/00-status.md`](docs/00-status.md)。
 
@@ -509,7 +508,7 @@ BRIDGEFLOW_TEST_FAULT=step-limit pnpm run smoke:business
 | 旧会话日志打不开（`bridgeflow/review`、`bridgeflow/approval-note`） | 历史遗留的信息事件，原生冷读器不肯忽略 | 先停启动器，跑 `python scripts/repair_session_metadata.py --root ../.dsh-bridgeflow/sessions` 检查，认可后再加 `--apply`。它会保留原始字节备份 |
 | Windows 浏览器连不上服务 | 服务绑在 `127.0.0.1`，或者主机不对 | 先用 `ss -tlnp` 看监听地址，再看 [`docs/14` 第 10 节](docs/14-wsl-setup.md) |
 | 干什么都慢、watch 不重载 | 你在 `/mnt` 下 | 把仓库、venv 与 `DSH_HOME` 移进 Linux 文件系统 |
-| 浏览器 smoke 报 client-modules 那句 | 已知未解问题，不是你改坏的 | 见 [#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97)；用 `shots` 看界面 |
+| 浏览器 smoke 报 client-modules 那句 | 用了别的 dsh 运行时（常见是先激活的 venv 排在 PATH 前面） | 跑 `bash scripts/install_dsh.sh --check` 看用的是哪个 dsh；历史见 [#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97)，用 `shots` 看界面 |
 | 本该出数的地方给了拒绝 | 数据不完整，系统拒绝猜 | 先照[第 16 节例 5](#16-例题从题目到答案)把四种情况各走一遍，再考虑改字典 |
 | 两个面板对同一个数不一致 | 口径冲突是有可能的，历史上真发生过 | 按引用重新推导，然后把量结果记进 `docs/00` |
 

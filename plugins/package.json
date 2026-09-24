@@ -12,7 +12,7 @@
     "smoke:web": "node tests/web-smoke.mjs",
     "smoke:business": "node tests/business-smoke.mjs",
     "sessions:prune": "python3 ../scripts/session_retention.py",
-    "shots": "node tests/screenshots.mjs",
+    "shots": "node tests/readme-shots.mjs /tmp/bridgeflow-shots",
     "smoke:quotation": "node tests/quotation-smoke.mjs",
     "smoke:tour": "node tests/tour-smoke.mjs"
   },

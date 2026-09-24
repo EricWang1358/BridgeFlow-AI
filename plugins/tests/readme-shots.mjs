@@ -10,7 +10,8 @@ import { chromium } from '@playwright/test'
 import { resolveDsh, assertClientModulesServed } from './dsh.mjs'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const scratch = await mkdtemp(`${tmpdir()}/bridgeflow-readme-`)
-const evidence = resolve(root, 'docs/images')
+// README screenshots by default; `pnpm shots` passes a scratch folder to look at the UI instead.
+const evidence = resolve(process.argv[2] ?? resolve(root, 'docs/images'))
 await mkdir(evidence, { recursive: true })
 async function port() { const s = createServer(); await new Promise(r => s.listen(0, '127.0.0.1', r)); const p = s.address().port; await new Promise(r => s.close(r)); return p }
 const backendPort = await port(), webPort = await port()

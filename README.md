@@ -569,6 +569,7 @@ the planned order are in [`HANDOFF.md`](HANDOFF.md).
 ## 14 Check that your install is healthy
 
 ```bash
+bash scripts/install_dsh.sh --check          # private dsh: … (0.1.2-rc.1)
 cd backend && pytest -q && ruff check src tests ../scripts/start_web.py
 cd ../plugins && pnpm run typecheck && pnpm test && pnpm run build
 pnpm run smoke:web && pnpm run smoke:business
@@ -580,7 +581,8 @@ Expect the Python and TypeScript unit tests to pass offline, with no model calls
 **Browser smokes.** The historical `client-modules` preload failure ([#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97))
 is closed: the launcher now selects the pinned npm CLI and checks the official client module before it
 opens a browser. If it ever reappears, the diagnostic names the missing module; look at the interface
-with `pnpm --dir plugins shots` while you investigate.
+with `pnpm --dir plugins shots` while you investigate: it opens the sample notebook and each
+Studio page offline and writes the screenshots to `/tmp/bridgeflow-shots`.
 
 [`docs/00-status.md`](docs/00-status.md) is the source of truth for what has been measured, what it
 cost, and what is still unverified.
