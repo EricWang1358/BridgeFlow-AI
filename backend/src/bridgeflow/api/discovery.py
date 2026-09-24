@@ -130,6 +130,10 @@ def inventory(project: str, kind: Kind, user: BrowserUser,
         if offset <= total < offset + limit:
             if kind == "score":
                 record = DiscoveryScores(domain, scoring_policy(project, user)).read(project, identifier)
+                # The chart needs the linked candidate's name on every score page.
+                # Looking up only the first candidate page leaves later ratings as opaque IDs.
+                record["opportunity_title"] = domain.read(
+                    "opportunity", project, record["opportunity_id"])["title"]
             elif kind == "decision":
                 record = DiscoveryDecisions(domain, decision_policy(project, user)).read(project, identifier)
             elif kind == "meeting":
@@ -137,7 +141,7 @@ def inventory(project: str, kind: Kind, user: BrowserUser,
             # Claims belong in an explicit detail view, not an unbounded list.
             items.append({key: record[key] for key in (
                 "id", "project_id", "version", "created_at", "department", "departments",
-                "title", "filename", "parser_status", "detected_kind", "status", "opportunity_id",
+                "title", "filename", "parser_status", "detected_kind", "status", "opportunity_id", "opportunity_title",
                 "coordinates", "not_plotted_reasons", "policy_fingerprint", "phase", "stale_candidates", "stale_sources", "proposal_version",
                 "recorded_status", "stale_reasons", "tally", "pending_conditions") if key in record})
         total += 1

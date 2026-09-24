@@ -160,6 +160,10 @@ try {
   await next(); await step('wfScore')
   await target('discovery-kind-score').click(); await step('wfQuadrant')
   await page.locator('[data-tour-id="quadrant-chart"] .bf-quadrant-dot').first().waitFor()
+  assert.match(await target('quadrant-chart').locator('.bf-quadrant-name').first().textContent(), /生产数据标准化后自动/)
+  const chartBox = await target('quadrant-chart').boundingBox()
+  assert(chartBox && chartBox.y >= 0 && chartBox.y + chartBox.height <= page.viewportSize().height,
+    `Tour must bring the whole quadrant chart into view: ${JSON.stringify(chartBox)}`)
   await page.screenshot({ path: `${evidence}/workflow-quadrant.png` })
   await next(); await step('wfScope')
   assert.match(await target('workflow-scope').innerText(), /demo-handoff/)
