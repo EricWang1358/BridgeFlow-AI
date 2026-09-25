@@ -169,6 +169,21 @@ try {
     results[id] = { status: summary.status, blockers: summary.review_blockers, quarantined: summary.departments.reduce((n, d) => n + d.quarantined, 0),
       column_questions: summary.column_questions, batch_id: batch, open_items: inbox.total }
     await shot(`case-${id}`)
+    if (id !== 'core') {
+      // The extra samples have their own short walk, started from the sample's note (it only reads).
+      await guide.getByRole('button', { name: 'Walk me through this sample', exact: true }).click()
+      const tourCard = page.locator('[data-tour-card]:visible')
+      for (const step of ['caseGuide', 'caseItems', 'caseAsk', 'caseData', 'caseReview']) {
+        await page.locator(`[data-tour-step="${step}"] [data-tour-card]`).waitFor(); await page.locator('.bf-tour-ring').waitFor()
+        if (step === 'caseAsk' && id === 'clean') await page.getByText('Nothing is open this month; the review can start.').first().waitFor()
+        if (step === 'caseAsk' && id !== 'clean') await page.getByRole('button', { name: 'Ask the captain how to finish these', exact: true }).waitFor()
+        await tourCard.locator('button.bf-tour-primary:not([disabled])').click()
+      }
+      await page.locator('[data-tour-mode="complete"] [data-tour-card]').waitFor()
+      await shot(`case-${id}-tour-done`)
+      await tourCard.getByRole('button', { name: 'Exit tour', exact: true }).first().click()
+      await page.waitForFunction(() => !document.querySelector('[data-tour-mode="complete"]'))
+    }
     if (id === 'core') {
       const department = Object.keys(inbox.by_department).find(name => inbox.by_department[name] > 0 && inbox.by_department[name] < inbox.total)
       assert(department, 'The core case should have a department with fewer items than the full batch')

@@ -5,6 +5,7 @@ import { describeError, navigate, startReview, useUI, type Summary } from './ui.
 import { Explain } from './explain.tsx'
 import { useGuestMode } from './guest.tsx'
 import { useDemoCase } from './sample-cases.tsx'
+import { startTour } from './tour/state.ts'
 import type { projectAudit } from './audit.ts'
 
 function DemoCaseGuide({ caseId, batchId }: { caseId: string; batchId: string }) {
@@ -12,10 +13,14 @@ function DemoCaseGuide({ caseId, batchId }: { caseId: string; batchId: string })
   const sample = useDemoCase(caseId)
   if (!sample) return null
   const pick = (pair: [string, string]) => pair[language === 'zh' ? 0 : 1]
-  return <div className="bf-callout bf-demo-guide" data-tone="info" role="note">
+  return <div className="bf-callout bf-demo-guide" data-tone="info" role="note" data-tour-id="case-guide">
     <h3>{t('sampleCaseLabel')} · {pick(sample.title)}</h3>
     <p>{pick(sample.summary)}</p>
-    <button onClick={() => navigate({ batch: batchId, view: 'data' })}>{t('sampleCaseOpenData')}</button>
+    <div className="bf-actions" style={{ margin: '8px 0 0' }}>
+      {/* The guided sample has its own first task; the others get this short walk. */}
+      {sample.id !== 'tour' && <button className="bf-primary" onClick={() => startTour('cases')}>{t('tourCasesStart')}</button>}
+      <button onClick={() => navigate({ batch: batchId, view: 'data' })}>{t('sampleCaseOpenData')}</button>
+    </div>
   </div>
 }
 
