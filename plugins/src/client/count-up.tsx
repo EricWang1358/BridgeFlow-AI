@@ -16,11 +16,15 @@ export function CountUp({ value, format }: { value: number; format: (value: numb
   useEffect(() => {
     if (reduced() || !Number.isFinite(value)) { setShown(value); from.current = value; return }
     const start = performance.now(), origin = from.current
+    // In-between values carry no more decimals than the value itself: a count of items steps
+    // through whole numbers, never "2.37".
+    const places = Math.min(4, (String(value).split('.')[1] ?? '').length)
+    const settle = (x: number) => Number(x.toFixed(places))
     let frame = 0
     const step = (now: number) => {
       const progress = Math.min(1, (now - start) / 480)
       const eased = 1 - (1 - progress) ** 3
-      setShown(progress === 1 ? value : origin + (value - origin) * eased)
+      setShown(progress === 1 ? value : settle(origin + (value - origin) * eased))
       if (progress < 1) frame = requestAnimationFrame(step)
       else from.current = value
     }
