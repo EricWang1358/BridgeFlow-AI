@@ -6,7 +6,7 @@ import { notebookKinds, notebookPurposes, isNotebookKind } from '../notebook-cap
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
-import { api, formatDateTime, navigate, portalLoginUrl, route, startReview, takeRouteError, useUI, type Summary, describeError, useGloss } from './ui.ts'
+import { api, formatDateTime, navigate, portalLoginUrl, route, startReview, takeRouteError, useUI, type Summary, describeError, useGloss, reportNotebookView } from './ui.ts'
 import { ImportForm, Chip, BatchChip } from './workspace.tsx'
 import { TasksView } from './tasks.tsx'
 import { DataView } from './data.tsx'
@@ -56,6 +56,7 @@ function Shell({ ctx }: { ctx: Context }) {
   const [preview, setPreview] = useState<Preview | null>(null), [report, setReport] = useState<Review | null>(null), [offset, setOffset] = useState(0)
   const [panel, setPanel] = useState(''), [copied, setCopied] = useState(false)
   const navigation = useNativeSidebar(ctx), notebook = useNotebook(ctx, selected, batchId)
+  useEffect(() => { if (session) void reportNotebookView(session, batchId, notebook.kind) }, [session, batchId, notebook.kind])
   // Opening a sample or restoring a notebook may still replace its route. Keep Studio
   // navigation idle until that transition is complete, so a fast click is not lost.
   const notebookSwitching = notebook.busy || !notebook.loaded

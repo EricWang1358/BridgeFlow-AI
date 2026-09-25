@@ -7,6 +7,7 @@
     "replay-does-not-navigate",
     "button-opens-page",
     "open-item-settle-guidance",
-    "ask-captain-for-suggestion"
+    "ask-captain-for-suggestion",
+    "captain-knows-notebook-batch"
   ]
 }
