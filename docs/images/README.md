@@ -10,10 +10,10 @@
 | `02-sample-sources.png` | 示例笔记本（模拟商砼 2024-07）：来源、批次、原件预览、「更多示例」 | 同上 | 同上 |
 | `03-source-provenance.png` | 文件来源信息：上传文件、批次、工作表、SHA-256 | 同上 | 同上 |
 | `04-batch-master-table.png` | 批次数据表：主表、清洗记录、待确认映射、列匹配、隔离行 | 同上 | 同上 |
-| `05-report-preview.png` | 四部门报告预览：公式、关注阈值、责任、解释与原始来源 | `live-2026-09-23/risk`（**真实模型**） | 2026-09-23 界面说清楚一轮（改版前外观） |
-| `06-trajectory-four-spawns.png` | 轨迹：`review_context` → 四次 `subagent` → `review_finalize` | `live-2026-09-23/risk`（**真实模型**） | 同上 |
-| `07-business-state-page.png` | 业务状态页：四部门报告、依据与归属 | `live-2026-09-23/risk`（**真实模型**） | 同上 |
-| `08-approval-rejection-note.png` | 原生审批面板：要批准的草稿值、原话与换算、出处、被标出的检查、拒绝理由、拒绝 / 允许一次 | `live-2026-09-24/workflow`（**真实模型**） | 同上 |
+| `05-report-preview.png` | 四部门报告预览：公式、关注阈值、责任、解释与原始来源 | `live-2026-09-25/risk`（**真实模型**） | 2026-09-25 页面质感改版 |
+| `06-trajectory-four-spawns.png` | 轨迹：`review_context` → 四次 `subagent` → `review_finalize` | `live-2026-09-25/risk`（**真实模型**） | 同上 |
+| `07-business-state-page.png` | 业务状态页：四部门报告、依据与归属 | `live-2026-09-25/risk`（**真实模型**） | 同上 |
+| `08-approval-rejection-note.png` | 原生审批面板：要批准的草稿值、原话与换算、出处、被标出的检查、拒绝理由、拒绝 / 允许一次 | `live-2026-09-25/workflow`（**真实模型**） | 同上 |
 | `09-save-notebook.png` | 离开前保存对话框：保存 / 不保存 / 取消 | `plugins/tests/quotation-smoke.mjs`（2026-09-25，离线） | 2026-09-25 页面质感改版 |
 | `10-notebooks-list.png` | 笔记本列表与历史恢复 | 同上 | 同上 |
 | `11-quotation-workspace-en.png` | 报价工作区（英文界面） | 同上 | 同上 |
@@ -24,8 +24,8 @@
 
 两点必须说清楚：
 
-1. 05–08 来自真实模型的付费运行，2026-09-25 页面质感改版（统一无衬线字体、SVG 图标、卡片层次）之后没有重拍。
-   按钮位置、文字和语义都没变，只是字体、图标和阴影还是旧样式，所以这里逐张标了外壳版本。
+1. 05–08 来自 2026-09-25 真实模型运行（`deepseek-official / deepseek/deepseek-v4.1-flash`），和其余截图同为改版后外观。
+   05–07 是中文界面，08 是英文界面。
 2. 截图来自离线模型适配器的浏览器复演，界面里的数字是合成案例的声明值，
    不是客户账目。费用与实测数字一律看 [`docs/00-status.md`](../00-status.md)。
 

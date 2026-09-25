@@ -7,7 +7,7 @@
 「每个数字都量过、可追溯」是本项目对评委的核心叙事，评委抓到一处对不上，整个叙事就打折。
 所以改数字只改这一处。
 
-最后更新：2026-09-24。新增一轮时照第三节的格式写，并附上复现命令。
+最后更新：2026-09-25。新增一轮时照第三节的格式写，并附上复现命令。
 
 ---
 
@@ -19,7 +19,7 @@
 | --- | --- | ---: | --- | --- |
 | 1 | Goal & Scope Definition | 4.5 | [问题与范围](01-problem-and-hmw.md)、[需求追溯](requirements/traceability.md)和明确的演示边界 | 真实客户材料、成功判据与企业签核仍待业务方 |
 | 2 | Architecture & Reasoning Loop | 4.5 | 原生队长与四部门子代理的[真实模型研判](evidence/live-2026-09-23/risk/measurement.json)；立项范围接入、两跳流转的[真实模型运行](evidence/live-2026-09-24/workflow-two-hops/measurement.json) | 取消、恢复与正式签发状态机尚未完整验证 |
-| 3 | Tool Use & Integration | 4.5 | 类型化工具在真实批次上执行；[工具选择原始结果](evidence/live-2026-09-24/tool-selection-rerun/tool-selection.json)为 18/18 | 用例经针对性修订，尚无独立新题；token 成本没有随正确率下降，真实企业文件适配待验 |
+| 3 | Tool Use & Integration | 4.5 | 类型化工具在真实批次上执行；工具选择 [09-24 为 18/18](evidence/live-2026-09-24/tool-selection-rerun/tool-selection.json)，[09-25 扩到 22 条后为 21/22](evidence/live-2026-09-25/tool-selection/tool-selection.json)（换了模型，未通过的一条见下文） | 用例经针对性修订，尚无独立新题；token 成本没有随正确率下降，真实企业文件适配待验 |
 | 4 | Autonomy & Human-in-the-Loop | 4.5 | 两跳真实模型旅程经 8 次原生审批；写入回执与请求绑定、拒绝不写入 | 风险分级仍主要是读取/审批两档；多人真实并发的审批归属待验 |
 | 5 | Safety, Security & Guardrails | 4.5 | [单元格注入真实模型运行](evidence/live-2026-09-23/poison/measurement.json)未把注入文本送入会话；原始行隔离、操作授权及独立访客实例已有实现 | 真实企业权限、共享访客会话、部署配置和外部安全检验尚未完成 |
 | 6 | Observability & Evaluation | 4.5 | [决策日志](evidence/round1-e13-e14/decision-journal.png)、[代理泳道](evidence/round1-e13-e14/agent-run.png)及[正常/对抗验收记录](evidence/observability/acceptance-2026-09-20.txt)；真实模型旅程留有调用、审批、token 证据 | 已知生成案例和同套工具选择题不等于独立留出集；真实业务质量、长期费用待验 |
@@ -40,6 +40,18 @@
 | 负责人本机演示 | 3082 已重启；8000 后端健康为 200、3082 无会话为预期 401。14:28 批次 `fef1a34a8d00457b8cac70e9f380f76f` 的研判因旧 `hyper-charm` 路由缺少凭据而在工具前失败；检查笔记本时 dsh 自动续跑一次，同样在凭据处失败，无 `review_context` 或业务写入。现已对齐本机 Web 默认与 `env.sh`，并给该旧会话追加 `deepseek-official / deepseek/deepseek-v4.1-flash` 模型选择；没有重跑研判，不能声称成功或 partial 报告。此前新 Command Code 接口极小请求得到 `OK`、原生 dsh 单题正确先调用 `batch_summary`（55,625 token），但旧会话后续研判和负责人登录走查仍待手工验证。 |
 | 公网访客入口 | 独立访客实例代码已合入；2026-09-24 合并部署后只读探测：门户首页 200、`/guest` 404，`guest.<domain>` TLS 仍不可用。[服务器装配步骤](22-lightsail-deploy.md)中的 DNS、环境变量、服务与重置定时器仍待执行和验收。浏览器旅程验证了关闭 AI 时任务页、流转页的禁用与提示；访客打开样例后选择器会收起，使当前案例说明回到首屏。另在临时隔离 worktree 启动真实 `--guest` 进程，从其令牌入站，干净样例与流转样例均可浏览、相应模型按钮禁用且无页面错误。部署 preflight 新增启用 guest 后的入口、令牌和 TLS 条件检查；当前未启用 guest，条件检查仍无现场结果。该验证仍不等于公网验收。 |
 | 真实业务输入 | 客户导出、业务口径及企业签核仍未到；[外部输入清单](27-external-inputs.md)未收齐。20 万行样例在现有上传/解压上限下导不进，实测见本文下方的 #228 记录。交付演示应使用已验证的合成样例并如实标明边界。 |
+
+## 真实模型彩排（2026-09-25，`deepseek-official / deepseek/deepseek-v4.1-flash`）
+
+提示词在 #280（队长指路）和 #282（待办建议）改过两次，所以全部重跑，证据在 `evidence/live-2026-09-25/`。
+
+| 项 | 结果 |
+| --- | --- |
+| 工具选择，共 22 条（原 18 条，新增 4 条：两条问功能在哪，两条要待办建议） | **21/22**。新增 4 条全过（`app_guide` 两条，`monthly_inbox` 两条）。每条中位 3 步 / 41,407 token，总计 904,051 token，模型没有中途反问 |
+| 未通过的一条：`sum` | 提问是「批次里生产量合计是多少」。模型先调 `list_metrics` 查指标名，再求和，共 5 步。09-24 用 `deepseek-v4-flash` 时是直接调 `aggregate_metric`。提问给的是列名而不是指标名，先查名字符合人设里「需要指标名时才调 list_metrics」，但这条用例只接受 `aggregate_metric`，所以照实记为未通过，判分标准没改 |
+| 四部门研判（risk 案例） | 通过，4 个部门全部校验通过：53.4 s，8 次模型请求，75,267 token（其中缓存读 44,416） |
+| 工作流两跳 | 首跑失败，原因在我这边：#281 把英文界面的记录标题整个换成了英文，旅程按中文标题找不到那张卡片。改成「英文 (中文)」、保留原名后重跑通过：8 次原生审批，28 次模型请求，204 s，499,798 token（其中缓存读 471,552） |
+| 演示录屏 | 同一模型下，在示例笔记本上录了研判、待办建议、拒绝并写明理由、再批准、记录页和指路。录屏素材在仓库外，只交成片 |
 
 ## 引导补流程线路、样例覆盖与私有 dsh（2026-09-24，分支 `feat/tour-workflow`）
 

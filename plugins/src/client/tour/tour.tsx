@@ -25,7 +25,9 @@ export function TourDriver({ session, batch, sample, ready, reveal }: { session:
     revealRef.current(step.pane)
     // Reading an already-existing view is safe. Action entry steps never navigate for the user.
     const open = () => {
-      if (!step.view || state.progress.batch !== batch || activeModal()) return
+      // The core task is bound to its sample batch; the supplementary tracks read pages that
+      // any notebook has, so they follow whichever notebook is open now.
+      if (!step.view || (state.progress.track === 'core' && state.progress.batch !== batch) || activeModal()) return
       const current = route()
       if (step.view === 'source') {
         if (state.progress.source && (current.view !== 'source' || current.source !== state.progress.source)) navigate({ batch, view: 'source', source: state.progress.source })
@@ -153,8 +155,11 @@ export function TourLayer({ surface = 'shell' }: { surface?: string }) {
         <div className="bf-tour-progress" aria-hidden="true"><span style={{ width: `${(p.index + 1) / tours[p.track].length * 100}%` }}/></div>
         <h2>{t(`tour_${step.id}_title`)}</h2>
         <p id={`tour-description-${surface}`}>{t(`tour_${step.id}_body`)}</p>
-        {wait ? <div className="bf-tour-task" role="status"><b>{t(timedOut ? 'tourMissing' : 'tourWaiting')}</b>{t(timedOut ? 'tourMissingBody' : 'tourWaitingBody')}
-          <div className="bf-tour-actions"><button onClick={retryTourTarget}>{t('tourRetry')}</button><button onClick={returnTourEntry}>{t('tourEntry')}</button></div>
+        {wait ? <div className="bf-tour-task" role="status"><b>{t(geo.blocked ? 'tourCovered' : timedOut ? 'tourMissing' : 'tourWaiting')}</b>{t(geo.blocked ? 'tourCoveredBody' : timedOut ? 'tourMissingBody' : 'tourWaitingBody')}
+          <div className="bf-tour-actions">
+            {/* Only our own read-only windows reach this state (a native dialog ends the tour), so closing one loses nothing. */}
+            {geo.blocked && <button className="bf-tour-primary" onClick={() => { activeModal()?.close(); retryTourTarget() }}>{t('tourCloseCover')}</button>}
+            <button onClick={retryTourTarget}>{t('tourRetry')}</button><button onClick={returnTourEntry}>{t('tourEntry')}</button></div>
         </div> : <>
           <div className="bf-tour-task"><b>{t('tourAction')}</b>{t(`tour_${step.id}_action`)}</div>
           <div className="bf-tour-expected"><b>{t('tourExpected')}</b>{t(`tour_${step.id}_expected`)}</div>

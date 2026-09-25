@@ -151,6 +151,12 @@ try {
   await page.keyboard.press('Escape')
   await help(); await card().getByRole('button',{name:'Explore · department review',exact:true}).click(); await step('reviewIntro')
   await card().getByRole('button',{name:'Next',exact:true}).click(); await step('reviewState')
+  // One of our own windows open over the step: the card says so and can close it (the preview loses nothing).
+  await page.evaluate(() => document.querySelector('dialog.bf-expanded-preview')?.showModal())
+  await page.getByText('This step is behind an open window').waitFor()
+  await page.getByRole('button', { name: 'Close this window and continue', exact: true }).click()
+  await page.locator('[data-tour-step="reviewState"] [data-tour-card]').waitFor(); await page.locator('.bf-tour-ring').waitFor()
+  assert.equal(await page.locator('dialog.bf-expanded-preview[open]').count(), 0)
   await card().getByRole('button',{name:'Next',exact:true}).click(); await step('reviewHistory')
   await card().getByRole('button',{name:'Finish tour',exact:true}).click()
   await page.keyboard.press('Escape')

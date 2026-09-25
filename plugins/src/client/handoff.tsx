@@ -89,7 +89,7 @@ export function Handoff() {
     sources={catalogue ? <>
       <p className="bf-hint">{catalogue.case} · {t('catalogueVersion')} {catalogue.version} <Chip status={catalogue.status}/></p>
       {Object.entries(catalogue.templates).map(([key, template]) => <article className="bf-source-item" key={key}>
-        <div className="bf-handoff-head"><strong>{gloss.text(template.department)}「{gloss.text(template.title)}」v{template.version}</strong><Chip status={template.status}/></div>
+        <div className="bf-handoff-head"><strong>{gloss.text(template.department)}「{gloss.label(template.title)}」v{template.version}</strong><Chip status={template.status}/></div>
         <span className="bf-hint">{Object.values(template.fields).map(f => gloss.text(f.label) + (f.required ? '' : paren(t('optional')))).join(', ')}</span>
       </article>)}
       <h4>{t('fieldLineage')}</h4>
@@ -116,7 +116,7 @@ export function Handoff() {
       <p className="bf-hint">{t('workflowSampleHelp')}</p>
       <button data-tour-id="workflow-sample" className="bf-primary" disabled={busy} onClick={() => void run(async () => { await api('/workflow/sample', { method: 'POST' }); tourEvent('workflowSample', '') })}>{t(busy ? 'busy' : 'workflowSample')}</button></div>}
     {rows && rows.map((row, i) => <article data-tour-id={i === 0 ? 'workflow-sample' : undefined} className="bf-source-item" key={row.kind === 'partial' ? `p${i}` : row.id}>
-      <div className="bf-handoff-head"><strong>{gloss.text(row.department)} · {gloss.text(row.title)}</strong>
+      <div className="bf-handoff-head"><strong>{gloss.text(row.department)} · {gloss.label(row.title)}</strong>
         <Chip status={row.kind === 'partial' ? 'partial' : row.state}/>
         {row.kind === 'handoff' && row.notification !== 'none' && <Chip status={`notice_${row.notification}`}/>}
         {row.kind === 'handoff' && row.stale && <Chip status="upstream_revised"/>}
