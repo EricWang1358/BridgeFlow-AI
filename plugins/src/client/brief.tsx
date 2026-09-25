@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { MetricCharts } from './charts.tsx'
-import { api, describeError, navigate, useUI } from './ui.ts'
+import { api, describeError, navigate, useUI, useGloss } from './ui.ts'
 import { Chip } from './workspace.tsx'
 import { CountUp } from './count-up.tsx'
 import { Explain } from './explain.tsx'
@@ -56,7 +56,7 @@ const fill = (text: string, values: Record<string, string | number>) =>
   Object.entries(values).reduce((out, [key, value]) => out.replaceAll(`{${key}}`, String(value)), text)
 
 export function MonthlyBrief({ batchId }: { batchId: string }) {
-  const { t, colon, paren, list } = useUI()
+  const { t, colon, paren, list } = useUI(), gloss = useGloss()
   const [brief, setBrief] = useState<Brief | null>(null), [error, setError] = useState(''), [needsReview, setNeedsReview] = useState(false), [revision, setRevision] = useState(0)
   const [exporting, setExporting] = useState(false), [exportError, setExportError] = useState('')
   // What the company says it is doing about each finding (E07-UC07). Read-only here: a
@@ -114,21 +114,21 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
     <div className="bf-brief-layer" data-layer="2">{t('briefLayerTwo')}</div>
     <h4>{t('briefKeyMetrics')}</h4>
     <dl className="bf-brief-metrics">{brief.key_metrics.map(m => <div key={m.metric}>
-      <dt>{m.title}</dt>
-      <dd><b><CountUp value={m.value} format={v => number(v, m.unit)} /></b> <Chip status={m.status} /> <GradeMark grade={m.grade} /> <ChangeMark change={m.change} unit={m.unit} /><small>{m.formula} · {t(m.owner)}</small></dd>
+      <dt>{gloss.text(m.title)}</dt>
+      <dd><b><CountUp value={m.value} format={v => number(v, m.unit)} /></b> <Chip status={m.status} /> <GradeMark grade={m.grade} /> <ChangeMark change={m.change} unit={m.unit} /><small title={m.formula}>{gloss.formula(m.formula)} · {t(m.owner)}</small></dd>
     </div>)}</dl>
 
     <h4>{t('briefAttentionItems')}</h4>
     {!brief.attention.length && <p className="bf-hint">{t('briefNoAttention')}</p>}
     <ol className="bf-brief-attention">{brief.attention.map(a => <li key={a.check_id}>
-      <div className="bf-check"><span className="bf-check-title">{a.title}</span><b><CountUp value={a.value} format={v => number(v, a.unit)} /></b><GradeMark grade={a.grade} />
+      <div className="bf-check"><span className="bf-check-title">{gloss.text(a.title)}</span><b><CountUp value={a.value} format={v => number(v, a.unit)} /></b><GradeMark grade={a.grade} />
         {dispositions[a.check_id] && <span className="bf-disposition" data-closed={dispositions[a.check_id]!.closed}>{dispositions[a.check_id]!.state}</span>}</div>
       {/* Why this is on the list, in one line: the figure against its threshold, then who decides. */}
       <p className="bf-why">{fill(t('briefWhy'), { value: number(a.value, a.unit), threshold: number(a.threshold, a.unit),
         relation: t(a.attention_when === 'above' ? 'relationAbove' : 'relationBelow') })}
         <span aria-hidden="true" className="bf-why-arrow">→</span>{fill(t('briefDecides'), { owner: a.decision_owner })}</p>
-      {a.formula && <p className="bf-hint bf-formula-line">{t('briefComputed')}{colon}<code>{a.formula}</code> · {fill(t('briefCells'), { count: a.source_count })}</p>}
-      <p>{t('briefAction')}{colon}{a.action} <GradeMark grade={a.advice_grade} /></p>
+      {a.formula && <p className="bf-hint bf-formula-line">{t('briefComputed')}{colon}<code title={a.formula}>{gloss.formula(a.formula)}</code> · {fill(t('briefCells'), { count: a.source_count })}</p>}
+      <p>{t('briefAction')}{colon}{gloss.text(a.action)} <GradeMark grade={a.advice_grade} /></p>
       <p className="bf-hint">{a.explanation}</p>
       {a.sources.length > 0 && <details className="bf-brief-sources"><summary>{t('briefSources')}{paren(a.source_count)}</summary>
         <ul>{a.sources.map((source, i) => <li key={i}>
@@ -173,7 +173,7 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
       <li>{t('pendingColumnQuestions')}{colon}{brief.open_items.column_questions}</li>
     </ul>
     <p className="bf-hint">{t('briefCompleteness')}{colon}{brief.completeness.complete_rows} / {brief.completeness.master_rows} {t('masterCompleteRows')} · {t('integrationAssumptions')} {brief.completeness.assumptions}</p>
-    <details><summary>{t('briefDecisionAndLimits')}</summary><p>{brief.manager_decision}</p><ul>{brief.limitations.map((l, i) => <li key={i}>{l}</li>)}</ul></details>
+    <details><summary>{t('briefDecisionAndLimits')}</summary><p>{gloss.text(brief.manager_decision)}</p><ul>{brief.limitations.map((l, i) => <li key={i}>{gloss.text(l)}</li>)}</ul></details>
     <details className="bf-brief-fold"><summary>{t('metricCharts')}</summary>
       <MetricCharts batchId={batchId} />
     </details>

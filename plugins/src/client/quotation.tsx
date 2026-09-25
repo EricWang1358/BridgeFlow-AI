@@ -1,6 +1,6 @@
 import { tourEvent } from './tour/state.ts'
 import { useEffect, useState } from 'react'
-import { api, navigate, route, useUI, describeError } from './ui.ts'
+import { api, navigate, route, useUI, describeError, useGloss } from './ui.ts'
 import { Notebook } from './notebook.tsx'
 
 type Contract = {
@@ -12,7 +12,7 @@ type Contract = {
 }
 type Catalogue = { status: string; contract: Contract | null; source?: { filename: string; document_sha256: string; paragraph: string } }
 export function Quotation() {
-  const { t } = useUI()
+  const { t } = useUI(), gloss = useGloss()
   const [catalogue, setCatalogue] = useState<Catalogue | null>(null), [error, setError] = useState(''), [revision, setRevision] = useState(0)
   useEffect(() => {
     const controller = new AbortController(); setCatalogue(null); setError('')
@@ -29,13 +29,13 @@ export function Quotation() {
     sources={<>
       <p className="bf-hint">{t('quotationSourceHelp')}</p>
       {contract ? Object.entries(contract.inputs).map(([key, field]) => <article className="bf-source-item" key={key}>
-        <strong>{field.title}</strong><span className="bf-hint">{field.unit} · {t(field.owner)}</span><span className="bf-source-pending">{t('awaitingEvidence')}</span>
+        <strong>{gloss.text(field.title)}</strong><span className="bf-hint">{gloss.text(field.unit)} · {t(field.owner)}</span><span className="bf-source-pending">{t('awaitingEvidence')}</span>
       </article>) : <p className="bf-empty">{t('quotationUnconfigured')}</p>}
     </>}
     studio={<>
       <div data-tour-id="quotation-scope" className="bf-notebook-note"><strong>{t('quotationStage')}</strong><p>{t('quotationStageHelp')}</p></div>
-      {contract && <><h4>{t('decisionOwners')}</h4>{Object.entries(contract.roles).map(([key, role]) => <article className="bf-source-item" key={key}><strong>{role.decision_owner}</strong><p className="bf-hint">{role.responsibility}</p></article>)}
-        <h4>{t('quotationChecks')}</h4>{contract.checks.map(check => <p className="bf-hint" key={check.id}>{check.title}</p>)}</>}
+      {contract && <><h4>{t('decisionOwners')}</h4>{Object.entries(contract.roles).map(([key, role]) => <article className="bf-source-item" key={key}><strong>{gloss.text(role.decision_owner)}</strong><p className="bf-hint">{gloss.text(role.responsibility)}</p></article>)}
+        <h4>{t('quotationChecks')}</h4>{contract.checks.map(check => <p className="bf-hint" key={check.id}>{gloss.text(check.title)}</p>)}</>}
       <p className="bf-hint">{t('quotationApprovalHelp')}</p>
     </>}>
     <div className="bf-card-head"><h3>{t('declaredTemplate')}</h3><button data-tour-recovery={error ? '' : undefined} onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button></div>
@@ -43,13 +43,13 @@ export function Quotation() {
     {!catalogue && !error && <p role="status" className="bf-loading">{t('loading')}</p>}
     {catalogue && !contract && <div className="bf-notebook-empty"><h3>{t('quotationUnconfigured')}</h3><p>{t('quotationConfigureHelp')}</p></div>}
     {contract && <>
-      <div className="bf-notebook-note"><span className="bf-chip" data-status="partial">{t('awaitingSamples')}</span><p>{contract.description}</p></div>
+      <div className="bf-notebook-note"><span className="bf-chip" data-status="partial">{t('awaitingSamples')}</span><p>{gloss.text(contract.description)}</p></div>
       <article className="bf-quotation-paper" aria-label={t('declaredTemplate')}>
-        <header><span className="bf-eyebrow">BridgeFlow · {t('quotation')}</span><h3>{contract.title}</h3><p className="bf-hint">{t('quotationNoDraft')}</p></header>
-        <dl>{contract.outputs.map(key => <div key={key}><dt>{contract.metrics[key]?.title}</dt><dd>{t('awaitingEvidence')}</dd></div>)}</dl>
-        <p className="bf-hint">{contract.manager_decision}</p>
+        <header><span className="bf-eyebrow">BridgeFlow · {t('quotation')}</span><h3>{gloss.text(contract.title)}</h3><p className="bf-hint">{t('quotationNoDraft')}</p></header>
+        <dl>{contract.outputs.map(key => <div key={key}><dt>{gloss.text(contract.metrics[key]?.title ?? '')}</dt><dd>{t('awaitingEvidence')}</dd></div>)}</dl>
+        <p className="bf-hint">{gloss.text(contract.manager_decision)}</p>
       </article>
-      <details className="bf-formulas"><summary>{t('declaredFormulas')}</summary>{contract.outputs.map(key => <article className="bf-source-item" key={key}><strong>{contract.metrics[key]?.title}</strong><code>{contract.metrics[key]?.formula}</code><span className="bf-hint">{contract.metrics[key]?.unit}</span></article>)}</details>
+      <details className="bf-formulas"><summary>{t('declaredFormulas')}</summary>{contract.outputs.map(key => <article className="bf-source-item" key={key}><strong>{gloss.text(contract.metrics[key]?.title ?? '')}</strong><code title={contract.metrics[key]?.formula}>{gloss.formula(contract.metrics[key]?.formula ?? '')}</code><span className="bf-hint">{gloss.text(contract.metrics[key]?.unit ?? '')}</span></article>)}</details>
       {catalogue.source && <details className="bf-formulas"><summary>{t('declarationSource')}</summary><p>{catalogue.source.filename} · {catalogue.source.paragraph}</p><code>{catalogue.source.document_sha256}</code></details>}
     </>}
   </Notebook>

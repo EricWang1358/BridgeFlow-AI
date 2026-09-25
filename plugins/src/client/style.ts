@@ -266,6 +266,10 @@ export const style = `
 
 .bf-scroll { overflow: auto; max-height: 46vh; border: 1px solid var(--bf-line); border-radius: 10px }
 .bf-panel table { border-collapse: separate; border-spacing: 0; font-size: 13px; min-width: 100% }
+/* Inside a scroller, columns take their content's width (capped by the cell's max-width)
+   instead of being squeezed to fit: a squeezed text column wrapped a roll-up note into a
+   270px-tall row and pushed every other cell of that row apart. */
+.bf-scroll > table { width: max-content }
 .bf-panel th, .bf-panel td {
   padding: 9px 12px;
   border-bottom: 1px solid var(--bf-line);
@@ -275,6 +279,15 @@ export const style = `
    the container scrolls; squeezing 17 columns into one screen reads as damage. */
 .bf-panel th { position: sticky; top: 0; z-index: 1; background: var(--bf-surface-2); white-space: nowrap; font-weight: 600; font-size: 12px; color: var(--bf-muted); box-shadow: inset 0 -1px 0 var(--bf-line) }
 .bf-panel th small { display: block; font-weight: 500; font-size: 10px; opacity: .8; text-transform: uppercase; letter-spacing: .04em }
+/* The business's own column name under its English display name (English interface only). */
+th small.bf-original { display: block; font-weight: 500; font-size: 10px; color: var(--bf-muted); opacity: 1; text-transform: none; letter-spacing: 0 }
+/* Studio tables scroll sideways like the panel's; a header never wraps one character per line. */
+.bf-state .bf-scroll table { border-collapse: separate; border-spacing: 0; font-size: 12px }
+.bf-state .bf-scroll th, .bf-state .bf-scroll td { padding: 7px 10px; border-bottom: 1px solid var(--bf-line); text-align: left; vertical-align: top }
+.bf-state .bf-scroll th { white-space: nowrap; vertical-align: bottom; position: sticky; top: 0; z-index: 1; background: var(--bf-surface-2); font-weight: 600; color: var(--bf-muted) }
+.bf-state .bf-scroll td { max-width: 260px; overflow-wrap: anywhere }
+.bf-state .bf-scroll td[data-numeric=true] { text-align: right; white-space: nowrap }
+.bf-state .bf-scroll tbody tr:last-child td { border-bottom: 0 }
 .bf-panel td { max-width: 320px; min-width: 84px; overflow-wrap: anywhere }
 .bf-panel td[data-numeric=true] { text-align: right; white-space: nowrap }
 .bf-panel td[data-empty=true] { color: var(--bf-muted) }

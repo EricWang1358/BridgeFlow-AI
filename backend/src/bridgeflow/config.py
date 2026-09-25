@@ -111,6 +111,8 @@ class Settings(BaseSettings):
     workflow_catalogue_path: str = ""
     # The business dictionary transcribed for the 跨部门业务整合总表 (2026-09-13 templates).
     integration_spec_path: str = "data/company_templates/integration.yaml"
+    # English display names beside the business's Chinese names (display only; see the file).
+    display_labels_path: str = "data/company_templates/labels.en.yaml"
 
     @property
     def cors_origin_list(self) -> list[str]:

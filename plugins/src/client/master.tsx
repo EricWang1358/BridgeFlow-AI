@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { tourEvent } from './tour/state.ts'
-import { api, cellText, describeError, navigate, useUI } from './ui.ts'
+import { api, cellText, describeError, navigate, useGloss, useUI } from './ui.ts'
 import { GradeMark } from './brief.tsx'
 import { Chip } from './workspace.tsx'
 
@@ -26,7 +26,7 @@ function origin(p: Record<string, unknown> | undefined): string {
 }
 
 export function MasterTable({ batchId }: { batchId: string }) {
-  const { t, colon, paren } = useUI()
+  const { t, colon, paren, language } = useUI(), gloss = useGloss()
   const [master, setMaster] = useState<Master | null>(null), [error, setError] = useState(''), [revision, setRevision] = useState(0)
   const [selection, setSelection] = useState<{ row: Row; column: string } | null>(null)
   useEffect(() => {
@@ -61,16 +61,16 @@ export function MasterTable({ batchId }: { batchId: string }) {
   return <section aria-label={t('integrationMaster')}>
     <div className="bf-card-head"><h3>{t('integrationMaster')}</h3><button data-tour-id="master-download" onClick={() => void download()}>{t('downloadMaster')}</button></div>
     <p data-tour-id="master-status" role="status">{master.rows.filter(row => row.complete).length} / {master.rows.length} {t('masterCompleteRows')} · {master.issues.length} {t('masterOpenQuestions')}</p>
-    <p className="bf-hint">{t('integrationHelp')} · {master.version}</p>
+    <p className="bf-hint">{t('integrationHelp')} · {gloss.text(master.version)}</p>
     {master.grade_summary && <p className="bf-hint">{t('evidenceGrades')}{colon}{['G1', 'G2', 'G3', 'G4'].map(g => `${g} ${master.grade_summary![g] ?? 0}`).join(' · ')}{master.grade_summary.missing ? ` · ${t('gradeMissing')} ${master.grade_summary.missing}` : ''} · {t('gradeLegend')}</p>}
     {Object.keys(master.assumptions ?? {}).length > 0 && <details className="bf-callout" data-tone="info">
       <summary>{t('integrationAssumptions')}{paren(Object.keys(master.assumptions!).length)}</summary>
       <ul>{Object.entries(master.assumptions!).map(([name, text]) => {
         const decided = master.conventions?.find(c => c.id === name)
         return <li key={name}>
-          <strong>{name}</strong> <span className="bf-convention" data-state={decided?.state ?? 'unconfirmed'}>{t(`conventionState_${decided?.state ?? 'unconfirmed'}`)}</span>
-          {decided && <span className="bf-hint"> · {t(`conventionKind_${decided.kind}`)}{decided.affected_fields.length ? ` · ${t('conventionAffects')} ${decided.affected_fields.join('、')}` : ''}</span>}
-          <div>{text}</div>
+          <strong>{gloss.label(name)}</strong> <span className="bf-convention" data-state={decided?.state ?? 'unconfirmed'}>{t(`conventionState_${decided?.state ?? 'unconfirmed'}`)}</span>
+          {decided && <span className="bf-hint"> · {t(`conventionKind_${decided.kind}`)}{decided.affected_fields.length ? ` · ${t('conventionAffects')} ${decided.affected_fields.map(gloss.label).join(language === 'zh' ? '、' : ', ')}` : ''}</span>}
+          <div>{gloss.text(text)}</div>
           {decided && decided.state !== 'unconfirmed' && <div className="bf-hint">{t('conventionSource')}{colon}{decided.source}{paren(`${decided.decided_by} · v${decided.version}`)}{decided.note ? ` · ${decided.note}` : ''}</div>}
           {decided?.declaration_change && <div className="bf-hint">{t('conventionDeclarationChange')}{colon}<code>{decided.declaration_change}</code></div>}
         </li>
@@ -79,15 +79,15 @@ export function MasterTable({ batchId }: { batchId: string }) {
     </details>}
     <details data-tour-id="master-questions" className="bf-master-questions" onToggle={e => { if (e.currentTarget.open) tourEvent('issues', batchId) }}><summary data-tour-id="master-issues">{t('masterOpenQuestions')} · {master.issues.length}</summary>
     {master.issues.map((issue, i) => <div className="bf-callout" data-tone={issue.kind === 'undeclared_constant' ? 'info' : 'warn'} key={i}>
-      <h3>{t(`issue_${issue.kind}`)}{issue.field ? ` · ${issue.field}` : ''}</h3><p>{issue.message}</p>
+      <h3>{t(`issue_${issue.kind}`)}{issue.field ? ` · ${gloss.label(issue.field)}` : ''}</h3><p>{gloss.message(issue.message)}</p>
     </div>)}
     </details>
     {selection && evidence && <aside className="bf-cell-evidence" aria-label={t('masterEvidence')}>
-      <h4>{t('masterEvidence')} · {selection.column} {selectedGrade && <GradeMark grade={selectedGrade} />}</h4><p>{cellText(selection.row.values[selection.column]).text}</p><p>{origin(evidence)}</p>
+      <h4>{t('masterEvidence')} · {gloss.label(selection.column)} {selectedGrade && <GradeMark grade={selectedGrade} />}</h4><p>{cellText(selection.row.values[selection.column]).text}</p><p>{gloss.message(origin(evidence))}</p>
       {typeof evidence.department === 'string' && <button data-tour-id="evidence-source" onClick={() => navigate({ batch: batchId, view: 'source', source: String(evidence.department) })}>{t('masterOpenSource')}</button>}
     </aside>}
     {!master.rows.length && <div className="bf-empty"><strong>{t('empty')}</strong>{t('integrationNoRows')}</div>}
-    {master.rows.length > 0 && <div className="bf-scroll"><table><thead><tr><th>{t('integrationRowState')}</th>{master.columns.map(c => <th scope="col" key={c}>{c}</th>)}</tr></thead>
+    {master.rows.length > 0 && <div className="bf-scroll"><table><thead><tr><th>{t('integrationRowState')}</th>{master.columns.map(c => { const en = gloss.english(c); return <th scope="col" key={c}>{en ?? c}{en && <small className="bf-original">{c}</small>}</th> })}</tr></thead>
       <tbody>{master.rows.map((row, i) => <tr key={i}><td><Chip status={row.complete ? 'ready' : 'partial'}/></td>{master.columns.map(c => {
         const { text, numeric, empty } = cellText(row.values[c])
         return <td key={c} data-numeric={numeric} data-empty={empty} title={origin(row.provenance[c])}>{row.provenance[c] ? <button className="bf-master-cell" data-tour-id={i === 0 && c === traceColumn ? 'master-evidence-open' : undefined} aria-label={`${t('masterSelectCell')}: ${c} · ${text}`} onClick={() => { setSelection({ row, column: c }); tourEvent('evidence', batchId) }}>{text}</button> : text}</td>
