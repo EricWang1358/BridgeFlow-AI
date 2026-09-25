@@ -31,14 +31,25 @@ def test_client_build_rejects_missing_and_outdated_artifacts(tmp_path):
     launcher.check_client_build(tmp_path)
 
 
-def test_web_launcher_rejects_a_stale_default_model_before_a_turn(tmp_path):
+def test_the_model_last_chosen_in_web_wins_and_env_only_fills_in(tmp_path):
     settings = tmp_path / "settings.yaml"
-    settings.write_text("agent-default-model:\n  provider: hyper-charm\n  model: old-model\n")
-    env = {"DSH_HOME": str(tmp_path), "DSH_PROVIDER": "deepseek-official", "DSH_MODEL": "new-model"}
-    with pytest.raises(SystemExit, match="conflicts with DSH_PROVIDER/DSH_MODEL"):
-        launcher.verify_web_model_settings(env)
-    settings.write_text("agent-default-model:\n  provider: deepseek-official\n  model: new-model\n")
-    launcher.verify_web_model_settings(env)
+    env = {"DSH_HOME": str(tmp_path), "DSH_PROVIDER": "deepseek-official", "DSH_MODEL": "env-model"}
+    # Nothing chosen in Web yet: env.sh's pair becomes the launch default.
+    assert launcher.resolve_web_model(dict(env)) == ("deepseek-official", "env-model")
+    patch = launcher.fallback_model_patch(str(tmp_path), "deepseek-official", "env-model").read_text(encoding="utf-8")
+    assert "agent-default-model" in patch and "'env-model'" in patch
+    assert "'../plugins/src/index.ts'" not in patch and "./dsh/presets" not in patch
+    # A choice made in Web is the person's and wins; the launch carries it to every process.
+    settings.write_text("agent-default-model:\n  provider: hyper-charm\n  model: chosen-model\n")
+    launched = dict(env)
+    assert launcher.resolve_web_model(launched) is None
+    assert (launched["DSH_PROVIDER"], launched["DSH_MODEL"]) == ("hyper-charm", "chosen-model")
+    assert settings.read_text() == "agent-default-model:\n  provider: hyper-charm\n  model: chosen-model\n"
+    # Neither side names a model: nothing to add.
+    assert launcher.resolve_web_model({"DSH_HOME": str(tmp_path / "fresh")}) is None
+    settings.write_text("agent-default-model: [unclosed\n")
+    with pytest.raises(SystemExit, match="Cannot read dsh Web model settings"):
+        launcher.resolve_web_model(dict(env))
 
 
 def test_backend_death_and_web_exit_are_not_silent_success():

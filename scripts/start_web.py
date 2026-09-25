@@ -57,32 +57,52 @@ def web_token_path() -> Path:
     return Path(os.environ["DSH_HOME"]) / TOKEN_FILE_NAME
 
 
-def verify_web_model_settings(env: dict[str, str]) -> None:
-    """Catch a stale dsh Web default before its first paid model request.
+def resolve_web_model(env: dict[str, str]) -> tuple[str, str] | None:
+    """Which model dsh Web starts on: the one last chosen in Web, else DSH_PROVIDER/DSH_MODEL.
 
-    DSH_PROVIDER/MODEL select the SDK route, but dsh Web reads its own default from
-    settings.yaml. An older Web selection can therefore ignore the new env.sh route.
+    dsh Web keeps the person's last choice (Sessions & settings) as `agent-default-model` in
+    settings.yaml, and that choice is theirs: it is never overwritten here, and a difference from
+    env.sh is not an error. The launched processes then carry the same pair, so the captain and
+    its SDK route agree. Only with nothing chosen does env.sh's pair apply; the caller writes it
+    into the launch patch, and it is returned for that. Returns None when Web already has a choice
+    or neither side names a model.
     """
-    provider, model = env.get("DSH_PROVIDER"), env.get("DSH_MODEL")
-    if not (provider and model):
-        return
     path = Path(env["DSH_HOME"]) / "settings.yaml"
-    if not path.is_file():
-        return
-    try:
-        settings = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except (OSError, UnicodeError, yaml.YAMLError) as exc:
-        raise SystemExit(f"Cannot read dsh Web model settings at {path}: {exc}") from exc
-    selected = settings.get("agent-default-model", {}) if isinstance(settings, dict) else {}
-    if not isinstance(selected, dict):
-        return
-    active = (selected.get("provider"), selected.get("model"))
-    if all(active) and active != (provider, model):
-        raise SystemExit(
-            f"dsh Web default model {active[0]}/{active[1]} conflicts with "
-            f"DSH_PROVIDER/DSH_MODEL={provider}/{model}. Update {path} or choose that "
-            "model in the dsh Web Models page before starting BridgeFlow."
-        )
+    selected: object = {}
+    if path.is_file():
+        try:
+            settings = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except (OSError, UnicodeError, yaml.YAMLError) as exc:
+            raise SystemExit(f"Cannot read dsh Web model settings at {path}: {exc}") from exc
+        selected = settings.get("agent-default-model", {}) if isinstance(settings, dict) else {}
+    chosen = (selected.get("provider"), selected.get("model")) if isinstance(selected, dict) else (None, None)
+    if all(isinstance(v, str) and v for v in chosen):
+        provider, model = str(chosen[0]), str(chosen[1])
+        if (env.get("DSH_PROVIDER"), env.get("DSH_MODEL")) != (provider, model) and env.get("DSH_MODEL"):
+            print(f"BridgeFlow model: {provider}/{model}, last chosen in dsh Web "
+                  f"(env.sh names {env.get('DSH_PROVIDER')}/{env.get('DSH_MODEL')}, used only when nothing is chosen)", flush=True)
+        else:
+            print(f"BridgeFlow model: {provider}/{model}, last chosen in dsh Web", flush=True)
+        env["DSH_PROVIDER"], env["DSH_MODEL"] = provider, model
+        return None
+    provider, model = env.get("DSH_PROVIDER"), env.get("DSH_MODEL")
+    if provider and model:
+        print(f"BridgeFlow model: {provider}/{model} from DSH_PROVIDER/DSH_MODEL (nothing chosen in dsh Web yet)", flush=True)
+        return provider, model
+    return None
+
+
+def fallback_model_patch(dsh_home: str, provider: str, model: str) -> Path:
+    """The Web patch with env.sh's model as the default, for a DSH_HOME where none was chosen."""
+    patch = (ROOT / "dsh/enterprise.patch.yml").read_text(encoding="utf-8")
+    patch = (patch.replace("'../plugins/src/index.ts'", repr(str(ROOT / "plugins/src/index.ts")))
+             .replace("./dsh/presets", str(ROOT / "dsh/presets")))
+    patch += ("\n# Nothing chosen in dsh Web yet: start on DSH_PROVIDER/DSH_MODEL. A choice made in Web wins next time.\n"
+              "- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n"
+              f"  config:\n    provider: {provider!r}\n    model: {model!r}\n")
+    path = Path(dsh_home) / "bridgeflow-web.patch.yml"
+    path.write_text(patch, encoding="utf-8")
+    return path
 
 
 def guest_environment(env: dict[str, str]) -> Path:
@@ -250,8 +270,10 @@ def main() -> None:
     patch_path = "dsh/enterprise.patch.yml"
     if guest:
         patch_path = str(guest_environment(env))
-    if run_web:
-        verify_web_model_settings(env)
+    if run_web and not guest:
+        fallback = resolve_web_model(env)
+        if fallback:
+            patch_path = str(fallback_model_patch(env["DSH_HOME"], *fallback))
     backend_port = env.get("BRIDGEFLOW_BACKEND_PORT", "8000")
 
     # `--demo` points the service at the walkthrough's own dictionary.
