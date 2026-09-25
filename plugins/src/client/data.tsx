@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { departments, ResupplyForm, TemplateDownload } from './workspace.tsx'
-import { api, describeError, navigate, useUI, type Summary } from './ui.ts'
+import { api, describeError, navigate, useUI, type Summary, useDataRevision } from './ui.ts'
 import { Explain } from './explain.tsx'
 import { useGuestMode } from './guest.tsx'
 
@@ -28,6 +28,7 @@ export function DataView({ batchId, summary, sources, onImport, onRefresh }: {
   onRefresh: () => void
 }) {
   const { t } = useUI()
+  const dataRevision = useDataRevision()
   const guest = useGuestMode().guest
   const [quality, setQuality] = useState<Quality | null>(null), [error, setError] = useState('')
   const [qualityRevision, setQualityRevision] = useState(0)
@@ -38,7 +39,7 @@ export function DataView({ batchId, summary, sources, onImport, onRefresh }: {
     void api<Quality>(`/monthly/inbox?period=${encodeURIComponent(summary.period)}&batch_id=${encodeURIComponent(batchId)}`, { signal: controller.signal })
       .then(setQuality).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
-  }, [summary?.period, batchId, qualityRevision])
+  }, [summary?.period, batchId, qualityRevision, dataRevision])
   if (!summary) return <p className="bf-hint">{t('studioStartHelp')}</p>
   const present = new Map(summary.departments.map(d => [d.department, d]))
   const fileOf = new Map(sources.map(s => [s.id, s]))

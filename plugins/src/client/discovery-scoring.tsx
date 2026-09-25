@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { api, describeError, useUI } from './ui.ts'
+import { api, describeError, useUI, useDataRevision } from './ui.ts'
 import { Sources, type Ref } from './flow-graph.tsx'
 
 type Axis = { title: string; unit: string; minimum: string; maximum: string; split: string; split_is_high: boolean; low_meaning: string; high_meaning: string }
@@ -24,6 +24,7 @@ function PolicyView({ policy }: { policy: Policy }) {
 
 export function ScoreEditor({ project, opportunity, initial }: { project: string; opportunity: { id: string; seq: number }; initial?: Score | undefined }) {
   const { language, t } = useUI(), zh = language === 'zh'
+  const dataRevision = useDataRevision()
   const [policy, setPolicy] = useState<Policy | null>(null), [error, setError] = useState(''), [request, setRequest] = useState('')
   const [ratings, setRatings] = useState({ effort: initial?.effort ?? empty(), value: initial?.value ?? empty() })
   const [revision, setRevision] = useState(0), [copied, setCopied] = useState(false)
@@ -31,7 +32,7 @@ export function ScoreEditor({ project, opportunity, initial }: { project: string
     const abort = new AbortController(); setPolicy(null); setRequest(''); setError('')
     void api<Policy>(`/discovery/${project}/scoring-policy`, { signal: abort.signal }).then(setPolicy).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
     return () => abort.abort()
-  }, [project, revision])
+  }, [project, revision, dataRevision])
   function update(key: 'effort' | 'value', change: Partial<Rating>) { setRatings(r => ({ ...r, [key]: { ...r[key], ...change } })); setRequest(''); setCopied(false) }
   function prepare(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); if (!policy) return
@@ -62,6 +63,7 @@ export function ScoreEditor({ project, opportunity, initial }: { project: string
 
 export function ScoreBoard({ project, onEdit }: { project: string; onEdit: (score: Score) => void }) {
   const { language, t } = useUI(), zh = language === 'zh'
+  const dataRevision = useDataRevision()
   const [page, setPage] = useState<{ items: Score[]; total: number; has_more: boolean } | null>(null), [policy, setPolicy] = useState<Policy | null>(null)
   const [offset, setOffset] = useState(0), [revision, setRevision] = useState(0), [error, setError] = useState(''), [selected, setSelected] = useState<Score | null>(null)
   const titled = (score: Score) => { const name = score.opportunity_title || score.opportunity_id; return name.length > 18 ? `${name.slice(0, 17)}…` : name }
@@ -69,7 +71,7 @@ export function ScoreBoard({ project, onEdit }: { project: string; onEdit: (scor
     const abort = new AbortController(); setPage(null); setPolicy(null); setSelected(null); setError('')
     void Promise.all([api<Policy>(`/discovery/${project}/scoring-policy`, { signal: abort.signal }), api<{ items: Score[]; total: number; has_more: boolean }>(`/discovery/${project}/score?offset=${offset}&limit=50`, { signal: abort.signal })]).then(([p, list]) => { setPolicy(p); setPage(list) }).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
     return () => abort.abort()
-  }, [project, offset, revision])
+  }, [project, offset, revision, dataRevision])
   async function select(score: Score) {
     try { setSelected(await api<Score>(`/discovery/${project}/score/${score.id}?version=${score.version}`)) }
     catch (e) { setError(describeError(e, t)) }

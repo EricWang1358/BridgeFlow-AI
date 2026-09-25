@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react'
-import { api, describeError, formatNumber, navigate, useUI, type Summary } from './ui.ts'
+import { useEffect, useState, type ReactNode, useRef } from 'react'
+import { api, describeError, formatNumber, navigate, useUI, type Summary, useDataRevision } from './ui.ts'
 import { FLOW } from './workflow-flow.tsx'
 import { Explain } from './explain.tsx'
 import { SampleHistory } from './charts.tsx'
@@ -27,15 +27,19 @@ type Run = { run: string; started_at: string; refused: number; steps: number; to
 /** Read one source; `undefined` while loading, an Error when it could not be read. */
 function useSource<T>(path: string | null, deps: unknown[]): T | Error | undefined {
   const { t } = useUI()
+  const dataRevision = useDataRevision()
   const [value, setValue] = useState<T | Error | undefined>(undefined)
+  const shown = useRef(path)
   useEffect(() => {
     if (!path) { setValue(undefined); return }
     const controller = new AbortController()
-    setValue(undefined)
+    // A reload of the same source keeps its figures on screen until the new ones arrive.
+    if (shown.current !== path) setValue(undefined)
+    shown.current = path
     void api<T>(path, { signal: controller.signal }).then(setValue)
       .catch(e => { if (!controller.signal.aborted) setValue(new Error(describeError(e, t))) })
     return () => controller.abort()
-  }, [path, ...deps])
+  }, [path, dataRevision, ...deps])
   return value
 }
 

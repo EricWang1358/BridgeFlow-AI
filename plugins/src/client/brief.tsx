@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { MetricCharts } from './charts.tsx'
-import { api, describeError, navigate, useUI, useGloss } from './ui.ts'
+import { api, describeError, navigate, useUI, useGloss, useDataRevision } from './ui.ts'
 import { Chip } from './workspace.tsx'
 import { CountUp } from './count-up.tsx'
 import { Explain } from './explain.tsx'
@@ -57,6 +57,7 @@ const fill = (text: string, values: Record<string, string | number>) =>
 
 export function MonthlyBrief({ batchId }: { batchId: string }) {
   const { t, colon, paren, list } = useUI(), gloss = useGloss()
+  const dataRevision = useDataRevision()
   const [brief, setBrief] = useState<Brief | null>(null), [error, setError] = useState(''), [needsReview, setNeedsReview] = useState(false), [revision, setRevision] = useState(0)
   const [exporting, setExporting] = useState(false), [exportError, setExportError] = useState('')
   // What the company says it is doing about each finding (E07-UC07). Read-only here: a
@@ -71,7 +72,7 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
       if (/Complete the review/.test(detail)) setNeedsReview(true); else setError(describeError(e, t))
     })
     return () => controller.abort()
-  }, [batchId, revision])
+  }, [batchId, revision, dataRevision])
   useEffect(() => {
     const controller = new AbortController()
     setDispositions({})
@@ -80,7 +81,7 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
       .then(result => setDispositions(Object.fromEntries((result.dispositions ?? []).map(d => [d.check_id, d]))))
       .catch(() => { /* no declared process, or no saved review yet: the brief stands without it */ })
     return () => controller.abort()
-  }, [batchId, revision])
+  }, [batchId, revision, dataRevision])
   async function exportReport() {
     // Generated from this same brief, so the document cannot say anything this page does not.
     setExportError(''); setExporting(true)

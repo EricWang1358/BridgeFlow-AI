@@ -27,7 +27,7 @@ test('approval notes join by call identity and outcomes by approval identity', (
   assert.equal(result.approvals[1]?.note, 'Needs owner review')
 })
 test('empty audit is unknown rather than an invented successful workflow', () => {
-  assert.deepEqual(projectAudit([]), { review: undefined, calls: [], approvals: [] })
+  assert.deepEqual(projectAudit([]), { review: undefined, calls: [], approvals: [], writes: 0 })
 })
 
 test('a rerun cannot inherit an earlier successful report, or another batch captain', () => {

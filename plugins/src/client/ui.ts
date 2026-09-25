@@ -737,6 +737,17 @@ async function refreshPortalToken(): Promise<boolean> {
  * — and must never block the page or provoke a login prompt.
  */
 /**
+ * Bumped when the captain finishes a write (an approved tool call returned), so every Studio page
+ * reloads what it shows instead of waiting for a manual Refresh.
+ */
+let dataRevision = 0
+const dataListeners = new Set<() => void>()
+export function bumpDataRevision() { dataRevision++; dataListeners.forEach(fn => fn()) }
+export function useDataRevision(): number {
+  return useSyncExternalStore(fn => { dataListeners.add(fn); return () => { dataListeners.delete(fn) } }, () => dataRevision)
+}
+
+/**
  * Tell the host which batch this session's notebook shows, so the captain knows whether "this
  * notebook" has data. Navigation only; best effort, never blocks the page.
  */

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, askCaptain, describeError, navigate, useUI, useGloss } from './ui.ts'
+import { api, askCaptain, describeError, navigate, useUI, useGloss, useDataRevision } from './ui.ts'
 import { useGuestMode } from './guest.tsx'
 import { settlePlaybook } from '../settle-playbook.ts'
 
@@ -28,6 +28,7 @@ type Inbox = { batch_id?: string; total: number; items: Item[]; by_kind: Record<
 export function OpenItemInbox({ period, batchId, focusSource = '', onClearFocus }:
   { period: string; batchId: string; focusSource?: string; onClearFocus?: () => void }) {
   const { t, colon, language } = useUI(), gloss = useGloss(), guest = useGuestMode()
+  const dataRevision = useDataRevision()
   // Suggestions come from the model; a guest instance with AI off cannot ask for them.
   const modelOff = guest.guest && !guest.llm
   const [asked, setAsked] = useState(''), [askError, setAskError] = useState('')
@@ -41,7 +42,7 @@ export function OpenItemInbox({ period, batchId, focusSource = '', onClearFocus 
     void api<Inbox>(`/monthly/inbox?${query}`, { signal: controller.signal })
       .then(setInbox).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
-  }, [period, batchId, department, retry])
+  }, [period, batchId, department, retry, dataRevision])
   if (!period) return null
   if (error) return <section className="bf-inbox" aria-label={t('openItems')}>
     <h3>{t('openItems')}</h3>
@@ -98,6 +99,7 @@ export function OpenItemInbox({ period, batchId, focusSource = '', onClearFocus 
 export function CloseChecklist({ period, batchId, onImport, onFocus, focusSource = '' }:
   { period: string; batchId: string; onImport: () => void; onFocus?: (source: string) => void; focusSource?: string }) {
   const { t, colon, list: joined } = useUI(), gloss = useGloss()
+  const dataRevision = useDataRevision()
   const [list, setList] = useState<Checklist | null>(null), [error, setError] = useState('')
   useEffect(() => {
     if (!period) return
@@ -106,7 +108,7 @@ export function CloseChecklist({ period, batchId, onImport, onFocus, focusSource
     void api<Checklist>(`/monthly/checklist?period=${encodeURIComponent(period)}&batch_id=${encodeURIComponent(batchId)}`, { signal: controller.signal })
       .then(setList).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
-  }, [period, batchId])
+  }, [period, batchId, dataRevision])
   if (!period) return null
   if (error) return <p role="alert" className="bf-error">{error}</p>
   if (!list) return <p role="status" className="bf-loading">{t('loading')}</p>
