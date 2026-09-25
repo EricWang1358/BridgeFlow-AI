@@ -42,7 +42,7 @@ class ScriptedModel extends LlmAdapter {
       const texts = allText(options.messages)
       const history = JSON.stringify(options.messages)
       let calls: Array<{ name: string; args: unknown }> = []
-      const humanNote = texts.at(-1)?.startsWith('人工复核意见（报告')
+      const humanNote = /(人工复核意见（报告|Human review note \(report)/.test(texts.at(-1) ?? '')
       if (humanNote) { /* Acknowledge without another review. */ } else if (options.tools?.some(tool => tool.name === 'structured_output')) {
         const packet = JSON.parse(texts.find(text => text.includes('"packet"'))!).packet
         const args = process.env.BRIDGEFLOW_TEST_FAULT === 'step-limit' && packet.role === 'finance' ? { checks: null } : {

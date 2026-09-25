@@ -777,7 +777,16 @@ export function navigate(value: Route) {
  * arrives without the column it applies to is another dead end wearing a longer
  * sentence.
  */
+// Requests the interface writes into the chat follow the interface language: the captain answers
+// in the language it is asked in, and a mixed prompt reads as a mistake.
 export function diagnoseRequest(batch: string, period = '') {
+  if (currentLanguage() !== 'zh') return `Batch ${batch} (${period}) has no joinable columns. First call column_candidates to see the uploaded columns the dictionary does not recognise, `
+    + `and for each the only declared candidate columns of that department. Propose at most one match per uploaded column, `
+    + `with its basis (type fit, value overlap with the same kind of column in other departments) and what is uncertain; value overlap is not proof of a cross-entity relationship. `
+    + `Then call confirm_column_match for each proposal; a person decides in the native approval, never you. `
+    + `After approval, tell the user this batch stays frozen and the files must be imported again for it to apply. `
+    + `If no candidate fits, say the dictionary owner must decide. Never invent fields, entities or dictionaries, never read data rows, `
+    + `and make no write other than confirm_column_match.`
   return `批次 ${batch}（${period}）没有可连接的列。请先调用 column_candidates 查看字典不认识的上传列，` +
     `以及每列只能匹配到的、本部门字典已声明的候选列。每个上传列至多提出一个匹配，` +
     `说明依据（类型是否相符、与其他部门同类列的值重合比例）和不确定项；重合比例不是跨实体关系的证明。` +
@@ -788,6 +797,8 @@ export function diagnoseRequest(batch: string, period = '') {
 }
 
 export function reviewRequest(batch: string, period = '') {
+  if (currentLanguage() !== 'zh') return `Please review the ${period} batch ${batch}: call review_context, then make the four official subagent calls `
+    + `(production, procurement, finance, marketing) in one response, then review_finalize. Mark any gap as partial; do not retry and take no business action.`
   return `请研判 ${period} 批次 ${batch}：review_context → 同一响应四次官方 subagent（production/procurement/finance/marketing）→ review_finalize。缺口如实标 partial，不重试，不执行业务动作。`
 }
 export type Summary = { demo_case?: string | null; batch_id: string; period: string; status: string; master_rows: number; unresolved: number; refusal: string;
@@ -872,7 +883,10 @@ export async function sendHumanNote(parent: string, batch: string, report: strin
   const binding = runtime.sessions.binding(parent as SessionId)
   if (!binding) throw new Error('Captain session unavailable')
   // The marker is what the host guard reads to keep this turn to recording (#111).
-  const result = await binding.session.prompt([{ type: 'text', text: `[bridgeflow:human-note:${noteId}] 人工复核意见（报告 ${report}）：${note}。意见已由系统记录。请说明尚缺哪些部门签核；不要重跑研判或执行业务动作。` }], 'queue')
+  const text = currentLanguage() === 'zh'
+    ? `[bridgeflow:human-note:${noteId}] 人工复核意见（报告 ${report}）：${note}。意见已由系统记录。请说明尚缺哪些部门签核；不要重跑研判或执行业务动作。`
+    : `[bridgeflow:human-note:${noteId}] Human review note (report ${report}): ${note}. The note has been recorded by the system. Say which departments still need to sign off; do not rerun the review or take any business action.`
+  const result = await binding.session.prompt([{ type: 'text', text }], 'queue')
   if (!result.ok) throw new Error(result.error.message)
   runtime.sessions.open(parent as SessionId)
 }
