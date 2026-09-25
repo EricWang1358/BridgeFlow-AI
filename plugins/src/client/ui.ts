@@ -878,6 +878,77 @@ export function columnLabel(column: string, t: (key: string) => string): { group
   return { group: group ? t(group) : '', label: field.replace(/_/g, ' ') }
 }
 
+/**
+ * English beside the business's Chinese names (data/company_templates/labels.en.yaml, served
+ * at /labels). Display only: the Chinese name stays visible so a reader with the spreadsheet can
+ * still find the column, and anything the glossary lacks shows exactly as declared. Values —
+ * company, project and material names — are never looked up. The Chinese interface is untouched.
+ */
+type Glossary = { names: Record<string, string>; texts: Record<string, string> }
+let glossary: Glossary = { names: {}, texts: {} }, glossaryState: 'idle' | 'loading' | 'ready' = 'idle', glossaryRevision = 0
+let glossaryPattern: RegExp | null = null
+const glossaryListeners = new Set<() => void>()
+function loadGlossary() {
+  if (glossaryState !== 'idle') return
+  glossaryState = 'loading'
+  void api<Glossary>('/labels').then(value => { applyGlossary(value); glossaryState = 'ready' }).catch(() => { glossaryState = 'idle' })
+}
+/** Install a glossary (from /labels, or a test) and tell every open view. */
+export function applyGlossary(value: Partial<Glossary>) {
+  glossary = { names: value.names ?? {}, texts: value.texts ?? {} }
+  // Longest first, and never a one-character unit (方, 元, 月): inside running text those
+  // are parts of other words.
+  const keys = Object.keys(glossary.names).filter(k => k.length > 1).sort((a, b) => b.length - a.length)
+    .map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  glossaryPattern = keys.length ? new RegExp(`(?:([\\u4e00-\\u9fff]+)_)?(${keys.join('|')})`, 'g') : null
+  glossaryRevision++; glossaryListeners.forEach(fn => fn())
+}
+/** The English for one declared name, or undefined. `财务_期初金额` reads as department · field. */
+export function englishName(name: string): string | undefined {
+  const own = glossary.names[name]
+  if (own) return own
+  const cut = name.indexOf('_')
+  if (cut <= 0) return undefined
+  const head = glossary.names[name.slice(0, cut)], rest = glossary.names[name.slice(cut + 1)]
+  return head && rest ? `${head} · ${rest}` : undefined
+}
+/** A cleaned column key ("材料a", "在供_完工", "单价_2") read back to the declared name it came from. */
+function englishColumn(key: string): string | undefined {
+  const direct = englishName(key) ?? englishName(key.toUpperCase()) ?? englishName(key.replace(/_/g, '/'))
+  if (direct) return direct
+  const numbered = /^(.+)_(\d+)$/.exec(key)
+  const base = numbered && englishColumn(numbered[1]!)
+  return base ? `${base} ${numbered![2]}` : undefined
+}
+// File names quote department names too ("模拟-财务部-2024-07.xlsx"); a name is never glossed inside one.
+const FILE_NAME = /(\S+\.(?:xlsx|xls|csv))/
+function glossRunning(value: string, replace: (whole: string) => string): string {
+  if (!glossaryPattern) return value
+  return value.split(FILE_NAME).map((part, i) => i % 2 ? part : part.replace(glossaryPattern!, replace)).join('')
+}
+export function useGloss() {
+  const language = useSyncExternalStore(subscribe, current)
+  useSyncExternalStore(fn => { glossaryListeners.add(fn); return () => { glossaryListeners.delete(fn) } }, () => glossaryRevision)
+  const on = language !== 'zh'
+  if (on) loadGlossary()
+  return makeGloss(on)
+}
+/** The gloss functions for one language: `on` is the English interface. */
+export function makeGloss(on: boolean) {
+  return {
+    /** The English alone, for a second line under the original; undefined in Chinese or when unknown. */
+    english: (name: string) => on ? englishName(name) ?? englishColumn(name) : undefined,
+    /** Inline: "Customer name (客户名称)". */
+    label: (name: string) => { const en = on ? englishName(name) : undefined; return en ? `${en} (${name})` : name },
+    /** Declared wording: its English when the glossary has it, otherwise as declared. */
+    text: (value: string) => on ? glossary.texts[value] ?? englishName(value) ?? value : value,
+    /** A formula over declared names: English only, so it stays readable; the original is the title. */
+    formula: (value: string) => on ? glossRunning(value, whole => englishName(whole) ?? whole) : value,
+    /** A sentence that quotes declared names: each becomes "English (中文)". */
+    message: (value: string) => on ? glossRunning(value, whole => { const en = englishName(whole); return en ? `${en} (${whole})` : whole }) : value,
+  }
+}
+
 /** How one cell reads, and whether it is a figure.
  *
  * Values arrive as they are stored: entity ids like `customer:acme-pte-ltd`, rollup

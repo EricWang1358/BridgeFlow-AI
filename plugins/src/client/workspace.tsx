@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { BusinessReview, type Review } from './review.tsx'
 import { NextStep } from './next-step.tsx'
-import { api, cellText, columnLabel, navigate, route, useUI, type Summary, describeError } from './ui.ts'
+import { api, cellText, columnLabel, navigate, route, useGloss, useUI, type Summary, describeError } from './ui.ts'
 export const departments = ['production', 'procurement', 'finance', 'marketing'] as const
 export const sections = ['master', 'corrections', 'mappings', 'columns', 'quarantine', 'review'] as const
 export function Chip({ status, label }: { status: string; label?: string | undefined }) { const { t } = useUI(); return <span className="bf-chip" data-status={status}>{label ?? t(status.replaceAll('-', '_'))}</span> }
@@ -10,7 +10,7 @@ export type Limits = { maxUploadBytes: number; maxRequestBytes: number; noteLimi
 type Finding = { check: string; message: string; row: number | null; column: string; count: number }
 type CheckReport = { department: string; filename: string; must_fix: Finding[]; review: Finding[]; passed: string[]; accepts: boolean }
 export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
-  const { t } = useUI()
+  const { t } = useUI(), gloss = useGloss()
   const [limits, setLimits] = useState<Limits | null>(null)
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [reports, setReports] = useState<CheckReport[]>([])
   const formRef = useRef<HTMLFormElement>(null)
@@ -67,8 +67,8 @@ export function ImportForm({ onSaved }: { onSaved: (batch: Summary) => void }) {
       <button type="button" disabled={busy} onClick={() => void selfCheck()}>{t('selfCheck')}</button>
       {reports.map(report => <div key={report.department} className="bf-callout" data-tone={report.accepts ? 'ok' : 'warn'} role="status">
         <h3>{t(report.department)} · {report.filename} · {report.accepts ? t('selfCheckAccepted') : `${t('selfCheckMustFix')} ${report.must_fix.length}`}</h3>
-        {report.must_fix.length > 0 && <ul>{report.must_fix.map((f, i) => <li key={i}>{f.row ? `row ${f.row} · ` : ''}{f.column && !f.message.startsWith(f.column) ? `${f.column} · ` : ''}{f.message}{f.count > 1 ? ` ×${f.count}` : ''}</li>)}</ul>}
-        {report.review.length > 0 && <details><summary>{t('selfCheckReview')} {report.review.length}</summary><ul>{report.review.map((f, i) => <li key={i}>{f.column ? `${f.column} · ` : ''}{f.message} ×{f.count}</li>)}</ul></details>}
+        {report.must_fix.length > 0 && <ul>{report.must_fix.map((f, i) => <li key={i}>{f.row ? `row ${f.row} · ` : ''}{f.column && !f.message.startsWith(f.column) ? `${gloss.label(f.column)} · ` : ''}{gloss.message(f.message)}{f.count > 1 ? ` ×${f.count}` : ''}</li>)}</ul>}
+        {report.review.length > 0 && <details><summary>{t('selfCheckReview')} {report.review.length}</summary><ul>{report.review.map((f, i) => <li key={i}>{f.column ? `${gloss.label(f.column)} · ` : ''}{gloss.message(f.message)} ×{f.count}</li>)}</ul></details>}
       </div>)}
     </div>
     <div className="bf-step">
@@ -149,7 +149,7 @@ type View = { total: number; offset: number; rows: Record<string, unknown>[] }
  * destinations, and this panel is reached only from there. It has no entry of its own.
  */
 export function DataWorkspace() {
-  const { t, paren } = useUI(), dialog = useRef<HTMLDialogElement>(null)
+  const { t, paren } = useUI(), gloss = useGloss(), dialog = useRef<HTMLDialogElement>(null)
   const [batch, setBatch] = useState<Summary | null>(null), [batchId, setBatchId] = useState('')
   const [section, setSection] = useState('master'), [offset, setOffset] = useState(0)
   const [view, setView] = useState<View | null>(null), [review, setReview] = useState<Review | null>(null)
@@ -259,13 +259,13 @@ export function DataWorkspace() {
         {section === 'mappings' && <p className="bf-hint">{t('mappingHelp')}</p>}{section === 'columns' && <p className="bf-hint">{t('columnsHelp')}</p>}{section === 'quarantine' && <p className="bf-hint">{t('quarantineHelp')}</p>}
         {section === 'review' ? review ? <BusinessReview report={review} /> : !error && <p role="status" className="bf-loading">{t('loading')}</p> : view ? <>
           {view.rows.length > 0 && <div className="bf-scroll"><table><thead><tr>{columns.map(c => {
-            const { group, label } = columnLabel(c, t)
-            return <th scope="col" key={c}>{group && <small>{group}</small>}{label}</th>
+            const { group, label } = columnLabel(c, t), en = gloss.english(c.slice(c.indexOf('.') + 1))
+            return <th scope="col" key={c}>{group && <small>{group}</small>}{en ?? label}{en && <small className="bf-original">{label}</small>}</th>
           })}</tr></thead><tbody>{view.rows.map((row, i) => <tr key={i}>{columns.map(c => {
             const { text, note, full, numeric, empty } = cellText(row[c])
             // The clipped form is what fits; the whole value stays one hover away,
             // because a table that silently shortens a business value is lying.
-            return <td key={c} data-numeric={numeric} data-empty={empty} {...(full ? { title: full } : {})}>{text}{note && <span className="bf-cellnote">{note}</span>}</td>
+            return <td key={c} data-numeric={numeric} data-empty={empty} {...(full ? { title: full } : {})}>{numeric ? text : gloss.message(text)}{note && <span className="bf-cellnote">{note}</span>}</td>
           })}</tr>)}</tbody></table></div>}
           {!view.rows.length && <div className="bf-empty"><strong>{t('empty')}</strong>{t('noRows')}</div>}
           <div className="bf-pager">

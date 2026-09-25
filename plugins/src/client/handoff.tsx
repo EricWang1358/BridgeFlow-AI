@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, askCaptain, useUI, describeError } from './ui.ts'
+import { api, askCaptain, useUI, describeError, useGloss } from './ui.ts'
 import { Notebook } from './notebook.tsx'
 import { Chip } from './workspace.tsx'
 import { tourEvent } from './tour/state.ts'
@@ -38,7 +38,7 @@ type Catalogue = {
 type Finding = { rule: string; category: string; scope: Record<string, string>; facts: string[]; hypothesis: string; route_to: string; decided_by: string }
 
 export function Handoff() {
-  const { t, paren } = useUI()
+  const { t, paren } = useUI(), gloss = useGloss()
   const guest = useGuestMode()
   const modelOff = guest.guest && !guest.llm
   const [rows, setRows] = useState<Row[] | null>(null), [catalogue, setCatalogue] = useState<Catalogue | null>(null)
@@ -89,8 +89,8 @@ export function Handoff() {
     sources={catalogue ? <>
       <p className="bf-hint">{catalogue.case} · {t('catalogueVersion')} {catalogue.version} <Chip status={catalogue.status}/></p>
       {Object.entries(catalogue.templates).map(([key, template]) => <article className="bf-source-item" key={key}>
-        <div className="bf-handoff-head"><strong>{template.department}「{template.title}」v{template.version}</strong><Chip status={template.status}/></div>
-        <span className="bf-hint">{Object.values(template.fields).map(f => f.label + (f.required ? '' : paren(t('optional')))).join(', ')}</span>
+        <div className="bf-handoff-head"><strong>{gloss.text(template.department)}「{gloss.text(template.title)}」v{template.version}</strong><Chip status={template.status}/></div>
+        <span className="bf-hint">{Object.values(template.fields).map(f => gloss.text(f.label) + (f.required ? '' : paren(t('optional')))).join(', ')}</span>
       </article>)}
       <h4>{t('fieldLineage')}</h4>
       {catalogue.lineage.map((edge, i) => <p className="bf-hint" key={i}><code>{edge.source}</code> → <code>{edge.target}</code> · {edge.transform} <Chip status={edge.status}/></p>)}
@@ -116,7 +116,7 @@ export function Handoff() {
       <p className="bf-hint">{t('workflowSampleHelp')}</p>
       <button data-tour-id="workflow-sample" className="bf-primary" disabled={busy} onClick={() => void run(async () => { await api('/workflow/sample', { method: 'POST' }); tourEvent('workflowSample', '') })}>{t(busy ? 'busy' : 'workflowSample')}</button></div>}
     {rows && rows.map((row, i) => <article data-tour-id={i === 0 ? 'workflow-sample' : undefined} className="bf-source-item" key={row.kind === 'partial' ? `p${i}` : row.id}>
-      <div className="bf-handoff-head"><strong>{row.department} · {row.title}</strong>
+      <div className="bf-handoff-head"><strong>{gloss.text(row.department)} · {gloss.text(row.title)}</strong>
         <Chip status={row.kind === 'partial' ? 'partial' : row.state}/>
         {row.kind === 'handoff' && row.notification !== 'none' && <Chip status={`notice_${row.notification}`}/>}
         {row.kind === 'handoff' && row.stale && <Chip status="upstream_revised"/>}

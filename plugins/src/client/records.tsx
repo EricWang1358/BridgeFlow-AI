@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AgentRuns, DecisionJournal, EvalReport } from './observability.tsx'
-import { api, describeError, formatDateTime, navigate, useUI, type Summary } from './ui.ts'
+import { api, describeError, formatDateTime, navigate, useUI, type Summary, useGloss } from './ui.ts'
 import { Explain } from './explain.tsx'
 
 /**
@@ -22,7 +22,7 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
   artifacts: Artifact[]
   language: string
 }) {
-  const { t, colon, paren } = useUI()
+  const { t, colon, paren } = useUI(), gloss = useGloss()
   const [conventions, setConventions] = useState<Convention[]>([])
   const [dispositions, setDispositions] = useState<Disposition[]>([]), [dispositionNote, setDispositionNote] = useState('')
   const [error, setError] = useState('')
@@ -61,7 +61,7 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
     {!conventions.length && <p className="bf-hint">{t('recordsNoConventions')}</p>}
     <ul className="bf-records-list">
       {conventions.map(item => <li key={item.id}>
-        <span><strong>{item.id}</strong> <span className="bf-convention" data-state={item.state}>{t(`conventionState_${item.state}`)}</span></span>
+        <span><strong>{gloss.label(item.id)}</strong> <span className="bf-convention" data-state={item.state}>{t(`conventionState_${item.state}`)}</span></span>
         <span className="bf-hint">{item.state === 'unconfirmed'
           ? t(`conventionKind_${item.kind}`)
           : `${t('conventionSource')}${colon}${item.source}${paren(`${item.decided_by} · v${item.version}`)}`}</span>
@@ -72,7 +72,7 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
     {dispositionNote && <p className="bf-hint">{dispositionNote}</p>}
     <ul className="bf-records-list">
       {dispositions.map(item => <li key={item.check_id}>
-        <span><strong>{item.title || item.check_id}</strong></span>
+        <span><strong>{item.title ? gloss.text(item.title) : item.check_id}</strong></span>
         <span className="bf-hint">{item.state}{item.decided_by ? ` · ${item.decided_by}` : ''}{item.note ? ` · ${item.note}` : ''}</span>
       </li>)}
     </ul>

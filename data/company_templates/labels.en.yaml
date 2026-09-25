@@ -1,0 +1,297 @@
+# English display names for the business's Chinese field names and declared wording.
+#
+# Display only. Nothing is joined, computed or validated from this file: the declarations
+# (integration.yaml, the field dictionary) stay the single source of truth, and their Chinese
+# names are what every file, formula and download keeps. The English interface shows these
+# beside the original ("Customer name · 客户名称") so a reader without Chinese can follow
+# and a reader with the spreadsheet can still find the column.
+#
+# A prefixed master column ("财务_期初金额") is shown from its parts: department, then name.
+# Values — company, project and material names — are data and are never translated here.
+# A missing entry falls back to the original text; add it here, never in code.
+names:
+  # Departments, as the master columns prefix them
+  财务: Finance
+  市场: Marketing
+  生产: Production
+  物资: Procurement
+  # Grain and shared fields
+  项目名称: Project name
+  项目编号: Project ID
+  客户名称: Customer name
+  客户代码: Customer code
+  客户单位: Customer
+  客户: Customer
+  报表年月: Reporting month
+  报表月: Report month
+  年份: Year
+  月: Month
+  日期: Date
+  产品名称: Product name
+  产品代码: Product code
+  货品名称: Item name
+  货品代码: Item code
+  公司代码: Company code
+  总账科目: GL account
+  总账科目长文本: GL account description
+  分类账: Ledger
+  本币: Local currency
+  负责人: Owner
+  备注: Notes
+  合计: Total
+  # Finance
+  期初金额: Opening balance
+  期初方向: Opening balance side
+  期末余额: Closing balance
+  期末方向: Closing balance side
+  本期借方金额: Period debits
+  本期贷方金额: Period credits
+  本年累计借方金额: Year-to-date debits
+  本年累计贷方金额: Year-to-date credits
+  本期实现收入: Period revenue
+  本期实际成本: Period actual cost
+  资金占用利息成本: Financing interest cost
+  项目财务净利润: Project net profit
+  项目净利率: Project net margin
+  借: Debit
+  贷: Credit
+  # Marketing
+  付款比例: Payment ratio
+  在供完工状态: Supply status
+  在供: Supplying
+  在供/完工: Supplying / completed
+  完工时间: Completion date
+  合同条款: Contract terms
+  累计产值: Cumulative output value
+  累计结算: Cumulative settlement
+  累计收款: Cumulative collections
+  累计回款: Cumulative collections (renamed column)
+  合同欠款: Contract receivable
+  总欠款: Total receivable
+  已到账: Received
+  已落实: Secured
+  有把握: Likely
+  可争取: Possible
+  收款计划: Collection plan
+  收款计划合计: Collection plan total
+  收款计划缺口: Collection plan gap
+  收款计划覆盖已结算金额: Collection plan covers the settled amount
+  缺口: Gap
+  产值收款率: Collection rate on output value
+  结算收款率: Collection rate on settlement
+  合同销售单价: Contract unit price
+  当前垫资额: Current advance funding
+  垫资比例: Advance funding ratio
+  应收余额相当于开票月数: Receivables in months of billing
+  坏账概率: Bad-debt probability
+  # Production
+  厂站: Plant
+  生产量: Production volume
+  出厂量: Volume dispatched
+  实际量: Actual volume
+  上月实际量: Last month’s actual volume
+  实际签收率: Actual sign-off rate
+  现场签收率: On-site sign-off rate
+  产量环比增长率: Output month-on-month growth
+  客户合作状态诊断: Customer relationship status
+  生产余料率: Production leftover rate
+  平稳合作: Steady relationship
+  稳定增长: Steady growth
+  需求下滑: Demand falling
+  合作萎缩: Relationship shrinking
+  签收异常: Sign-off anomaly
+  # Procurement
+  当月生产量: Monthly production volume
+  当月物资总成本: Monthly material cost
+  不含税成本: Cost excl. VAT
+  含税成本: Cost incl. VAT
+  预付款含税成本: Prepaid cost incl. VAT
+  单方不含税毛利: Gross margin per m³ excl. VAT
+  加权单方毛利: Weighted gross margin per m³
+  容重: Density
+  材料含量: Material content
+  材料成本占收入: Material cost share of revenue
+  物资测算量与生产量: Materials estimate vs production volume
+  材料A: Material A
+  材料A单价: Material A unit price
+  材料A含量: Material A content
+  材料B: Material B
+  材料B单价: Material B unit price
+  材料B含量: Material B content
+  材料C: Material C
+  材料C单价: Material C unit price
+  材料C含量: Material C content
+  材料D: Material D
+  材料D单价: Material D unit price
+  材料D含量: Material D content
+  材料E: Material E
+  材料E单价: Material E unit price
+  材料E含量: Material E content
+  材料F: Material F
+  材料F单价: Material F unit price
+  材料F含量: Material F content
+  单价: Unit price
+  # Constants and statuses
+  增值税税率: VAT rate
+  净利润已扣除资金占用利息: Net profit after financing cost
+  供应正常: Supply normal
+  信用敞口扩大: Credit exposure widening
+  信用敞口缩小: Credit exposure narrowing
+  原材料价格基本平稳: Raw material prices broadly stable
+  减值: Impairment
+  计提: Accrue
+  处理中: In progress
+  待确认: To confirm
+  已确认: Confirmed
+  已驳回: Rejected
+  已关闭: Closed
+  # Units
+  元: CNY
+  元/方: CNY/m³
+  方: m³
+  方/月: m³/month
+  天: days
+  比例: ratio
+  # Owners named in open items and quotations
+  部门填报员: Department data clerk
+  月度汇总负责人: Monthly consolidation owner
+  各部门负责人: Department heads
+  总经理（模拟）: General manager (simulated)
+  销售总监（模拟）: Sales director (simulated)
+  财务总监（模拟）: Finance director (simulated)
+  物资部经理（模拟）: Procurement manager (simulated)
+  生产部经理（模拟）: Production manager (simulated)
+  # Declared actions in the department review
+  发起成本与售价联合复核: Start a joint cost and price review
+  复核材料价格与配合比: Review material prices and mix design
+  对低收款率项目制定催收计划: Draw up a collection plan for low-collection projects
+  持续跟踪当月到厂价: Keep tracking this month’s delivered prices
+  按合同节点跟进回款: Follow up collections by contract milestone
+  按实际生产量更正物资测算: Correct the materials estimate to actual output
+  按现行回款节奏跟踪: Track at the current collection pace
+  提交低毛利项目售价复核: Submit low-margin projects for a price review
+  核查余料处置与计量误差: Check leftover disposal and metering error
+  继续按车次记录余料: Keep recording leftovers per truck
+  维持现有发货与签收流程: Keep the current dispatch and sign-off process
+  维持现有垫资额度: Keep the current advance funding limit
+  维持现行配合比与采购价: Keep the current mix design and purchase prices
+  补充收款计划并明确责任人: Complete the collection plan and name an owner
+  记录净利率并按月跟踪: Record the net margin and track it monthly
+  记录测算量与生产量一致: Record that the estimate and production agree
+  按项目复核回款计划并通报市场部: Review each project’s collection plan and inform Marketing
+  按项目核对低签收车次与退料记录: Check low sign-off trucks and returned material by project
+  暂停新增垫资并与财务核对资金占用: Pause new advance funding and reconcile financing with Finance
+  # Terms in the review formulas
+  物资部当月生产量: Procurement’s monthly production volume
+  生产部生产量: Production’s production volume
+  应收期末余额: Closing receivable
+  本期借方开票额: Period invoiced (debits)
+  生产部: Production
+  物资部: Procurement
+  财务部: Finance
+  市场部: Marketing
+  生产记录: Production record
+  期间: Period
+  结算量: Settled volume
+  结算依据: Settlement basis
+  # Quotation items
+  商品混凝土报价草稿: Ready-mix concrete quote draft
+  单方成本（不含税）: Cost per m³ (excl. VAT)
+  含税底价（单方毛利 15 元）: Floor price incl. VAT (15 CNY/m³ margin)
+  含税目标价（单方毛利 30 元）: Target price incl. VAT (30 CNY/m³ margin)
+  含税争取价（单方毛利 40 元）: Stretch price incl. VAT (40 CNY/m³ margin)
+  客户期望含税单价: Customer’s target unit price incl. VAT
+  目标价总额（含税）: Target price total (incl. VAT)
+  次月付款比例: Next-month payment ratio
+  客户要求的次月付款比例: Next-month payment ratio the customer asks for
+  预计总方量: Expected total volume
+  月峰值需求: Peak monthly demand
+  距首次浇筑天数: Days to first pour
+  配合比材料成本（不含税）: Mix material cost (excl. VAT)
+  运输泵送及制造费用: Transport, pumping and production costs
+  拌站可承接方量: Plant capacity available
+  可承接方量: Capacity available
+  新项目准备周期: New project lead time
+  准备周期: Lead time
+  历史平均回款天数: Average historical collection days
+  资金占用成本: Financing cost
+
+# Longer declared wording, keyed by the exact original text.
+texts:
+  字典 v2（业务方 2026-09-13 提供）: Dictionary v2 (provided by the business, 2026-09-13)
+  物资部当月生产量与生产部生产量一致: Procurement’s monthly production volume matches Production’s
+  字典未写税率。按一般纳税人销售货物的通用税率 13% 取值；业务方示例 339÷1.13−260=40 与此一致。: >-
+    The dictionary gives no tax rate. The general 13% rate for a general taxpayer selling goods is used;
+    the business’s own example 339÷1.13−260=40 agrees.
+  字典写「目标与预计可收回款项之间的差距」，模板里没有「目标」列。按回款管理的通用做法以累计结算为目标：缺口 = 累计结算 − 收款计划合计；业务方示例 1,200,000−1,150,000=50,000 与此一致。: >-
+    The dictionary says “the gap between the target and the amount expected to be collected”, but the
+    template has no target column. Following common collection practice, cumulative settlement is the
+    target: Gap = Cumulative settlement − Collection plan total; the business’s example
+    1,200,000−1,150,000=50,000 agrees.
+  字典只说按签收率与环比判断。按常用口径：签收率低于 95% 先判签收异常；环比 ±5% 以内视为正常波动（平稳合作），≥5% 稳定增长，<−5% 需求下滑，≤−20% 合作萎缩；按规则顺序取第一条命中。业务方示例（签收率 99.4%、环比 10%）判为稳定增长，与此一致。: >-
+    The dictionary only says to judge by sign-off rate and month-on-month change. Common practice is used:
+    a sign-off rate below 95% is a sign-off anomaly first; within ±5% month on month is normal variation
+    (steady relationship), ≥5% steady growth, <−5% demand falling, ≤−20% relationship shrinking; the first
+    rule that matches wins. The business’s example (sign-off 99.4%, +10%) is steady growth, which agrees.
+  生产部模板带「日期」，可按日填报。同一项目、客户、月份的多行按通用做法汇总：生产量、出厂量、实际量求和；厂站与备注去重拼接；签收率、环比与合作状态用汇总后的数重新计算，不平均各行比率；上月实际量等其余字段必须各行一致，不一致即拒绝。: >-
+    The production template has a date column, so it can be filled daily. Rows for the same project,
+    customer and month are rolled up the usual way: production, dispatched and actual volumes are summed;
+    plants and notes are de-duplicated and joined; sign-off rate, month-on-month change and relationship
+    status are recomputed from the totals rather than averaging row ratios; every other field, such as
+    last month’s actual volume, must agree across rows or the roll-up is refused.
+  # The department review declaration (business_review in the sample dictionary)
+  模拟商砼公司 2024-07 月度对账（业务方 v2 模板，虚构数据）: Simulated concrete supplier, 2024-07 monthly reconciliation (business v2 templates, fictional data)
+  生产部核对签收差额，物资部确认测算与毛利，财务部复核利润与应收，市场部落实催收与垫资控制；本报告不自动调整结算、售价或授信。: >-
+    Production checks the sign-off difference, Procurement confirms the estimate and margin, Finance reviews
+    profit and receivables, Marketing follows up collections and advance funding. This report changes no
+    settlement, price or credit by itself.
+  核对出厂量与现场签收量、生产余料，提出车次核对与退料处置；不得认定客户违约或调整结算量。: >-
+    Check dispatched against signed-off volume and production leftovers; propose truck checks and handling of
+    returned material. May not find a customer in breach or change settled volumes.
+  核对材料成本占收入比重、加权单方毛利，以及物资测算量与生产实际量是否一致；不得自行改合同售价。: >-
+    Check material cost as a share of revenue, weighted margin per m³, and whether the materials estimate matches
+    actual production. May not change contract prices.
+  核对项目净利率与应收余额相当于几个月开票额，提出利润与回款复核；不得认定坏账或计提减值。: >-
+    Check project net margin and how many months of billing the receivables equal; propose profit and collection
+    reviews. May not declare bad debt or book impairments.
+  核对结算收款率、垫资比例与收款计划缺口，提出催收与垫资控制建议；不得自行调整客户账期或授信。: >-
+    Check the collection rate on settlement, the advance funding ratio and the collection plan gap; propose
+    collection and funding controls. May not change customer terms or credit.
+  不做坏账、减值或客户信用分级判断: No bad-debt, impairment or customer credit rating judgements
+  增值税 13%、缺口公式与诊断阈值是按通用做法补的口径，业务方尚未确认: >-
+    VAT 13%, the gap formula and the diagnosis thresholds are common-practice conventions the business has not
+    confirmed yet
+  指标为公司级月度汇总；项目级核对与跨部门字段一致性看「跨部门总表」: >-
+    Metrics are company-level monthly totals; for project-level checks and cross-department consistency see the
+    Cross-department master
+  模拟商砼公司数据，用于演示业务方 v2 模板的月度对账，不代表真实经营结论: >-
+    Simulated concrete supplier data, demonstrating the monthly reconciliation of the business’s v2 templates;
+    not a real business conclusion
+  应收月数是余额与当月开票之比，不是账龄: Receivable months is balance over this month’s billing, not ageing
+  垫资比例是公司级汇总，项目差异须看跨部门总表: The advance funding ratio is company-level; see the Cross-department master for project differences
+  缺口口径为累计结算减收款计划合计，是业务方未确认的口径假设: >-
+    The gap is cumulative settlement minus the collection plan total, a convention the business has not confirmed
+  单方毛利按增值税 13% 折算不含税售价，税率是口径假设: Margin per m³ converts the price at 13% VAT; the rate is an assumed convention
+  测算量与生产量不一致时，先更正测算再比较成本: When the estimate and production disagree, correct the estimate before comparing cost
+  签收率是公司级月度汇总，不是单个项目的结论: The sign-off rate is a company-level monthly total, not a finding about one project
+  签收量差额须与市场部、现场核对后才能进入结算: A signed-off volume difference goes into settlement only after checking with Marketing and the site
+
+  # The quotation declaration (quotation in the sample dictionary)
+  模拟样板。按定价与信用政策从询价记录、成本与产能依据测算价格带，检查产能、交期、回款与付款条件；未经政策规定的审批人批准不得外发。: >-
+    Simulated sample. The price band is computed from the enquiry, cost and capacity evidence under the pricing
+    and credit policy, checking capacity, lead time, collections and payment terms; nothing goes out without the
+    approver the policy names.
+  记录客户需求与商务条件，按审批结果报出，不自行承诺价格与账期。: Records the customer’s needs and terms and quotes as approved; never promises a price or payment terms alone.
+  按当月到厂价与配合比测算材料成本，提供运输泵送及制造费用口径。: Computes material cost from this month’s delivered prices and the mix design; supplies the transport, pumping and production cost basis.
+  确认可承接方量与新项目准备周期。: Confirms available capacity and the new project lead time.
+  核实客户历史回款、确定信用等级与资金占用成本。: Checks the customer’s collection history and sets the credit grade and financing cost.
+  审批低于底价或付款条件低于信用等级下限的报价。: Approves quotes below the floor price or with payment terms below the credit grade’s minimum.
+  客户期望价低于底价，报出须总经理审批: The customer’s target price is below the floor; quoting needs the general manager’s approval
+  客户期望价低于目标价，报出须销售总监审批: The customer’s target price is below target; quoting needs the sales director’s approval
+  月峰值超过可承接方量，须生产部重新排产后再报价: Peak monthly demand exceeds capacity; Production must reschedule before quoting
+  历史回款超过 75 天（C 级），须款到发货或财务总监审批: Collections have taken over 75 days (grade C); cash before delivery or the finance director’s approval
+  付款比例低于 B 级下限 70%，须总经理审批: The payment ratio is below grade B’s 70% minimum; needs the general manager’s approval
+  准备周期长于客户首次浇筑时间，须重新协商供货日: The lead time is longer than the time to first pour; renegotiate the supply date
+  内部报价草稿。价格低于底价须总经理审批，介于底价与目标价之间须销售总监审批；审批前不得外发，外发须复用原生审批并取得针对本报价的批准。: >-
+    Internal quote draft. Below the floor price needs the general manager; between floor and target needs the
+    sales director. Nothing goes out before approval, and sending it needs a native approval for this quote.

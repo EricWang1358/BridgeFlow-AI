@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, describeError, navigate, useUI } from './ui.ts'
+import { api, describeError, navigate, useUI, useGloss } from './ui.ts'
 
 /**
  * This month's close checklist (E14-UC01).
@@ -25,7 +25,7 @@ type Inbox = { total: number; items: Item[]; by_kind: Record<string, number>; by
  */
 export function OpenItemInbox({ period, batchId, focusSource = '', onClearFocus }:
   { period: string; batchId: string; focusSource?: string; onClearFocus?: () => void }) {
-  const { t, colon } = useUI()
+  const { t, colon } = useUI(), gloss = useGloss()
   const [inbox, setInbox] = useState<Inbox | null>(null), [error, setError] = useState(''), [department, setDepartment] = useState('')
   const [retry, setRetry] = useState(0)
   useEffect(() => {
@@ -64,9 +64,9 @@ export function OpenItemInbox({ period, batchId, focusSource = '', onClearFocus 
     {!shown.length && <p className="bf-hint">{filtered && inbox.total > 0 ? t('inboxNoMatches') : t('inboxEmpty')}</p>}
     <ul>{shown.map(item => <li key={item.id}>
       <b>{t(`item_${item.kind}`) === `item_${item.kind}` ? item.kind : t(`item_${item.kind}`)}</b>
-      {item.subject && <span className="bf-mono"> · {item.subject}</span>}
+      {item.subject && <span className="bf-mono"> · {gloss.label(item.subject)}</span>}
       <span className="bf-hint"> · {item.departments.map(d => t(d)).join('、')}</span>
-      {item.detail && <div className="bf-hint">{item.detail}</div>}
+      {item.detail && <div className="bf-hint">{gloss.message(item.detail)}</div>}
       <button onClick={() => navigate({ ...(item.batch_id ? { batch: item.batch_id } : {}), view: item.next_view })}>{t('openToSettle')}</button>
     </li>)}</ul>
   </section>
@@ -74,7 +74,7 @@ export function OpenItemInbox({ period, batchId, focusSource = '', onClearFocus 
 
 export function CloseChecklist({ period, batchId, onImport, onFocus, focusSource = '' }:
   { period: string; batchId: string; onImport: () => void; onFocus?: (source: string) => void; focusSource?: string }) {
-  const { t, colon, list: joined } = useUI()
+  const { t, colon, list: joined } = useUI(), gloss = useGloss()
   const [list, setList] = useState<Checklist | null>(null), [error, setError] = useState('')
   useEffect(() => {
     if (!period) return
@@ -97,10 +97,10 @@ export function CloseChecklist({ period, batchId, onImport, onFocus, focusSource
     <ol>{list.steps.map(step => <li key={step.id} data-state={step.state} data-focused={!!inboxSource(step.kind) && inboxSource(step.kind) === focusSource}>
       <span className="bf-step-state" data-state={step.state}>{t(`stepState_${step.state}`)}</span>
       <b>{t(`step_${step.id}`)}</b>
-      {step.owner_role && <span className="bf-hint bf-step-owner">{t('stepOwner')}{colon}{step.owner_role}</span>}
+      {step.owner_role && <span className="bf-hint bf-step-owner">{t('stepOwner')}{colon}{gloss.text(step.owner_role)}</span>}
       {step.state !== 'done' && <>
         {step.outstanding.length > 0 && <div className="bf-hint">{t('stepOutstanding')}{colon}{joined(step.outstanding.map((name: string) => name.replace(/^([a-z_]+)(×\d+)?$/, (whole, kind: string, count = '') => t(`issue_${kind}`) === `issue_${kind}` ? whole : `${t(`issue_${kind}`)}${count}`)))}</div>}
-        {step.reason && <div className="bf-hint">{step.reason}</div>}
+        {step.reason && <div className="bf-hint">{gloss.message(step.reason)}</div>}
         <div className="bf-actions" style={{ marginBottom: 0 }}>
           {step.count > 0 && inboxSource(step.kind) && onFocus && <button onClick={() => onFocus(inboxSource(step.kind))}>{t('stepShowItems')}</button>}
           {step.next_view && <button onClick={() => {

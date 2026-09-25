@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import base64
 import json
+from pathlib import Path
 from typing import Annotated
 
+import yaml
 from fastapi import APIRouter, Depends, HTTPException
 
 from bridgeflow import integration
 from bridgeflow.api.batches import BatchRef, _visible, batch_path, load_batch
 from bridgeflow.conclusions import conventions
 from bridgeflow.conclusions.grades import grade_master
+from bridgeflow.config import REPO_ROOT, settings
 from bridgeflow.identity import UserIdentity, require_user
 
 router = APIRouter(tags=["integration"])
@@ -84,3 +87,23 @@ async def integration_summary(request: BatchRef) -> dict:
                       "undeclared constants and roll-up rules belong to the dictionary owner. "
                       "When citing a figure that rests on an assumption, say it follows a convention the business side has not confirmed."),
     }
+
+
+def _display_labels() -> dict:
+    """The English display glossary, or empty maps when none is configured or it is unreadable.
+
+    Display only: a missing file shows the declared Chinese names, never an error page."""
+    path = Path(settings.display_labels_path)
+    path = path if path.is_absolute() else REPO_ROOT / path
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return {"names": {}, "texts": {}}
+    pick = lambda key: {str(k): str(v).strip() for k, v in (data.get(key) or {}).items() if v}
+    return {"names": pick("names"), "texts": pick("texts")}
+
+
+@router.get("/labels")
+async def display_labels(_user: Annotated[UserIdentity | None, Depends(require_user)]) -> dict:
+    """English names shown beside the business's Chinese field names in the English interface."""
+    return _display_labels()

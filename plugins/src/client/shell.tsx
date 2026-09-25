@@ -6,7 +6,7 @@ import { notebookKinds, notebookPurposes, isNotebookKind } from '../notebook-cap
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
-import { api, formatDateTime, navigate, portalLoginUrl, route, startReview, takeRouteError, useUI, type Summary, describeError } from './ui.ts'
+import { api, formatDateTime, navigate, portalLoginUrl, route, startReview, takeRouteError, useUI, type Summary, describeError, useGloss } from './ui.ts'
 import { ImportForm, Chip, BatchChip } from './workspace.tsx'
 import { TasksView } from './tasks.tsx'
 import { DataView } from './data.tsx'
@@ -34,7 +34,7 @@ const viewportSubscribe = (fn: () => void) => { window.addEventListener('resize'
 const hashSubscribe = (fn: () => void) => { window.addEventListener('hashchange', fn); return () => window.removeEventListener('hashchange', fn) }
 
 function Shell({ ctx }: { ctx: Context }) {
-  const { t, language } = useUI(), sessions = ctx.sessions as unknown as ISessions
+  const { t, language } = useUI(), gloss = useGloss(), sessions = ctx.sessions as unknown as ISessions
   // The chat pane's heading is drawn by the skin's CSS; give it the current language's word.
   useEffect(() => { document.body.style.setProperty('--bf-chat-label', JSON.stringify(t('chatPane'))) }, [language])
   const guest = useGuestMode().guest
@@ -147,7 +147,7 @@ function Shell({ ctx }: { ctx: Context }) {
         ? <RecordsView batchId={batchId} summary={summary} artifacts={artifacts} language={language} />
         : selected.view === 'overview' ? <Overview key={batchId} batchId={batchId} /> : selected.view === 'discovery' ? <Discovery /> : selected.view === 'quotation' ? <Quotation /> : selected.view === 'handoff' ? <Handoff /> : selected.view === 'integration' && batchId ? <MasterTable batchId={batchId} /> : selected.view === 'brief' && batchId ? <MonthlyBrief key={batchId} batchId={batchId} /> : preview ? <section aria-label={t('sourcePreview')}>
     <h3>{preview.filename}</h3><p className="bf-hint">{t('parsedOriginal')} {preview.sheet}</p>
-    <div className="bf-source-table"><table><thead><tr><th>{t('sourceRow')}</th>{preview.columns.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>
+    <div className="bf-source-table"><table><thead><tr><th>{t('sourceRow')}</th>{preview.columns.map((c, i) => { const en = gloss.english(c); return <th key={i}>{en ?? c}{en && <small className="bf-original">{c}</small>}</th> })}</tr></thead>
       <tbody>{preview.rows.map((row, i) => <tr key={preview.offset + i}><th>{preview.row_numbers?.[i] ?? preview.offset + i + 2}</th>{row.map((cell, j) => <td key={j}>{cell === null ? '—' : String(cell)}</td>)}</tr>)}</tbody></table></div>
     {preview.total > 50 ? <nav className="bf-actions" aria-label={t('sourcePagination')}>
       <button disabled={preview.offset === 0} onClick={() => setOffset(Math.max(0, preview.offset - 50))}>{t('previous')}</button>
