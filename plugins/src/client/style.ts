@@ -678,6 +678,10 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-run-steps > li[data-outcome=refused] { box-shadow: inset 2px 0 var(--bf-danger) }
 .bf-run-step-reason { flex: 1 1 100%; color: var(--bf-text); line-height: 1.5 }
 
+/* How an open item gets settled, under its detail. */
+.bf-settle { margin: 6px 0 0; font-size: 12px; line-height: 1.55; color: var(--bf-text) }
+.bf-settle > b { font-weight: 600; color: var(--bf-muted) }
+
 /* The captain's "where is it" answer: numbered clicks. */
 .bf-guide-steps { margin: 6px 0 0; padding-left: 20px; line-height: 1.6 }
 .bf-guide-steps > li + li { margin-top: 2px }

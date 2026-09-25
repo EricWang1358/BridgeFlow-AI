@@ -1,4 +1,5 @@
 import { withAccess, type ProductTool } from '../tool-catalogue.ts'
+import { settlePlaybook } from '../settle-playbook.ts'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
 import { callBackend, type BackendConfig } from '../backend.ts'
@@ -52,12 +53,20 @@ type InboxText = { batch_id?: string; total?: number; by_kind?: Record<string, n
  * because the filters narrow the items this render used to drop — seven calls for one
  * question. Capped, with the true total, as every tool result here is.
  */
+/** How the item gets settled and which step the captain may start, from the shared playbook. */
+function settleLine(kind: string): string {
+  const entry = settlePlaybook[kind]
+  if (!entry) return ''
+  return `\n  how to settle: ${entry.how[1]}${entry.captain?.length ? ` Captain can start: ${entry.captain.join(', ')} (ask first).` : ' A person does it; the captain can only suggest.'}`
+}
+
 export function renderInbox(args: InboxArgs, result: InboxText) {
   const kinds = Object.entries(result.by_kind ?? {}).map(([kind, n]) => `${kind} ${n}`).join(', ')
   const items = result.items ?? []
   const filter = [args.department && `department=${args.department}`, args.kind && `kind=${args.kind}`].filter(Boolean).join(', ')
   const lines = items.slice(0, 15).map(item => `- ${item.kind}: ${item.subject || '(no subject)'}${item.detail ? ` — ${item.detail}` : ''}`
-    + ` [departments: ${(item.departments ?? []).join('/') || 'all'}; settled in: ${item.next_view || 'its module'}]`)
+    + ` [departments: ${(item.departments ?? []).join('/') || 'all'}; settled in: ${item.next_view || 'its module'}]`
+    + settleLine(item.kind))
   const scope = result.batch_id ? `batch ${result.batch_id}` : 'this period (no batch found)'
   return [{ type: 'text' as const, text: `${result.total ?? 0} open item(s) in ${scope} (by kind: ${kinds || 'none'}). `
     + `${filter ? `Filtered by ${filter}: ` : ''}${items.length} listed${items.length > 15 ? ', first 15 shown' : ''}.`
@@ -67,7 +76,7 @@ export function renderInbox(args: InboxArgs, result: InboxText) {
 export function inboxTool(config: BackendConfig): ProductTool {
   return withAccess(defineTool({
     name: 'monthly_inbox',
-    description: 'Open items for a period across modules. Pass batch_id when the person is looking at a specific notebook; without it, the latest batch for that period is used. Counts by kind and department, with where each item is settled. Never rows or cell values; the inbox decides nothing.',
+    description: 'Open items for a period across modules. Pass batch_id when the person is looking at a specific notebook; without it, the latest batch for that period is used. Counts by kind and department, with where each item is settled and how (who decides, which of your tools can start the next step). Never rows or cell values; the inbox decides nothing.',
     parameters: {
       period: { type: 'string', required: true, description: 'YYYY-MM' },
       batch_id: { type: 'string', description: 'Exact batch from the current notebook, if known' },

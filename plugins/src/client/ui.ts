@@ -220,6 +220,12 @@ const labels = {
   studioStartHelp: ['添加部门文件后即可开始月度研判。报价工作区现在就能用。', 'Add department files to start a monthly review. The quotation workspace works without them.'],
   preview: ['预览', 'Preview'], expandPreview: ['展开预览', 'Expand preview'],
 
+  settleHow: ['怎么处理', 'How to settle'], askSettleOne: ['让队长给建议', 'Ask the captain for a suggestion'],
+  askSettleAllButton: ['让队长给出完成建议', 'Ask the captain how to finish these'], settleAsked: ['已发给队长，建议在中间的对话里。', 'Sent to the captain; the suggestion appears in the chat.'],
+  askSettleAll: ['请调用 monthly_inbox（期间 {period}，批次 {batch}）查看这个月的全部待办，逐项给出完成建议：这是什么问题、你建议怎么处理以及依据（标明这是模型建议）、由谁决定、在哪个页面处理；能由你用工具发起下一步的，说明是哪一步，并先问我要不要开始。不要替任何人做决定，也不要改动任何数据。',
+    'Please call monthly_inbox (period {period}, batch {batch}) and, for every open item this month, suggest how to finish it: what the problem is, what you suggest and why (marked as model advice), who decides, and which page settles it. Where one of your tools can start the next step, say which and ask me before starting. Do not decide for anyone and do not change any data.'],
+  askSettleItem: ['请就这一项待办给出处理建议：{kind}「{subject}」，涉及部门 {departments}，说明：{detail}（批次 {batch}，待办 {id}）。说出你的建议和依据（标明这是模型建议）、由谁决定、在哪里处理；如果你能用工具发起下一步，先问我要不要开始。不要替任何人做决定，也不要改动任何数据。',
+    'Please suggest how to settle this open item: {kind} “{subject}”, departments {departments}, detail: {detail} (batch {batch}, item {id}). Give your suggestion and its basis (marked as model advice), who decides and where it is settled; if one of your tools can start the next step, ask me before starting. Do not decide for anyone and do not change any data.'],
   app_guide: ['功能指引', 'Where to find it'], guideOpen: ['带我去', 'Take me there'], guideOpened: ['已在右侧打开', 'Opened on the right'],
   guideNeedsBatch: ['先打开一个有数据的笔记本，例如左侧的「打开示例笔记本」。', 'Open a notebook with data first, for example Open sample notebook on the left.'],
   sources: ['来源', 'Sources'], chatPane: ['对话', 'Chat'], studio: ['工作室', 'Studio'], workArea: ['工作区', 'Workspace'],

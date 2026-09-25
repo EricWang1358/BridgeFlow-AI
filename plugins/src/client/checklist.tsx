@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { api, describeError, navigate, useUI, useGloss } from './ui.ts'
+import { api, askCaptain, describeError, navigate, useUI, useGloss } from './ui.ts'
+import { useGuestMode } from './guest.tsx'
+import { settlePlaybook } from '../settle-playbook.ts'
 
 /**
  * This month's close checklist (E14-UC01).
@@ -15,7 +17,7 @@ type Checklist = { period: string; batch_id: string; steps: Step[]; ready_to_clo
 
 type Item = { id: string; kind: string; source: string; batch_id: string; period: string
   departments: string[]; subject: string; detail: string; next_view: string }
-type Inbox = { total: number; items: Item[]; by_kind: Record<string, number>; by_department: Record<string, number>; unreadable: string[] }
+type Inbox = { batch_id?: string; total: number; items: Item[]; by_kind: Record<string, number>; by_department: Record<string, number>; unreadable: string[] }
 
 /**
  * What is still waiting on someone (E14-UC05).
@@ -25,7 +27,10 @@ type Inbox = { total: number; items: Item[]; by_kind: Record<string, number>; by
  */
 export function OpenItemInbox({ period, batchId, focusSource = '', onClearFocus }:
   { period: string; batchId: string; focusSource?: string; onClearFocus?: () => void }) {
-  const { t, colon } = useUI(), gloss = useGloss()
+  const { t, colon, language } = useUI(), gloss = useGloss(), guest = useGuestMode()
+  // Suggestions come from the model; a guest instance with AI off cannot ask for them.
+  const modelOff = guest.guest && !guest.llm
+  const [asked, setAsked] = useState(''), [askError, setAskError] = useState('')
   const [inbox, setInbox] = useState<Inbox | null>(null), [error, setError] = useState(''), [department, setDepartment] = useState('')
   const [retry, setRetry] = useState(0)
   useEffect(() => {
@@ -50,8 +55,18 @@ export function OpenItemInbox({ period, batchId, focusSource = '', onClearFocus 
   const shown = focusSource ? inbox.items.filter(item => item.source === focusSource) : inbox.items
   const filtered = Boolean(focusSource || department)
   const clearFilters = () => { setDepartment(''); onClearFocus?.() }
+  const fill = (template: string, values: Record<string, string>) => template.replace(/\{(\w+)\}/g, (whole, key: string) => values[key] ?? whole)
+  // A suggestion is asked for, never acted on: the prompt tells the captain to decide nothing.
+  const ask = (key: string, text: string) => { setAskError(''); void askCaptain(text).then(() => setAsked(key)).catch(e => setAskError(describeError(e, t))) }
+  const batch = inbox.batch_id || batchId
   return <section className="bf-inbox" aria-label={t('openItems')}>
     <h3>{t('openItems')} <span className="bf-badge">{shown.length}</span></h3>
+    {inbox.total > 0 && <div className="bf-actions" style={{ margin: '6px 0' }}>
+      <button disabled={modelOff} onClick={() => ask('all', fill(t('askSettleAll'), { period, batch }))}>{t('askSettleAllButton')}</button>
+      {asked === 'all' && <span className="bf-hint" role="status">{t('settleAsked')}</span>}
+    </div>}
+    {modelOff && inbox.total > 0 && <p className="bf-hint" role="status">{t('guestModelActionUnavailable')}</p>}
+    {askError && <p role="alert" className="bf-error">{askError}</p>}
     {filtered && <p className="bf-hint" role="status">{t('inboxShowingOf').replace('{shown}', String(shown.length)).replace('{total}', String(inbox.total))} <button onClick={clearFilters}>{t('inboxClearFocus')}</button></p>}
     {focusSource
       ? <p className="bf-hint" role="status">{t('inboxFocused')}</p>
@@ -65,9 +80,15 @@ export function OpenItemInbox({ period, batchId, focusSource = '', onClearFocus 
     <ul>{shown.map(item => <li key={item.id}>
       <b>{t(`item_${item.kind}`) === `item_${item.kind}` ? item.kind : t(`item_${item.kind}`)}</b>
       {item.subject && <span className="bf-mono"> · {gloss.label(item.subject)}</span>}
-      <span className="bf-hint"> · {item.departments.map(d => t(d)).join('、')}</span>
+      <span className="bf-hint"> · {item.departments.map(d => t(d)).join(language === 'zh' ? '、' : ', ')}</span>
       {item.detail && <div className="bf-hint">{gloss.message(item.detail)}</div>}
-      <button onClick={() => navigate({ ...(item.batch_id ? { batch: item.batch_id } : {}), view: item.next_view })}>{t('openToSettle')}</button>
+      {settlePlaybook[item.kind] && <div className="bf-settle"><b>{t('settleHow')}{colon}</b>{settlePlaybook[item.kind]!.how[language === 'zh' ? 0 : 1]}</div>}
+      <div className="bf-actions" style={{ margin: '6px 0 0' }}>
+        <button onClick={() => navigate({ ...(item.batch_id ? { batch: item.batch_id } : {}), view: item.next_view })}>{t('openToSettle')}</button>
+        <button className="bf-quiet" disabled={modelOff} onClick={() => ask(item.id, fill(t('askSettleItem'), { kind: t(`item_${item.kind}`) === `item_${item.kind}` ? item.kind : t(`item_${item.kind}`),
+          subject: item.subject || '—', departments: item.departments.map(d => t(d)).join(language === 'zh' ? '、' : ', ') || '—', detail: item.detail || '—', batch: item.batch_id || batch, id: item.id }))}>{t('askSettleOne')}</button>
+        {asked === item.id && <span className="bf-hint" role="status">{t('settleAsked')}</span>}
+      </div>
     </li>)}</ul>
   </section>
 }
