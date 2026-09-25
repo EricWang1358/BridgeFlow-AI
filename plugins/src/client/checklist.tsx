@@ -59,12 +59,14 @@ export function OpenItemInbox({ period, batchId, focusSource = '', onClearFocus 
   // A suggestion is asked for, never acted on: the prompt tells the captain to decide nothing.
   const ask = (key: string, text: string) => { setAskError(''); void askCaptain(text).then(() => setAsked(key)).catch(e => setAskError(describeError(e, t))) }
   const batch = inbox.batch_id || batchId
-  return <section className="bf-inbox" aria-label={t('openItems')}>
+  return <section className="bf-inbox" aria-label={t('openItems')} data-tour-id="open-items">
     <h3>{t('openItems')} <span className="bf-badge">{shown.length}</span></h3>
-    {inbox.total > 0 && <div className="bf-actions" style={{ margin: '6px 0' }}>
-      <button disabled={modelOff} onClick={() => ask('all', fill(t('askSettleAll'), { period, batch }))}>{t('askSettleAllButton')}</button>
+    <div className="bf-actions" style={{ margin: '6px 0' }} data-tour-id="settle-ask-all">
+      {inbox.total > 0
+        ? <button disabled={modelOff} onClick={() => ask('all', fill(t('askSettleAll'), { period, batch }))}>{t('askSettleAllButton')}</button>
+        : <span className="bf-hint">{t('settleNothingOpen')}</span>}
       {asked === 'all' && <span className="bf-hint" role="status">{t('settleAsked')}</span>}
-    </div>}
+    </div>
     {modelOff && inbox.total > 0 && <p className="bf-hint" role="status">{t('guestModelActionUnavailable')}</p>}
     {askError && <p role="alert" className="bf-error">{askError}</p>}
     {filtered && <p className="bf-hint" role="status">{t('inboxShowingOf').replace('{shown}', String(shown.length)).replace('{total}', String(inbox.total))} <button onClick={clearFilters}>{t('inboxClearFocus')}</button></p>}

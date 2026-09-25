@@ -137,7 +137,7 @@ const labels = {
   draftUnavailable: ['读不到这份草稿；请在「填报与流转」页核对后再决定。', 'This draft could not be read; check it on the Filling & handoff page before deciding.'],
   runTokens: ['tokens（发起工具调用的模型步骤）', 'tokens (model steps that called tools)'],
   sampleCases: ['更多示例', 'More sample cases'],
-  sampleCasesHelp: ['同一家虚构公司的 2024-07，分别展示不同的问题；有些状态不能放在同一个批次里。每个示例打开成一个新笔记本。', 'The same fictional company in 2024-07, each showing different problems, because some states cannot share one batch. Each opens in a new notebook.'],
+  sampleCasesHelp: ['同一家虚构公司的 2024-07，分别展示不同的问题；有些状态不能放在同一个批次里。每个示例打开成一个新笔记本，在它的「本月任务」里点「带我走一遍这套示例」有一段短引导。', 'The same fictional company in 2024-07, each showing different problems, because some states cannot share one batch. Each opens in a new notebook; Walk me through this sample, on its This month’s tasks page, starts a short tour.'],
   sampleCasesUnavailable: ['示例列表暂时读不到。请刷新重试。', 'Sample cases could not be loaded. Refresh to try again.'],
   sampleCaseLabel: ['本示例展示', 'This sample shows'],
   sampleCaseOpenData: ['查看数据与待确认项', 'Inspect data and open items'],
@@ -220,7 +220,7 @@ const labels = {
   studioStartHelp: ['添加部门文件后即可开始月度研判。报价工作区现在就能用。', 'Add department files to start a monthly review. The quotation workspace works without them.'],
   preview: ['预览', 'Preview'], expandPreview: ['展开预览', 'Expand preview'],
 
-  settleHow: ['怎么处理', 'How to settle'], askSettleOne: ['让队长给建议', 'Ask the captain for a suggestion'],
+  settleHow: ['怎么处理', 'How to settle'], settleNothingOpen: ['本月没有待办，可以直接发起研判。', 'Nothing is open this month; the review can start.'], askSettleOne: ['让队长给建议', 'Ask the captain for a suggestion'],
   askSettleAllButton: ['让队长给出完成建议', 'Ask the captain how to finish these'], settleAsked: ['已发给队长，建议在中间的对话里。', 'Sent to the captain; the suggestion appears in the chat.'],
   askSettleAll: ['请调用 monthly_inbox（期间 {period}，批次 {batch}）查看这个月的全部待办，逐项给出完成建议：这是什么问题、你建议怎么处理以及依据（标明这是模型建议）、由谁决定、在哪个页面处理；能由你用工具发起下一步的，说明是哪一步，并先问我要不要开始。不要替任何人做决定，也不要改动任何数据。',
     'Please call monthly_inbox (period {period}, batch {batch}) and, for every open item this month, suggest how to finish it: what the problem is, what you suggest and why (marked as model advice), who decides, and which page settles it. Where one of your tools can start the next step, say which and ask me before starting. Do not decide for anyone and do not change any data.'],

@@ -1,4 +1,4 @@
-export type Track = 'core' | 'review' | 'quotation' | 'workflow'
+export type Track = 'core' | 'review' | 'quotation' | 'workflow' | 'cases'
 /** `optional`: the step still reacts to its action, but Next never waits for it. */
 export type Step = { id: string; target: string; event?: string; optional?: true; pane?: 'sources' | 'studio'
   view?: 'integration' | 'source' | 'quotation' | 'data' | 'tasks' | 'discovery' | 'handoff' | 'overview' }
@@ -21,6 +21,15 @@ export const tours: Record<Track, Step[]> = {
     { id: 'reviewIntro', target: 'review-start', pane: 'studio', view: 'tasks' },
     { id: 'reviewState', target: 'state-open', pane: 'studio' },
     { id: 'reviewHistory', target: 'artifacts', pane: 'studio' },
+  ],
+  // Inside one of the extra sample notebooks: where its planted problems show, how each is
+  // settled, and when the month is ready for review. Nothing to do but read; no model call.
+  cases: [
+    { id: 'caseGuide', target: 'case-guide', pane: 'studio', view: 'tasks' },
+    { id: 'caseItems', target: 'open-items', pane: 'studio', view: 'tasks' },
+    { id: 'caseAsk', target: 'settle-ask-all', pane: 'studio', view: 'tasks' },
+    { id: 'caseData', target: 'master-open', pane: 'studio', view: 'data' },
+    { id: 'caseReview', target: 'review-start', pane: 'studio', view: 'tasks' },
   ],
   quotation: [
     { id: 'quoteOpen', target: 'quotation-open', event: 'quotation', pane: 'studio' },
