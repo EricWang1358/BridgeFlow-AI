@@ -10,6 +10,32 @@ class ScriptedModel extends LlmAdapter {
     return { provider, id: model, name: 'Offline approval fixture', reasoning: { efforts: [{ id: 'low', name: 'Low' }] } }
   }
   async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
+    if (process.env.BRIDGEFLOW_TEST_SCENARIO === 'guide') {
+      // "Where is it: <feature>" asks app_guide once; the turn after its result answers in text.
+      const words = (value: any): string[] => value && typeof value === 'object'
+        ? [typeof value.text === 'string' ? value.text : '', ...Object.values(value).flatMap(words)] : []
+      const messages = options.messages as any[]
+      // The person's own turn: DSH appends a runtime-context user message after it.
+      const lastUser = messages.findLastIndex(m => m?.role === 'user' && m?.source?.kind === 'user')
+      const asked = words(messages[lastUser]).find(text => text.includes('Where is it: '))
+      const answered = messages.slice(lastUser + 1).some(m => JSON.stringify(m).includes('app_guide'))
+      if (asked && !answered) {
+        const id = ToolCallId(`guide-${Date.now()}`), args = JSON.stringify({ feature: asked.slice(asked.indexOf('Where is it: ') + 13).trim().split(/\s/)[0] })
+        yield { type: 'block-start', index: 0, blockType: 'tool-call' }
+        yield { type: 'tool-call-delta', index: 0, id, name: 'app_guide', argumentsDelta: args }
+        yield { type: 'block-end', index: 0, block: { type: 'tool-call', id, name: 'app_guide', arguments: args } }
+        yield { type: 'usage', usage: { inputTokens: 10, outputTokens: 10 } }
+        yield { type: 'finish', reason: { kind: 'tool-calls' } }
+        return
+      }
+      const text = 'The steps are in the card above.'
+      yield { type: 'block-start', index: 0, blockType: 'text' }
+      yield { type: 'text-delta', index: 0, text }
+      yield { type: 'block-end', index: 0, block: { type: 'text', text } }
+      yield { type: 'usage', usage: { inputTokens: 10, outputTokens: 10 } }
+      yield { type: 'finish', reason: { kind: 'stop' } }
+      return
+    }
     if (process.env.BRIDGEFLOW_TEST_SCENARIO === 'business') {
       const allText = (value: any): string[] => value && typeof value === 'object'
         ? [typeof value.text === 'string' ? value.text : '', ...Object.values(value).flatMap(allText)] : []

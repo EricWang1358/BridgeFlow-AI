@@ -220,6 +220,8 @@ const labels = {
   studioStartHelp: ['添加部门文件后即可开始月度研判。报价工作区现在就能用。', 'Add department files to start a monthly review. The quotation workspace works without them.'],
   preview: ['预览', 'Preview'], expandPreview: ['展开预览', 'Expand preview'],
 
+  app_guide: ['功能指引', 'Where to find it'], guideOpen: ['带我去', 'Take me there'], guideOpened: ['已在右侧打开', 'Opened on the right'],
+  guideNeedsBatch: ['先打开一个有数据的笔记本，例如左侧的「打开示例笔记本」。', 'Open a notebook with data first, for example Open sample notebook on the left.'],
   sources: ['来源', 'Sources'], chatPane: ['对话', 'Chat'], studio: ['工作室', 'Studio'], workArea: ['工作区', 'Workspace'],
   sourceHelp: ['依据与归属', 'Evidence and ownership'], studioHelp: ['状态、责任与下一步', 'Status, owners and next steps'],
   handoffWorkspace: ['填报与流转', 'Filling & handoff'],

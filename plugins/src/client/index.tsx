@@ -15,6 +15,7 @@ import { useDemoCase } from './sample-cases.tsx'
 import { mountShell } from './shell.tsx'
 import { mountState } from './state.tsx'
 import { motion } from './motion.ts'
+import { GuideCard } from './guide-card.tsx'
 import { style } from './style.ts'
 
 const subscribeHash = (fn: () => void) => { window.addEventListener('hashchange', fn); return () => window.removeEventListener('hashchange', fn) }
@@ -112,7 +113,12 @@ function Welcome() {
 function ToolCard({ block, toolName, inspect }: ToolCallViewProps) {
   const { t } = useUI(), [expanded, setExpanded] = useState(false)
   const settled = 'kind' in block && block.kind === 'tool-result'
+  // Seen running in this mount means the result is live, not replayed from history.
+  const [live] = useState(!settled)
   const text = 'kind' in block ? block.content.filter(c => c.type === 'text').map(c => c.text).join('\n') : block.argsRaw
+  if (toolName === 'app_guide' && settled && !block.isError) {
+    try { const answer = JSON.parse(text) as { feature?: string }; if (answer.feature) return <GuideCard feature={answer.feature} fresh={live} /> } catch { /* falls through to the plain card */ }
+  }
   if (toolName === 'review_finalize' && settled && !block.isError) {
     try { const report = JSON.parse(text) as Review; if (Array.isArray(report.roles)) return <div className="bf-card"><BusinessReview report={report} />{inspect && <button onClick={inspect}>{t('inspect')}</button>}</div> } catch { /* Bounded fallback below. */ }
   }
@@ -186,7 +192,7 @@ export function apply(ctx: Context): void {
     const navigateSession = () => { const value = route(); if (value.parent) void openSession(value.parent, value.child).catch(e => { ctx.logger.warn('Session route unavailable: %s', String(e)); reportRouteError(value.child ? 'routeChildUnavailable' : 'routeParentUnavailable') }) }
     navigateSession(); window.addEventListener('hashchange', navigateSession); return () => window.removeEventListener('hashchange', navigateSession)
   }, 'bridgeflow: native session routes')
-  for (const key of ['discovery_materials', 'aggregate_metric', 'confirm_mapping', 'column_candidates', 'confirm_column_match', 'dictionary_profiles', 'dictionary_draft_view', 'dictionary_import', 'dictionary_draft', 'dictionary_decide', 'dictionary_publish', 'workflow_catalogue', 'workflow_draft', 'workflow_scope', 'workflow_accept_scope', 'workflow_guidance', 'workflow_board', 'workflow_record', 'workflow_approve_submit', 'workflow_handoff', 'discovery_propose', 'discovery_register', 'discovery_decision_finalize', 'discovery_decision_propose', 'discovery_decision_resolve', 'discovery_decision_vote', 'discovery_graph_save', 'discovery_score_save', 'discovery_meeting_save', 'quarantine_list', 'quarantine_decide', 'quarantine_apply', 'feishu_import', 'feishu_upload_report', 'integration_summary', 'batch_summary', 'list_metrics', 'lookup_field_dictionary', 'review_context', 'review_finalize']) {
+  for (const key of ['app_guide', 'discovery_materials', 'aggregate_metric', 'confirm_mapping', 'column_candidates', 'confirm_column_match', 'dictionary_profiles', 'dictionary_draft_view', 'dictionary_import', 'dictionary_draft', 'dictionary_decide', 'dictionary_publish', 'workflow_catalogue', 'workflow_draft', 'workflow_scope', 'workflow_accept_scope', 'workflow_guidance', 'workflow_board', 'workflow_record', 'workflow_approve_submit', 'workflow_handoff', 'discovery_propose', 'discovery_register', 'discovery_decision_finalize', 'discovery_decision_propose', 'discovery_decision_resolve', 'discovery_decision_vote', 'discovery_graph_save', 'discovery_score_save', 'discovery_meeting_save', 'quarantine_list', 'quarantine_decide', 'quarantine_apply', 'feishu_import', 'feishu_upload_report', 'integration_summary', 'batch_summary', 'list_metrics', 'lookup_field_dictionary', 'review_context', 'review_finalize']) {
     ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({ name: 'tool.call.toolview', key }, ToolCard))
   }
 }
