@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { acceptEvent, canFinish, fresh, parseProgress, observeTour, startTour, tourEvent, tourSnapshot, exitTour, resetTour } from '../src/client/tour/state.ts'
-import { required, tours } from '../src/client/tour/steps.ts'
+import { coreEvents, required, tours } from '../src/client/tour/steps.ts'
 import { placeCard } from '../src/client/tour/position.ts'
 
 test('corrupt, stale or forged completion never resumes as a successful task', () => {
@@ -47,4 +47,12 @@ test('cards fit desktop, narrow and visual viewport offsets without covering con
     assert(box.x+box.width<=vp.x+vp.width && box.y+box.height<=vp.y+vp.height)
     assert(box.x>=target.x+target.width || box.x+box.width<=target.x || box.y>=target.y+target.height || box.y+box.height<=target.y)
   }
+})
+test('download and rename are optional: completion never waits for them, but they are still recorded', () => {
+  assert.equal(required.includes('download'), false); assert.equal(required.includes('named'), false)
+  assert.equal(coreEvents.includes('download'), true)
+  let p = acceptEvent({...fresh(),status:'inProgress' as const}, 'sample', 'a'.repeat(32)) as ReturnType<typeof fresh>
+  for (const event of required.filter(x => x !== 'sample')) p = acceptEvent(p, event, 'a'.repeat(32)) as typeof p
+  assert.equal(canFinish(p), true)
+  assert.deepEqual(acceptEvent(p, 'download', 'a'.repeat(32)).done.includes('download'), true)
 })

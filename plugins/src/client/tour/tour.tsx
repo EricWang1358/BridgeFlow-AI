@@ -161,8 +161,8 @@ export function TourLayer({ surface = 'shell' }: { surface?: string }) {
         </>}
         {geo.error && <div className="bf-tour-task" role="alert"><b>{t('tourError')}</b>{geo.error}<p>{t('tourErrorHelp')}</p></div>}
         {['sample', 'result'].includes(step.id) && <details><summary>{t('tourMore')}</summary><p>{t(`tour_${step.id}_more`)}</p></details>}
-        {!intro && <p className="bf-tour-wait" role="status">{t(p.done.includes(step.event!) ? 'tourDoneAction' : 'tourWaitingAction')}</p>}
-        <div className="bf-tour-actions"><button disabled={p.index === 0} onClick={() => moveTour(-1)}>{t('tourBack')}</button><button onClick={exitTour}>{t('tourExit')}</button><button className="bf-tour-primary" disabled={wait || !intro && !p.done.includes(step.event!)} onClick={() => moveTour(1)}>{t(p.index === tours[p.track].length - 1 ? 'tourFinish' : 'tourNext')}</button></div>
+        {!intro && <p className="bf-tour-wait" role="status">{t(p.done.includes(step.event!) ? 'tourDoneAction' : step.optional ? 'tourOptionalAction' : 'tourWaitingAction')}</p>}
+        <div className="bf-tour-actions"><button disabled={p.index === 0} onClick={() => moveTour(-1)}>{t('tourBack')}</button><button onClick={exitTour}>{t('tourExit')}</button><button className="bf-tour-primary" disabled={wait || !intro && !step.optional && !p.done.includes(step.event!)} onClick={() => moveTour(1)}>{t(p.index === tours[p.track].length - 1 ? 'tourFinish' : 'tourNext')}</button></div>
       </> : <>
         <div className="bf-tour-mark" aria-hidden="true"><Icon name={complete ? 'check' : 'sparkle'} size={24} /></div>
         <h2>{t(complete ? p.track === 'core' ? 'tourComplete' : p.track === 'workflow' ? 'tourWorkflowDone' : 'tourSupplementDone' : welcome ? 'tourWelcome' : 'tourHelp')}</h2>
