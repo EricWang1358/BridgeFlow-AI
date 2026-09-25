@@ -1,5 +1,6 @@
 export type Track = 'core' | 'review' | 'quotation' | 'workflow'
-export type Step = { id: string; target: string; event?: string; pane?: 'sources' | 'studio'
+/** `optional`: the step still reacts to its action, but Next never waits for it. */
+export type Step = { id: string; target: string; event?: string; optional?: true; pane?: 'sources' | 'studio'
   view?: 'integration' | 'source' | 'quotation' | 'data' | 'tasks' | 'discovery' | 'handoff' | 'overview' }
 export const tours: Record<Track, Step[]> = {
   core: [
@@ -12,8 +13,8 @@ export const tours: Record<Track, Step[]> = {
     { id: 'source', target: 'evidence-source', event: 'source', pane: 'studio' },
     { id: 'sourceDetails', target: 'source-details', event: 'sourceDetails', pane: 'studio', view: 'source' },
     { id: 'sourceVerified', target: 'source-provenance', pane: 'studio', view: 'source' },
-    { id: 'download', target: 'master-download', event: 'download', pane: 'studio', view: 'integration' },
-    { id: 'named', target: 'notebook-name', event: 'named' },
+    { id: 'download', target: 'master-download', event: 'download', optional: true, pane: 'studio', view: 'integration' },
+    { id: 'named', target: 'notebook-name', event: 'named', optional: true },
     { id: 'saved', target: 'notebook-save', event: 'saved' },
   ],
   review: [
@@ -40,6 +41,8 @@ export const tours: Record<Track, Step[]> = {
   ],
 }
 export const TOUR_VERSION = 1
-export const required = tours.core.flatMap(s => s.event ? [s.event] : [])
+/** Every core event the tour records; `required` are the ones completion waits for. */
+export const coreEvents = tours.core.flatMap(s => s.event ? [s.event] : [])
+export const required = tours.core.flatMap(s => s.event && !s.optional ? [s.event] : [])
 /** Events a supplementary track waits for; they are not tied to a batch. */
 export const trackEvents = ['quotation', ...tours.workflow.flatMap(s => s.event ? [s.event] : [])]

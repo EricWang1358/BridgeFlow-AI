@@ -1,4 +1,4 @@
-import { tours, TOUR_VERSION, required, trackEvents, type Track } from './steps.ts'
+import { tours, TOUR_VERSION, coreEvents, required, trackEvents, type Track } from './steps.ts'
 export type Progress = { version: number; status: 'notStarted' | 'inProgress' | 'skipped' | 'completed'; track: Track; index: number; done: string[]; batch?: string | undefined; source?: string | undefined }
 export const fresh = (): Progress => ({ version: TOUR_VERSION, status: 'notStarted', track: 'core', index: 0, done: [] })
 export function parseProgress(raw: string | null): Progress {
@@ -9,7 +9,7 @@ export function parseProgress(raw: string | null): Progress {
       || !Array.isArray(p.done) || p.done.some((x: unknown) => typeof x !== 'string') || p.batch && !/^[a-f0-9]{32}$/.test(p.batch)) return fresh()
     if (p.source !== undefined && !['production', 'procurement', 'finance', 'marketing'].includes(p.source)) return fresh()
     if (p.status === 'completed' && !canFinish(p)) return fresh()
-    return { ...(p.source ? { source: p.source } : {}), version: TOUR_VERSION, status: p.status, track: p.track, index: p.index, done: p.done.filter((x: string) => required.includes(x) || trackEvents.includes(x)), ...(p.batch ? { batch: p.batch } : {}) }
+    return { ...(p.source ? { source: p.source } : {}), version: TOUR_VERSION, status: p.status, track: p.track, index: p.index, done: p.done.filter((x: string) => coreEvents.includes(x) || trackEvents.includes(x)), ...(p.batch ? { batch: p.batch } : {}) }
   } catch { return fresh() }
 }
 export function canFinish(p: Progress) { return p.track !== 'core' || required.every(e => p.done.includes(e)) }
@@ -18,7 +18,7 @@ export function acceptEvent(p: Progress, event: string, batch: string): Progress
   // A supplementary track's events belong to no batch; the core task's are bound to its sample.
   if (trackEvents.includes(event)) return { ...p, done: [...new Set([...p.done, event])] }
   if (event !== 'sample' && p.batch !== batch) return p
-  if (!required.includes(event)) return p
+  if (!coreEvents.includes(event)) return p
   if (event === 'sample' && p.batch !== batch) return { ...p, batch, source: undefined, done: ['sample'] }
   return { ...p, done: [...new Set([...p.done, event])] }
 }
@@ -73,10 +73,10 @@ export function resetTour() {
   publish({ ...value, progress: fresh(), mode: 'welcome' }) }
 export function moveTour(delta: number) {
   const p = value.progress, steps = tours[p.track], step = steps[p.index]!
-  if (delta > 0 && step.event && !p.done.includes(step.event)) return
+  if (delta > 0 && step.event && !step.optional && !p.done.includes(step.event)) return
   if (p.index + delta >= steps.length) {
     if (!canFinish(p)) {
-      const index = steps.findIndex(s => s.event && !p.done.includes(s.event))
+      const index = steps.findIndex(s => s.event && !s.optional && !p.done.includes(s.event))
       publish({ ...value, progress: { ...p, index: Math.max(0, index) } }); return
     }
     publish({ ...value, progress: { ...p, status: 'completed' }, mode: 'complete' }); return
