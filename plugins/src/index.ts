@@ -19,6 +19,7 @@ import { feishuImport, feishuUploadReport } from './tools/feishu.ts'
 import { integrationSummary } from './tools/integration.ts'
 import { checklistTool, inboxTool } from './tools/checklist.ts'
 import { conventionDecide, conventionList, conventionPreview } from './tools/conventions.ts'
+import { appGuide } from './tools/app-guide.ts'
 import { riskDispositionRecord, riskDispositions } from './tools/dispositions.ts'
 import { quarantineApply, quarantineDecide, quarantineList } from './tools/quarantine.ts'
 import { workflowAcceptScope, workflowApproveSubmit, workflowBoard, workflowCatalogue, workflowDraft, workflowGuidance, workflowHandoff, workflowRecord, workflowScope } from './tools/workflow.ts'
@@ -72,6 +73,7 @@ export function apply(ctx: Context, config: Config): void {
   catalogue.register(ctx, columnCandidates(backend))
   catalogue.register(ctx, aggregateMetric(backend))
   catalogue.register(ctx, lookupFieldDictionary(backend))
+  catalogue.register(ctx, appGuide())
   const receipts = new ApprovalReceipts()
   const notes = new ApprovalNotes()
   const details = new PendingDetails()

@@ -14,7 +14,8 @@
     "sessions:prune": "python3 ../scripts/session_retention.py",
     "shots": "node tests/readme-shots.mjs /tmp/bridgeflow-shots",
     "smoke:quotation": "node tests/quotation-smoke.mjs",
-    "smoke:tour": "node tests/tour-smoke.mjs"
+    "smoke:tour": "node tests/tour-smoke.mjs",
+    "smoke:guide": "node tests/guide-journey.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-agent": "0.1.2-rc.1",

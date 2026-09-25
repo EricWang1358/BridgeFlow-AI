@@ -665,6 +665,10 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-run-steps > li[data-outcome=refused] { box-shadow: inset 2px 0 var(--bf-danger) }
 .bf-run-step-reason { flex: 1 1 100%; color: var(--bf-text); line-height: 1.5 }
 
+/* The captain's "where is it" answer: numbered clicks. */
+.bf-guide-steps { margin: 6px 0 0; padding-left: 20px; line-height: 1.6 }
+.bf-guide-steps > li + li { margin-top: 2px }
+
 /* ---- clarity pass: explanations, logic chains, evidence --------------------- */
 
 /* "How this works": the reasoning behind a page, one click from its instruction. */
