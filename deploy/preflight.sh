@@ -27,6 +27,9 @@ check "DEEPSEEK_API_KEY is filled" bash -c 'source env.sh && [[ -n "${DEEPSEEK_A
 check "dsh CLI is the pinned 0.1.2-rc.1" bash -c 'dsh --version | grep -q 0.1.2-rc.1'
 check "client bundle is built" test -f plugins/dist/client.js
 check "working tree is clean (instance state is gitignored)" bash -c '[[ -z "$(git status --porcelain)" ]]'
+# Say which paths, so a failed deploy names the file instead of sending someone to SSH in to find it.
+# Paths only: git status never prints file contents.
+if [[ -n "$(git status --porcelain)" ]]; then git status --porcelain | head -20 | sed 's/^/      dirty: /'; fi
 check "bridgeflow unit is active" systemctl is-active --quiet bridgeflow
 check "portal unit is active" systemctl is-active --quiet bridgeflow-portal
 check "unit names the real domain" grep -q -- "--trusted-host $DOMAIN" /etc/systemd/system/bridgeflow.service

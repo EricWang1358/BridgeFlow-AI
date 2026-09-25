@@ -1,4 +1,5 @@
 import { tourLabels } from './tour/copy.ts'
+import { translate as zhMessage } from './zh-messages.ts'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace'
 import { useSyncExternalStore } from 'react'
 import type { SubagentListEntry } from '@deepseek-ai/dsh-subagent/client'
@@ -228,6 +229,16 @@ const labels = {
     'Please suggest how to settle this open item: {kind} “{subject}”, departments {departments}, detail: {detail} (batch {batch}, item {id}). Give your suggestion and its basis (marked as model advice), who decides and where it is settled; if one of your tools can start the next step, ask me before starting. Do not decide for anyone and do not change any data.'],
   app_guide: ['功能指引', 'Where to find it'], guideOpen: ['带我去', 'Take me there'], guideOpened: ['已在右侧打开', 'Opened on the right'],
   guideNeedsBatch: ['先打开一个有数据的笔记本，例如左侧的「打开示例笔记本」。', 'Open a notebook with data first, for example Open sample notebook on the left.'],
+  transform_passthrough: ['原样传递', 'passed through'], integration_local_sqlite: ['本地数据库', 'local database'], integration_local_outbox: ['本地发件箱', 'local outbox'],
+  kind_project: ['项目', 'project'], kind_customer: ['客户', 'customer'], kind_product: ['产品', 'product'], kind_material: ['物料', 'material'], kind_supplier: ['供应商', 'supplier'], kind_plant: ['厂站', 'plant'],
+  originRow: ['第 {n} 行', 'row {n}'], originRows: ['第 {rows} 行（{rollup}）', 'rows {rows} ({rollup})'],
+  view_period: ['期间', 'Period'], view_entity_id: ['实体标识', 'Entity ID'], view_entity: ['实体', 'Entity'], view_source_rows: ['来源行数', 'Source rows'],
+  view_rollups: ['汇总方式', 'Roll-ups'], view_source: ['来源', 'Source'], view_before: ['原值', 'Before'], view_after: ['改后', 'After'], view_rule: ['规则', 'Rule'],
+  view_confidence: ['置信度', 'Confidence'], view_reason: ['原因', 'Reason'], view_row: ['行', 'Row'],
+  rule_header_normalise: ['表头规范化', 'Header normalised'], rule_date_parse: ['日期统一', 'Date normalised'], rule_date_parse_ambiguous: ['日期有歧义', 'Ambiguous date'],
+  rule_date_parse_declared: ['按声明读日期', 'Date read as declared'], rule_date_conflicts_declared_order: ['日期与声明顺序冲突', 'Date conflicts with declared order'],
+  rule_number_normalise: ['数字规范化', 'Number normalised'], rule_duplicate_row: ['重复行', 'Duplicate row'], rule_column_shift: ['疑似表头错行', 'Shifted header row'],
+  decision_needs_dictionary_owner: ['需字典负责人决定', 'Needs the dictionary owner'], conventionRollup: ['汇总口径', 'Roll-up'],
   sources: ['来源', 'Sources'], chatPane: ['对话', 'Chat'], studio: ['工作室', 'Studio'], workArea: ['工作区', 'Workspace'],
   sourceHelp: ['依据与归属', 'Evidence and ownership'], studioHelp: ['状态、责任与下一步', 'Status, owners and next steps'],
   handoffWorkspace: ['填报与流转', 'Filling & handoff'],
@@ -918,6 +929,11 @@ export function englishName(name: string): string | undefined {
   const head = glossary.names[name.slice(0, cut)], rest = glossary.names[name.slice(cut + 1)]
   return head && rest ? `${head} · ${rest}` : undefined
 }
+/** A convention's id as a reader sees it: `rollup.production` is the production department's roll-up. */
+export function conventionName(id: string, t: (key: string) => string): string {
+  const rollup = /^rollup\.(\w+)$/.exec(id)
+  return rollup ? `${t('conventionRollup')} · ${t(rollup[1]!)}` : id
+}
 /** A cleaned column key ("材料a", "在供_完工", "单价_2") read back to the declared name it came from. */
 function englishColumn(key: string): string | undefined {
   const direct = englishName(key) ?? englishName(key.toUpperCase()) ?? englishName(key.replace(/_/g, '/'))
@@ -950,8 +966,8 @@ export function makeGloss(on: boolean) {
     text: (value: string) => on ? glossary.texts[value] ?? englishName(value) ?? value : value,
     /** A formula over declared names: English only, so it stays readable; the original is the title. */
     formula: (value: string) => on ? glossRunning(value, whole => englishName(whole) ?? whole) : value,
-    /** A sentence that quotes declared names: each becomes "English (中文)". */
-    message: (value: string) => on ? glossRunning(value, whole => { const en = englishName(whole); return en ? `${en} (${whole})` : whole }) : value,
+    /** A sentence the backend wrote: in English, declared names read "English (中文)"; in Chinese, the sentence reads in Chinese. */
+    message: (value: string) => on ? glossRunning(value, whole => { const en = englishName(whole); return en ? `${en} (${whole})` : whole }) : zhMessage(value),
   }
 }
 

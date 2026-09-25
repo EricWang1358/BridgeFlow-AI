@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { tourEvent } from './tour/state.ts'
-import { api, cellText, describeError, navigate, useGloss, useUI } from './ui.ts'
+import { api, cellText, describeError, navigate, useGloss, useUI, conventionName } from './ui.ts'
 import { GradeMark } from './brief.tsx'
 import { Chip } from './workspace.tsx'
 
@@ -15,14 +15,14 @@ type Grade = { grade: string | null; chain: string[]; missing: string[] }
 type Convention = { id: string; text: string; kind: string; affected_fields: string[]; state: string; version: number; source: string; note: string; requested_value: string; decided_by: string; at: string; declaration_change: string }
 type Master = { version: string; columns: string[]; rows: Row[]; issues: Issue[]; assumptions?: Record<string, string>; conventions?: Convention[]; grades?: Record<string, Grade>[]; grade_summary?: Record<string, number> }
 
-function origin(p: Record<string, unknown> | undefined): string {
+function origin(p: Record<string, unknown> | undefined, t: (key: string) => string): string {
   if (!p) return ''
   const assumed = (p.assumptions as string[] | undefined)?.length ? `\n${(p.assumptions as string[]).join('\n')}` : ''
   if (p.formula || p.rule) return `= ${String(p.formula ?? p.rule)} (${(p.inputs as string[] | undefined)?.join(', ') ?? ''})${assumed}`
   if (p.conflict) return JSON.stringify(p.conflict)
-  const rows = (p.rows as number[] | undefined)?.length ? `rows ${(p.rows as number[]).join(',')} (${String(p.rollup)})` : p.row && `row ${p.row}`
+  const rows = (p.rows as number[] | undefined)?.length ? t('originRows').replace('{rows}', (p.rows as number[]).join(',')).replace('{rollup}', String(p.rollup)) : p.row && t('originRow').replace('{n}', String(p.row))
   const verified = p.verified_by_formula === true || p.verified_by_rule === true ? ' ✓' : ''
-  return [p.department, p.file, p.sheet, rows, p.column].filter(Boolean).join(' · ') + verified + assumed
+  return [typeof p.department === 'string' ? t(p.department) : p.department, p.file, p.sheet, rows, p.column].filter(Boolean).join(' · ') + verified + assumed
 }
 
 export function MasterTable({ batchId }: { batchId: string }) {
@@ -68,7 +68,7 @@ export function MasterTable({ batchId }: { batchId: string }) {
       <ul>{Object.entries(master.assumptions!).map(([name, text]) => {
         const decided = master.conventions?.find(c => c.id === name)
         return <li key={name}>
-          <strong>{gloss.label(name)}</strong> <span className="bf-convention" data-state={decided?.state ?? 'unconfirmed'}>{t(`conventionState_${decided?.state ?? 'unconfirmed'}`)}</span>
+          <strong>{name.startsWith('rollup.') ? conventionName(name, t) : gloss.label(name)}</strong> <span className="bf-convention" data-state={decided?.state ?? 'unconfirmed'}>{t(`conventionState_${decided?.state ?? 'unconfirmed'}`)}</span>
           {decided && <span className="bf-hint"> · {t(`conventionKind_${decided.kind}`)}{decided.affected_fields.length ? ` · ${t('conventionAffects')} ${decided.affected_fields.map(gloss.label).join(language === 'zh' ? '、' : ', ')}` : ''}</span>}
           <div>{gloss.text(text)}</div>
           {decided && decided.state !== 'unconfirmed' && <div className="bf-hint">{t('conventionSource')}{colon}{decided.source}{paren(`${decided.decided_by} · v${decided.version}`)}{decided.note ? ` · ${decided.note}` : ''}</div>}
@@ -83,14 +83,14 @@ export function MasterTable({ batchId }: { batchId: string }) {
     </div>)}
     </details>
     {selection && evidence && <aside className="bf-cell-evidence" aria-label={t('masterEvidence')}>
-      <h4>{t('masterEvidence')} · {gloss.label(selection.column)} {selectedGrade && <GradeMark grade={selectedGrade} />}</h4><p>{cellText(selection.row.values[selection.column]).text}</p><p>{gloss.message(origin(evidence))}</p>
+      <h4>{t('masterEvidence')} · {gloss.label(selection.column)} {selectedGrade && <GradeMark grade={selectedGrade} />}</h4><p>{cellText(selection.row.values[selection.column]).text}</p><p>{gloss.message(origin(evidence, t))}</p>
       {typeof evidence.department === 'string' && <button data-tour-id="evidence-source" onClick={() => navigate({ batch: batchId, view: 'source', source: String(evidence.department) })}>{t('masterOpenSource')}</button>}
     </aside>}
     {!master.rows.length && <div className="bf-empty"><strong>{t('empty')}</strong>{t('integrationNoRows')}</div>}
     {master.rows.length > 0 && <div className="bf-scroll"><table><thead><tr><th>{t('integrationRowState')}</th>{master.columns.map(c => { const en = gloss.english(c); return <th scope="col" key={c}>{en ?? c}{en && <small className="bf-original">{c}</small>}</th> })}</tr></thead>
       <tbody>{master.rows.map((row, i) => <tr key={i}><td><Chip status={row.complete ? 'ready' : 'partial'}/></td>{master.columns.map(c => {
         const { text, numeric, empty } = cellText(row.values[c])
-        return <td key={c} data-numeric={numeric} data-empty={empty} title={origin(row.provenance[c])}>{row.provenance[c] ? <button className="bf-master-cell" data-tour-id={i === 0 && c === traceColumn ? 'master-evidence-open' : undefined} aria-label={`${t('masterSelectCell')}: ${c} · ${text}`} onClick={() => { setSelection({ row, column: c }); tourEvent('evidence', batchId) }}>{text}</button> : text}</td>
+        return <td key={c} data-numeric={numeric} data-empty={empty} title={origin(row.provenance[c], t)}>{row.provenance[c] ? <button className="bf-master-cell" data-tour-id={i === 0 && c === traceColumn ? 'master-evidence-open' : undefined} aria-label={`${t('masterSelectCell')}: ${c} · ${text}`} onClick={() => { setSelection({ row, column: c }); tourEvent('evidence', batchId) }}>{text}</button> : text}</td>
       })}</tr>)}</tbody></table></div>}
   </section>
 }

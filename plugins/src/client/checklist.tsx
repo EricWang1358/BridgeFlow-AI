@@ -110,7 +110,7 @@ export function CloseChecklist({ period, batchId, onImport, onFocus, focusSource
   if (!period) return null
   if (error) return <p role="alert" className="bf-error">{error}</p>
   if (!list) return <p role="status" className="bf-loading">{t('loading')}</p>
-  if (list.refusal) return <p className="bf-hint">{list.refusal}</p>
+  if (list.refusal) return <p className="bf-hint">{gloss.message(list.refusal)}</p>
   const inboxSource = (kind: string) => kind === 'quarantine_cleared' ? 'quarantine' : kind === 'master_open_items' ? 'integration' : ''
   return <section className="bf-checklist" aria-label={t('closeChecklist')}>
     <h3>{t('closeChecklist')} · {list.period}</h3>

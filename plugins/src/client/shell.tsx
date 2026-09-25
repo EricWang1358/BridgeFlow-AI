@@ -117,7 +117,9 @@ function Shell({ ctx }: { ctx: Context }) {
     return () => controller.abort()
   }, [batchId, revision, audit.review?.status, audit.review?.report_id, artifactOffset])
   useEffect(() => {
-    setPreview(null); setReport(null); setError('')
+    // Paging keeps the current page on screen until the next arrives; a new source or report is
+    // cleared by the effect above, so a stale table never shows under another file's name.
+    setError('')
     if (!batchId) return
     const controller = new AbortController(), signal = controller.signal
     const task = selected.view === 'source' && selected.source

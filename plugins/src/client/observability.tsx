@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, describeError, useUI } from './ui.ts'
+import { api, describeError, useUI, useGloss } from './ui.ts'
 import { Explain } from './explain.tsx'
 
 /**
@@ -108,7 +108,7 @@ export function AgentRuns({ batchId }: { batchId: string }) {
 }
 
 export function DecisionJournal({ batchId }: { batchId: string }) {
-  const { t } = useUI()
+  const { t } = useUI(), gloss = useGloss()
   const [journal, setJournal] = useState<Journal | null>(null), [error, setError] = useState('')
   const [outcome, setOutcome] = useState<string>(''), [mine, setMine] = useState(true), [revision, setRevision] = useState(0)
   useEffect(() => {
@@ -139,7 +139,7 @@ export function DecisionJournal({ batchId }: { batchId: string }) {
     {journal.refusal_reasons.length > 0 && <div className="bf-callout" data-tone="info">
       <h3>{t('journalTopRefusals')}</h3>
       <ol className="bf-journal-reasons">{journal.refusal_reasons.map(item => <li key={item.reason}>
-        <span>{item.reason}</span><span className="bf-badge">{item.count}</span>
+        <span>{gloss.message(item.reason)}</span><span className="bf-badge">{item.count}</span>
       </li>)}</ol>
     </div>}
 
@@ -155,14 +155,14 @@ export function DecisionJournal({ batchId }: { batchId: string }) {
       <span className="bf-journal-outcome" data-outcome={item.outcome}>{t(`journal_${item.outcome}`)}</span>
       <span className="bf-journal-surface bf-mono">{item.method} {item.surface}</span>
       <span className="bf-journal-ms">{item.ms} ms</span>
-      {item.reason && <span className="bf-journal-reason">{item.reason}</span>}
+      {item.reason && <span className="bf-journal-reason">{gloss.message(item.reason)}</span>}
       <span className="bf-journal-trace bf-mono" title={t('journalTrace')}>{item.trace}</span>
     </li>)}</ol>
   </section>
 }
 
 export function EvalReport() {
-  const { t } = useUI()
+  const { t } = useUI(), gloss = useGloss()
   const [report, setReport] = useState<Report | null>(null), [error, setError] = useState('')
   useEffect(() => {
     const controller = new AbortController()
@@ -173,7 +173,7 @@ export function EvalReport() {
   if (error) return <p role="alert" className="bf-error">{error}</p>
   if (!report) return <p role="status" className="bf-loading">{t('loading')}</p>
   if (report.refusal) return <section className="bf-eval" aria-label={t('evalReport')}>
-    <h4>{t('evalReport')}</h4><p className="bf-hint">{report.refusal}</p>
+    <h4>{t('evalReport')}</h4><p className="bf-hint">{gloss.message(report.refusal)}</p>
   </section>
   const failed = report.checks.filter(c => !c.passed)
   return <section className="bf-eval" aria-label={t('evalReport')}>

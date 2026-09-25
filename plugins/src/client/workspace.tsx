@@ -152,7 +152,7 @@ export function DataWorkspace() {
   const { t, paren } = useUI(), gloss = useGloss(), dialog = useRef<HTMLDialogElement>(null)
   const [batch, setBatch] = useState<Summary | null>(null), [batchId, setBatchId] = useState('')
   const [section, setSection] = useState('master'), [offset, setOffset] = useState(0)
-  const [view, setView] = useState<View | null>(null), [review, setReview] = useState<Review | null>(null)
+  const [view, setView] = useState<View | null>(null), [review, setReview] = useState<Review | null>(null), [loadingView, setLoadingView] = useState(false)
   const [reportId, setReportId] = useState(''), [revision, setRevision] = useState(0)
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [notice, setNotice] = useState('')
   const currentBatch = useRef(batch); currentBatch.current = batch
@@ -191,11 +191,15 @@ export function DataWorkspace() {
   }, [])
   useEffect(() => {
     if (!batch) return
-    const abort = new AbortController(); setView(null); setReview(null); setError('')
+    // The table on screen stays (dimmed) until the next one arrives: clearing it first made the
+    // dialog collapse to a loading line and grow back on every tab or page change.
+    const abort = new AbortController(); setLoadingView(true); setError('')
+    const settle = () => { if (!abort.signal.aborted) setLoadingView(false) }
     if (section === 'review') {
       void api<Review>(`/batches/${batch.batch_id}/review${reportId ? `?report_id=${encodeURIComponent(reportId)}` : ''}`, { signal: abort.signal }).then(setReview)
-        .catch(e => { if (!abort.signal.aborted) setError(String(e).includes('no saved review') ? t('noReport') : describeError(e, t)) })
-    } else void api<View>(`/batches/${batch.batch_id}/view?section=${section}&offset=${offset}`, { signal: abort.signal }).then(setView).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
+        .catch(e => { if (!abort.signal.aborted) { setReview(null); setError(String(e).includes('no saved review') ? t('noReport') : describeError(e, t)) } }).finally(settle)
+    } else void api<View>(`/batches/${batch.batch_id}/view?section=${section}&offset=${offset}`, { signal: abort.signal }).then(setView)
+      .catch(e => { if (!abort.signal.aborted) { setView(null); setError(describeError(e, t)) } }).finally(settle)
     return () => abort.abort()
   }, [batch, section, offset, reportId, revision])
   async function copy(text: string, message: string) { try { await navigator.clipboard.writeText(text); setNotice(message) } catch (e) { setError(describeError(e, t)) } }
@@ -204,7 +208,7 @@ export function DataWorkspace() {
     corrections: batch.departments.reduce((n, d) => n + d.corrections, 0), columns: batch.column_questions ?? 0, quarantine: batch.departments.reduce((n, d) => n + d.quarantined, 0), review: review ? `${review.roles.filter(r => r.status === 'validated').length}/4` : '—' } : {}
   function tab(key: string) { setSection(key); setOffset(0); if (batch) navigate({ batch: batch.batch_id, view: key, ...(key === 'review' && reportId ? { report: reportId } : {}) }) }
   return <>
-    <dialog className="bf-panel" ref={dialog} onCancel={close} aria-label={t('batchTables')}>
+    <dialog className="bf-panel bf-tables-dialog" ref={dialog} onCancel={close} aria-label={t('batchTables')}>
       <header className="bf-panel-head">
         <div>
           <h2>{t('batchTables')}</h2>
@@ -258,14 +262,14 @@ export function DataWorkspace() {
         <nav className="bf-tabs" aria-label={t('tabs')}>{sections.map(key => <button key={key} aria-label={t(key)} aria-pressed={section === key} onClick={() => tab(key)}>{t(key)} <span className="bf-badge">{counts[key]}</span></button>)}</nav>
         {section === 'mappings' && <p className="bf-hint">{t('mappingHelp')}</p>}{section === 'columns' && <p className="bf-hint">{t('columnsHelp')}</p>}{section === 'quarantine' && <p className="bf-hint">{t('quarantineHelp')}</p>}
         {section === 'review' ? review ? <BusinessReview report={review} /> : !error && <p role="status" className="bf-loading">{t('loading')}</p> : view ? <>
-          {view.rows.length > 0 && <div className="bf-scroll"><table><thead><tr>{columns.map(c => {
+          {view.rows.length > 0 && <div className="bf-scroll" data-loading={loadingView} aria-busy={loadingView}><table><thead><tr>{columns.map(c => {
             const { group, label } = columnLabel(c, t), en = gloss.english(c.slice(c.indexOf('.') + 1))
             return <th scope="col" key={c}>{group && <small>{group}</small>}{en ?? label}{en && <small className="bf-original">{label}</small>}</th>
           })}</tr></thead><tbody>{view.rows.map((row, i) => <tr key={i}>{columns.map(c => {
             const { text, note, full, numeric, empty } = cellText(row[c])
             // The clipped form is what fits; the whole value stays one hover away,
             // because a table that silently shortens a business value is lying.
-            return <td key={c} data-numeric={numeric} data-empty={empty} {...(full ? { title: full } : {})}>{numeric ? text : gloss.message(text)}{note && <span className="bf-cellnote">{note}</span>}</td>
+            return <td key={c} data-numeric={numeric} data-empty={empty} {...(full ? { title: full } : {})}>{numeric ? text : c === 'department' ? t(text) : c === 'rule' || c === 'decision' ? (t(`${c}_${text}`) === `${c}_${text}` ? text : t(`${c}_${text}`)) : gloss.message(text)}{note && <span className="bf-cellnote">{t(`kind_${note}`) === `kind_${note}` ? note : t(`kind_${note}`)}</span>}</td>
           })}</tr>)}</tbody></table></div>}
           {!view.rows.length && <div className="bf-empty"><strong>{t('empty')}</strong>{t('noRows')}</div>}
           <div className="bf-pager">
