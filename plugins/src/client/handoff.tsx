@@ -85,6 +85,8 @@ export function Handoff() {
     setBusy(true); setError('')
     try { await action(); setRevision(n => n + 1) } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
   }
+  // Technical ids read as words when there is a label for them, and as themselves otherwise.
+  const label = (key: string, raw: string) => t(key) === key ? raw : t(key)
   return <Notebook title={t('handoffWorkspace')} description={t('handoffHelp')}
     sources={catalogue ? <>
       <p className="bf-hint">{catalogue.case} · {t('catalogueVersion')} {catalogue.version} <Chip status={catalogue.status}/></p>
@@ -93,8 +95,8 @@ export function Handoff() {
         <span className="bf-hint">{Object.values(template.fields).map(f => gloss.text(f.label) + (f.required ? '' : paren(t('optional')))).join(', ')}</span>
       </article>)}
       <h4>{t('fieldLineage')}</h4>
-      {catalogue.lineage.map((edge, i) => <p className="bf-hint" key={i}><code>{edge.source}</code> → <code>{edge.target}</code> · {edge.transform} <Chip status={edge.status}/></p>)}
-      <p className="bf-hint">{t('integrations')}: {catalogue.integrations.sink} / {catalogue.integrations.notifier}</p>
+      {catalogue.lineage.map((edge, i) => <p className="bf-hint" key={i}><code>{edge.source}</code> → <code>{edge.target}</code> · {label(`transform_${edge.transform}`, edge.transform)} <Chip status={edge.status}/></p>)}
+      <p className="bf-hint">{t('integrations')}: {label(`integration_${catalogue.integrations.sink}`, catalogue.integrations.sink)} / {label(`integration_${catalogue.integrations.notifier}`, catalogue.integrations.notifier)}</p>
     </> : <p className="bf-empty">{t('loading')}</p>}
     studio={<>
       <h4>{t('adoptionSignals')}</h4>
@@ -151,17 +153,17 @@ export function DraftForApproval({ artifactId }: { artifactId: string }) {
 }
 
 export function DraftDetail({ draft }: { draft: Draft }) {
-  const { t } = useUI()
+  const { t } = useUI(), gloss = useGloss()
   return <section className="bf-handoff-draft" aria-label={t('viewDraft')}>
     {draft.issues.filter(i => i.blocking).map((issue, i) => <div className="bf-callout" data-tone="warn" key={i}>
-      <h3>{issue.label ? `${issue.label} · ` : ''}{t(issue.kind)}</h3>
-      <p>{issue.question || `${t('pleaseProvide')}${issue.label}`}</p>
-      {issue.kind !== 'missing' && <p className="bf-hint">{issue.message}</p>}
+      <h3>{issue.label ? `${gloss.label(issue.label)} · ` : ''}{t(issue.kind)}</h3>
+      <p>{issue.question || `${t('pleaseProvide')}${gloss.label(issue.label)}`}</p>
+      {issue.kind !== 'missing' && <p className="bf-hint">{gloss.message(issue.message)}</p>}
     </div>)}
-    {draft.checks.filter(c => c.attention).map(c => <div className="bf-callout" data-tone="info" key={c.id}><h3>{c.title}</h3><p>{c.value} {c.unit}</p></div>)}
+    {draft.checks.filter(c => c.attention).map(c => <div className="bf-callout" data-tone="info" key={c.id}><h3>{gloss.message(c.title)}</h3><p>{c.value} {c.unit}</p></div>)}
     <div className="bf-scroll"><table><thead><tr><th>{t('field')}</th><th>{t('value')}</th><th>{t('asWritten')}</th><th>{t('provenance')}</th></tr></thead>
       <tbody>{Object.entries(draft.values).map(([key, v]) => <tr key={key}>
-        <th>{v.label}</th><td>{v.value}</td><td>{v.raw}{v.note ? ` · ${v.note}` : ''}</td>
+        <th>{gloss.label(v.label)}</th><td>{v.value}</td><td>{v.raw}{v.note ? ` · ${v.note}` : ''}</td>
         <td>{v.source.kind}: {v.source.ref}{v.evidence ? ` · ${v.evidence}` : ''}</td>
       </tr>)}</tbody></table></div>
     {draft.receipt && <p className="bf-hint">{t('receipt')}: {String(draft.receipt.system)} #{String(draft.receipt.record_id)}</p>}

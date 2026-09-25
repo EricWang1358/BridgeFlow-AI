@@ -270,6 +270,9 @@ export const style = `
    instead of being squeezed to fit: a squeezed text column wrapped a roll-up note into a
    270px-tall row and pushed every other cell of that row apart. */
 .bf-scroll > table { width: max-content }
+/* Content-heavy windows keep one height: rows arriving must not resize the window around them. */
+.bf-panel.bf-tables-dialog[open], .bf-panel.bf-expanded-preview[open] { height: min(880px, 90vh) }
+.bf-scroll[data-loading=true] { opacity: .55; transition: opacity .15s }
 .bf-panel th, .bf-panel td {
   padding: 9px 12px;
   border-bottom: 1px solid var(--bf-line);

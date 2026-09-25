@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AgentRuns, DecisionJournal, EvalReport } from './observability.tsx'
-import { api, describeError, formatDateTime, navigate, useUI, type Summary, useGloss } from './ui.ts'
+import { api, describeError, formatDateTime, navigate, useUI, type Summary, useGloss, conventionName } from './ui.ts'
 import { Explain } from './explain.tsx'
 
 /**
@@ -61,7 +61,7 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
     {!conventions.length && <p className="bf-hint">{t('recordsNoConventions')}</p>}
     <ul className="bf-records-list">
       {conventions.map(item => <li key={item.id}>
-        <span><strong>{gloss.label(item.id)}</strong> <span className="bf-convention" data-state={item.state}>{t(`conventionState_${item.state}`)}</span></span>
+        <span><strong>{item.id.startsWith('rollup.') ? conventionName(item.id, t) : gloss.label(item.id)}</strong> <span className="bf-convention" data-state={item.state}>{t(`conventionState_${item.state}`)}</span></span>
         <span className="bf-hint">{item.state === 'unconfirmed'
           ? t(`conventionKind_${item.kind}`)
           : `${t('conventionSource')}${colon}${item.source}${paren(`${item.decided_by} · v${item.version}`)}`}</span>
