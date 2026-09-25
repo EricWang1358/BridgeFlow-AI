@@ -200,7 +200,7 @@ source env.sh
 | 变量 | 作用 |
 | --- | --- |
 | `DSH_HOME` | dsh 存放 profile、插件、凭据与会话的位置。必须绝对路径，且在仓库外。必填：SDK 刻意不去发现 `~/.dsh` |
-| `DSH_PROFILE` / `DSH_PROVIDER` / `DSH_MODEL` | SDK 路由和预期的 Web 模型。dsh Web 还从 `$DSH_HOME/settings.yaml` 的 `agent-default-model` 读取默认模型；不一致时启动器会提前报错，需在「模型」页或该文件中对齐。旧会话可能另存了自己的模型选择。 |
+| `DSH_PROFILE` / `DSH_PROVIDER` / `DSH_MODEL` | 没在界面里选过模型时的默认模型。在 dsh Web「会话与设置」里选过的模型（存在 `$DSH_HOME/settings.yaml` 的 `agent-default-model`）优先，启动器会把它传给各个进程，并打印当前用的是哪个；这两个变量只在还没选过时生效。旧会话可能另存了自己的模型选择。 |
 | `DEEPSEEK_API_KEY` | 模型凭据 |
 | `FIELD_DICTIONARY_PATH` | 领域字典：哪个部门的哪一列装哪类实体、什么可以被算、怎么折叠 |
 

@@ -4,6 +4,17 @@
 
 **27 日前收口**：以 [当前演示闸门](docs/00-status.md)为准。暂停新增功能和未经业务原件支持的需求；只修现有演示链路的阻断、错误表述与回归。#261 继续放在交付后；#228 先保留已测上限与样例边界，#247 不因口头要求直接合入。
 
+## 2026-09-25 模型选择：界面上次选的优先，env.sh 只做兜底（分支 `fix/model-choice-precedence`）
+
+- 起因：`$DSH_HOME/settings.yaml` 里的默认模型在 10:30 被改成了 `hyper-charm/deepseek-v4-flash-0731`（界面「会话与设置」里的选择），和 env.sh 的 `deepseek-official/deepseek/deepseek-v4.1-flash` 不一致，启动器因此拒绝启动。
+- 用户定的规则：「上次选中啥默认就是啥，如果啥都没选 fallback 到 deepseek-official / deepseek/deepseek-v4.1-flash」。
+- `scripts/start_web.py` 用 `resolve_web_model` 取代了原来的冲突报错：
+  - 界面里选过模型，就用那个，同时把 `DSH_PROVIDER` / `DSH_MODEL` 改成同一个再传给各个进程，保证队长和 SDK 路由一致。settings.yaml 本身不改。
+  - 没选过时，用 env.sh 的这两个变量，写进 `$DSH_HOME/bridgeflow-web.patch.yml` 作为启动默认。
+  - 启动时都会打印「BridgeFlow model: … 」，说明当前用的是哪个模型、从哪来。访客模式不受影响。
+  - `test_start_web.py` 改为覆盖这三种情况，README 中英文对应的那一行也同步改了。
+- **待用户处理**：本机当前选的是 hyper-charm，它的密钥变量 `HYPER_CHARM_API_KEY` 不在 env.sh 里，settings.yaml 里其他自定义通道的密钥变量（`OPENCODE_GO_API_KEY_2`）也没设。所以研判会在第一次调用模型时失败。想用 commandcode（也就是 env.sh 的 deepseek-official 路由），在界面「会话与设置」里选它即可；或者补上对应的密钥变量。
+
 ## 2026-09-25 「更多示例」有了自己的引导（分支 `feat/sample-case-tour`）
 
 用户指出「More sample cases 没有 tour」。

@@ -222,7 +222,7 @@ source env.sh
 | Variable | What it does |
 | --- | --- |
 | `DSH_HOME` | Where dsh keeps profiles, plugins, credentials and sessions. Absolute path, outside the repository. Required: the SDK deliberately never discovers `~/.dsh` |
-| `DSH_PROFILE` / `DSH_PROVIDER` / `DSH_MODEL` | SDK route and expected dsh Web model. Web also keeps `agent-default-model` in `$DSH_HOME/settings.yaml`; if it differs, the launcher now stops before a paid turn and tells you to align the Models page or that file. Existing sessions can retain their own model selection. |
+| `DSH_PROFILE` / `DSH_PROVIDER` / `DSH_MODEL` | The default model when none has been chosen in the interface. A model chosen in dsh Web's Sessions & settings (kept as `agent-default-model` in `$DSH_HOME/settings.yaml`) wins: the launcher passes it to every process and prints which model is in use. These variables apply only until a choice is made. Existing sessions can retain their own model selection. |
 | `DEEPSEEK_API_KEY` | The model credential |
 | `FIELD_DICTIONARY_PATH` | The domain dictionary: which column of which department holds which entity, what may be computed, and how it rolls up |
 
