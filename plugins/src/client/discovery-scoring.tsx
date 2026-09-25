@@ -78,7 +78,7 @@ export function ScoreBoard({ project, onEdit }: { project: string; onEdit: (scor
   return <section aria-label={zh ? '评分四象限' : 'Rating quadrants'}><h3>{zh ? '评分四象限' : 'Rating quadrants'}</h3><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button>
     <p>{zh ? '只画出当前量表下依据齐全的评分；点的位置只是参考，立项要另行决定。重叠的点可以从列表里分别打开。' : 'Only complete scores under the current scale are plotted. A point\'s position is guidance; the project is decided separately. Open overlapping points from the list.'}</p>
     {error && <p role="alert">{error}</p>}{policy && page && <><PolicyView policy={policy} />
-      <div data-tour-id="quadrant-chart"><svg role="img" aria-label={zh ? '投入与价值四象限' : 'Effort and value quadrants'} viewBox="0 0 400 340" style={{ width: '100%' }}>
+      <div data-tour-id="quadrant-chart"><svg role="img" aria-label={zh ? '投入与价值四象限' : 'Effort and value quadrants'} viewBox="0 0 400 340" className="bf-quadrant">
         <rect x="45" y="25" width="320" height="270" fill="none" stroke="currentColor" />
         <path d={`M ${45 + split(policy.effort) * 320} 25 V 295 M 45 ${295 - split(policy.value) * 270} H 365`} stroke="#94a3b8" strokeDasharray="5 4" />
         <text x="200" y="326" textAnchor="middle" fontSize="12" fill="currentColor">{policy.effort.title} →</text><text x="45" y="16" fontSize="12" fill="currentColor">{policy.value.title} ↑</text>

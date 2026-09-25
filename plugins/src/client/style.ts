@@ -821,6 +821,9 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-approval-check { margin: 8px 0 4px; font-size: 12px; font-weight: 600 }
 .bf-approval-technical { margin-top: 8px; font-size: 12px; color: var(--bf-muted) }
 .bf-approval-technical summary { cursor: pointer }
+/* The chart keeps the size it was drawn at: stretched to a wide preview, its labels grew to
+   headline size and the plot ran past the bottom of the window. */
+.bf-quadrant { display: block; width: 100%; max-width: 560px; height: auto; max-height: 60vh; margin: 0 auto }
 .bf-quadrant-label { fill: var(--bf-muted) }
 .bf-quadrant-name { fill: var(--bf-text); font-weight: 600 }
 .bf-quadrant-dot { fill: var(--bf-chart-mark); stroke: var(--bf-surface); stroke-width: 2; cursor: pointer }
