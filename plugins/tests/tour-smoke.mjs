@@ -89,9 +89,9 @@ try {
   await target('evidence-source').click(); await step('sourceDetails')
   await target('source-details').click(); await step('sourceVerified'); await card().getByRole('button', { name: 'Next', exact: true }).click(); await step('download')
   // Download and rename are optional: Next is open before either happens (a download still advances by itself).
-  assert.equal(await card().getByRole('button', { name: 'Next', exact: true }).isEnabled(), true)
+  await card().locator('button.bf-tour-primary:not([disabled])').waitFor({ timeout: 5000 })
   const download = page.waitForEvent('download'); await target('master-download').click(); await download; await step('named')
-  assert.equal(await card().getByRole('button', { name: 'Next', exact: true }).isEnabled(), true)
+  await card().locator('button.bf-tour-primary:not([disabled])').waitFor({ timeout: 5000 })
   await target('notebook-name').fill('Guided monthly review'); await target('notebook-name').press('Tab'); await step('saved')
   await page.route('**/bridgeflow/notebook?*', async route => {
     if (route.request().method() !== 'POST') return route.continue()

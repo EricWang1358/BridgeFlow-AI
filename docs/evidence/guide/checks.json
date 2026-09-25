@@ -5,6 +5,8 @@
   "cases": [
     "fresh-answer-opens-page",
     "replay-does-not-navigate",
-    "button-opens-page"
+    "button-opens-page",
+    "open-item-settle-guidance",
+    "ask-captain-for-suggestion"
   ]
 }

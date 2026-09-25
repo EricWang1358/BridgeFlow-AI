@@ -192,7 +192,10 @@ try {
   // E14-UC05: the same open items, listed as what is waiting on whom — with no decision buttons
   const waiting = page.locator('.bf-inbox li')
   await waiting.first().waitFor()
-  assert.equal(await waiting.first().locator('button').count(), 1, 'an item offers one action: open where it is settled')
+  // It can be opened where it is settled, or a suggestion asked for; never approved or rejected here.
+  const actions = await waiting.first().locator('button').allInnerTexts()
+  assert.deepEqual(actions.filter(name => !['Open to settle', '打开处理', 'Ask the captain for a suggestion', '让队长给建议'].includes(name.trim())), [], 'an item offers no decision, only where to settle it and a suggestion')
+  assert.equal(actions.length, 2)
   await shot('open-items')
 
   // Observability: one agent run, drawn as lanes — the captain's steps and each department
