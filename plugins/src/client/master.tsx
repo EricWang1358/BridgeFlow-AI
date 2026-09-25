@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { tourEvent } from './tour/state.ts'
-import { api, cellText, describeError, navigate, useGloss, useUI, conventionName } from './ui.ts'
+import { api, cellText, describeError, navigate, useGloss, useUI, conventionName, useDataRevision } from './ui.ts'
 import { GradeMark } from './brief.tsx'
 import { Chip } from './workspace.tsx'
 
@@ -27,15 +27,19 @@ function origin(p: Record<string, unknown> | undefined, t: (key: string) => stri
 
 export function MasterTable({ batchId }: { batchId: string }) {
   const { t, colon, paren, language } = useUI(), gloss = useGloss()
+  const dataRevision = useDataRevision()
   const [master, setMaster] = useState<Master | null>(null), [error, setError] = useState(''), [revision, setRevision] = useState(0)
   const [selection, setSelection] = useState<{ row: Row; column: string } | null>(null)
+  const shownBatch = useRef('')
   useEffect(() => {
     const controller = new AbortController()
-    setMaster(null); setError(''); setSelection(null)
+    // Refreshing the same batch keeps the table on screen; another batch starts clean.
+    if (shownBatch.current !== batchId) { setMaster(null); setSelection(null) }
+    shownBatch.current = batchId; setError('')
     void api<Master>(`/integration/batches/${batchId}`, { signal: controller.signal }).then(value => { setMaster(value); if (value.rows.length) tourEvent('master', batchId) })
       .catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
-  }, [batchId, revision])
+  }, [batchId, revision, dataRevision])
   useEffect(() => {
     const opened = () => { if (master?.rows.length) tourEvent('master', batchId) }
     window.addEventListener('bridgeflow:master-opened', opened)

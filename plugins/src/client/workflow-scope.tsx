@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, askCaptain, describeError, formatDateTime, navigate, route, useUI } from './ui.ts'
+import { api, askCaptain, describeError, formatDateTime, navigate, route, useUI, useDataRevision } from './ui.ts'
 import { useGuestMode } from './guest.tsx'
 
 /**
@@ -15,6 +15,7 @@ export type ScopeState = { accepted: Accepted | null; current: boolean; stale_re
 
 export function WorkflowScopeCard({ revision, onChanged }: { revision: number; onChanged: () => void }) {
   const { t, language } = useUI()
+  const dataRevision = useDataRevision()
   const guest = useGuestMode()
   const modelOff = guest.guest && !guest.llm
   const [state, setState] = useState<ScopeState | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false)
@@ -23,7 +24,7 @@ export function WorkflowScopeCard({ revision, onChanged }: { revision: number; o
     void api<ScopeState>('/workflow/scope', { signal: controller.signal }).then(setState)
       .catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
-  }, [revision])
+  }, [revision, dataRevision])
   async function run(action: () => Promise<unknown>) {
     setBusy(true); setError('')
     try { await action(); onChanged() } catch (e) { setError(describeError(e, t)) } finally { setBusy(false) }
@@ -66,13 +67,14 @@ type Step = { seq: number; type: string; at: string; by: string; reason: string;
 /** One record's steps, read from its append-only stream: what, when, who and why. */
 export function WorkflowTimeline({ kind, id }: { kind: 'artifact' | 'handoff'; id: string }) {
   const { t, language } = useUI()
+  const dataRevision = useDataRevision()
   const [steps, setSteps] = useState<Step[] | null>(null), [error, setError] = useState('')
   useEffect(() => {
     const controller = new AbortController()
     void api<{ steps: Step[] }>(`/workflow/history/${kind}/${id}`, { signal: controller.signal }).then(value => setSteps(value.steps))
       .catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
-  }, [kind, id])
+  }, [kind, id, dataRevision])
   if (error) return <p role="alert" className="bf-error">{error}</p>
   if (!steps) return <p className="bf-hint bf-loading">{t('loading')}</p>
   return <ol className="bf-timeline">{steps.map(step => <li key={step.seq}>
@@ -87,12 +89,13 @@ export function WorkflowTimeline({ kind, id }: { kind: 'artifact' | 'handoff'; i
 /** On the discovery side: whether the filling workflow has taken this approved decision on. */
 export function DecisionScopeLink({ project, decision, seq }: { project: string; decision: string; seq: number }) {
   const { t } = useUI()
+  const dataRevision = useDataRevision()
   const [state, setState] = useState<ScopeState | null>(null)
   useEffect(() => {
     const controller = new AbortController()
     void api<ScopeState>('/workflow/scope', { signal: controller.signal }).then(setState).catch(() => undefined)
     return () => controller.abort()
-  }, [project, decision, seq])
+  }, [project, decision, seq, dataRevision])
   if (!state) return null
   const a = state.accepted
   const same = a?.project_id === project && a.decision_id === decision

@@ -5,7 +5,7 @@ import { FlowDiagram, FlowEditor, type FlowGraph } from './flow-graph.tsx'
 import { OpportunityEditor, type Opportunity } from './opportunity-editor.tsx'
 import { useEffect, useState, type FormEvent } from 'react'
 import { tourEvent } from './tour/state.ts'
-import { api, describeError, useUI } from './ui.ts'
+import { api, describeError, useUI, useDataRevision } from './ui.ts'
 import { useGuestMode } from './guest.tsx'
 
 type Item = { id: string; version: number; filename?: string; title?: string; parser_status?: string; status?: string }
@@ -14,6 +14,7 @@ type Staged = { upload_id: string; digest: string; material: Record<string, unkn
 
 export function Discovery() {
   const { language, t } = useUI()
+  const dataRevision = useDataRevision()
   const guest = useGuestMode().guest
   const tr = (zh: string, en: string) => language === 'zh' ? zh : en
   // A record's state in words; an unexpected value is shown as it is rather than hidden.
@@ -36,7 +37,7 @@ export function Discovery() {
     void api<Page>(`/discovery/${project}/${kind}?offset=${offset}&limit=10`, { signal: abort.signal })
       .then(setPage).catch(e => { if (!abort.signal.aborted) setError(describeError(e, t)) })
     return () => abort.abort()
-  }, [project, kind, offset, revision])
+  }, [project, kind, offset, revision, dataRevision])
   async function upload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(''); setCopied(false)
     const form = new FormData(event.currentTarget), file = form.get('file')

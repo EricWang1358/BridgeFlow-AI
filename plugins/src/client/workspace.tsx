@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { BusinessReview, type Review } from './review.tsx'
 import { NextStep } from './next-step.tsx'
-import { api, cellText, columnLabel, navigate, route, useGloss, useUI, type Summary, describeError } from './ui.ts'
+import { api, cellText, columnLabel, navigate, route, useGloss, useUI, type Summary, describeError, useDataRevision } from './ui.ts'
 export const departments = ['production', 'procurement', 'finance', 'marketing'] as const
 export const sections = ['master', 'corrections', 'mappings', 'columns', 'quarantine', 'review'] as const
 export function Chip({ status, label }: { status: string; label?: string | undefined }) { const { t } = useUI(); return <span className="bf-chip" data-status={status}>{label ?? t(status.replaceAll('-', '_'))}</span> }
@@ -150,6 +150,7 @@ type View = { total: number; offset: number; rows: Record<string, unknown>[] }
  */
 export function DataWorkspace() {
   const { t, paren } = useUI(), gloss = useGloss(), dialog = useRef<HTMLDialogElement>(null)
+  const dataRevision = useDataRevision()
   const [batch, setBatch] = useState<Summary | null>(null), [batchId, setBatchId] = useState('')
   const [section, setSection] = useState('master'), [offset, setOffset] = useState(0)
   const [view, setView] = useState<View | null>(null), [review, setReview] = useState<Review | null>(null), [loadingView, setLoadingView] = useState(false)
@@ -201,7 +202,7 @@ export function DataWorkspace() {
     } else void api<View>(`/batches/${batch.batch_id}/view?section=${section}&offset=${offset}`, { signal: abort.signal }).then(setView)
       .catch(e => { if (!abort.signal.aborted) { setView(null); setError(describeError(e, t)) } }).finally(settle)
     return () => abort.abort()
-  }, [batch, section, offset, reportId, revision])
+  }, [batch, section, offset, reportId, revision, dataRevision])
   async function copy(text: string, message: string) { try { await navigator.clipboard.writeText(text); setNotice(message) } catch (e) { setError(describeError(e, t)) } }
   const columns = Array.from(new Set(view?.rows.flatMap(row => Object.keys(row)) ?? []))
   const counts: Record<string, number | string> = batch ? { master: batch.master_rows, mappings: batch.unresolved,

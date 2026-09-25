@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, askCaptain, useUI, describeError, useGloss } from './ui.ts'
+import { api, askCaptain, useUI, describeError, useGloss, useDataRevision } from './ui.ts'
 import { Notebook } from './notebook.tsx'
 import { Chip } from './workspace.tsx'
 import { tourEvent } from './tour/state.ts'
@@ -39,6 +39,7 @@ type Finding = { rule: string; category: string; scope: Record<string, string>; 
 
 export function Handoff() {
   const { t, paren } = useUI(), gloss = useGloss()
+  const dataRevision = useDataRevision()
   const guest = useGuestMode()
   const modelOff = guest.guest && !guest.llm
   const [rows, setRows] = useState<Row[] | null>(null), [catalogue, setCatalogue] = useState<Catalogue | null>(null)
@@ -58,7 +59,7 @@ export function Handoff() {
     })
       .catch(e => { if (!signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
-  }, [revision])
+  }, [revision, dataRevision])
 
   useEffect(() => {
     if (!selected) { setDraft(null); return }
@@ -66,7 +67,7 @@ export function Handoff() {
     void api<Draft>(`/workflow/artifacts/${selected}`, { signal: controller.signal }).then(setDraft)
       .catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
-  }, [selected, revision])
+  }, [selected, revision, dataRevision])
 
   const counts: Record<string, number> = {}, overdue: Record<string, number> = {}
   for (const row of rows ?? []) if (row.kind !== 'partial') {

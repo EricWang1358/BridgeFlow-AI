@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AgentRuns, DecisionJournal, EvalReport } from './observability.tsx'
-import { api, describeError, formatDateTime, navigate, useUI, type Summary, useGloss, conventionName } from './ui.ts'
+import { api, describeError, formatDateTime, navigate, useUI, type Summary, useGloss, conventionName, useDataRevision } from './ui.ts'
 import { Explain } from './explain.tsx'
 
 /**
@@ -23,6 +23,7 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
   language: string
 }) {
   const { t, colon, paren } = useUI(), gloss = useGloss()
+  const dataRevision = useDataRevision()
   const [conventions, setConventions] = useState<Convention[]>([])
   const [dispositions, setDispositions] = useState<Disposition[]>([]), [dispositionNote, setDispositionNote] = useState('')
   const [error, setError] = useState('')
@@ -38,7 +39,7 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
       .then(value => { setDispositions(value.dispositions ?? []); setDispositionNote(value.refusal ?? '') })
       .catch(() => { if (!signal.aborted) setDispositionNote(t('recordsNoReview')) })
     return () => controller.abort()
-  }, [batchId])
+  }, [batchId, dataRevision])
   if (batchId && !summary) return <p role="status" className="bf-loading">{t('loading')}</p>
   return <section className="bf-records" aria-label={t('records')}>
     <div className="bf-card-head"><h3>{t('records')}{summary ? ` · ${summary.period}` : ''}</h3></div>

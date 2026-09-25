@@ -218,8 +218,12 @@ try {
   await decision.getByText('sku:test-0', { exact: true }).waitFor()
   await decision.getByText('接受映射', { exact: true }).waitFor()
   await decision.getByText('决定时展示的依据', { exact: true }).waitFor()
+  const revisionBefore = await page.evaluate(() => Number(document.body.dataset.bfDataRevision ?? 0))
   await page.getByRole('button', { name: /^(允许一次|Allow once)$/ }).click({ timeout: 30_000 })
   await waitTurn(1)
+  // The approved write reaches the Studio by itself: every page is told to reload, no Refresh click.
+  await page.waitForFunction(before => Number(document.body.dataset.bfDataRevision ?? 0) > before, revisionBefore, { timeout: 10_000 })
+  const revisionAfterWrite = await page.evaluate(() => Number(document.body.dataset.bfDataRevision ?? 0))
   const acceptedMemory = await readFile(`${scratch}/mappings.json`, 'utf8')
   assert(acceptedMemory.includes('sku:test-0'))
   if (employeeMode) {
@@ -242,6 +246,7 @@ try {
   assert.match(await page.evaluate(() => document.activeElement?.textContent ?? ''), /^(拒绝|Reject)$/)
   await page.keyboard.press('Enter')
   await waitTurn(2)
+  assert.equal(await page.evaluate(() => Number(document.body.dataset.bfDataRevision ?? 0)), revisionAfterWrite, 'a rejected call wrote nothing, so nothing reloads')
   const afterRejection = await sessionEvents()
   const refusalNarration = afterRejection.filter(e => e.type === 'assistant/message').at(-1).data.message.content
     .filter(block => block.type === 'text').map(block => block.text).join('\n')

@@ -35,7 +35,12 @@ export function projectAudit(events: AuditEvent[]) {
   const approvals = asks.map(ask => ({ id: String(ask.data.id), call: String(ask.data.callId), time: ask.time,
     outcome: String(events.find(e => e.type === 'approval/decided' && e.data.id === ask.data.id)?.data.outcome ?? 'running'),
     note: String(events.filter(e => e.type === 'bridgeflow/approval-note' && e.data.callId === ask.data.callId).at(-1)?.data.note ?? events.flatMap(results).find(result=>result.callId===ask.data.callId)?.text.match(/The reviewer said: "([\s\S]*?)"\. Nothing was written/)?.[1] ?? '') }))
-  return { review: review?.data, calls, approvals }
+  // Writes the captain finished in this session: every write waits for an approval, so a call
+  // that was allowed and has since returned is one. The Studio reloads when this count moves.
+  const allowed = new Set(events.filter(e => e.type === 'approval/decided' && e.data.outcome === 'allowed-once')
+    .map(e => String(events.find(ask => ask.type === 'approval/asked' && ask.data.id === e.data.id)?.data.callId ?? '')))
+  const writes = events.flatMap(results).filter(result => allowed.has(result.callId)).length
+  return { review: review?.data, calls, approvals, writes }
 }
 
 /** Never substitute a saved report for a newer run that has no final report yet. */

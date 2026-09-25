@@ -6,7 +6,7 @@ import { notebookKinds, notebookPurposes, isNotebookKind } from '../notebook-cap
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ISessions, SessionEventWindow } from '@deepseek-ai/dsh-api-session-controller/client'
-import { api, formatDateTime, navigate, portalLoginUrl, route, startReview, takeRouteError, useUI, type Summary, describeError, useGloss, reportNotebookView } from './ui.ts'
+import { api, formatDateTime, navigate, portalLoginUrl, route, startReview, takeRouteError, useUI, type Summary, describeError, useGloss, reportNotebookView, useDataRevision, bumpDataRevision } from './ui.ts'
 import { ImportForm, Chip, BatchChip } from './workspace.tsx'
 import { TasksView } from './tasks.tsx'
 import { DataView } from './data.tsx'
@@ -43,6 +43,13 @@ function Shell({ ctx }: { ctx: Context }) {
   const binding = session ? sessions.binding(session) : undefined
   const events = useSyncExternalStore<SessionEventWindow>(fn => binding?.eventSource.subscribe(fn) ?? (() => {}), () => binding?.eventSource.getSnapshot() ?? emptyWindow)
   const audit = useMemo(() => projectAudit(events.entries.filter(e => e.type === 'event').map(e => e.event) as AuditEvent[]), [events])
+  // When the captain finishes a write, every Studio page reloads. Writes already in the session
+  // when it opens are history, not news, so the first count only sets the baseline.
+  const dataRevision = useDataRevision(), seenWrites = useRef<number | null>(null)
+  useEffect(() => { seenWrites.current = null }, [session])
+  // Visible on the page, so a check (or a person in devtools) can see the Studio was told to reload.
+  useEffect(() => { document.body.dataset.bfDataRevision = String(dataRevision) }, [dataRevision])
+  useEffect(() => { if (seenWrites.current !== null && audit.writes > seenWrites.current) bumpDataRevision(); seenWrites.current = audit.writes }, [audit.writes, session])
   const hash = useSyncExternalStore(hashSubscribe, () => location.hash)
   const selected = useMemo(() => route(), [hash])
   const batchId = selected.batch || String(audit.review?.batch_id ?? '')
@@ -106,7 +113,8 @@ function Shell({ ctx }: { ctx: Context }) {
   useEffect(() => { setOffset(0); setPreview(null); setReport(null); }, [batchId, selected.source, selected.report])
   useEffect(() => { setArtifactOffset(0); setCopied(false); setFeishuNotice('') }, [batchId])
   useEffect(() => {
-    setBatchData(null); setError('')
+    // A reload of the same batch keeps Sources and Artifacts on screen until the new data lands.
+    setBatchData(current => current?.batchId === batchId ? current : null); setError('')
     if (!batchId) return
     const controller = new AbortController(), signal = controller.signal
     void Promise.all([
@@ -116,7 +124,7 @@ function Shell({ ctx }: { ctx: Context }) {
     ]).then(([batch, files, outputs]) => { setBatchData({ batchId, summary: batch, sources: files.sources, artifacts: outputs.artifacts, artifactTotal: outputs.total }) })
       .catch(e => { if (!signal.aborted) setError(describeError(e, t)) })
     return () => controller.abort()
-  }, [batchId, revision, audit.review?.status, audit.review?.report_id, artifactOffset])
+  }, [batchId, revision, audit.review?.status, audit.review?.report_id, artifactOffset, dataRevision])
   useEffect(() => {
     // Paging keeps the current page on screen until the next arrives; a new source or report is
     // cleared by the effect above, so a stale table never shows under another file's name.
