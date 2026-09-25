@@ -9,6 +9,7 @@ import { QuotationProgress } from './quotation-progress.tsx'
 import { Notebook } from './notebook.tsx'
 import { BusinessReview, type Review } from './review.tsx'
 import { Chip, BatchChip, type Limits } from './workspace.tsx'
+import { StateGuide } from './state-guide.tsx'
 import { NextStep } from './next-step.tsx'
 
 type Injected = { source: SessionEventSource; loadOlder: () => Promise<void> }
@@ -77,6 +78,9 @@ function MonthlyState({ source, loadOlder, openView }: ConvViewProps & Injected)
     <p className="bf-hint">{t('mappingHelp')} {t('quarantineHelp')}</p>
     <details><summary>{t('batchAudit')} · {selected.calls.length} Spawn · {t('dispatchCount')}</summary><p>{t('loadedWindow')}</p><ul>{selected.calls.map((e, i) => <li key={i}>{String(e.data.callId)} · {formatTime(e.time, language)}</li>)}</ul>{snapshot.hasMore && <button onClick={() => void loadOlder().catch(e => setError(describeError(e, t)))}>{t('loadOlder')}</button>}</details>
     </>}>
+    {/* What to do next leads the page; the evidence and the state map follow it. */}
+    <StateGuide batch={batch} running={waiting && batchId === eventBatch} approvalWaiting={audit.approvals.some(a => a.outcome === 'running')}
+      report={report ? { id: report.report_id, status: report.status, attention: report.roles.flatMap(r => r.checks).filter(c => c.expected_status === 'attention').length } : null} />
     {isApproval ? <section aria-label={t('approval')}><h3>{t('approval')}</h3>{audit.approvals.filter(a => a.outcome === node).map(a => <article className="bf-card" key={a.id}><Chip status={a.outcome} /><p>{a.id}</p><p>{a.note}</p><small>{a.call}</small></article>)}{!approvalCounts[node] && <p>{t('unknown')}</p>}</section>
       : report && !['needs_configuration', 'needs_review', 'ready', 'empty'].includes(node) ? <BusinessReview report={{ ...report, roles: ['attention', 'ok'].includes(node) ? report.roles.map(r => ({ ...r, checks: r.checks.filter(c => c.expected_status === node) })) : report.roles }} /> : <p>{batch?.refusal || (waiting ? t('waitingReview') : report ? t('batchHint') : batch ? t('noReport') : t('batchHint'))}</p>}
   </Notebook>

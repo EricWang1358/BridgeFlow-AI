@@ -19,6 +19,18 @@ class ScriptedModel extends LlmAdapter {
       const lastUser = messages.findLastIndex(m => m?.role === 'user' && m?.source?.kind === 'user')
       const asked = words(messages[lastUser]).find(text => text.includes('Where is it: '))
       const answered = messages.slice(lastUser + 1).some(m => JSON.stringify(m).includes('app_guide'))
+      // "Which batch is this notebook on?" is answered only from the notebook context the host sends.
+      if (words(messages[lastUser]).some(text => text.includes('Which batch is this notebook on?'))) {
+        const all = words(messages).join('\n')
+        const bound = /bound to batch ([a-f0-9]{32})/.exec(all)?.[1]
+        const text = bound ? `Notebook batch: ${bound}` : /has no data yet/.test(all) ? 'Notebook: no data yet' : 'Notebook: unknown'
+        yield { type: 'block-start', index: 0, blockType: 'text' }
+        yield { type: 'text-delta', index: 0, text }
+        yield { type: 'block-end', index: 0, block: { type: 'text', text } }
+        yield { type: 'usage', usage: { inputTokens: 10, outputTokens: 10 } }
+        yield { type: 'finish', reason: { kind: 'stop' } }
+        return
+      }
       if (asked && !answered) {
         const id = ToolCallId(`guide-${Date.now()}`), args = JSON.stringify({ feature: asked.slice(asked.indexOf('Where is it: ') + 13).trim().split(/\s/)[0] })
         yield { type: 'block-start', index: 0, blockType: 'tool-call' }

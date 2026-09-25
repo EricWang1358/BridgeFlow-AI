@@ -107,6 +107,7 @@ export function Handoff() {
       </article>) : <p className="bf-hint">{t('noAdoptionSignals')}</p>}
       <p className="bf-hint">{t('handoffWriteHelp')}</p>
     </>}>
+    <p className="bf-chip bf-shared" data-status="info">{t('sharedAcrossNotebooks')}</p>
     <div className="bf-card-head"><h3>{t('handoffBoard')}</h3><button onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button></div>
     {error && <p role="alert" className="bf-error">{error}</p>}
     {!rows && !error && <p role="status" className="bf-loading">{t('loading')}</p>}

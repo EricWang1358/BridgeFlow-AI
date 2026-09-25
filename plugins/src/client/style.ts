@@ -681,6 +681,18 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-run-steps > li[data-outcome=refused] { box-shadow: inset 2px 0 var(--bf-danger) }
 .bf-run-step-reason { flex: 1 1 100%; color: var(--bf-text); line-height: 1.5 }
 
+/* Business state's "what to do now": the month's five stages, then the clicks for this one. */
+.bf-state-guide { border: 1px solid color-mix(in srgb, var(--bf-accent) 22%, transparent); border-radius: 12px; background: var(--bf-accent-soft); padding: 12px 14px; margin: 0 0 14px }
+.bf-state-guide h3 { margin: 10px 0 4px; font-size: 14px }
+.bf-stage-strip { list-style: none; display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; font-size: 11px; font-weight: 600 }
+.bf-stage-strip li { padding: 3px 9px; border-radius: 999px; color: var(--bf-muted); background: var(--bf-surface) }
+.bf-stage-strip li[data-state=done] { color: var(--bf-ok) }
+.bf-stage-strip li[data-state=done]::before { content: '✓ ' }
+.bf-stage-strip li[data-state=current] { color: #fff; background: var(--bf-accent) }
+
+/* Company-wide pages say so: they are not part of the open notebook. */
+.bf-shared { display: inline-flex; white-space: normal; line-height: 1.45; padding: 4px 10px; margin: 4px 0 10px; color: var(--bf-accent); background: var(--bf-accent-soft) }
+
 /* How an open item gets settled, under its detail. */
 .bf-settle { margin: 6px 0 0; font-size: 12px; line-height: 1.55; color: var(--bf-text) }
 .bf-settle > b { font-weight: 600; color: var(--bf-muted) }

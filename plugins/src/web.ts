@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto'
 import { DEFAULT_BINDING_MS, actors } from './actor.ts'
 import { notebookDomain, parseNotebook, readNotebook, saveNotebook } from './notebooks.ts'
+import { notebookContextText, parseViewing, type Viewing } from './notebook-context.ts'
+import type {} from '@deepseek-ai/dsh-system-prompt'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-connection'
@@ -19,6 +21,18 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
     const domain=await ctx.storageDomain.open(notebookDomain)
     ctx.effect(()=>()=>domain.close(), 'bridgeflow: close notebook store')
     const notebookTable=domain.table('notebooks'), noteTable=domain.table('approval_notes')
+    // Which batch each notebook session's page shows right now (an unsaved notebook has one
+    // too). Bounded: the oldest entry goes first. Read into the captain's context each turn.
+    const viewing = new Map<string, Viewing>()
+    ctx.inject(['systemPrompt'], prompt => {
+      prompt.effect(() => prompt.systemPrompt.context({
+        name: 'bridgeflow:notebook', order: 130,
+        text: context => {
+          const session = (context as { agent?: { session?: { id: string } } }).agent?.session
+          return session ? notebookContextText(viewing.get(session.id), notebookTable.get(session.id) ?? null) : ''
+        },
+      }), 'bridgeflow: notebook context for the captain')
+    })
     const noteKey=(sessionId:string,callId:string)=>createHash('sha256').update(JSON.stringify([sessionId,callId])).digest('hex')
     notes.onSettled=async (sessionId,callId,outcome)=>{
       const key=noteKey(sessionId,callId), entry=noteTable.get(key)
@@ -44,6 +58,19 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           const rows=[...noteTable.entries()].map(([,value])=>value).filter(value=>value.sessionId===id).sort((a,b)=>b.time-a.time)
           res.writeHead(200,{'content-type':'application/json','cache-control':'no-store'}).end(JSON.stringify({total:rows.length,notes:rows.slice(0,50)}))
           return
+        }
+        if (path === '/notebook-context' && req.method === 'POST') {
+          // The page says which batch this session's notebook shows. Navigation only: it
+          // grants nothing, and a malformed report is refused rather than guessed at.
+          const id = url.searchParams.get('session_id') ?? ''
+          let body = ''
+          for await (const chunk of req) { body += chunk.toString(); if (body.length > 1024) break }
+          let report: Viewing | null = null
+          try { report = parseViewing(JSON.parse(body)) } catch { report = null }
+          if (!/^[a-zA-Z0-9_-]{1,160}$/.test(id) || !report) { res.writeHead(422).end('{}'); return }
+          viewing.delete(id); viewing.set(id, report)
+          if (viewing.size > 500) viewing.delete(viewing.keys().next().value!)
+          res.writeHead(204).end(); return
         }
         if (path === '/actor' && req.method === 'POST') {
           // The browser says "this session is mine, here is my portal token" (#231).

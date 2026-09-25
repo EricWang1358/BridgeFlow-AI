@@ -221,6 +221,37 @@ const labels = {
   studioStartHelp: ['添加部门文件后即可开始月度研判。报价工作区现在就能用。', 'Add department files to start a monthly review. The quotation workspace works without them.'],
   preview: ['预览', 'Preview'], expandPreview: ['展开预览', 'Expand preview'],
 
+  sharedAcrossNotebooks: ['全公司共享：这里的记录属于整个公司，不属于某个笔记本，每个笔记本看到的都一样。', 'Shared across the company: these records belong to no single notebook, and every notebook sees the same ones.'],
+  guideTitle: ['现在做什么', 'What to do now'], guideStages: ['本月进度', 'Where this month stands'],
+  stageFiles: ['交文件', 'Files'], stageClean: ['清理数据', 'Clean up'], stageReview: ['四部门研判', 'Review'], stageDecide: ['处理结论', 'Decide'], stageClose: ['收口', 'Close'],
+  guideOpenColumns: ['打开列匹配', 'Open column matches'], guideOpenReport: ['打开这份报告', 'Open this report'], guideAskMatches: ['让队长提出匹配', 'Ask the captain to propose matches'],
+  guide_approval_title: ['有一张审批卡在等你', 'An approval card is waiting for you'],
+  guide_approval_steps: ['切到「对话」标签，审批卡在输入框的位置。\n逐项核对卡上的值和出处。\n不同意就在「拒绝理由」里写明原因，再点「拒绝」；同意就点「允许一次」。', 'Switch to the Chat tab: the card sits where the message box was.\nCheck each value on the card and where it came from.\nTo refuse, write why in Rejection reason and choose Reject; to accept, choose Allow once.'],
+  guide_approval_after: ['在你决定之前什么都不会写入；拒绝的理由会转给队长。', 'Nothing is written until you decide; a rejection’s reason goes back to the captain.'],
+  guide_empty_title: ['先把本月的四份部门文件交上来', 'Add this month’s four department files'],
+  guide_empty_steps: ['在左侧「来源」里点「添加来源」。\n选月份，为生产、物资、财务、市场各选一份文件，再点导入。\n只是想先看看？点左侧的「打开示例笔记本」，不用准备文件，也不调用 AI。', 'In Sources on the left, choose Add sources.\nPick the month and one file for each of production, procurement, finance and marketing, then import.\nJust looking? Choose Open sample notebook on the left: no files, no AI.'],
+  guide_empty_after: ['导入会自动清洗和核对；这一步不调用模型，不花钱。', 'Import cleans and checks the files by itself; it calls no model and costs nothing.'],
+  guide_configure_title: ['有上传的列字典不认识', 'Some uploaded columns are not in the dictionary'],
+  guide_configure_steps: ['点下面的「打开列匹配」，看每个不认识的列能对上哪个已声明的列。\n也可以点「让队长提出匹配」：队长逐列给出建议和依据，每一条都会弹出审批卡，由你决定。\n都匹配好之后，在左侧「添加来源」里重新导入这批文件。', 'Choose Open column matches below to see which declared column each unknown one could be.\nOr choose Ask the captain to propose matches: it suggests one per column with its evidence, and each comes to you as an approval card.\nOnce matched, import the files again from Add sources on the left.'],
+  guide_configure_after: ['批准的匹配只对重新导入生效，当前批次保持不变。', 'An approved match applies to the next import; this batch stays as it is.'],
+  guide_settle_title: ['导入扣下了一些行或映射，需要人来定', 'The import held back rows or mappings for a person to settle'],
+  guide_settle_steps: ['打开右侧「工作室」→「本月任务」。\n在「待确认事项」里，每一项下面写着「怎么处理」；点「打开处理」直接去它的页面。\n拿不准就点「让队长给建议」，它只给建议，不替你决定。', 'Open Studio on the right → This month’s tasks.\nUnder Open items, each item says How to settle; Open to settle takes you to its page.\nUnsure? Ask the captain for a suggestion: it advises and never decides for you.'],
+  guide_settle_after: ['全部处理完，批次变成「可以研判」。', 'When every item is settled, the batch becomes ready for review.'],
+  guide_review_title: ['数据齐了，可以发起四部门研判', 'The data is ready for the four-department review'],
+  guide_review_steps: ['打开右侧「工作室」→「本月任务」。\n点右上角的「发起研判」。\n在对话上方切到「轨迹」，看队长派出的四个部门代理。', 'Open Studio on the right → This month’s tasks.\nChoose Start the review at the top right.\nSwitch to the Trajectory tab above the chat to watch the four department agents.'],
+  guide_review_after: ['研判会调用模型，大约一分钟；完成的报告出现在「工作室」→「产物」。', 'The review calls the model and takes about a minute; the finished report appears under Studio → Artifacts.'],
+  guide_running_title: ['研判正在进行', 'The review is running'],
+  guide_running_steps: ['现在不用点任何东西。\n在对话上方的「轨迹」里能看到四个部门代理各自在做什么。', 'Nothing to click right now.\nThe Trajectory tab above the chat shows what each of the four department agents is doing.'],
+  guide_running_after: ['完成后报告出现在「工作室」→「产物」，这一页会自动更新。', 'When it finishes, the report appears under Studio → Artifacts and this page updates.'],
+  guide_partial_title: ['有部门没有给出结论', 'Some departments did not return findings'],
+  guide_partial_steps: ['在右侧「工作室」→「产物」里打开这份报告，看缺了哪些部门。\n能线下确认的，在报告里写「人工复核意见」，点「交给队长复核」。\n数据有问题的，改好文件后用「数据」页该部门一行的「补传单个部门」重新提交。', 'Open the report under Studio → Artifacts and see which departments are missing.\nIf it can be confirmed offline, write a Human review note in the report and choose Send to captain.\nIf the data is wrong, correct the file and resubmit it with Replace one department’s file on the Data page.'],
+  guide_partial_after: ['不完整的报告不能签核，也不会替缺的部门补结论。', 'A partial report cannot be signed off, and nothing is made up for the missing departments.'],
+  guide_decide_title: ['有 {attention} 条结论需要处理', '{attention} findings need a decision'],
+  guide_decide_steps: ['打开右侧「工作室」→「本月结论」，从标红的结论看起。\n每条结论写着公式、阈值和依据的单元格，点依据可以追到原始行。\n决定怎么处理后，在对话里告诉队长，它会用审批卡记录你的决定。', 'Open Studio on the right → Conclusions and start with the flagged findings.\nEach one shows its formula, threshold and source cells; open a source to see the original row.\nOnce you decide, tell the captain in the chat: it records your decision through an approval card.'],
+  guide_decide_after: ['结论只是建议，处置由你决定，并且留有记录。', 'Findings are advice; what to do is your decision, and it is recorded.'],
+  guide_close_title: ['本月可以收口了', 'This month is ready to close'],
+  guide_close_steps: ['打开右侧「工作室」→「本月任务」，核对收口清单每一步都已完成。\n在「本月结论」里下载或查看月度简报。', 'Open Studio on the right → This month’s tasks and check that every close step is done.\nRead or download the monthly brief under Conclusions.'],
+  guide_close_after: ['收口清单只汇总各页面的状态，不替你签发。', 'The close checklist only collects each page’s status; it signs nothing off for you.'],
   settleHow: ['怎么处理', 'How to settle'], settleNothingOpen: ['本月没有待办，可以直接发起研判。', 'Nothing is open this month; the review can start.'], askSettleOne: ['让队长给建议', 'Ask the captain for a suggestion'],
   askSettleAllButton: ['让队长给出完成建议', 'Ask the captain how to finish these'], settleAsked: ['已发给队长，建议在中间的对话里。', 'Sent to the captain; the suggestion appears in the chat.'],
   askSettleAll: ['请调用 monthly_inbox（期间 {period}，批次 {batch}）查看这个月的全部待办，逐项给出完成建议：这是什么问题、你建议怎么处理以及依据（标明这是模型建议）、由谁决定、在哪个页面处理；能由你用工具发起下一步的，说明是哪一步，并先问我要不要开始。不要替任何人做决定，也不要改动任何数据。',
@@ -704,6 +735,17 @@ async function refreshPortalToken(): Promise<boolean> {
  * attribution on those reads — the journal records them as the host's, as it did before
  * — and must never block the page or provoke a login prompt.
  */
+/**
+ * Tell the host which batch this session's notebook shows, so the captain knows whether "this
+ * notebook" has data. Navigation only; best effort, never blocks the page.
+ */
+export async function reportNotebookView(sessionId: string, batch: string, kind?: string): Promise<void> {
+  if (!sessionId) return
+  try {
+    await fetch(`/bridgeflow/notebook-context?session_id=${encodeURIComponent(sessionId)}`, { method: 'POST', credentials: 'same-origin',
+      headers: { 'content-type': 'application/json' }, body: JSON.stringify({ batch: /^[a-f0-9]{32}$/.test(batch) ? batch : null, ...(kind ? { kind } : {}) }) })
+  } catch { /* The captain then simply lacks the hint. */ }
+}
 const claimedSessions = new Set<string>()
 export async function claimActor(sessionId: string): Promise<void> {
   const token = portalToken()

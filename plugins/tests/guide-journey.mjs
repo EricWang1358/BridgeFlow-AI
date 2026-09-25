@@ -50,6 +50,10 @@ try {
   const overview = studio.getByRole('button', { name: /^.?Overview/ }).first()
   await overview.click(); assert.equal(await discovery.getAttribute('aria-pressed'), 'false')
   const composer = page.locator('[contenteditable=true]').first()
+  // The captain knows which notebook it is in: its context names the open notebook's batch.
+  const sampleBatch = new URLSearchParams((await page.evaluate(() => location.hash)).slice(12)).get('batch')
+  await composer.fill('Which batch is this notebook on?'); await composer.press('Enter')
+  await page.getByText(`Notebook batch: ${sampleBatch}`).waitFor()
   await composer.fill('Where is it: quadrant_chart'); await composer.press('Enter')
   // A fresh answer opens the page by itself.
   await page.waitForFunction(() => location.hash.includes('view=discovery'))
@@ -77,7 +81,7 @@ try {
   await page.getByText(/Please suggest how to settle this open item: /).first().waitFor()
   await page.screenshot({ path: `${evidence}/settle-suggestion.png` })
   assert.deepEqual(errors, [])
-  await writeFile(`${evidence}/checks.json`, JSON.stringify({ status: 'passed', mode: 'offline', model_calls: 0, cases: ['fresh-answer-opens-page', 'replay-does-not-navigate', 'button-opens-page', 'open-item-settle-guidance', 'ask-captain-for-suggestion'] }, null, 2))
+  await writeFile(`${evidence}/checks.json`, JSON.stringify({ status: 'passed', mode: 'offline', model_calls: 0, cases: ['fresh-answer-opens-page', 'replay-does-not-navigate', 'button-opens-page', 'open-item-settle-guidance', 'ask-captain-for-suggestion', 'captain-knows-notebook-batch'] }, null, 2))
   console.log(JSON.stringify({ status: 'passed', artifacts: evidence, scratch }))
 } catch (e) { if (page) { await page.screenshot({ path: `${scratch}/failure.png` }).catch(() => {}); console.error((await page.locator('body').innerText().catch(() => '')).slice(-3000)) } console.error('Artifacts:', scratch); console.error(logs.replace(/([?&]token=)[^\s)]+/g, '$1<redacted>').slice(-3000)); throw e }
 finally { await browser?.close(); for (const p of processes) p.kill('SIGTERM'); await Promise.all(processes.map(p => new Promise(r => { if (p.exitCode !== null) return r(); const timer = setTimeout(() => p.kill('SIGKILL'), 5000); p.once('exit', () => { clearTimeout(timer); r() }) }))) }

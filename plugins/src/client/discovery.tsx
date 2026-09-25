@@ -62,6 +62,7 @@ export function Discovery() {
   }
   return <section className="bf-state bf-discovery" aria-label={tr('立项材料与候选', 'Discovery materials and opportunities')}>
     <h2>{tr('立项材料与候选', 'Discovery materials and opportunities')}</h2>
+    <p className="bf-chip bf-shared" data-status="info">{t('sharedAcrossNotebooks')}</p>
     <p>{guest ? t('guestUploadUnavailable') : tr('上传的文件先暂存，在对话里批准后才登记。保存提案之后，立项仍要另行批准。', 'Uploads wait until you approve them in the chat. Saving a proposal leaves the project to be approved separately.')}</p>
     <form onSubmit={e => { e.preventDefault(); setPage(null); setDetail(null); setEditing(undefined); setGraphDraft(null); setScoringTarget(null); setMeeting(null); setDecisionEdit(null); setProject(projectInput); setOffset(0); setStaged(null); setRevision(n => n + 1) }}>
       <label>{tr('项目标识', 'Project ID')}<input required pattern="[a-zA-Z0-9]([a-zA-Z0-9_]|-){0,79}" value={projectInput} onChange={e => setProjectInput(e.target.value)} /></label>
