@@ -21,9 +21,9 @@ export const style = `
 .bf-panel, .bf-state, .bf-drawer, .bf-card, .bf-hero, .bf-open {
   /* Surfaces sit on the host's background; the second surface lifts off it slightly. */
   --bf-surface: var(--background, #fff);
-  --bf-surface-2: #f4f6f9;
-  --bf-line: #d8dee6;
-  --bf-line-strong: #b6c0cc;
+  --bf-surface-2: #f5f7fa;
+  --bf-line: #e2e7ee;
+  --bf-line-strong: #cbd3dd;
   --bf-text: var(--foreground, #101b27);
   --bf-muted: #5b6b7c;
   --bf-accent: #2f6bd8;
@@ -36,22 +36,30 @@ export const style = `
   --bf-ok-bg: #e6f5ec;
   --bf-danger: #9d271c;
   --bf-danger-bg: #fdeceb;
-  --bf-sans: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, 'Segoe UI',
-    'Noto Sans SC', 'Source Han Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --bf-serif: 'Source Serif 4', 'Source Serif Pro', 'Noto Serif SC', 'Source Han Serif SC',
-    Georgia, 'Songti SC', serif;
+  /* One sans family everywhere. The serif headings asked for fonts that are never
+     loaded, so every system substituted its own serif and the product looked
+     different on each machine. System faces render crisply wherever it runs. */
+  --bf-sans: Inter, system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', sans-serif;
   --bf-radius: 10px;
-  --bf-shadow: 0 1px 2px #0f172a12, 0 8px 24px #0f172a14;
+  --bf-shadow-sm: 0 1px 2px #0f172a0f;
+  --bf-shadow: 0 1px 2px #0f172a0d, 0 6px 20px #0f172a12;
+  --bf-shadow-lg: 0 2px 6px #0f172a14, 0 24px 60px #0f172a2e;
   color: var(--bf-text);
   font-family: var(--bf-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
   font-variant-numeric: tabular-nums;
 }
 
 /* ---- typography -------------------------------------------------------- */
 
-.bf-panel h2, .bf-state h2 { font-family: var(--bf-serif); font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -.01em }
-.bf-brief-headline, .bf-card-head h3 { font-family: var(--bf-serif) }
-.bf-panel h3, .bf-state h3 { font-size: 15px; font-weight: 640; margin: 0 0 6px }
+.bf-icon { display: inline-block; flex: none; vertical-align: -.2em }
+
+.bf-panel h2, .bf-state h2 { font-size: 18px; font-weight: 650; line-height: 1.3; margin: 0; letter-spacing: -.015em }
+.bf-brief-headline, .bf-card-head h3 { letter-spacing: -.01em }
+.bf-panel h3, .bf-state h3 { font-size: 14px; font-weight: 620; margin: 0 0 6px; letter-spacing: -.005em }
 .bf-report h4 { font-size: 14px; font-weight: 640; margin: 0 0 8px }
 .bf-panel p, .bf-state p, .bf-card p { line-height: 1.65; margin: 6px 0 }
 .bf-hint { font-size: 12px; color: var(--bf-muted); line-height: 1.6 }
@@ -67,8 +75,8 @@ export const style = `
 .bf-panel[open] {
   background: var(--bf-surface);
   border: 1px solid var(--bf-line);
-  border-radius: 14px;
-  box-shadow: var(--bf-shadow);
+  border-radius: 16px;
+  box-shadow: var(--bf-shadow-lg);
   padding: 0;
   width: min(1180px, 94vw);
   max-width: min(1180px, 94vw);
@@ -80,16 +88,16 @@ export const style = `
   display: grid;
   grid-template-rows: auto 1fr;
 }
-.bf-panel::backdrop { background: #0b16247a; backdrop-filter: blur(2px) }
+.bf-panel::backdrop { background: #0b162466; backdrop-filter: blur(3px) }
 .bf-panel:not([open]) { display: none }
 
 .bf-panel-head {
   display: flex; align-items: flex-start; gap: 16px;
-  padding: 18px 24px 14px;
+  padding: 18px 24px 16px;
   border-bottom: 1px solid var(--bf-line);
   background: var(--bf-surface);
 }
-.bf-panel-head > div:first-child { flex: 1; min-width: 0 }
+.bf-panel-head > div:first-child, .bf-panel-head > h2:first-child { flex: 1; min-width: 0 }
 .bf-panel-body { overflow: auto; padding: 20px 24px 28px }
 
 /* Secondary entrances. They are always available and rarely the point, so they read
@@ -107,16 +115,20 @@ export const style = `
 
 .bf-panel button, .bf-card button, .bf-state button, .bf-drawer button, .bf-open {
   font: inherit;
+  font-size: 13px;
+  font-weight: 520;
+  line-height: 18px;
   border: 1px solid var(--bf-line-strong);
   border-radius: 8px;
-  padding: 7px 13px;
+  padding: 6px 12px;
   background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-sm);
   color: inherit;
   cursor: pointer;
-  transition: background .12s, border-color .12s;
+  transition: background .12s, border-color .12s, box-shadow .12s;
 }
 .bf-panel button:hover:not(:disabled), .bf-card button:hover:not(:disabled),
-.bf-state button:hover:not(:disabled), .bf-open:hover { background: var(--bf-surface-2) }
+.bf-state button:hover:not(:disabled), .bf-open:hover { background: var(--bf-surface-2); border-color: color-mix(in srgb, var(--bf-line-strong) 70%, var(--bf-text)) }
 .bf-panel button:disabled, .bf-card button:disabled, .bf-drawer button:disabled { opacity: .45; cursor: default }
 
 /* One primary per surface. It is the action that moves the work forward. */
@@ -125,9 +137,10 @@ export const style = `
   border-color: var(--bf-accent) !important;
   color: #fff !important;
   font-weight: 600;
+  box-shadow: 0 1px 2px #1d4ed833, inset 0 1px 0 #ffffff26 !important;
 }
 .bf-primary:hover:not(:disabled) { filter: brightness(1.07) }
-.bf-quiet { border-color: transparent !important; color: var(--bf-muted) !important; padding: 6px 8px !important }
+.bf-quiet { border-color: transparent !important; background: transparent !important; box-shadow: none !important; color: var(--bf-muted) !important; padding: 6px 8px !important }
 .bf-quiet:hover:not(:disabled) { color: var(--bf-text) !important }
 .bf-danger-btn { border-color: var(--bf-danger) !important; color: var(--bf-danger) !important }
 
@@ -137,14 +150,16 @@ export const style = `
 
 .bf-panel input, .bf-panel select, .bf-state input, .bf-drawer input, .bf-card textarea {
   font: inherit;
+  font-size: 13px;
   border: 1px solid var(--bf-line-strong);
-  border-radius: 7px;
-  padding: 7px 9px;
+  border-radius: 8px;
+  padding: 7px 10px;
   color: inherit;
   background: var(--bf-surface);
   max-width: 100%;
 }
-.bf-panel input:focus-visible, .bf-card textarea:focus-visible { outline: 2px solid var(--bf-accent); outline-offset: 1px }
+.bf-panel input:focus-visible, .bf-panel select:focus-visible, .bf-card textarea:focus-visible { outline: 0; border-color: var(--bf-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bf-accent) 22%, transparent) }
+.bf-panel button:focus-visible, .bf-card button:focus-visible, .bf-state button:focus-visible { outline: 2px solid color-mix(in srgb, var(--bf-accent) 70%, transparent); outline-offset: 2px }
 
 /* Numbered steps: the import panel is a sequence, so it should look like one. */
 .bf-steps { counter-reset: bf-step; display: grid; gap: 18px; margin: 4px 0 0 }
@@ -177,20 +192,22 @@ export const style = `
 
 /* ---- callouts: a state and what to do about it -------------------------- */
 
+/* A tinted panel with a hairline in its own tone: the colour carries the state,
+   so no heavy side bar is needed to announce it. */
 .bf-callout {
-  border: 1px solid var(--bf-line);
-  border-left: 3px solid var(--bf-muted);
-  border-radius: 8px;
+  --bf-tone: var(--bf-muted);
+  border: 1px solid color-mix(in srgb, var(--bf-tone) 20%, transparent);
+  border-radius: 10px;
   padding: 12px 14px;
   margin: 12px 0;
   background: var(--bf-surface-2);
 }
 .bf-callout h3 { font-size: 13px; margin: 0 0 4px }
 .bf-callout p { margin: 0 }
-.bf-callout[data-tone=warn] { border-left-color: var(--bf-warn); background: var(--bf-warn-bg); color: var(--bf-warn) }
-.bf-callout[data-tone=danger] { border-left-color: var(--bf-danger); background: var(--bf-danger-bg); color: var(--bf-danger) }
-.bf-callout[data-tone=ok] { border-left-color: var(--bf-ok); background: var(--bf-ok-bg); color: var(--bf-ok) }
-.bf-callout[data-tone=info] { border-left-color: var(--bf-accent); background: var(--bf-accent-soft) }
+.bf-callout[data-tone=warn] { --bf-tone: var(--bf-warn); background: var(--bf-warn-bg); color: var(--bf-warn) }
+.bf-callout[data-tone=danger] { --bf-tone: var(--bf-danger); background: var(--bf-danger-bg); color: var(--bf-danger) }
+.bf-callout[data-tone=ok] { --bf-tone: var(--bf-ok); background: var(--bf-ok-bg); color: var(--bf-ok) }
+.bf-callout[data-tone=info] { --bf-tone: var(--bf-accent); background: var(--bf-accent-soft) }
 .bf-error { color: var(--bf-danger) }
 
 /* ---- status band ------------------------------------------------------- */
@@ -198,11 +215,11 @@ export const style = `
 .bf-band { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 0 0 2px }
 .bf-band .bf-period { font-size: 22px; font-weight: 660; letter-spacing: -.02em }
 /* The status's debt to its reader: the sentence under the chip and its one action (#244). */
-.bf-next { margin: 6px 0 0; padding: 8px 10px; border-left: 3px solid var(--bf-accent); background: var(--bf-accent-soft) }
+.bf-next { margin: 8px 0 0; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--bf-accent) 20%, transparent); border-radius: 10px; background: var(--bf-accent-soft) }
 .bf-next .bf-actions { margin: 6px 0 0 }
 .bf-stats { display: flex; gap: 20px; flex-wrap: wrap; margin: 14px 0 }
 .bf-stat { min-width: 74px }
-.bf-stat b { display: block; font-size: 21px; font-weight: 640; line-height: 1.2 }
+.bf-stat b { display: block; font-size: 22px; font-weight: 650; line-height: 1.2; letter-spacing: -.02em }
 .bf-stat span { font-size: 12px; color: var(--bf-muted) }
 
 /* ---- tabs -------------------------------------------------------------- */
@@ -211,12 +228,13 @@ export const style = `
 .bf-tabs button {
   border: 0 !important; border-radius: 8px 8px 0 0 !important;
   background: transparent !important; color: var(--bf-muted) !important;
-  padding: 9px 14px !important; margin-bottom: -1px;
+  padding: 9px 12px !important; margin-bottom: -1px;
   border-bottom: 2px solid transparent !important;
+  box-shadow: none !important; font-size: 13px !important;
 }
 .bf-tabs button:hover:not(:disabled) { color: var(--bf-text) !important }
 .bf-tabs button[aria-pressed=true] {
-  color: var(--bf-text) !important; font-weight: 620;
+  color: var(--bf-text) !important; font-weight: 600;
   border-bottom-color: var(--bf-accent) !important;
 }
 .bf-tabs button[aria-pressed=true] .bf-badge { background: var(--bf-accent-soft); color: var(--bf-accent) }
@@ -225,9 +243,10 @@ export const style = `
 
 .bf-chip, .bf-badge {
   display: inline-flex; align-items: center; gap: 5px;
-  border-radius: 999px; padding: 2px 9px;
-  font-size: 11px; font-weight: 650; letter-spacing: .01em;
+  border-radius: 999px; padding: 1px 8px;
+  font-size: 11px; line-height: 18px; font-weight: 600; letter-spacing: .01em;
   background: var(--bf-surface-2); color: var(--bf-muted);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 16%, transparent);
   white-space: nowrap;
 }
 .bf-handoff-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px }
@@ -254,7 +273,7 @@ export const style = `
 }
 /* Never wrap a header one character per line. Columns take the width they need and
    the container scrolls; squeezing 17 columns into one screen reads as damage. */
-.bf-panel th { position: sticky; top: 0; z-index: 1; background: var(--bf-surface-2); white-space: nowrap; font-weight: 620; font-size: 12px; color: var(--bf-muted) }
+.bf-panel th { position: sticky; top: 0; z-index: 1; background: var(--bf-surface-2); white-space: nowrap; font-weight: 600; font-size: 12px; color: var(--bf-muted); box-shadow: inset 0 -1px 0 var(--bf-line) }
 .bf-panel th small { display: block; font-weight: 500; font-size: 10px; opacity: .8; text-transform: uppercase; letter-spacing: .04em }
 .bf-panel td { max-width: 320px; min-width: 84px; overflow-wrap: anywhere }
 .bf-panel td[data-numeric=true] { text-align: right; white-space: nowrap }
@@ -316,8 +335,9 @@ export const style = `
 /* ---- cards, report, drawer, state map ---------------------------------- */
 
 .bf-card {
-  padding: 14px 16px; border: 1px solid var(--bf-line); border-radius: var(--bf-radius);
+  padding: 14px 16px; border: 1px solid var(--bf-line); border-radius: 12px;
   margin: 8px 0; font-size: 13px; overflow-wrap: anywhere; background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-sm);
 }
 .bf-card strong { font-size: 14px; font-weight: 640 }
 .bf-card pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; font-size: 12px; background: var(--bf-surface-2); border-radius: 7px; padding: 10px; margin: 8px 0 }
@@ -389,7 +409,9 @@ body[data-ds-dark-theme] .bf-hero, body[data-ds-dark-theme] .bf-open {
   --bf-ok-bg: #17352a;
   --bf-danger: #ff9d95;
   --bf-danger-bg: #3a1f1c;
+  --bf-shadow-sm: 0 1px 2px #0005;
   --bf-shadow: 0 1px 2px #0006, 0 10px 30px #0007;
+  --bf-shadow-lg: 0 2px 6px #0007, 0 24px 60px #000a;
   color: var(--bf-text);
 }
 body[data-ds-dark-theme] .bf-primary, body[data-ds-dark-theme] .bf-open { color: #0b1420 !important }
@@ -649,7 +671,7 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-explain { margin: 6px 0 16px; font-size: 12px }
 .bf-explain > summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--bf-accent); list-style: none; font-weight: 560 }
 .bf-explain > summary::-webkit-details-marker { display: none }
-.bf-explain > summary::before { content: 'i'; display: grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid currentColor; font: 700 10px/1 var(--bf-serif, serif); font-style: italic }
+.bf-explain > summary::before { content: 'i'; display: grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid currentColor; font: 700 10px/1 var(--bf-sans) }
 .bf-explain > ul { margin: 8px 0 0; padding: 10px 14px 10px 30px; background: var(--bf-surface-2); border-radius: 10px; color: var(--bf-text); line-height: 1.6 }
 .bf-explain > ul > li + li { margin-top: 6px }
 

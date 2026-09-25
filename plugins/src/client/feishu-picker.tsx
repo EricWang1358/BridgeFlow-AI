@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { api, describeError, feishuUserToken, useUI, type Summary } from './ui.ts'
 import { departments } from './workspace.tsx'
+import { Icon } from './icons.tsx'
 
 type DriveItem = { token: string; name: string; type: string; size: number; modified_time: string }
 type DrivePage = { files: DriveItem[]; has_more: boolean; next_page_token: string }
@@ -75,7 +76,7 @@ function Browser({ row, currentFolder, extra }: {
     <nav className="bf-feishu-crumbs" aria-label={t('feishuRoot')}>
       {/* The crumbs navigated, but nobody found them: entering a deep folder read as
           one-way. The up button says the way out out loud, one level per click. */}
-      {trail.length > 0 && <button className="bf-feishu-up" onClick={() => jump(trail.length - 1)}>↑ {t('feishuUpOne')}</button>}
+      {trail.length > 0 && <button className="bf-feishu-up" onClick={() => jump(trail.length - 1)}><Icon name="up" size={14} /> {t('feishuUpOne')}</button>}
       <button aria-current={!trail.length ? 'true' : undefined} onClick={() => jump(0)}>{t('feishuRoot')}</button>
       {trail.map((item, i) => <button key={item.token} aria-current={i === trail.length - 1 ? 'true' : undefined} onClick={() => jump(i + 1)}>{item.name}</button>)}
     </nav>
@@ -139,7 +140,7 @@ function WikiBrowser({ row, currentLocation, extra }: {
     <nav className="bf-feishu-crumbs" aria-label={t('feishuWiki')}>
       {/* Same affordance as the Drive browser: up pops one node level, and from a
           space's top level it returns to the space list. */}
-      {space && <button className="bf-feishu-up" onClick={() => (trail.length ? setTrail(trail.slice(0, -1)) : back())}>↑ {t('feishuUpOne')}</button>}
+      {space && <button className="bf-feishu-up" onClick={() => (trail.length ? setTrail(trail.slice(0, -1)) : back())}><Icon name="up" size={14} /> {t('feishuUpOne')}</button>}
       <button aria-current={!space ? 'true' : undefined} onClick={back}>{t('feishuSpaces')}</button>
       {space && <button aria-current={!trail.length ? 'true' : undefined} onClick={() => setTrail([])}>{space.name}</button>}
       {trail.map((node, i) => <button key={node.token} aria-current={i === trail.length - 1 ? 'true' : undefined} onClick={() => setTrail(trail.slice(0, i + 1))}>{node.title}</button>)}
@@ -149,7 +150,7 @@ function WikiBrowser({ row, currentLocation, extra }: {
     {!error && !space && spaces && <>
       {!spaces.spaces.length && <p className="bf-hint">{t('feishuSpacesEmpty')}</p>}
       <ul className="bf-resource-list">{spaces.spaces.map(item =>
-        <li key={item.space_id}><button className="bf-feishu-folder" onClick={() => setSpace(item)}><span aria-hidden="true">▸</span> {item.name}</button></li>)}</ul>
+        <li key={item.space_id}><button className="bf-feishu-folder" onClick={() => setSpace(item)}><span aria-hidden="true"><Icon name="chevron" size={14} /></span> {item.name}</button></li>)}</ul>
       {spaces.has_more && <button className="bf-hint" onClick={() => loadSpaces(spaces.next_page_token)}>{t('feishuMore')}</button>}
     </>}
     {!error && space && !page && <p role="status">{t('loading')}</p>}
@@ -254,20 +255,20 @@ export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void })
     <p className="bf-hint">{t(source === 'drive' ? 'feishuPickHelp' : 'feishuWikiHelp')}</p>
     {source === 'drive' && <Browser extra={(page, loadMore) => MORE(page, loadMore, t)} row={(item, enter) => {
       if (item.type === 'folder') {
-        return <button className="bf-feishu-folder" onClick={() => enter(item)}><span aria-hidden="true">▸</span> {item.name}</button>
+        return <button className="bf-feishu-folder" onClick={() => enter(item)}><span aria-hidden="true"><Icon name="chevron" size={14} /></span> {item.name}</button>
       }
       if (!importable(item)) {
-        return <span className="bf-feishu-item" data-disabled="true"><span aria-hidden="true">▤</span> {item.name} <small>{t('feishuUnsupported')}</small></span>
+        return <span className="bf-feishu-item" data-disabled="true"><span aria-hidden="true"><Icon name="file" size={14} /></span> {item.name} <small>{t('feishuUnsupported')}</small></span>
       }
       const kind: Picked['kind'] = item.type === 'sheet' ? 'sheet' : item.type === 'bitable' ? 'bitable' : 'file'
-      return <span className="bf-feishu-item"><span aria-hidden="true">▤</span> {item.name} {deptSelect({ token: item.token, name: item.name, kind })}</span>
+      return <span className="bf-feishu-item"><span aria-hidden="true"><Icon name="file" size={14} /></span> {item.name} {deptSelect({ token: item.token, name: item.name, kind })}</span>
     }} />}
     {source === 'wiki' && <WikiBrowser extra={(page, loadMore) => MORE(page, loadMore, t)} row={(node, enter) => {
       const pickable = importableNode(node)
       return <span className="bf-feishu-item" data-disabled={pickable || node.has_child ? undefined : 'true'}>
         {node.has_child
-          ? <button className="bf-feishu-folder" onClick={() => enter(node)}><span aria-hidden="true">▸</span> {node.title}</button>
-          : <><span aria-hidden="true">▤</span> {node.title}</>}
+          ? <button className="bf-feishu-folder" onClick={() => enter(node)}><span aria-hidden="true"><Icon name="chevron" size={14} /></span> {node.title}</button>
+          : <><span aria-hidden="true"><Icon name="file" size={14} /></span> {node.title}</>}
         {!pickable && !node.has_child && <small>{t('feishuUnsupported')}</small>}
         {pickable && deptSelect({ token: node.obj_token, name: node.title,
                                   kind: node.obj_type === 'sheet' ? 'sheet' : node.obj_type === 'bitable' ? 'bitable' : 'file' })}
@@ -281,7 +282,7 @@ export function FeishuImport({ onSaved }: { onSaved: (batch: Summary) => void })
           <b>{t(d)}</b> <span className="bf-feishu-chosen-name">{assign[d]!.name}</span>
           {assign[d]!.kind !== 'file' && subSelect(d, assign[d]!)}
           <button className="bf-feishu-remove" aria-label={`${t('feishuCancelPick')} · ${t(d)} · ${assign[d]!.name}`}
-                  title={t('feishuCancelPick')} onClick={() => remove(d)}><span aria-hidden="true">✕</span></button>
+                  title={t('feishuCancelPick')} onClick={() => remove(d)}><Icon name="close" size={14} /></button>
         </li>)}
       </ul>
     </div>}
@@ -320,8 +321,8 @@ export function FeishuUpload({ batchId, reportId, onDone }: { batchId: string; r
   if (!reportId) return <p className="bf-hint">{t('feishuNoReport')}</p>
   const wikiNodeRow = (node: WikiNode, enter: (node: WikiNode) => void) =>
     node.has_child
-      ? <button className="bf-feishu-folder" onClick={() => enter(node)}><span aria-hidden="true">▸</span> {node.title}</button>
-      : <span className="bf-feishu-item" data-disabled="true"><span aria-hidden="true">▤</span> {node.title}</span>
+      ? <button className="bf-feishu-folder" onClick={() => enter(node)}><span aria-hidden="true"><Icon name="chevron" size={14} /></span> {node.title}</button>
+      : <span className="bf-feishu-item" data-disabled="true"><span aria-hidden="true"><Icon name="file" size={14} /></span> {node.title}</span>
   return <section className="bf-feishu-upload" aria-label={t('feishuUpload')}>
     <div className="bf-feishu-mode" aria-label={t('feishuTarget')}>
       <button aria-pressed={target === 'drive'} onClick={() => setTarget('drive')}>{t('feishuRoot')}</button>
@@ -330,8 +331,8 @@ export function FeishuUpload({ batchId, reportId, onDone }: { batchId: string; r
     {target === 'drive'
       ? <Browser currentFolder={setFolder} extra={(page, loadMore) => MORE(page, loadMore, t)} row={(item, enter) =>
           item.type === 'folder'
-            ? <button className="bf-feishu-folder" onClick={() => enter(item)}><span aria-hidden="true">▸</span> {item.name}</button>
-            : <span className="bf-feishu-item" data-disabled="true"><span aria-hidden="true">▤</span> {item.name}</span>
+            ? <button className="bf-feishu-folder" onClick={() => enter(item)}><span aria-hidden="true"><Icon name="chevron" size={14} /></span> {item.name}</button>
+            : <span className="bf-feishu-item" data-disabled="true"><span aria-hidden="true"><Icon name="file" size={14} /></span> {item.name}</span>
         } />
       : <WikiBrowser currentLocation={(space, parent) => setWikiLoc({ space, parent })} extra={(page, loadMore) => MORE(page, loadMore, t)} row={wikiNodeRow} />}
     <button className="bf-primary" disabled={busy || (target === 'drive' ? !folder : !wikiLoc.space)} onClick={() => void run()}>
@@ -368,8 +369,8 @@ export function WikiFileUpload() {
   return <section className="bf-feishu-upload" aria-label={t('feishuUploadFileWiki')}>
     <WikiBrowser currentLocation={(space, parent) => setLoc({ space, parent })} extra={(page, loadMore) => MORE(page, loadMore, t)} row={(node, enter) =>
       node.has_child
-        ? <button className="bf-feishu-folder" onClick={() => enter(node)}><span aria-hidden="true">▸</span> {node.title}</button>
-        : <span className="bf-feishu-item" data-disabled="true"><span aria-hidden="true">▤</span> {node.title}</span>
+        ? <button className="bf-feishu-folder" onClick={() => enter(node)}><span aria-hidden="true"><Icon name="chevron" size={14} /></span> {node.title}</button>
+        : <span className="bf-feishu-item" data-disabled="true"><span aria-hidden="true"><Icon name="file" size={14} /></span> {node.title}</span>
     } />
     <div className="bf-feishu-go">
       <input type="file" ref={fileRef} aria-label={t('feishuPickFile')} />

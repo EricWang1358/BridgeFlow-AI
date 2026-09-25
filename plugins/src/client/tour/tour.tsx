@@ -4,6 +4,7 @@ import { tours } from './steps.ts'
 import { placeCard, type Rect } from './position.ts'
 import { closeTourCard, exitTour, moveTour, observeTour, openTourHelp, resetTour, returnTourEntry, retryTourTarget, startTour, tourSnapshot, tourSubscribe } from './state.ts'
 import { tourStyle } from './style.ts'
+import { Icon } from '../icons.tsx'
 
 const tabbable = 'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,a[href],[tabindex="0"]'
 function visible(el: Element): el is HTMLElement { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden' }
@@ -163,7 +164,7 @@ export function TourLayer({ surface = 'shell' }: { surface?: string }) {
         {!intro && <p className="bf-tour-wait" role="status">{t(p.done.includes(step.event!) ? 'tourDoneAction' : 'tourWaitingAction')}</p>}
         <div className="bf-tour-actions"><button disabled={p.index === 0} onClick={() => moveTour(-1)}>{t('tourBack')}</button><button onClick={exitTour}>{t('tourExit')}</button><button className="bf-tour-primary" disabled={wait || !intro && !p.done.includes(step.event!)} onClick={() => moveTour(1)}>{t(p.index === tours[p.track].length - 1 ? 'tourFinish' : 'tourNext')}</button></div>
       </> : <>
-        <div className="bf-tour-mark" aria-hidden="true">{complete ? '✓' : '▥'}</div>
+        <div className="bf-tour-mark" aria-hidden="true"><Icon name={complete ? 'check' : 'sparkle'} size={24} /></div>
         <h2>{t(complete ? p.track === 'core' ? 'tourComplete' : p.track === 'workflow' ? 'tourWorkflowDone' : 'tourSupplementDone' : welcome ? 'tourWelcome' : 'tourHelp')}</h2>
         <p id={`tour-description-${surface}`}>{t(complete ? p.track === 'core' ? 'tourCompleteBody' : p.track === 'workflow' ? 'tourWorkflowDoneBody' : 'tourSupplementBody' : welcome ? 'tourWelcomeBody' : p.status === 'completed' ? 'tourHelpCompleted' : 'tourSkipped')}</p>
         {welcome && <div className="bf-tour-task">{t('tourWelcomeResult')}</div>}

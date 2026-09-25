@@ -220,7 +220,7 @@ const labels = {
   studioStartHelp: ['添加部门文件后即可开始月度研判。报价工作区现在就能用。', 'Add department files to start a monthly review. The quotation workspace works without them.'],
   preview: ['预览', 'Preview'], expandPreview: ['展开预览', 'Expand preview'],
 
-  sources: ['来源', 'Sources'], studio: ['工作室', 'Studio'], workArea: ['工作区', 'Workspace'],
+  sources: ['来源', 'Sources'], chatPane: ['对话', 'Chat'], studio: ['工作室', 'Studio'], workArea: ['工作区', 'Workspace'],
   sourceHelp: ['依据与归属', 'Evidence and ownership'], studioHelp: ['状态、责任与下一步', 'Status, owners and next steps'],
   handoffWorkspace: ['填报与流转', 'Filling & handoff'],
   approval_confirm_column_match: ['列匹配审批', 'Column match approval'], approvalTitle_confirm_column_match: ['确认上传列对应的已声明字段', 'Confirm which declared column this upload column is'],
