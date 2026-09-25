@@ -690,6 +690,17 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-stage-strip li[data-state=done]::before { content: '✓ ' }
 .bf-stage-strip li[data-state=current] { color: #fff; background: var(--bf-accent) }
 
+/* The user guide under Sessions & settings. */
+.bf-user-guide { max-width: 760px; padding: 4px 4px 24px; font-size: 14px; line-height: 1.65 }
+.bf-user-guide h2 { font-size: 22px; margin-bottom: 6px }
+.bf-user-guide h3 { font-size: 16px; margin: 26px 0 8px; padding-top: 14px; border-top: 1px solid var(--bf-line) }
+.bf-guide-toc { columns: 2; column-gap: 48px; margin: 14px 0 0; padding-left: 20px; font-size: 13px }
+.bf-guide-toc a { color: var(--bf-accent); text-decoration: none }
+.bf-guide-points { padding-left: 20px; display: grid; gap: 6px }
+.bf-guide-faq > div, .bf-guide-terms > div { margin: 0 0 10px }
+.bf-guide-faq dt, .bf-guide-terms dt { font-weight: 600 }
+.bf-guide-faq dd, .bf-guide-terms dd { margin: 2px 0 0; color: var(--bf-muted) }
+
 /* Company-wide pages say so: they are not part of the open notebook. */
 .bf-shared { display: inline-flex; white-space: normal; line-height: 1.45; padding: 4px 10px; margin: 4px 0 10px; color: var(--bf-accent); background: var(--bf-accent-soft) }
 

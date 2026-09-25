@@ -8,7 +8,7 @@ import type { ToolCallViewProps } from '@deepseek-ai/dsh-client-ui-tool/client'
 import type { ComposerChainProps, InputZone } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { MappingApproval } from './approval.tsx'
 import { BusinessReview, type Review } from './review.tsx'
-import { api, configureRuntime, navigate, openSession, reportRouteError, route, useUI, type Summary } from './ui.ts'
+import { api, configureRuntime, labelText, navigate, openSession, reportRouteError, route, useUI, type Summary } from './ui.ts'
 import { DataWorkspace } from './workspace.tsx'
 import { QuotationButton } from './quotation.tsx'
 import { useDemoCase } from './sample-cases.tsx'
@@ -16,6 +16,7 @@ import { mountShell } from './shell.tsx'
 import { mountState } from './state.tsx'
 import { motion } from './motion.ts'
 import { GuideCard } from './guide-card.tsx'
+import { GuidePage } from './guide-page.tsx'
 import { style } from './style.ts'
 
 const subscribeHash = (fn: () => void) => { window.addEventListener('hashchange', fn); return () => window.removeEventListener('hashchange', fn) }
@@ -181,6 +182,11 @@ export function apply(ctx: Context): void {
   ctx.effect(() => { const tag = document.createElement('style'); tag.textContent = style + motion; document.head.append(tag); return () => tag.remove() }, 'bridgeflow: styles')
   ctx.slots.inject('conversation.hero.brand.mark', () => ctx.slots.register({ name: 'conversation.hero.brand.mark', priority: -10 }, Welcome))
   ctx.slots.inject('sidebar.brand.name', () => ctx.slots.register({ name: 'sidebar.brand.name', priority: -10 }, () => <span>BridgeFlow AI</span>))
+  // The user guide lives where people look for help with the product: Sessions & settings.
+  // 'settings.section' belongs to DSH's settings panel, whose slot types this package does not
+  // depend on; the slot itself is part of the running host (checked by the guide journey).
+  const slots = ctx.slots as unknown as { inject(name: string, fn: () => () => void): void; register(options: Record<string, unknown>, component: () => JSX.Element): () => void }
+  slots.inject('settings.section', () => slots.register({ name: 'settings.section', id: 'bridgeflow-user-guide', order: 100, label: () => labelText('userGuide') }, GuidePage))
   // Above the composer card, so the orientation reads before the prompt box rather
   // than competing with it.
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({ name: 'conversation.input.dock', id: 'bridgeflow-orientation', order: -10 }, Orientation))

@@ -7,6 +7,7 @@
 
 | 你是谁、想干什么 | 读这几篇就够 |
 | --- | --- |
+| 用这个产品 | [使用说明书](user-guide.zh.md)（[English](user-guide.en.md)），也在产品「会话与设置 → 使用说明书」里 |
 | 把它跑起来 | [`../HANDOFF.md`](../HANDOFF.md) 的「怎么把它跑起来」，一屏命令 |
 | 接手开发 | [`../CLAUDE.md`](../CLAUDE.md) 的规矩 → [`../HANDOFF.md`](../HANDOFF.md) 的现状 → [`13`](13-golden-standard.md) 的理由 |
 | 评委或外部读者 | [`17`](17-business-mvp-acceptance.md) 现在能演示什么 → [`00`](00-status.md) 数字 → [`01`](01-problem-and-hmw.md) 问题从哪来 |
@@ -40,7 +41,7 @@
 | [`01-problem-and-hmw.md`](01-problem-and-hmw.md) | 权威 | EN | 评委、新人 | HMW、目标客户画像、三个痛点如何变成可测目标 |
 | [`02-architecture.md`](02-architecture.md) | 参考 | EN | 开发 | 四个 Agent 各自的输入输出契约（dsh 的位置看 `13`） |
 | [`03-data-contracts.md`](03-data-contracts.md) | 参考 | EN | 开发 | Pydantic 模型逐个说明，跨 Agent 边界的类型定义 |
-| [`04-demo-plan.md`](04-demo-plan.md) | 权威 | EN | 演示人 | 六分钟脚本，逐拍标注今天能不能真跑、跑不了怎么退 |
+| [`04-demo-plan.md`](04-demo-plan.md) | 权威 | EN | 演示人 | 五分钟脚本：每一拍点哪里、说什么、对应哪几项评分，以及现场出错怎么应对 |
 | [`05-roadmap.md`](05-roadmap.md) | 已取代 | 中 | — | 旧 M0–M5 排期，基于已废弃的自建前端与自建编排 |
 | [`06-deepseek-harness.md`](06-deepseek-harness.md) | 参考 | 中 | 开发 | dsh 的版本事实、SDK API、三条必知约束 |
 | [`07-prd-v0.1.md`](07-prd-v0.1.md) | 参考 | 中 | 开发、业务方 | 业务方需求原文。是需求基线，不是交付承诺，正文不改 |
@@ -59,6 +60,7 @@
 | [`20-quotation-brief.md`](20-quotation-brief.md) | 权威 | 中 | 接手报价的人 | 报价功能任务书：并列的第二条路径，分三步，第一步现在可做 |
 | [`21-quotation-design.md`](21-quotation-design.md) | 参考 | 中 | 接手报价的人 | 报价声明与自由文本证据边界，设计先于实现写定 |
 | [`22-lightsail-deploy.md`](22-lightsail-deploy.md) | 参考 | 中 | 开发、运维 | Lightsail 部署 runbook：实例引导、GitHub Actions 流水线、Caddy 反代与回滚 |
+| [`user-guide.zh.md`](user-guide.zh.md) / [`.en`](user-guide.en.md) | 权威 | 中 / EN | 使用者 | 使用说明书，由 `plugins/src/client/user-guide.ts` 生成，与产品内的说明书同源 |
 | [`29-interactive-onboarding.md`](29-interactive-onboarding.md) | 参考 | 中 | 开发、体验者 | 真实页面引导、重播恢复、案例留档与验证边界 |
 | [`28-rehearsal-authorization.md`](28-rehearsal-authorization.md) | 交接 | 高 | 项目负责人 | 录制版本复跑彩排的付费授权书草案：命令、预算硬上限、停止条件，签署前不运行 |
 | [`27-external-inputs.md`](27-external-inputs.md) | 交接 | 高 | 业务方、部署与飞书负责人 | 剩余 issue 所需的外部输入：要什么、怎么安全交付、到手后跑哪条验收命令 |

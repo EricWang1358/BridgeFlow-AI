@@ -129,6 +129,10 @@ export const guide = {
     what: ['引导：一步步带你做完合并与核对、研判、报价、立项到流转', 'Guided tours: step by step through combining and checking, review, quotation, and discovery to handoff'],
     steps: [['顶栏右上「帮助与引导」', 'The top bar, top right: Help & guided tours']],
   },
+  user_guide: {
+    what: ['使用说明书：从五分钟上手到每月流程、审批卡和常见问题，一步步写清点哪里', 'User guide: from five minutes to a first result to the monthly routine, approval cards and common questions, click by click'],
+    steps: [['顶栏「会话与设置」', 'The top bar: Sessions & settings'], ['左侧选「使用说明书」', 'Choose User guide on the left']],
+  },
   settings: {
     what: ['会话与设置：历史会话、模型选择与语言', 'Sessions & settings: earlier sessions, model choice and language'],
     steps: [['顶栏「会话与设置」', 'The top bar: Sessions & settings']],

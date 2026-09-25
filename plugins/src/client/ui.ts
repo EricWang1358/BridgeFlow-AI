@@ -252,6 +252,7 @@ const labels = {
   guide_close_title: ['本月可以收口了', 'This month is ready to close'],
   guide_close_steps: ['打开右侧「工作室」→「本月任务」，核对收口清单每一步都已完成。\n在「本月结论」里下载或查看月度简报。', 'Open Studio on the right → This month’s tasks and check that every close step is done.\nRead or download the monthly brief under Conclusions.'],
   guide_close_after: ['收口清单只汇总各页面的状态，不替你签发。', 'The close checklist only collects each page’s status; it signs nothing off for you.'],
+  userGuide: ['使用说明书', 'User guide'],
   settleHow: ['怎么处理', 'How to settle'], settleNothingOpen: ['本月没有待办，可以直接发起研判。', 'Nothing is open this month; the review can start.'], askSettleOne: ['让队长给建议', 'Ask the captain for a suggestion'],
   askSettleAllButton: ['让队长给出完成建议', 'Ask the captain how to finish these'], settleAsked: ['已发给队长，建议在中间的对话里。', 'Sent to the captain; the suggestion appears in the chat.'],
   askSettleAll: ['请调用 monthly_inbox（期间 {period}，批次 {batch}）查看这个月的全部待办，逐项给出完成建议：这是什么问题、你建议怎么处理以及依据（标明这是模型建议）、由谁决定、在哪个页面处理；能由你用工具发起下一步的，说明是哪一步，并先问我要不要开始。不要替任何人做决定，也不要改动任何数据。',

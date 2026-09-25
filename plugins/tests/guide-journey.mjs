@@ -80,8 +80,16 @@ try {
   await inbox.getByText('Sent to the captain; the suggestion appears in the chat.').waitFor()
   await page.getByText(/Please suggest how to settle this open item: /).first().waitFor()
   await page.screenshot({ path: `${evidence}/settle-suggestion.png` })
+  // The user guide is a page under Sessions & settings.
+  await page.getByRole('button', { name: 'Sessions & settings', exact: true }).click()
+  await page.getByRole('button', { name: /^Settings$/ }).first().click()
+  await page.getByText('User guide', { exact: true }).first().click()
+  await page.getByRole('heading', { name: 'BridgeFlow user guide' }).waitFor()
+  await page.getByRole('heading', { name: 'Five minutes to your first result' }).waitFor()
+  await page.screenshot({ path: `${evidence}/user-guide.png` })
+  await page.keyboard.press('Escape')
   assert.deepEqual(errors, [])
-  await writeFile(`${evidence}/checks.json`, JSON.stringify({ status: 'passed', mode: 'offline', model_calls: 0, cases: ['fresh-answer-opens-page', 'replay-does-not-navigate', 'button-opens-page', 'open-item-settle-guidance', 'ask-captain-for-suggestion', 'captain-knows-notebook-batch'] }, null, 2))
+  await writeFile(`${evidence}/checks.json`, JSON.stringify({ status: 'passed', mode: 'offline', model_calls: 0, cases: ['fresh-answer-opens-page', 'replay-does-not-navigate', 'button-opens-page', 'open-item-settle-guidance', 'ask-captain-for-suggestion', 'captain-knows-notebook-batch', 'user-guide-in-settings'] }, null, 2))
   console.log(JSON.stringify({ status: 'passed', artifacts: evidence, scratch }))
 } catch (e) { if (page) { await page.screenshot({ path: `${scratch}/failure.png` }).catch(() => {}); console.error((await page.locator('body').innerText().catch(() => '')).slice(-3000)) } console.error('Artifacts:', scratch); console.error(logs.replace(/([?&]token=)[^\s)]+/g, '$1<redacted>').slice(-3000)); throw e }
 finally { await browser?.close(); for (const p of processes) p.kill('SIGTERM'); await Promise.all(processes.map(p => new Promise(r => { if (p.exitCode !== null) return r(); const timer = setTimeout(() => p.kill('SIGKILL'), 5000); p.once('exit', () => { clearTimeout(timer); r() }) }))) }

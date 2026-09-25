@@ -13,6 +13,10 @@ This README is a guided walkthrough. Follow it top to bottom and you will have t
 one review completed end to end, and one mapping decision recorded, on a machine you have never used
 before. Nothing is assumed beyond "you can open a terminal".
 
+> **Just want to use it?** Read the [user guide](docs/user-guide.en.md): five minutes to a first
+> result, the monthly routine, approval cards and common questions, click by click. The same guide
+> is inside the product under **Sessions & settings → User guide**.
+
 - [Evaluator walkthrough](#evaluator-walkthrough)
 - [What is built today, and what is not](#what-is-built-today-and-what-is-not)
 - [Before you start](#before-you-start)
@@ -305,10 +309,21 @@ preferences are stored in the browser only.
 ![Guided tour welcome card](docs/images/14-guided-tour.png)
 
 The first time you open the workspace, a welcome card offers a guided task: open the sample notebook,
-read the cross-department master table, follow one number to its original file, download the workbook
-and save the notebook. Each step only advances when the real action succeeded. **Help & guided tours**
+read the cross-department master table, follow one number to its original file, optionally download the
+workbook and rename the notebook, and save it. Each required step only advances when the real action succeeded. **Help & guided tours**
 in the top bar resumes it, replays it, or explains the department review and the quotation path. The
 tour's first track covers the monthly review. A second track, "Explore · from an idea to a handoff between departments" (Help & guided tours, or the welcome card), walks through the discovery sample's flow graph and quadrant chart, the filling page's scope, the sample workflow, its flow strip and timelines, and the Overview. It calls no model.
+
+Help that stays on screen, so nobody has to remember this README:
+
+- **Business state** (the tab above the chat) opens with **What to do now**: the month's five stages
+  (files, clean up, review, decide, close), the clicks for the current one, and a button that goes there.
+- **This month's tasks** lists every open item with **How to settle** (who decides, where) and an
+  optional **Ask the captain for a suggestion**; the captain advises and never decides.
+- Ask the captain "where is the quadrant chart?" and it lists the clicks and opens the page. It also
+  knows which notebook it is in: "this batch" means the open notebook's batch.
+- Each extra sample under **More sample cases** has **Walk me through this sample** on its tasks page.
+- The full [user guide](docs/user-guide.en.md) is inside the product under **Sessions & settings → User guide**.
 
 ## 7 The fastest complete loop: the sample notebook
 
