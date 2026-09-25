@@ -12,6 +12,8 @@ export const tourLabels: Record<string, [string, string]> = {
   tourWaitingAction: ['完成高亮操作后自动继续', 'Continues after the highlighted action succeeds'], tourDoneAction: ['此操作已完成；可回看说明后继续。', 'Already done. Review this explanation, then continue.'],
   tourOptionalAction: ['这一步可选：做了会自动继续，不做直接点「下一步」。', 'Optional: doing it moves on by itself, or press Next to skip it.'],
   tourWaiting: ['正在等真实界面就绪', 'Waiting for the workspace'], tourWaitingBody: ['目标可能正在加载或被弹窗盖住。请完成当前弹窗中的选择；失败时关闭弹窗后重试。引导不会代你提交。', 'The control may still be loading, or a dialog is covering it. Finish or close the dialog, then try again. The tour never submits anything for you.'],
+  tourCovered: ['这一步在弹出的窗口后面', 'This step is behind an open window'], tourCoveredBody: ['要看的内容不在当前弹出的窗口里。关掉这个窗口就能继续，窗口里的内容只是预览，不会丢。', 'What this step points at is outside the window that is open now. Close it to continue; it only shows a preview, so nothing is lost.'],
+  tourCloseCover: ['关闭窗口并继续', 'Close this window and continue'],
   tourMissing: ['这一步暂时不可用', 'This step is not available yet'], tourMissingBody: ['控件未出现、页面无数据或权限不足。检查页面提示，然后重试定位；也可以回到入口或退出，稍后继续。', 'The control didn’t appear, the page has no data, or you don’t have access. Check the message on the page and retry, or exit and come back later.'],
   tourError: ['操作未成功', 'The action did not succeed'], tourErrorHelp: ['请按页面提示修正后重试高亮操作；未成功前不会推进。若暂时无法恢复，可退出后继续。', 'Correct the issue and retry the highlighted action. The tour stays here until it succeeds. You can exit and continue later.'],
   tourRetry: ['重试定位', 'Retry locating'], tourEntry: ['回到本步页面', 'Open this step’s view'], tourSkipped: ['已暂时跳过，任务未记为完成。', 'Paused, not completed. Continue whenever you are ready.'],

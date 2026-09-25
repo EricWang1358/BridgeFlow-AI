@@ -1,59 +1,37 @@
 # 04 — Demo plan
 
-Six minutes, one question: "what does this month's reconciliation say, and where do the departments disagree?"
+Five minutes, one question: "what does this month's reconciliation say, where do the departments
+disagree, and who has to decide what?"
 
-> Written in English because it is spoken on stage. Every measured figure comes from
-> [`00-status.md`](00-status.md); nothing here restates a number that is not measured there.
-> The concrete clicking sequence, prerequisites and the answer key are in
-> [`17`](17-business-mvp-acceptance.md) and the [one-stop demo](../demo-walkthrough/README.md).
+> Written in English because it is spoken on stage and in the video. Every measured figure comes
+> from [`00-status.md`](00-status.md); nothing here restates a number that is not measured there.
+> The recorded version of this script is the demo video (see *Video* below).
 
-## Self-guided first visit
+## Before you start
 
-For an unfamiliar visitor, the native interface now offers **Help & guided tours**. Its core task uses the
-[retained fictional concrete supplier case](../data/mock_business/demo/README.md): combine the actual department files,
-inspect a discrepancy, follow a cell to its source, download the workbook and save the notebook.
-It makes no model calls. Use this as an interactive entry, with the agent rehearsal below clearly identified as a separate path.
-See [implementation and replay](29-interactive-onboarding.md) and [measured verification](00-status.md).
+- Start the local instance with `python scripts/start_web.py --demo` after `source env.sh`, with
+  `PORTAL_BASE_URL` empty unless you are demonstrating Feishu login. `--demo` loads the sample
+  dictionary; without it the sample imports but cannot be reviewed.
+- The launcher prints `BridgeFlow model: …`. That model must have its key in the environment; a
+  review on a model without one fails at the first call. Change it in *Sessions & settings*.
+- Interface in English, a 1440-wide window, zoom 100%. Close the guided-tour welcome card
+  (*Maybe later*).
+- Rehearse once on the real model the same day. The review is the only billed beat.
 
-## What runs today
+## Run of show
 
-The stage path is the native DSH Web demo with the generated 2025-11 business case: four department
-CSV files, a frozen field dictionary, four department sub-sessions, and a report that cites cells.
-The older "Acme November order" narrative runs on the legacy Python pipeline, which is off by
-default (`BRIDGEFLOW_ENABLE_LEGACY_PIPELINE`), so treat it as a terminal walkthrough rather than a
-screen you will click through.
+| Time | Beat | What you click | What you say | Rubric |
+| --- | --- | --- | --- | --- |
+| 0:00–0:30 | The problem | Nothing yet: the empty notebook | "Four departments keep four monthly spreadsheets. Same customers, same projects, different spellings, different columns. Nobody here has a data team." | 1 |
+| 0:30–1:15 | Four files, no preparation | Sources → **Open sample notebook**; click one file | "A fictional concrete supplier, July 2024. Four real business templates, imported and cleaned as they are. No model has been called and nothing has been charged." | 1, 3 |
+| 1:15–2:00 | One table, and the one place it does not add up | Studio → **Data** → **Cross-department master**; open **Open questions**; click a figure | "Three of four rows are complete. Production shortened one customer's name; the table does not guess which is right, it asks. Every figure opens at its file, sheet and row." | 2, 6 |
+| 2:00–3:00 | Four department agents | Studio → **This month's tasks** → **Start the review**; then the **Trajectory** tab; then the report under **Artifacts** | "The captain sends production, procurement, finance and marketing agents in parallel. They read computed metrics, never raw rows. Each finding carries its formula, threshold and source cells." | 2, 3 |
+| 3:00–3:50 | A person decides | In the chat: ask the captain to record that the business confirmed the 13% VAT convention. **Reject** the first approval card with a reason, then ask again and **Allow once** | "Nothing is written until a person approves this exact change. My rejection and its reason go back to the model, and it says so. Approved, the figures resting on that convention move from G3 to G2." | 4, 5 |
+| 3:50–4:30 | What happened, and what was stopped | Studio → **Records**: the run's lanes, tokens, refused calls | "Every run is recorded: which agent called which tool, how long it took, what it cost, what was refused. A spreadsheet cell that tries to instruct the agent is refused at dispatch and appears here." | 5, 6 |
+| 4:30–5:00 | Close | Ask the captain "Where is the quadrant chart?"; it opens the page | "The captain knows the product: ask where anything is and it takes you there. Open items say how each is settled. The data is synthetic; the templates are the business's own." | 1, 7 |
 
-| # | Beat | Rubric | Runs today | If it does not |
-| - | ---- | ------ | ---------- | -------------- |
-| 1 | Show the four monthly files. Different date formats, different spellings for one product, a shifted header, a merged cell. "This is a normal Tuesday." | 1 | yes, no code needed | — |
-| 2 | Import all four. Corrections and quarantined rows come back per batch; a renamed column is proposed as a match to a declared field and a person approves it in the native approval panel, then the file is re-imported. Quarantined rows are released or discarded the same way. The batch stays immutable, so re-running does not overwrite last month. | 1, 4, 6 | yes, native panel and column-match view | name the frozen dictionary on screen if the batch returns `needs_configuration` |
-| 3 | Start the review from the panel. The captain dispatches four department sub-sessions in parallel; they only read and judge. Anything that writes — a column match, a quarantine release — is asked of a person by the captain, never approved by a department sub-session. | 4 | yes. The refusal half is the interesting half: nothing is written, and the reviewer's reason comes back into the model's own narration | if the approval panel is not visible, show the native audit events instead |
-| 4 | One aligned master table from four files, with the labels that never reached the entity graph listed rather than hidden. | 2 | yes, as an artifact in the right-hand panel | — |
-| 5 | Four department views: load against declared available hours, spend against budget at the same quantity, project margin, weighted payment terms, the order-vs-output gap. Tension between departments is the punchline. | 3, 6 | mostly. Every figure shown is computed by rule from declared columns and cites its cells | do not claim a customer tier, a price band, a credit decision or an executed action; none of them exist |
-| 6 | Optional, only if time allows. Open the quotation workspace: what a quote sheet would contain, which inputs are missing, and who owes each one. Numbers are computed from declared arithmetic on a synthetic case. | 4 | only as a declaration preview | do not present it as an issued quote; contract parsing and sending do not exist yet |
-| 7 | Close on the HMW slide. | 1 | yes | — |
-| 8 | Show an attack being stopped: a poisoned cell tries to instruct the agent, the host guard refuses at dispatch, and the attempt is in the audit trail. | 5, 6 | yes: `plugins/src/guards/untrusted-input.ts` is wired in `plugins/src/index.ts`, and the deny/allow cases are shared with the Python side | say the guard is deliberately narrow (it errs toward letting a real purchase order through), and that breadth comes from the adversarial eval suite |
-
-The issue numbers behind the caveats above, in case a judge asks where a claim is tracked:
-[#7](https://github.com/EricWang1358/BridgeFlow-AI/issues/7) price bands must come from real cost
-arithmetic, [#13](https://github.com/EricWang1358/BridgeFlow-AI/issues/13) the evaluator consumes
-metrics instead of raw rows, [#25](https://github.com/EricWang1358/BridgeFlow-AI/issues/25) the
-corrected attribution of the slow runs,
-[#44](https://github.com/EricWang1358/BridgeFlow-AI/issues/44) the join key is no longer guessed
-(PR #60), [#46](https://github.com/EricWang1358/BridgeFlow-AI/issues/46) and
-[#88](https://github.com/EricWang1358/BridgeFlow-AI/issues/88) the field-mapping wizard and quarantine
-disposal (now built as the column-match approval and quarantine release/discard tools, #146/#156).
-
-Beat 8 is the beat most teams will not have. A working pipeline is table stakes; an attack being
-refused, in a product whose input is four spreadsheets maintained by four different people, is a
-specific and plausible threat you can demonstrate in 30 seconds.
-
-### How to rehearse beat 3
-
-Have the second screen ready before the turn starts. The point lands only if the audience watches
-the agent stop and wait. Say it out loud while it is waiting: "nothing has been written yet, and if
-I walk away now, nothing will be." Then refuse first and re-run to approve. A refusal that carries
-the reviewer's reason back into the model's narration is the part nobody else shows.
+If time is short, drop the last beat first, then shorten *What happened*. Never drop *A person
+decides*.
 
 ## Two things to say unprompted
 
@@ -67,20 +45,29 @@ Judges will not infer either of these from watching ([`09`](09-rubric-assessment
 2. Every conclusion is bound to evidence. `Finding` rejects an evidence-free claim at the schema
    layer: refused, not downgraded.
 
+## If something goes wrong on stage
+
+| Symptom | Say and do |
+| --- | --- |
+| The review fails at the first model call | "The model route has no key on this machine." Show the report already saved from the rehearsal under **Artifacts**. |
+| The review takes long | Keep talking over the **Trajectory** tab; the four agents appear as they start. |
+| The approval card does not appear | The request did not reach a write tool. Ask again naming the convention; never approve something you have not read. |
+| Network down | Everything up to *Four department agents* runs offline. Say so, and show the recorded video from 2:00. |
+
 ## Demo safety rules
 
-- Rehearse on the real provider, not on mock. Mock returns placeholder text such as
-  `mock-justification-<hash>`: it proves the code does not crash. If the network fails on stage and
-  you fall back to mock, say so out loud.
-- Import and rule computation cost nothing. Sending the analysis request in the native conversation
-  calls the configured model, so budget for real charges and minutes rather than seconds; the
-  measured durations and token counts are in [`00`](00-status.md).
-- Use the case dictionary (`data/business_demo/dictionary.yaml`), or start with `--demo`. With the
-  default dictionary the import succeeds and the review refuses, and the failure looks like a bug.
-- Every number shown must trace to a cell. A judge will ask where a percentage came from; expand
-  "explanation and raw source" and show the file, row and column.
+- Import and rule computation cost nothing. The review, the approval beat and captain questions call
+  the configured model; the measured durations and token counts are in [`00`](00-status.md).
+- If you fall back to the offline test model, say so out loud: it returns fixed text and proves only
+  that the interface works.
+- Every number shown must trace to a cell. A judge will ask where a percentage came from; open it
+  and show the file, row and column.
 - Do not present the sample as a customer's books. It is generated, labelled synthetic, and comes
   with an independent answer key that must never be fed to the model.
-- Three browser smokes are currently red on the development machine for reasons unrelated to the
-  product ([#97](https://github.com/EricWang1358/BridgeFlow-AI/issues/97)). Rehearse on a real
-  `DSH_HOME`, and do not use a red smoke as evidence that the demo is broken.
+
+## Video
+
+The five-minute video follows this run of show, recorded from the real product: the sample
+notebook in an isolated `DSH_HOME`, the review and the approval on the real model, captions and
+voice-over added in [HyperFrames](https://github.com/heygen-com/hyperframes). Its source lives
+outside the repository (`~/Hackathon2026/demo-video/`); only the rendered file is handed in.
