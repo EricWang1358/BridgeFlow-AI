@@ -2,13 +2,17 @@
  * No private CSS module names, DOM reparenting, second React root or DSH fork. */
 export const shellStyle = `
 body[data-bf-notebook] {
-  --bf-shell-top-height: 52px; --bf-shell-bg: #e9eef6; --bf-shell-pane: #fff; --bf-shell-border: #dbe0e7;
-  --bf-shell-text: #242629; --bf-shell-muted: #606773;
+  --bf-shell-top-height: 52px; --bf-shell-bg: #eef1f5; --bf-shell-pane: #fff; --bf-shell-border: #e1e5eb;
+  --bf-shell-text: #1f2328; --bf-shell-muted: #5f6773; --bf-shell-accent: #2f6bd8; --bf-shell-accent-soft: #eaf1fd;
+  --bf-shell-shadow: 0 1px 2px #0f172a0a, 0 0 0 1px #0f172a0d;
+  --bf-shell-font: Inter, system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', sans-serif;
   --bf-shell-left: clamp(240px, 25vw, 440px); --bf-shell-right: clamp(280px, 26vw, 460px);
 }
 body[data-bf-notebook][data-ds-dark-theme] {
-  --bf-shell-bg: #191b1f; --bf-shell-pane: #22262b; --bf-shell-border: #34383e;
-  --bf-shell-text: #e3e5e9; --bf-shell-muted: #a5aab3;
+  --bf-shell-bg: #16181c; --bf-shell-pane: #1f2328; --bf-shell-border: #30353c;
+  --bf-shell-text: #e6e8eb; --bf-shell-muted: #a2a9b3; --bf-shell-accent: #8fb3f5; --bf-shell-accent-soft: #22324c;
+  --bf-shell-shadow: 0 0 0 1px #ffffff0d, 0 1px 3px #0006;
 }
 /* AppFrame wrappers contain public slot anchors; native detail transitions stay. */
 body[data-bf-notebook] [data-slot="root"] > div {
@@ -19,9 +23,10 @@ body[data-bf-notebook] [data-slot="root"] > div {
 body[data-bf-notebook] [data-slot="root"] > div > [data-side] { display: none }
 body[data-bf-notebook] [data-slot="root"] > div > div:has(> [data-slot="conversation"]) {
   grid-column: 2; grid-row: 1; border-radius: 16px; background: var(--bf-shell-pane); padding-top: 40px; position: relative;
+  box-shadow: var(--bf-shell-shadow);
 }
 body[data-bf-notebook] [data-slot="root"] > div > div:has(> [data-slot="conversation"])::before {
-  content: 'Chat'; position: absolute; left: 16px; top: 11px; color: var(--bf-shell-text); font: 500 13px/20px sans-serif;
+  content: var(--bf-chat-label, 'Chat'); position: absolute; left: 16px; top: 11px; color: var(--bf-shell-text); font: 600 13px/20px var(--bf-shell-font); letter-spacing: -.005em;
 }
 body[data-bf-notebook] [data-slot="conversation"] > div {
   --dsw-alias-bg-base: var(--bf-shell-pane); --dsw-alias-bg-layer-1: var(--bf-shell-pane);
@@ -35,8 +40,8 @@ body[data-bf-notebook] div:has(> div > div > span > [data-slot="conversation.her
 body[data-bf-notebook] div:has(> span > [data-slot="conversation.hero.brand.mark"]) { display: block; margin-bottom: 14px }
 body[data-bf-notebook] span:has(> [data-slot="conversation.hero.brand.mark"]) ~ span { display: none }
 .bf-welcome { color: var(--bf-shell-text); text-align: left }
-.bf-welcome > span { color: #85a7e8; font-size: 36px }
-.bf-welcome h2 { margin: 14px 0; font-size: 25px; line-height: 1.45; font-weight: 500 }
+.bf-welcome > span { display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; color: var(--bf-shell-accent); background: var(--bf-shell-accent-soft) }
+.bf-welcome h2 { margin: 16px 0 10px; font-size: 24px; line-height: 1.35; font-weight: 600; letter-spacing: -.02em }
 .bf-welcome p { margin: 0; color: var(--bf-shell-muted); font-size: 13px; line-height: 1.8 }
 body[data-bf-notebook] .bf-hero { box-sizing: border-box; width: 100%; background: transparent; border: 0; box-shadow: none; padding: 8px 30px; margin: 0 0 24px }
 body[data-bf-notebook] .bf-hero > h3, body[data-bf-notebook] .bf-hero > p { display: none }
@@ -58,7 +63,8 @@ body[data-ds-dark-theme] .bf-flow > li[data-actor=person] { --bf-flow-tone: #7fd
 .bf-flow > li > b { font-size: 14px; font-weight: 600; line-height: 1.35 }
 .bf-flow > li > span:last-child { font-size: 12px; line-height: 1.55; color: var(--bf-shell-muted) }
 body[data-bf-notebook] .bf-hero .bf-actions { display: flex; flex-wrap: wrap; gap: 8px }
-body[data-bf-notebook] .bf-hero button { background: transparent !important; color: var(--bf-shell-text) !important; border: 1px solid var(--bf-shell-border); border-radius: 24px; padding: 8px 14px; width: auto; font-size: 12px; font-weight: 400 }
+body[data-bf-notebook] .bf-hero button { background: var(--bf-shell-pane) !important; color: var(--bf-shell-text) !important; border: 1px solid var(--bf-shell-border); border-radius: 24px; padding: 7px 14px; width: auto; font-size: 12px; font-weight: 500; box-shadow: 0 1px 2px #0f172a0a }
+body[data-bf-notebook] .bf-hero button:hover { border-color: color-mix(in srgb, var(--bf-shell-accent) 45%, var(--bf-shell-border)); color: var(--bf-shell-accent) !important }
 body[data-bf-hide-sources] [data-slot="root"] > div { padding-left: 12px }
 body[data-bf-hide-studio] [data-slot="root"] > div { padding-right: 12px }
 body[data-bf-hide-sources] .bf-shell-sources, body[data-bf-hide-studio] .bf-shell-studio { display: none !important }
@@ -73,21 +79,21 @@ body[data-bf-notebook] [data-slot="root"] > div > div:has(> [data-slot="details"
   z-index: 35; background: var(--bf-shell-pane); border-radius: 16px;
 }
 body[data-bf-notebook] [data-slot="root"] > [data-details-collapsed] > div:has(> [data-slot="details"]) { width: 0; border: 0 }
-.bf-shell-top { position: fixed; inset: 0 0 auto; height: var(--bf-shell-top-height); padding: 0 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--bf-shell-text); pointer-events: auto }
+.bf-shell-top { position: fixed; inset: 0 0 auto; height: var(--bf-shell-top-height); padding: 0 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--bf-shell-text); pointer-events: auto; font-family: var(--bf-shell-font); -webkit-font-smoothing: antialiased }
 .bf-shell-brand { display: flex; align-items: center; gap: 12px; min-width: 0 }
-.bf-shell-brand > span:first-child { display: grid; place-items: center; width: 29px; height: 29px; background: #f4f7ff; color: #386bbb; border-radius: 50%; font-weight: 700 }
-.bf-shell-brand strong { font-size: 17px; font-weight: 500 }
+.bf-shell-brand > span:first-child { display: grid; place-items: center; width: 28px; height: 28px; background: linear-gradient(135deg, #3d7be6, #2554b8); color: #fff; border-radius: 8px; font-size: 14px; font-weight: 700; box-shadow: 0 1px 2px #1d4ed840, inset 0 1px 0 #ffffff33 }
+.bf-shell-brand strong { font-size: 16px; font-weight: 650; letter-spacing: -.015em }
 .bf-shell-title { font-size: 13px; color: var(--bf-shell-muted) }
 .bf-shell-top nav { display: flex; align-items: center; gap: 14px }
 /* Three kinds of control, three weights: notebook actions are quiet text, the pane
    switches read as one segmented control, and Help keeps its own outline. */
 .bf-top-group { display: flex; align-items: center; gap: 2px }
 .bf-top-group[data-kind=notebook] button { border-color: transparent; color: var(--bf-shell-muted) }
-.bf-top-group[data-kind=notebook] button:hover:not(:disabled) { background: #0f172a0d; color: var(--bf-shell-text) }
-.bf-top-group[data-kind=panes] { border: 1px solid var(--bf-shell-border); border-radius: 24px; padding: 2px; background: var(--bf-shell-pane) }
+.bf-top-group[data-kind=notebook] button:hover:not(:disabled) { background: color-mix(in srgb, var(--bf-shell-text) 7%, transparent); color: var(--bf-shell-text) }
+.bf-top-group[data-kind=panes] { border: 1px solid var(--bf-shell-border); border-radius: 24px; padding: 2px; background: var(--bf-shell-pane); box-shadow: 0 1px 2px #0f172a0a }
 .bf-top-group[data-kind=panes] button { border-color: transparent }
 .bf-shell-top button, .bf-shell-pane button { font: inherit; cursor: pointer; color: inherit }
-.bf-shell-top button { border: 1px solid var(--bf-shell-border); background: transparent; border-radius: 24px; padding: 5px 12px; font-size: 12px; white-space: nowrap }
+.bf-shell-top button { border: 1px solid var(--bf-shell-border); background: transparent; border-radius: 24px; padding: 5px 12px; font-size: 12px; font-weight: 500; white-space: nowrap; transition: background .12s, color .12s, border-color .12s }
 /* A 1280-wide laptop or projector: labels stay on one line and the groups tighten
    instead of wrapping "Create notebook" into two lines. */
 @media (max-width: 1400px) {
@@ -98,29 +104,33 @@ body[data-bf-notebook] [data-slot="root"] > [data-details-collapsed] > div:has(>
 .bf-shell-pane.bf-state {
   position: fixed; top: var(--bf-shell-top-height); bottom: 14px; height: auto; margin: 0; border-radius: 16px; padding: 0;
   display: flex; flex-direction: column; overflow: hidden; pointer-events: auto;
-  background: var(--bf-shell-pane); color: var(--bf-shell-text); font-size: 13px;
+  background: var(--bf-shell-pane); color: var(--bf-shell-text); font-size: 13px; box-shadow: var(--bf-shell-shadow);
   --bf-surface: var(--bf-shell-pane); --bf-surface-2: var(--bf-shell-bg); --bf-line: var(--bf-shell-border);
   --bf-text: var(--bf-shell-text); --bf-muted: var(--bf-shell-muted);
 }
 .bf-shell-sources { left: 12px; width: var(--bf-shell-left) }
 .bf-shell-studio { right: 12px; width: var(--bf-shell-right) }
 .bf-shell-pane > header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--bf-shell-border); height: 40px; flex-shrink: 0; padding: 0 14px }
-.bf-shell-pane > header h2 { font-size: 13px; font-weight: 500 }
+.bf-shell-pane > header h2 { font-size: 13px; font-weight: 600; letter-spacing: -.005em }
 .bf-shell-scroll { padding: 16px 18px; flex: 1; min-height: 0; overflow: auto }
-.bf-add-source { width: 100%; border: 1px solid var(--bf-shell-border); border-radius: 22px; background: transparent; padding: 8px; font-size: 12px }
-.bf-add-source:hover, .bf-resource-list button:hover, .bf-artifact:hover { background: color-mix(in srgb, var(--bf-shell-text) 7%, transparent) }
+.bf-add-source { width: 100%; border: 1px dashed color-mix(in srgb, var(--bf-shell-accent) 45%, var(--bf-shell-border)) !important; border-radius: 10px !important; background: color-mix(in srgb, var(--bf-shell-accent-soft) 60%, transparent) !important; color: var(--bf-shell-accent) !important; padding: 9px !important; font-size: 13px !important; font-weight: 600 !important; box-shadow: none !important }
+.bf-add-source:hover { background: var(--bf-shell-accent-soft) !important }
+.bf-resource-list button:hover, .bf-artifact:hover { background: color-mix(in srgb, var(--bf-shell-text) 5%, transparent) }
 .bf-source-batch { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 20px 0 12px }
 .bf-source-batch code { width: 100%; font-size: 10px; overflow-wrap: anywhere; color: var(--bf-shell-muted) }
 .bf-source-batch button { background: transparent; border: 0; font-size: 11px; margin-left: auto }
 .bf-resource-list { list-style: none; padding: 0; margin: 0 }
-.bf-resource-list button { border: 0; border-radius: 10px; background: transparent; display: flex; gap: 12px; align-items: center; padding: 13px 8px; text-align: left; width: 100% }
+.bf-resource-list button { border: 0; border-radius: 10px; background: transparent; box-shadow: none; display: flex; gap: 10px; align-items: center; padding: 10px 6px; margin-bottom: 2px; text-align: left; width: 100% }
+.bf-resource-list button > span:last-child, .bf-artifact > span:last-child { color: var(--bf-shell-muted); opacity: .7 }
 .bf-resource-list button > span:nth-child(2), .bf-artifact > span:nth-child(2) { flex: 1; min-width: 0 }
 .bf-resource-list strong, .bf-artifact strong { display: block; font-size: 13px; font-weight: 500; overflow-wrap: anywhere }
-.bf-resource-list small, .bf-artifact small { display: block; font-size: 11px; color: var(--bf-shell-muted); margin-top: 5px }
-.bf-resource-list button[aria-pressed=true], .bf-artifact[aria-pressed=true] { background: color-mix(in srgb, #7ea8ef 17%, transparent); box-shadow: inset 0 0 0 1px #7ea8ef66 }
-.bf-file-icon { font-size: 23px; color: var(--bf-shell-muted) }
+.bf-resource-list small, .bf-artifact small { display: block; font-size: 11px; color: var(--bf-shell-muted); margin-top: 3px }
+.bf-resource-list button[aria-pressed=true], .bf-artifact[aria-pressed=true] { background: var(--bf-shell-accent-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bf-shell-accent) 35%, transparent) }
+/* Icon tiles: one tinted square per row, so files and outputs line up as a list. */
+.bf-file-icon, .bf-artifact > span:first-child { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 8px; color: var(--bf-shell-muted); background: color-mix(in srgb, var(--bf-shell-text) 5%, transparent) }
+.bf-resource-list button[aria-pressed=true] .bf-file-icon, .bf-artifact[aria-pressed=true] > span:first-child { color: var(--bf-shell-accent); background: var(--bf-shell-pane) }
 .bf-shell-empty { min-height: 320px; height: 48vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--bf-shell-muted); font-size: 12px }
-.bf-shell-empty > span { font-size: 32px; margin-bottom: 12px }
+.bf-shell-empty > span { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 16px; margin-bottom: 14px; color: var(--bf-shell-accent); background: var(--bf-shell-accent-soft) }
 .bf-shell-empty p { max-width: 260px }
 .bf-existing { color: var(--bf-shell-muted); font-size: 12px; margin-top: 20px }
 .bf-existing form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px }
@@ -131,39 +141,42 @@ body[data-bf-notebook] [data-slot="root"] > [data-details-collapsed] > div:has(>
    only marks which one is open. */
 .bf-studio-tools button {
   display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto;
-  gap: 2px 8px; align-items: center; text-align: left; min-height: 70px;
-  border: 0; box-shadow: inset 0 0 0 1px var(--bf-shell-border);
-  border-radius: 12px; padding: 11px 12px; font-size: 13px;
-  background: color-mix(in srgb, var(--bf-shell-text) 4%, transparent);
+  gap: 8px 8px; align-items: center; text-align: left; min-height: 78px;
+  border: 1px solid var(--bf-shell-border) !important; box-shadow: 0 1px 2px #0f172a0a !important;
+  border-radius: 12px !important; padding: 12px !important; font-size: 13px;
+  background: var(--bf-shell-pane) !important;
+  transition: border-color .12s, box-shadow .12s, background .12s;
 }
-.bf-studio-tools button:hover { background: color-mix(in srgb, var(--bf-shell-text) 9%, transparent) }
-.bf-studio-tools button > span:first-child { grid-row: 1; font-size: 15px; opacity: .75 }
-.bf-studio-tools button > span:nth-child(2) { grid-row: 2; grid-column: 1 / -1; font-size: 13px; font-weight: 600 }
+.bf-studio-tools button:hover { border-color: color-mix(in srgb, var(--bf-shell-accent) 40%, var(--bf-shell-border)) !important; box-shadow: 0 2px 8px #0f172a12 !important }
+/* The icon sits in a tinted square: a quiet mark of where each entry leads. */
+.bf-studio-tools button > span:first-child { grid-row: 1; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; color: var(--bf-shell-accent); background: var(--bf-shell-accent-soft) }
+.bf-studio-tools button > span:nth-child(2) { grid-row: 2; grid-column: 1 / -1; font-size: 13px; font-weight: 600; letter-spacing: -.005em }
 /* The chevron sits on the icon line, so a long name can never push it onto its own row. */
-.bf-studio-tools button > span:last-child { grid-row: 1; grid-column: 3; opacity: .45; font-size: 12px }
+.bf-studio-tools button > span:last-child { grid-row: 1; grid-column: 3; display: grid; color: var(--bf-shell-muted); opacity: .6 }
 .bf-studio-tools button .bf-badge { grid-row: 1; grid-column: 2; justify-self: end; margin: 0 }
 .bf-studio-tools button[data-span=all] { grid-column: 1 / -1; min-height: 0; grid-template-rows: auto }
 .bf-studio-tools button[data-span=all] > span:nth-child(2) { grid-row: 1; grid-column: 2 }
-.bf-studio-tools .bf-studio-group { grid-column: 1 / -1; margin: 14px 2px 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .55 }
+.bf-studio-tools .bf-studio-group { grid-column: 1 / -1; margin: 14px 2px 2px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--bf-shell-muted) }
 .bf-studio-tools button[data-secondary=true] {
   grid-column: 1 / -1; grid-template-columns: auto 1fr auto; grid-template-rows: auto;
-  min-height: 0; padding: 9px 12px; background: transparent;
+  min-height: 0; padding: 8px 12px 8px 8px !important;
 }
-.bf-studio-tools button[data-secondary=true] > span:first-child { grid-row: 1; font-size: 13px }
+.bf-studio-tools button[data-secondary=true] > span:first-child { grid-row: 1; width: 26px; height: 26px; border-radius: 7px; color: var(--bf-shell-muted); background: color-mix(in srgb, var(--bf-shell-text) 5%, transparent) }
 .bf-studio-tools button[data-secondary=true] > span:nth-child(2) { grid-row: 1; grid-column: 2; justify-self: start; font-weight: 400 }
 .bf-studio-tools button[data-secondary=true] > span:last-child { grid-row: 1 }
 .bf-shell-pane button:disabled { opacity: .5; cursor: default }
 .bf-artifacts { border-top: 1px solid var(--bf-shell-border); margin-top: 18px; padding-top: 16px }
 .bf-artifacts > header, .bf-inline-preview > header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px }
 .bf-artifacts > header h3, .bf-inline-preview > header h3 { flex: 1; margin: 0; font-size: 13px }
-.bf-artifacts > header button, .bf-inline-preview > header button { background: transparent; border: 1px solid var(--bf-shell-border); border-radius: 16px; padding: 5px 8px; font-size: 11px }
-.bf-artifact { display: flex; align-items: center; gap: 10px; border: 0; border-radius: 10px; padding: 12px 8px; text-align: left; width: 100%; background: transparent; margin-bottom: 6px }
+.bf-artifacts > header button, .bf-inline-preview > header button { background: transparent; border: 1px solid var(--bf-shell-border); border-radius: 16px; padding: 4px 10px; font-size: 11px; box-shadow: none }
+.bf-artifact { display: flex; align-items: center; gap: 12px; border: 0 !important; border-radius: 10px !important; padding: 8px !important; text-align: left; width: 100%; background: transparent; box-shadow: none !important; margin-bottom: 4px }
 .bf-artifact .bf-chip { margin-top: 8px }
 .bf-inline-preview { margin-top: 22px; border-top: 1px solid var(--bf-shell-border); padding-top: 16px }
-.bf-source-table { overflow: auto; max-height: 55vh; border: 1px solid var(--bf-shell-border); border-radius: 8px }
+.bf-source-table { overflow: auto; max-height: 55vh; border: 1px solid var(--bf-shell-border); border-radius: 10px }
 .bf-source-table table { border-collapse: collapse; white-space: nowrap; font-size: 12px; width: 100% }
 .bf-source-table th, .bf-source-table td { padding: 8px 12px; border-bottom: 1px solid var(--bf-shell-border); text-align: left; max-width: 480px; overflow: hidden; text-overflow: ellipsis }
-.bf-source-table thead { position: sticky; top: 0; background: var(--bf-shell-pane, var(--bf-surface)) }
+.bf-source-table th { font-weight: 600; color: var(--bf-shell-muted) }
+.bf-source-table thead { position: sticky; top: 0; background: color-mix(in srgb, var(--bf-shell-text) 3%, var(--bf-shell-pane)) }
 .bf-inline-preview code { overflow-wrap: anywhere; font-size: 10px }
 .bf-inline-preview .bf-actions { font-size: 11px; gap: 6px }
 .bf-inline-preview .bf-actions button { padding: 5px 8px }
@@ -181,13 +194,15 @@ body[data-bf-notebook] .bf-drawer { top: var(--bf-shell-top-height); right: 12px
 .bf-source-import { max-width: 740px }
 .bf-expanded-preview .bf-document { padding: 16px }
 .bf-shell-top button:focus-visible, .bf-shell-pane button:focus-visible { outline: 2px solid #7ea8ef; outline-offset: 3px }
-.bf-shell-top button[aria-expanded=true], .bf-shell-top button[aria-pressed=true] { background: #d8e5ff; color: #244c8b; border-color: #8caade; box-shadow: inset 0 0 0 1px #8caade }
-body[data-ds-dark-theme] .bf-shell-top button[aria-expanded=true] { background: #334b70; color: #e2edff; border-color: #7d9dcd }
+.bf-shell-top button[aria-expanded=true], .bf-shell-top button[aria-pressed=true] { background: var(--bf-shell-accent-soft); color: #1f4f9e; border-color: color-mix(in srgb, var(--bf-shell-accent) 40%, transparent) }
+body[data-ds-dark-theme] .bf-shell-top button[aria-expanded=true], body[data-ds-dark-theme] .bf-shell-top button[aria-pressed=true] { background: #2a3d5e; color: #e2edff; border-color: #5d7fb5 }
 .bf-shell-pane .bf-studio-tools button[aria-pressed=true] {
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, #7ea8ef 70%, transparent);
-  background: color-mix(in srgb, #7ea8ef 16%, transparent);
+  border-color: color-mix(in srgb, var(--bf-shell-accent) 65%, transparent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bf-shell-accent) 16%, transparent) !important;
+  background: color-mix(in srgb, var(--bf-shell-accent-soft) 55%, var(--bf-shell-pane)) !important;
 }
-.bf-shell-pane .bf-studio-tools button[aria-pressed=true] > span:first-child { opacity: 1 }
+.bf-shell-pane .bf-studio-tools button[aria-pressed=true] > span:first-child { color: #fff; background: var(--bf-shell-accent) }
+body[data-ds-dark-theme] .bf-shell-pane .bf-studio-tools button[aria-pressed=true] > span:first-child { color: #0b1420 }
 .bf-shell-top .bf-notebook-title { width: clamp(120px, 15vw, 260px); min-width: 70px; background: transparent; border: 1px solid transparent; border-radius: 6px; color: inherit; padding: 5px; font: inherit; font-size: 13px }
 .bf-notebook-title:hover, .bf-notebook-title:focus { border-color: var(--bf-shell-border) }
 .bf-save-state { font-size: 11px; white-space: nowrap; color: var(--bf-shell-muted) }
@@ -246,9 +261,10 @@ body[data-ds-dark-theme] .bf-save-state[data-dirty=true] { color: #dfbd76 }
 .bf-feishu-crumbs button { border: 0; background: transparent; color: inherit; cursor: pointer; padding: 2px 4px; border-radius: 4px; opacity: 0.75 }
 .bf-feishu-crumbs button[aria-current=true] { opacity: 1; font-weight: 600 }
 .bf-feishu-crumbs button:hover { background: #ffffff14 }
-.bf-feishu-folder { display: block; width: 100%; text-align: left; border: 0; background: transparent; color: inherit; cursor: pointer; padding: 6px 8px; border-radius: 6px }
+.bf-feishu-folder { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; border: 0; background: transparent; color: inherit; cursor: pointer; padding: 6px 8px; border-radius: 6px }
 .bf-feishu-folder:hover { background: #ffffff14 }
 .bf-feishu-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px }
+.bf-feishu-up { display: inline-flex; align-items: center; gap: 4px }
 .bf-feishu-item[data-disabled=true] { opacity: 0.5 }
 .bf-feishu-item select { margin-left: auto }
 .bf-feishu-go { display: flex; gap: 8px; align-items: center; margin-top: 10px }

@@ -1,3 +1,4 @@
+import { Icon } from './icons.tsx'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
@@ -105,7 +106,7 @@ const APPROVAL_CARD_TOOLS = new Set(['confirm_mapping', 'confirm_column_match', 
 function Welcome() {
   const { t } = useUI()
   const batchId = useSyncExternalStore(subscribeHash, selectedBatch)
-  return <div className="bf-welcome"><span aria-hidden="true">✦</span><h2>{t(batchId ? 'welcomeLoadedTitle' : 'welcomeTitle')}</h2><p>{t(batchId ? 'welcomeLoadedHelp' : 'welcomeHelp')}</p></div>
+  return <div className="bf-welcome"><span aria-hidden="true"><Icon name="sparkle" size={28} /></span><h2>{t(batchId ? 'welcomeLoadedTitle' : 'welcomeTitle')}</h2><p>{t(batchId ? 'welcomeLoadedHelp' : 'welcomeHelp')}</p></div>
 }
 
 function ToolCard({ block, toolName, inspect }: ToolCallViewProps) {

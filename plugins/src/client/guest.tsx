@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, useUI } from './ui.ts'
+import { Icon } from './icons.tsx'
 
 /**
  * Guest mode: an isolated instance with sample data only, for people without a Feishu
@@ -41,5 +42,5 @@ export function GuestPill() {
 /** Where a Feishu feature would be: says it is not available here instead of failing. */
 export function GuestUnavailable({ feature }: { feature: string }) {
   const { t } = useUI()
-  return <p className="bf-hint bf-guest-off"><span aria-hidden="true">⊘</span> {feature} · {t('guestUnavailable')}</p>
+  return <p className="bf-hint bf-guest-off"><span aria-hidden="true"><Icon name="block" size={14} /></span> {feature} · {t('guestUnavailable')}</p>
 }
