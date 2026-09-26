@@ -113,3 +113,33 @@ def test_guest_can_still_open_the_built_in_sample(monkeypatch):
         response = client.post("/batches/demo?case=clean")
         assert response.status_code == 200, response.text
         assert response.json()["demo_case"] == "demo-clean-2024-07"
+
+
+def test_the_guest_launcher_replaces_its_own_environment_before_anything_else(guest_root, gate_token, monkeypatch):
+    # run.sh sources env.sh and execs the launcher, so the operator's key is in the environment
+    # it started with; /proc/<pid>/environ keeps showing that block whatever os.environ says.
+    # Only an exec swaps it — and every guest process runs as the same user (docs/36 §6).
+    started = {**OPERATOR, **gate_token, "DEEPSEEK_API_KEY": "sk-operator-real-key", "BRIDGEFLOW_GUEST_LLM": "1"}
+    calls = []
+
+    def execve(path, argv, env):
+        calls.append((path, argv, env))
+        raise SystemExit("exec")
+
+    with pytest.raises(SystemExit, match="exec"):
+        start_web.reexec_scrubbed_guest(["start_web.py", "--guest", "--port", "3090"], started, execve=execve)
+    [(_path, argv, env)] = calls
+    assert argv[1].endswith("scripts/start_web.py") and argv[2:] == ["--guest", "--port", "3090"]
+    assert "sk-operator-real-key" not in env.values() and env["DEEPSEEK_API_KEY"].startswith("gate-client-token")
+    assert env[start_web.GUEST_PREPARED].endswith("web.yml")
+
+    # main() re-execs before it reads the build, the dsh binary or the environment it would pass on.
+    monkeypatch.setattr(start_web.importlib.metadata, "version", lambda _name: "0.1.2rc1")
+    monkeypatch.setattr(start_web.sys, "argv", ["start_web.py", "--guest"])
+    monkeypatch.delenv(start_web.GUEST_PREPARED, raising=False)
+    seen = []
+    monkeypatch.setattr(start_web, "reexec_scrubbed_guest", lambda argv, environ: seen.append(argv) or (_ for _ in ()).throw(SystemExit("exec")))
+    monkeypatch.setattr(start_web, "check_client_build", lambda _root: pytest.fail("ran before the re-exec"))
+    with pytest.raises(SystemExit, match="exec"):
+        start_web.main()
+    assert seen == [["start_web.py", "--guest"]]

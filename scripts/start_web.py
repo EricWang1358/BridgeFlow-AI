@@ -175,6 +175,25 @@ def guest_environment(env: dict[str, str]) -> Path:
     return path
 
 
+# Set only on the re-executed guest launcher: the prepared patch path, and proof the environment
+# this process started with is already the stripped one.
+GUEST_PREPARED = "BRIDGEFLOW_GUEST_PATCH"
+
+
+def reexec_scrubbed_guest(argv: list[str], environ: dict[str, str], execve=os.execve) -> None:
+    """Replace this launcher with itself, started on the guest environment. Does not return.
+
+    run.sh sources env.sh and then execs us, so the operator's key is in the environment this
+    process was started with. Stripping it from the children's copy is not enough: /proc/<pid>/
+    environ shows a process's original environment block — deleting from os.environ does not
+    change it — and every guest process runs as the same user as this one. execve swaps that
+    block, so nothing in the guest unit ever holds the key (docs/36 §6; preflight checks it).
+    """
+    env = dict(environ)
+    env[GUEST_PREPARED] = str(guest_environment(env))
+    execve(sys.executable, [sys.executable, str(Path(__file__).resolve()), *argv[1:]], env)
+
+
 def read_gate_token(env: dict[str, str]) -> str:
     """The demo gate's client token, which it mints on first start (docs/36 §6)."""
     path = Path(llm_gate_state_dir(env)) / GATE_TOKEN_FILE
@@ -285,9 +304,11 @@ def main() -> None:
     run_web, run_backend = not backend_only, not web_only
     guest = "--guest" in sys.argv
     if guest:
-        sys.argv.remove("--guest")
         if backend_only or web_only:
             raise SystemExit("--guest runs its own backend and console together; drop --backend-only/--web-only")
+        if not os.environ.get(GUEST_PREPARED):
+            reexec_scrubbed_guest(sys.argv, dict(os.environ))
+        sys.argv.remove("--guest")
         os.environ.setdefault("DSH_HOME", str(GUEST_ROOT / "dsh-home"))
     if run_web:
         if not os.environ.get("DSH_HOME"):
@@ -308,7 +329,7 @@ def main() -> None:
     env["PYTHONPATH"] = str(ROOT / "backend/src")
     patch_path = "dsh/enterprise.patch.yml"
     if guest:
-        patch_path = str(guest_environment(env))
+        patch_path = env.pop(GUEST_PREPARED)  # prepared before the re-exec above
     if run_web and not guest:
         fallback = resolve_web_model(env)
         if fallback:
