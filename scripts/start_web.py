@@ -45,11 +45,15 @@ TOKEN_FILE_NAME = ".web-launch-token"
 # data, dictionary and credentials are never reachable from it.
 GUEST_ROOT = ROOT / "data" / "guest"
 GUEST_BACKEND_PORT = 8001
-# Never handed to a guest instance: Feishu and the login portal.
-GUEST_ALWAYS_STRIPPED = ("FEISHU_", "PORTAL_")
-# Also stripped unless BRIDGEFLOW_GUEST_LLM=1: every way to reach a paid model.
+# Never handed to a guest instance: Feishu, the login portal and the demo model gate's own config.
+GUEST_ALWAYS_STRIPPED = ("FEISHU_", "PORTAL_", "LLM_GATE_")
+# Also never handed over, AI on or off: every way to reach a paid model directly. With
+# BRIDGEFLOW_GUEST_LLM=1 the guest gets the loopback model gate instead (docs/36 §6), whose
+# client token is worthless anywhere else; the operator's key stays in the gate's process.
 GUEST_MODEL_STRIPPED = ("DEEPSEEK_", "ANTHROPIC_", "OPENAI_", "HERMES_", "HYPER_CHARM_", "OPENCODE_", "COMMANDCODE_",
-                        "DSH_PROVIDER", "DSH_MODEL")
+                        "OPENCLAW_", "DSH_PROVIDER", "DSH_MODEL")
+# Backend providers a guest can still reach through the gate; any other choice is rerouted to it.
+GUEST_BACKEND_PROVIDERS = ("mock", "deepseek", "dsh")
 
 
 def web_token_path() -> Path:
@@ -108,19 +112,35 @@ def fallback_model_patch(dsh_home: str, provider: str, model: str) -> Path:
 def guest_environment(env: dict[str, str]) -> Path:
     """Point this launch at a fresh, isolated guest instance; returns the dsh patch to use."""
     allow_llm = env.get("BRIDGEFLOW_GUEST_LLM") == "1"
+    model = guest_model(env)
+    gate_token = read_gate_token(env) if allow_llm else ""
+    # Checked again after stripping: no operator secret may survive under any other name.
+    secrets_held = {v for k, v in env.items()
+                    if len(v) >= 8 and (k.endswith(("_API_KEY", "_SECRET")) or k == "LLM_GATE_UPSTREAM_KEY")}
+    # Where staff sign in: the demo sits on the apex, so it links to the portal (docs/36 §4).
+    staff_url = env.get("PORTAL_EXTERNAL_BASE_URL", "")
     shutil.rmtree(GUEST_ROOT, ignore_errors=True)
     outputs, home = GUEST_ROOT / "outputs", GUEST_ROOT / "dsh-home"
     outputs.mkdir(parents=True)
     home.mkdir(parents=True)
     for key in list(env):
-        paid_model = key.startswith(GUEST_MODEL_STRIPPED) or key.endswith("_API_KEY")
-        if key.startswith(GUEST_ALWAYS_STRIPPED) or (paid_model and not allow_llm):
+        if key.startswith(GUEST_ALWAYS_STRIPPED + GUEST_MODEL_STRIPPED) or key.endswith(("_API_KEY", "_SECRET")):
             del env[key]
+    # Its own host credential: the operator's service token would also open the real backend on :8000.
+    env["BRIDGEFLOW_SERVICE_TOKEN"] = secrets.token_urlsafe(32)
     if allow_llm:
-        # The operator's model routes (not credentials: those stay in the environment).
-        source = Path(os.environ.get("DSH_HOME", "")) / "settings.yaml"
-        if source.is_file():
-            shutil.copy2(source, home / "settings.yaml")
+        # dsh's DeepSeek provider and the backend's both append /chat/completions to this base.
+        env.update({"DEEPSEEK_BASE_URL": f"http://127.0.0.1:{env.get('BRIDGEFLOW_GATE_PORT', DEFAULT_GATE_PORT)}",
+                    "DEEPSEEK_API_KEY": gate_token, "DEEPSEEK_MODEL": model,
+                    "DSH_PROVIDER": "deepseek-official", "DSH_MODEL": model})
+        for key in [k for k in env if k == "LLM_PROVIDER" or k.startswith("LLM_PROVIDER_")]:
+            if env[key] and env[key] not in GUEST_BACKEND_PROVIDERS:
+                env[key] = "deepseek"
+    leaked = [k for k, v in env.items() if v in secrets_held]
+    if leaked:
+        raise SystemExit(f"guest environment would still carry an operator secret in {leaked}; refusing to start")
+    if staff_url:
+        env["BRIDGEFLOW_STAFF_URL"] = staff_url
     # A copy of the sample dictionary: publishing a dictionary rewrites the active file,
     # and a guest must only ever rewrite its own copy.
     dictionary = GUEST_ROOT / "dictionary.yaml"
@@ -137,7 +157,12 @@ def guest_environment(env: dict[str, str]) -> Path:
     patch = (patch.replace("'../plugins/src/index.ts'", repr(str(ROOT / "plugins/src/index.ts")))
              .replace("./dsh/presets", str(ROOT / "dsh/presets"))
              .replace("http://127.0.0.1:8000", f"http://127.0.0.1:{GUEST_BACKEND_PORT}"))
-    if not allow_llm:
+    if allow_llm:
+        # One model, the one the gate lets through; the operator's own Web routes are not copied.
+        patch += ("\n# Guest mode with the model: through the loopback demo gate only (docs/36 §6).\n"
+                  "- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n"
+                  f"  config:\n    provider: deepseek-official\n    model: {model!r}\n")
+    else:
         patch += ("\n# Guest mode without the model: every turn is answered by a fixed note, at no cost.\n"
                   "- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n"
                   "  config:\n    provider: bridgeflow-guest-notice\n    model: guest-notice\n"
@@ -145,9 +170,19 @@ def guest_environment(env: dict[str, str]) -> Path:
                   f"      name: {str(ROOT / 'plugins/src/guest-model/index.ts')!r}\n")
     path = GUEST_ROOT / "web.yml"
     path.write_text(patch, encoding="utf-8")
-    print(f"BridgeFlow guest mode: data under {GUEST_ROOT} (wiped on start), "
-          f"Feishu off, AI model {'ON (operator pays)' if allow_llm else 'off'}", flush=True)
+    print(f"BridgeFlow guest mode: data under {GUEST_ROOT} (wiped on start), Feishu off, AI model "
+          f"{f'ON via the demo gate ({model})' if allow_llm else 'off'}", flush=True)
     return path
+
+
+def read_gate_token(env: dict[str, str]) -> str:
+    """The demo gate's client token, which it mints on first start (docs/36 §6)."""
+    path = Path(llm_gate_state_dir(env)) / GATE_TOKEN_FILE
+    token = path.read_text(encoding="utf-8").strip() if path.is_file() else ""
+    if not token:
+        raise SystemExit(f"BRIDGEFLOW_GUEST_LLM=1 needs the demo model gate: {path} is missing. "
+                         "Start it first (sudo systemctl enable --now bridgeflow-llm-gate), or unset BRIDGEFLOW_GUEST_LLM.")
+    return token
 
 
 def warn_if_token_missing(web: subprocess.Popen, token_path: Path, seconds: float = 20) -> None:
@@ -180,6 +215,10 @@ def pump_web_output(web: subprocess.Popen, token_path: Path) -> None:
 # fallbacks point into /snapshot and cannot be imported by the running Node Web.
 sys.path.insert(0, str(ROOT / "backend/src"))
 from bridgeflow.dsh_runtime import native_command
+from bridgeflow.llm_gate import CLIENT_TOKEN_FILE as GATE_TOKEN_FILE
+from bridgeflow.llm_gate import DEFAULT_PORT as DEFAULT_GATE_PORT
+from bridgeflow.llm_gate import guest_model
+from bridgeflow.llm_gate import state_dir as llm_gate_state_dir
 
 
 def web_command() -> str:

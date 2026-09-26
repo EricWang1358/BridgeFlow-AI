@@ -497,46 +497,65 @@ python scripts/feishu_membership_check.py
 
 ---
 
-### 9e 访客模式（评委等没有飞书账号的人，可选）
+### 9e 公网演示（主域名，免登录；设计见 [`36`](36-online-demo.md)）
 
-访客实例是一套**独立的**后端加控制台，由 `scripts/start_web.py --guest` 启动，与正式服务物理隔离：
-- **数据**：全部放在 `data/guest/` 下（后端 `127.0.0.1:8001`、自己的 DSH_HOME、自己的一份示例字典），每次启动清空。
-- **凭据**：启动器会去掉所有 `FEISHU_*`、`PORTAL_*` 变量，访客实例拿不到飞书和门户的任何凭据，飞书接口一律返回「访客模式不可用」。
-- **大模型**：是否允许访客用由 `BRIDGEFLOW_GUEST_LLM` 决定，默认不允许。
-  - 不允许时，所有模型密钥都会被去掉，对话由一个固定回复代替，不花钱，也不会消耗服务器上的 API token。
-  - 设为 `1` 才会用运营方的模型和费用。
-- **入口**：门户登录页的「以访客身份进入」按钮，不签发会话，也不签发身份令牌。
+2026-09-25 负责人拍板：**主域名 `https://<domain>/` 就是演示**，评委打开即用，不经登录门户；员工从
+`https://portal.<domain>/` 飞书登录进各自席位。演示背后是访客实例（`scripts/start_web.py --guest`），与正式服务物理隔离：
 
-**访客从内置示例开始，不能上传自己的文件。** 普通批次、自检、部门补传、立项材料和流程材料的文件上传接口均拒绝访客请求；界面不提供上传表单，改为指引打开样例。访客之间共用一个控制台，能看到彼此输入的会话与改动；页面明确提醒不要输入真实业务数据，并说明每晚清空。
+- **数据**：全部在 `data/guest/`（后端 `127.0.0.1:8001`、控制台 `127.0.0.1:3090`、自己的 DSH_HOME 与示例字典副本），每次启动清空，每晚 03:30 重启即重置。
+- **凭据**：恒剥 `FEISHU_*` `PORTAL_*` `LLM_GATE_*` 与一切模型 key；另发一枚新的服务凭证（运营方那枚能打开 8000 上的正式后端）。
+- **大模型**：`BRIDGEFLOW_GUEST_LLM=1` 时**只经本机模型闸门** `bridgeflow-llm-gate`（`127.0.0.1:8300`）。
+  真 key 只在闸门进程里；访客进程拿到的是闸门地址和一枚在别处毫无用处的客户端令牌。闸门限制在
+  `data/mappings/llm-gate.yaml`：模型白名单（只放访客钉死的那一个）、`max_tokens` 封顶、请求体封顶、速率、并发、急停；
+  日预算字段已就位但**暂不设置**（拍板：先不设预算，后续迭代）。未设 `BRIDGEFLOW_GUEST_LLM` 时对话由固定提示回复，不花钱。
+- **入口**：无会话的浏览器打开 `/` → Caddy 302 到 `/__enter` → 门户 `/guest` 交接页带本次启动令牌跳回。门户对访客只是令牌交接器，
+  不签会话、不签身份令牌。令牌缺失（实例正在重启）时返回 503 自动重试页，不会循环。
+- **首屏**：新标签页自动打开示例笔记本，并弹出引导欢迎卡。上传入口一律拒绝，只能用内置样例。
+- 访客之间共用一个控制台（席位池见 [`36`](36-online-demo.md) §7，P1）；每个标签页各开自己的示例笔记本，横幅提醒不要输入真实数据。
 
-一次性装配：
+一次性装配（在实例上，按顺序）：
 
-1. DNS 加一条 `guest.<domain>` 指向本机，和其他子域名一样。
-2. `env.sh` 追加以下内容，然后重启门户：
+1. 确认 `env.sh` 里的 `DEEPSEEK_API_KEY` / `DEEPSEEK_BASE_URL` 是一条能用的 `deepseek-official` 路由：访客只走这一条，
+   模型取 `BRIDGEFLOW_GUEST_MODEL`，否则 `DSH_PROVIDER=deepseek-official` 时的 `DSH_MODEL`，否则 `DEEPSEEK_MODEL`。
+   想给演示单独一把 key，设 `LLM_GATE_UPSTREAM_KEY`（与 `LLM_GATE_UPSTREAM_URL`）即可，不影响正式服务。
+2. `env.sh` 追加：
 
    ```bash
-   export PORTAL_GUEST_APP_URI="https://guest.<domain>/"
+   export PORTAL_GUEST_APP_URI="https://<domain>/"
    export PORTAL_GUEST_TOKEN_FILE="$HOME/Hackathon2026/BridgeFlow-AI/data/guest/dsh-home/.web-launch-token"
-   # export BRIDGEFLOW_GUEST_LLM=1   # 只有愿意承担访客模型费用时才打开
+   export BRIDGEFLOW_GUEST_LLM=1          # 不开就去掉这行：访客对话变固定提示
+   # export LLM_GATE_UPSTREAM_KEY="..."   # 可选：演示专用 key
+   # export LLM_GATE_UPSTREAM_URL="..."   # 可选：与上面配套的上游地址
    ```
 
-3. 启用访客单元和每晚重置定时器（`deploy.sh` 会安装单元文件，但只会重启已经启用的访客单元）：
+3. 先起闸门（它在第一次启动时生成 `data/gate/client-token`，访客启动器要读），再起访客与定时器，最后重跑部署渲染 Caddy：
 
    ```bash
-   bash deploy/deploy.sh origin/main <domain>    # 安装单元文件
+   bash deploy/deploy.sh origin/main <domain>        # 安装单元文件
+   sudo systemctl enable --now bridgeflow-llm-gate
+   curl -s 127.0.0.1:8300/status                     # 看到 "paused": false 与模型名
    sudo systemctl enable --now bridgeflow-guest bridgeflow-guest-reset.timer
-   bash deploy/deploy.sh origin/main <domain>    # 这次访客已启用，会给 Caddyfile 加上 guest.<domain> 站点
-   sudo systemctl restart bridgeflow-portal
+   bash deploy/deploy.sh origin/main <domain>        # 访客已启用：主域名改渲染为演示站点，并重启门户
+   bash deploy/preflight.sh <domain>
    ```
+
+内存：访客实例 `MemoryMax=900M`、闸门 `200M`，叠在 7 席位之上接近 4GB 上限。装配后看 `free -h`；吃紧就先腾掉空闲席位。
 
 验收：
-- 门户首页出现「以访客身份进入」，点进去能看到「访客模式」横幅；
-- 「添加来源」里飞书两项显示「访客模式下不可用」；
-- 对话发一句话，回复是访客提示（没开 `BRIDGEFLOW_GUEST_LLM` 时）；
-- 「打开示例笔记本」能用；
-- `curl -s 127.0.0.1:8001/tools/feishu-list -X POST` 在带服务令牌时返回 403「guest mode」。
+- 无痕窗口打开 `https://<domain>/`：不出现任何登录框，几秒内进入示例笔记本并弹出引导；横幅写「访客模式」，并有员工飞书登录链接；
+- `curl -sI -H 'Accept: text/html' https://<domain>/` → `302`、`location: /__enter`；`curl -s -o /dev/null -w '%{http_code}' https://<domain>/` → `401`；
+- 发一句话，有回复；`curl -s 127.0.0.1:8300/status` 的 `requests` 增加；
+- `https://portal.<domain>/` 飞书登录进席位照旧；
+- `preflight.sh` 的 `no guest process holds the operator model key` 为 ok。
 
-关闭：`sudo systemctl disable --now bridgeflow-guest bridgeflow-guest-reset.timer`，再跑一次 `deploy.sh` 去掉 Caddy 站点，并从 `env.sh` 删掉两个 `PORTAL_GUEST_*` 变量。
+日常操作：
+- 暂停演示 AI（即时，所有调用 503，页面照常）：`touch ~/Hackathon2026/BridgeFlow-AI/data/gate/OFF`；恢复：删掉这个文件。
+- 用量：`curl -s 127.0.0.1:8300/status`（当天请求数、token、被拒次数；只有计数，不存任何请求内容）。
+- 设预算：在 `data/mappings/llm-gate.yaml` 填 `daily_tokens`，`sudo systemctl restart bridgeflow-llm-gate`。
+
+关闭演示、主域名改回跳门户：`sudo systemctl disable --now bridgeflow-guest bridgeflow-guest-reset.timer bridgeflow-llm-gate`，
+再跑一次 `deploy.sh`，并从 `env.sh` 删掉 `PORTAL_GUEST_*` 与 `BRIDGEFLOW_GUEST_LLM`。疑似 key 泄露：吊销后把新 key 写回 `env.sh`，
+只需 `sudo systemctl restart bridgeflow-llm-gate`——访客进程从未持有它。
 
 ## 10 GitHub 仓库侧配置
 

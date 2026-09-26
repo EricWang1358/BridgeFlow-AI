@@ -230,7 +230,13 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
         """
         if not cfg.guest_app_uri:
             return error(404, "访客模式未开启", "这个部署没有提供访客入口，请用飞书登录。")
-        return handover(cfg.guest_app_uri, cfg.guest_token_file, cfg.guest_token_file or "PORTAL_GUEST_TOKEN_FILE unset")
+        # The public demo sends every browser without a dsh session here (docs/36 §4), so
+        # entering without a token would bounce straight back: a loop, not a degraded entry.
+        # No token means the instance is (re)starting — say so and let the page retry.
+        if not (cfg.guest_token_file and read_token_file(cfg.guest_token_file)):
+            return HTMLResponse(pages.restarting(), status_code=503,
+                                headers={"cache-control": "no-store", "retry-after": "15"})
+        return handover(cfg.guest_app_uri, cfg.guest_token_file, cfg.guest_token_file)
 
     @app.get("/login", response_model=None)
     async def login(request: Request, app: Annotated[str, Query()] = "") -> HTMLResponse | RedirectResponse:

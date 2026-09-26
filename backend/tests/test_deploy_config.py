@@ -84,3 +84,54 @@ def test_deploy_scripts_parse(script):
     subprocess.run(["bash", "-n", str(DEPLOY / script)], check=True)
     if shutil.which("shellcheck"):
         subprocess.run(["shellcheck", "-S", "error", str(DEPLOY / script)], check=True)
+
+
+def _render(*args: str) -> str:
+    import sys
+    return subprocess.run([sys.executable, str(DEPLOY / "render_caddy.py"), "example.com", *args],
+                          check=True, capture_output=True, text=True).stdout
+
+
+def _site(caddyfile: str, host: str) -> str:
+    start = caddyfile.index(f"\n{host} {{") if not caddyfile.startswith(f"{host} {{") else 0
+    return caddyfile[start:caddyfile.index("\n}", start + 1) + 2]
+
+
+def test_the_apex_becomes_the_public_demo_only_once_the_guest_instance_is_on():
+    # docs/36 §3: without the guest instance the apex keeps redirecting to the portal.
+    assert "redir https://portal.example.com{uri} permanent" in _render()
+    demo = _render("--guest-port", "3090")
+    apex = _site(demo, "example.com")
+    assert "forward_auth" not in apex and "reverse_proxy 127.0.0.1:3090" in apex
+    # No session → the portal's token handover on this host; a failing ?token= must not loop.
+    assert "rewrite * /guest" in apex and "redir @page /__enter 302" in apex
+    assert "{http.request.uri.query.token} == \"\"" in apex and "header Accept *text/html*" in apex
+    assert "copy_response" in apex and "portal.example.com" not in apex
+    assert "guest.example.com" not in demo
+    # Seats and the portal are untouched.
+    assert "seat-1.console.example.com {" in demo and "portal.example.com {" in demo
+
+
+def test_legacy_single_console_moves_off_the_apex_for_the_demo(tmp_path):
+    rendered = _render("--guest-port", "3090", "--seats", str(tmp_path / "none.yaml"))
+    assert "console.example.com {" in rendered and "forward_auth" in _site(rendered, "console.example.com")
+    assert "forward_auth" not in _site(rendered, "example.com")
+
+
+@pytest.mark.skipif(shutil.which("caddy") is None, reason="caddy not installed")
+@pytest.mark.parametrize("args", [(), ("--guest-port", "3090")])
+def test_rendered_caddyfiles_validate(tmp_path, args):
+    path = tmp_path / "Caddyfile"
+    path.write_text(_render(*args), encoding="utf-8")
+    subprocess.run(["caddy", "validate", "--adapter", "caddyfile", "--config", str(path)],
+                   check=True, capture_output=True)
+
+
+def test_guest_unit_trusts_the_apex_and_the_gate_stays_on_loopback():
+    guest = (DEPLOY / "bridgeflow-guest.service").read_text(encoding="utf-8")
+    assert "--trusted-host <domain> --trusted-host <domain>:443" in guest and "guest.<domain>" not in guest
+    gate = (DEPLOY / "bridgeflow-llm-gate.service").read_text(encoding="utf-8")
+    assert "source env.sh" in gate and "-m bridgeflow.llm_gate" in gate and "--host" not in gate
+    deploy = (DEPLOY / "deploy.sh").read_text(encoding="utf-8")
+    assert "bridgeflow-llm-gate.service:bridgeflow-llm-gate.service" in deploy
+    assert deploy.index("restart bridgeflow-llm-gate") < deploy.index("restart bridgeflow-guest")

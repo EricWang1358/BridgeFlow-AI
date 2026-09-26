@@ -730,3 +730,13 @@ def test_guest_entry_is_offered_only_when_configured_and_issues_nothing(tmp_path
         assert entered.status_code == 200 and "http://guest.test/?token=guest-launch" in entered.text
         assert "set-cookie" not in entered.headers  # no session, no identity
         assert client.get("/me").status_code == 401
+
+
+def test_guest_entry_without_a_token_waits_instead_of_bouncing(tmp_path):
+    # The public demo sends every browser without a dsh session to /guest (docs/36 §4); entering
+    # without a token would 401 and come straight back, so a restarting instance gets a retry page.
+    portal = make_portal(tmp_path, guest_app_uri="https://demo.test/", guest_token_file=str(tmp_path / "missing"))
+    with TestClient(portal) as client:
+        waiting = client.get("/guest")
+        assert waiting.status_code == 503 and waiting.headers["retry-after"] == "15"
+        assert "https://demo.test/" not in waiting.text and 'http-equiv="refresh" content="15"' in waiting.text

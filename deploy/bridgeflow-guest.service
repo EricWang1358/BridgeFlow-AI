@@ -9,16 +9,21 @@
 # FEISHU_*/PORTAL_* variable, and — unless env.sh sets BRIDGEFLOW_GUEST_LLM=1 — every model
 # key too, answering chat with a fixed note instead of calling a model. Nothing the real
 # service stores is reachable from here.
+#
+# Public demo (docs/36): with this unit enabled, deploy.sh renders the apex <domain> as this
+# console (no sign-in; browsers without a session go through /__enter for the launch token),
+# and staff use portal.<domain>. With BRIDGEFLOW_GUEST_LLM=1 the model is reached only through
+# bridgeflow-llm-gate on loopback; the launcher refuses to start if the gate never ran.
 [Unit]
 Description=BridgeFlow guest instance (sample data only, reset nightly)
-After=network-online.target
+After=network-online.target bridgeflow-llm-gate.service
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/Hackathon2026/BridgeFlow-AI
-ExecStart=/home/ubuntu/Hackathon2026/BridgeFlow-AI/run.sh --guest --host 127.0.0.1 --port 3090 --trusted-host guest.<domain> --trusted-host guest.<domain>:443
+ExecStart=/home/ubuntu/Hackathon2026/BridgeFlow-AI/run.sh --guest --host 127.0.0.1 --port 3090 --trusted-host <domain> --trusted-host <domain>:443
 Restart=on-failure
 RestartSec=5
 MemoryHigh=700M

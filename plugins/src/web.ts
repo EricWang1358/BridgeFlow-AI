@@ -153,6 +153,8 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
             // Guest mode (docs/22 §9e): an isolated sample-only instance with no Feishu, and
             // the model only when the operator allowed it.
             guestMode: process.env.BRIDGEFLOW_GUEST_MODE === '1', guestLlm: process.env.BRIDGEFLOW_GUEST_LLM === '1',
+            // The public demo sits on the apex; staff sign in at the portal (docs/36 §4).
+            staffUrl: process.env.BRIDGEFLOW_GUEST_MODE === '1' ? process.env.BRIDGEFLOW_STAFF_URL ?? '' : '',
           }))
           return
         }

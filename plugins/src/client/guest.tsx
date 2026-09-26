@@ -7,13 +7,14 @@ import { Icon } from './icons.tsx'
  * account (evaluators). Feishu is never available here, and the AI model only when the
  * operator switched it on. Read once from the host's /config and shared.
  */
-export type GuestMode = { guest: boolean; llm: boolean }
+export type GuestMode = { guest: boolean; llm: boolean; staffUrl: string }
 let cached: Promise<GuestMode> | null = null
 export function useGuestMode(): GuestMode {
-  const [mode, setMode] = useState<GuestMode>({ guest: false, llm: true })
+  const [mode, setMode] = useState<GuestMode>({ guest: false, llm: true, staffUrl: '' })
   useEffect(() => {
-    cached ??= api<{ guestMode?: boolean; guestLlm?: boolean }>('/config')
-      .then(v => ({ guest: !!v.guestMode, llm: !!v.guestLlm })).catch(() => ({ guest: false, llm: true }))
+    cached ??= api<{ guestMode?: boolean; guestLlm?: boolean; staffUrl?: string }>('/config')
+      .then(v => ({ guest: !!v.guestMode, llm: !!v.guestLlm, staffUrl: v.staffUrl ?? '' }))
+      .catch(() => ({ guest: false, llm: true, staffUrl: '' }))
     let live = true
     void cached.then(value => { if (live) setMode(value) })
     return () => { live = false }
@@ -30,6 +31,7 @@ export function GuestBanner() {
     <span>{t('guestBannerData')}</span>
     <span>{t('guestBannerFeishu')}</span>
     <span>{t(mode.llm ? 'guestBannerLlmOn' : 'guestBannerLlmOff')}</span>
+    {/^https:\/\//.test(mode.staffUrl) && <a href={mode.staffUrl} rel="noopener">{t('guestStaffSignIn')}</a>}
   </div>
 }
 

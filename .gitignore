@@ -41,6 +41,8 @@ data/mappings/field-dictionary.yaml
 # no person in it) stays tracked.
 data/homes/
 data/guest/
+# Demo model gate state: its client token and per-day ledger (docs/36 §6).
+data/gate/
 data/seats-assigned.json
 *.xlsx
 *.xls

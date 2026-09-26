@@ -1,0 +1,29 @@
+# The public demo's model gate (docs/36 §6). Opt-in, like the guest instance: deploy.sh installs
+# this file but only restarts the unit once it is enabled:
+#
+#   sudo systemctl enable --now bridgeflow-llm-gate
+#
+# It is the only process that holds the operator's model key when guests may use the model
+# (BRIDGEFLOW_GUEST_LLM=1): it sources env.sh for DEEPSEEK_API_KEY / DEEPSEEK_BASE_URL (or the
+# LLM_GATE_UPSTREAM_* overrides) and listens on 127.0.0.1:8300 only. The guest instance gets
+# that address and a client token minted into data/gate/client-token on first start — never
+# the key. Limits live in data/mappings/llm-gate.yaml; `touch data/gate/OFF` pauses all calls.
+
+[Unit]
+Description=BridgeFlow demo model gate (holds the model key, loopback only)
+After=network-online.target
+Wants=network-online.target
+Before=bridgeflow-guest.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Hackathon2026/BridgeFlow-AI
+ExecStart=/bin/bash -c 'source env.sh && exec /home/ubuntu/Hackathon2026/.venv/bin/python -m bridgeflow.llm_gate'
+Restart=on-failure
+RestartSec=5
+MemoryMax=200M
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

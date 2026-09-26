@@ -56,11 +56,38 @@ def seat_site(host: str, port: int, portal_port: int) -> str:
 }}"""
 
 
-def guest_site(domain: str, port: int) -> str:
-    """The guest console (docs/22 §9e). No forward_auth: it is public on purpose and holds
-    sample data only; browsers arrive from the portal's /guest with its launch token."""
-    return f"""guest.{domain} {{
-    reverse_proxy 127.0.0.1:{port}
+def demo_site(domain: str, port: int, portal_port: int) -> str:
+    """The public demo on the apex (docs/36 §3–4): the guest console, no sign-in in front.
+
+    No forward_auth — it is public on purpose and holds sample data only. dsh web still wants
+    its per-boot launch token before it mints a session, and that cannot be switched off, so a
+    browser opening the page without a session is sent to /__enter: the portal's /guest
+    handover, served on this host, which carries the token back in. Only a page load of `/`
+    without a token is redirected; API, asset and WebSocket 401s stay 401 (a redirect would
+    hand an XHR an HTML page), and `/?token=` that still fails stays 401 instead of looping.
+    """
+    return f"""{domain} {{
+    handle /__enter {{
+        rewrite * /guest
+        reverse_proxy 127.0.0.1:{portal_port}
+    }}
+    handle {{
+        reverse_proxy 127.0.0.1:{port} {{
+            @unauth status 401
+            handle_response @unauth {{
+                @page {{
+                    method GET
+                    path /
+                    header Accept *text/html*
+                    expression `{{http.request.uri.query.token}} == ""`
+                }}
+                route {{
+                    redir @page /__enter 302
+                    copy_response
+                }}
+            }}
+        }}
+    }}
 }}"""
 
 
@@ -73,14 +100,19 @@ def main() -> int:
     parser.add_argument("--web-port", type=int, default=3080,
                         help="only used in the legacy shape")
     parser.add_argument("--guest-port", type=int, default=0,
-                        help="add guest.<domain> for the guest instance (docs/22 §9e); 0 = none")
+                        help="serve the guest instance as the public demo on the apex (docs/36); 0 = none")
     args = parser.parse_args()
-    guest = f"\n{guest_site(args.domain, args.guest_port)}\n" if args.guest_port else ""
+    demo = demo_site(args.domain, args.guest_port, args.portal_port) if args.guest_port else ""
 
     template = (ROOT / "deploy/Caddyfile.template").read_text(encoding="utf-8")
+    if demo:
+        # The apex belongs to the demo; the single console moves to console.<domain>
+        # (its portal app entry's app_uri/origins must follow — docs/36 §9).
+        template = template.replace("\n__DOMAIN__ {", "\nconsole.__DOMAIN__ {", 1)
     seats_path = Path(args.seats)
     if not seats_path.exists():
-        sys.stdout.write(render_legacy(template, args.domain, args.web_port, args.portal_port) + guest)
+        sys.stdout.write(render_legacy(template, args.domain, args.web_port, args.portal_port)
+                         + (f"\n{demo}\n" if demo else ""))
         return 0
     try:
         registry = yaml.safe_load(seats_path.read_text(encoding="utf-8")) or {}
@@ -89,17 +121,23 @@ def main() -> int:
         return 1
     seats = registry.get("seats") or []
     if not seats:
-        sys.stdout.write(render_legacy(template, args.domain, args.web_port, args.portal_port) + guest)
+        sys.stdout.write(render_legacy(template, args.domain, args.web_port, args.portal_port)
+                         + (f"\n{demo}\n" if demo else ""))
         return 0
 
-    apex_redirect = "    redir https://portal." + args.domain + "{uri} permanent"
+    if demo:
+        apex = [demo]
+    else:
+        apex = [
+            f"{args.domain} {{",
+            "    # Seat deployments: the apex is the front door, the portal; consoles",
+            f"    # live at <seat>.console.{args.domain}.",
+            "    redir https://portal." + args.domain + "{uri} permanent",
+            "}",
+        ]
     blocks = [
         f"# Rendered by deploy/render_caddy.py from {seats_path} — do not edit by hand.",
-        f"{args.domain} {{",
-        "    # Seat deployments: the apex is the front door, the portal; consoles",
-        f"    # live at <seat>.console.{args.domain}.",
-        apex_redirect,
-        "}",
+        *apex,
         "",
         f"portal.{args.domain} {{",
         f"    reverse_proxy 127.0.0.1:{args.portal_port}",
@@ -113,7 +151,7 @@ def main() -> int:
             return 1
         blocks.append("")
         blocks.append(seat_site(f"{name}.console.{args.domain}", int(port), args.portal_port))
-    sys.stdout.write("\n".join(blocks) + "\n" + guest)
+    sys.stdout.write("\n".join(blocks) + "\n")
     return 0
 
 

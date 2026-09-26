@@ -142,6 +142,15 @@ def login_required(portal_url: str) -> str:
 </body></html>"""
 
 
+def restarting() -> str:
+    """The public demo while its instance (re)starts and has no launch token yet (docs/36 §4).
+
+    Reloads itself: the same URL again, which on the demo's own host is /__enter."""
+    return _layout("Starting", """<meta http-equiv="refresh" content="15">
+<p class="subtitle">The demo is starting — this page retries in 15 seconds.<br>演示实例正在启动，本页 15 秒后自动重试。</p>
+<a class="again" href="">Retry now · 立即重试 →</a>""")
+
+
 def entering(target: str) -> str:
     """The page that ends the cross-site login chain, instead of one more redirect.
 

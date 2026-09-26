@@ -155,8 +155,11 @@ sys.exit(0 if any(CONSOLE_OPERATION in (r.get(\"operations\") or []) for r in ro
 check "nothing but ssh and caddy listens publicly" bash -c '! ss -tlnH | awk "{print \$4}" | grep -vE "^(127\.[^:]*|\[::1\]):" | grep -vE ":(22|80|443)$"'
 # The anonymous-answer expectation differs by shape (docs/35 §3): a seat
 # deployment redirects the apex to the portal (3xx), the legacy shape answers
-# dsh's own 401 through forward_auth.
-if bash -c 'source env.sh && [[ -n "${PORTAL_SEATS_PATH:-}" ]]'; then
+# dsh's own 401 through forward_auth. With the guest instance enabled the apex is
+# the public demo instead (docs/36), checked in the guest block below.
+if systemctl is-enabled --quiet bridgeflow-guest 2>/dev/null; then
+  :
+elif bash -c 'source env.sh && [[ -n "${PORTAL_SEATS_PATH:-}" ]]'; then
   check "main site redirects to the portal on https://$DOMAIN" bash -c 'code=$(curl -s -o /dev/null -w %{http_code} --max-time 10 "https://'"$DOMAIN"'/"); case "$code" in 301|302|307|308) exit 0;; *) exit 1;; esac'
 else
   check "main site is gated by the portal on https://$DOMAIN" bash -c 'test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 https://'"$DOMAIN"'/)" = 401'
@@ -170,11 +173,31 @@ if systemctl is-enabled --quiet bridgeflow-guest 2>/dev/null || bash -c 'source 
   check "guest nightly reset is enabled and active" bash -c 'systemctl is-enabled --quiet bridgeflow-guest-reset.timer && systemctl is-active --quiet bridgeflow-guest-reset.timer'
   check "guest backend answers on loopback" curl -fsS --max-time 5 http://127.0.0.1:8001/health
   check "guest console listens on loopback" bash -c 'ss -tlnH | grep -q "127.0.0.1:3090 "'
-  check "portal points at this guest site and its captured token" bash -c '
+  check "portal points at the apex demo and its captured token" bash -c '
     source env.sh
-    [[ "${PORTAL_GUEST_APP_URI:-}" = "https://guest.$DOMAIN/" && -s "${PORTAL_GUEST_TOKEN_FILE:-/nonexistent}" ]]'
-  check "portal offers a guest entry" bash -c 'curl -fsS --max-time 5 http://127.0.0.1:8100/ | grep -Fq "href=\"/guest\""'
-  check "portal hands guests to the current console" bash -c 'curl -fsS --max-time 5 http://127.0.0.1:8100/guest | grep -Fq "https://guest.$DOMAIN/?token="'
-  check "guest site has working TLS and a session fence" bash -c 'test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 "https://guest.$DOMAIN/")" = 401'
+    [[ "${PORTAL_GUEST_APP_URI:-}" = "https://$DOMAIN/" && -s "${PORTAL_GUEST_TOKEN_FILE:-/nonexistent}" ]]'
+  check "portal hands guests to the current console" bash -c 'curl -fsS --max-time 5 http://127.0.0.1:8100/guest | grep -Fq "https://$DOMAIN/?token="'
+  # The public demo on the apex (docs/36 §4): a page load without a session is sent to
+  # /__enter, which carries the launch token in; API calls without one stay a plain 401.
+  check "apex demo sends a new browser to /__enter" bash -c '
+    headers=$(curl -s -o /dev/null -D - --max-time 10 -H "Accept: text/html" "https://$DOMAIN/")
+    grep -q "^HTTP/[0-9.]* 302" <<<"$headers" && grep -qi "^location: /__enter" <<<"$headers"'
+  check "apex demo /__enter hands over this boot's token" bash -c 'curl -fsS --max-time 10 "https://$DOMAIN/__enter" | grep -Fq "https://$DOMAIN/?token="'
+  check "apex demo keeps anonymous API calls at 401" bash -c 'test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 -H "Accept: application/json" "https://$DOMAIN/")" = 401'
+  # Guest AI (docs/36 §6): only through the loopback gate, and no guest process holds the key.
+  if bash -c 'source env.sh && [[ "${BRIDGEFLOW_GUEST_LLM:-}" = 1 ]]'; then
+    check "model gate is enabled and active" bash -c 'systemctl is-enabled --quiet bridgeflow-llm-gate && systemctl is-active --quiet bridgeflow-llm-gate'
+    check "model gate answers on loopback only" bash -c 'curl -fsS --max-time 5 http://127.0.0.1:8300/status >/dev/null && ss -tlnH | grep -q "127.0.0.1:8300 " && ! ss -tlnH | grep -E ":8300 " | grep -vq "127.0.0.1:8300 "'
+    check "no guest process holds the operator model key" bash -c '
+      source env.sh
+      key="${LLM_GATE_UPSTREAM_KEY:-${DEEPSEEK_API_KEY:-}}"
+      [[ -n "$key" ]] || exit 1
+      cg=$(systemctl show -p ControlGroup --value bridgeflow-guest)
+      [[ -n "$cg" && -r "/sys/fs/cgroup$cg/cgroup.procs" ]] || exit 1
+      while read -r pid; do
+        tr "\0" "\n" < "/proc/$pid/environ" 2>/dev/null | grep -Fq -- "$key" && exit 1
+      done < "/sys/fs/cgroup$cg/cgroup.procs"
+      exit 0'
+  fi
 fi
 exit $failed

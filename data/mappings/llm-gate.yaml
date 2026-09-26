@@ -1,0 +1,20 @@
+# Limits of the public demo's model gate (docs/36 §6). Declared here, never in code; no secrets.
+# The gate reads the real key from env.sh (DEEPSEEK_API_KEY, or LLM_GATE_UPSTREAM_KEY) and the
+# upstream from DEEPSEEK_BASE_URL (or LLM_GATE_UPSTREAM_URL). Restart bridgeflow-llm-gate after edits.
+
+# Empty = the one model the guest launcher pins (BRIDGEFLOW_GUEST_MODEL, else env.sh's
+# deepseek-official DSH_MODEL, else DEEPSEEK_MODEL). Anything else is refused with 403.
+models: []
+# Only the chat endpoint. dsh's Files API (image offload) and model listing stay closed.
+paths: [/chat/completions]
+# Larger max_tokens values are rewritten to this, not refused.
+max_tokens_cap: 32768
+max_request_bytes: 2000000
+# Across the whole demo: the captain plus four role subagents run in parallel during a review.
+rpm: 60
+concurrency: 6
+queue_seconds: 60
+# No budget yet (decided 2026-09-25). A number enforces a daily cap on billable tokens
+# (cache hits count a tenth); over it every call gets 429 demo_budget_exhausted until midnight.
+daily_tokens: null
+timezone: Asia/Singapore

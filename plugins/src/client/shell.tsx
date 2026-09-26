@@ -67,6 +67,17 @@ function Shell({ ctx }: { ctx: Context }) {
   // Opening a sample or restoring a notebook may still replace its route. Keep Studio
   // navigation idle until that transition is complete, so a fast click is not lost.
   const notebookSwitching = notebook.busy || !notebook.loaded
+  // The public demo (docs/36 §5 E1): a visitor lands in an empty notebook, and the first thing
+  // anyone did was look for "Open sample notebook". Open it for them, once per tab, and only
+  // from an empty notebook — a notebook with data, or one the visitor made later, is theirs.
+  useEffect(() => {
+    if (!guest || !notebook.loaded || notebook.busy || notebook.dirty || batchId) return
+    try {
+      if (sessionStorage.getItem('bf-guest-sample-opened')) return
+      sessionStorage.setItem('bf-guest-sample-opened', '1')
+    } catch { return }
+    notebook.sample()
+  }, [guest, notebook.loaded, notebook.busy, batchId])
   const [expanded, setExpanded] = useState(false)
   // These pages were drawn at a working width; the studio column is 300–460px. A reader who
   // says "wide" once should not have to say it again, so the choice is remembered — and it

@@ -64,6 +64,7 @@ const labels = {
   guestBannerFeishu: ['飞书登录、导入与上传在访客模式下不可用。', 'Feishu sign-in, import and upload are not available in guest mode.'],
   guestBannerLlmOff: ['AI 对话已关闭：工作室里的页面都能用，队长不会调用模型。', 'AI chat is off: every Studio page works, but the captain does not call a model.'],
   guestBannerLlmOn: ['AI 对话已开启，由运营方承担费用，请勿输入真实数据。', 'AI chat is on at the operator\u2019s cost; please do not enter real data.'],
+  guestStaffSignIn: ['员工请从飞书登录入口进入 →', 'Staff: sign in with Feishu →'],
   guestUnavailable: ['访客模式下不可用', 'not available in guest mode'],
   guestUploadUnavailable: ['这是多人共用的示例环境，请使用下方内置样例；不能上传自己的文件。', 'This shared demo uses built-in samples. You cannot upload your own files here.'],
   sampleHistory: ['载入前两个月的示例', 'Load the two earlier sample months'],

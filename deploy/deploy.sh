@@ -48,7 +48,8 @@ if [ -n "$units_domain" ]; then
     units_changed=1
   fi
   # The guest instance (docs/22 §9e) is opt-in: its units are always installed, but only an
-  # operator's `systemctl enable` turns it on, and only then does the Caddyfile get its site.
+  # operator's `systemctl enable` turns it on, and only then does the apex become the public
+  # demo (docs/36) — until then the apex keeps redirecting to the portal.
   guest_rendered=$(sed "s#<domain>#$units_domain#g" deploy/bridgeflow-guest.service)
   if [ "$guest_rendered" != "$(sudo cat /etc/systemd/system/bridgeflow-guest.service 2>/dev/null || true)" ]; then
     printf '%s\n' "$guest_rendered" | sudo tee /etc/systemd/system/bridgeflow-guest.service >/dev/null
@@ -57,7 +58,8 @@ if [ -n "$units_domain" ]; then
   for pair in "portal.service:bridgeflow-portal.service" "bridgeflow-dsh.slice:bridgeflow-dsh.slice" \
               "bridgeflow-dsh@.service:bridgeflow-dsh@.service" \
               "bridgeflow-guest-reset.service:bridgeflow-guest-reset.service" \
-              "bridgeflow-guest-reset.timer:bridgeflow-guest-reset.timer"; do
+              "bridgeflow-guest-reset.timer:bridgeflow-guest-reset.timer" \
+              "bridgeflow-llm-gate.service:bridgeflow-llm-gate.service"; do
     src="deploy/${pair%%:*}" dst="/etc/systemd/system/${pair##*:}"
     if ! sudo diff -q "$src" "$dst" >/dev/null 2>&1; then
       sudo cp "$src" "$dst"
@@ -88,6 +90,10 @@ fi
 sudo systemctl restart bridgeflow bridgeflow-portal
 # The guest instance restarts with each deploy so it serves this deploy's code; restarting
 # is also its reset (data/guest is wiped), which is fine for sample-only data.
+# The demo model gate first: the guest launcher reads its client token (docs/36 §6).
+if systemctl is-enabled --quiet bridgeflow-llm-gate 2>/dev/null; then
+  sudo systemctl restart bridgeflow-llm-gate
+fi
 if systemctl is-enabled --quiet bridgeflow-guest 2>/dev/null; then
   sudo systemctl restart bridgeflow-guest
 fi
