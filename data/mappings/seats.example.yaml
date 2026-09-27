@@ -1,0 +1,8 @@
+# Example only. Generate instance capacity with scripts/provision_seat.sh --init N.
+seats:
+  - name: seat-1
+    port: 3101
+    home: /absolute/path/to/BridgeFlow-AI/data/homes/seat-1
+  - name: seat-2
+    port: 3102
+    home: /absolute/path/to/BridgeFlow-AI/data/homes/seat-2

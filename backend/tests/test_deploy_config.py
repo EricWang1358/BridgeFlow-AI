@@ -88,7 +88,8 @@ def test_deploy_scripts_parse(script):
 
 def _render(*args: str) -> str:
     import sys
-    return subprocess.run([sys.executable, str(DEPLOY / "render_caddy.py"), "example.com", *args],
+    return subprocess.run([sys.executable, str(DEPLOY / "render_caddy.py"), "example.com",
+                           "--seats", str(REPO_ROOT / "data/mappings/seats.example.yaml"), *args],
                           check=True, capture_output=True, text=True).stdout
 
 

@@ -119,7 +119,7 @@ EOF
   echo "Still yours to do:"
   echo "  1. DNS: one A record per seat — seat-1.console.$DOMAIN .. seat-$count.console.$DOMAIN"
   echo "  2. Who MAY claim is the console gate: console_access in access-control.yaml (#229)"
-  echo "  3. Commit data/mappings/seats.yaml through a PR (capacity is reviewed, people are not)"
+  echo "  3. Back up data/mappings/seats.yaml privately; instance configuration must not be committed"
   echo "  4. Verify: bash deploy/preflight.sh $DOMAIN"
 }
 

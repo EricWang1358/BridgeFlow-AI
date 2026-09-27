@@ -16,10 +16,27 @@ VENV="$HOME/Hackathon2026/.venv/bin/python"
 
 cd "$ROOT"
 git fetch origin main
-# The seat fleet (data/mappings/seats.yaml) is static capacity committed via PR,
-# so reset --hard is safe for it; the runtime claims (data/seats-assigned.json)
-# are untracked instance state and survive every reset untouched.
+# Preserve instance configuration when upgrading from a version that tracked it.
+# A checkout that removes these paths would otherwise remove the live policy.
+instance_config_backup=$(mktemp -d)
+restore_instance_config() {
+  for config in access-control.yaml seats.yaml; do
+    if [ -f "$instance_config_backup/$config" ]; then
+      mkdir -p data/mappings
+      install -m 600 "$instance_config_backup/$config" "data/mappings/$config"
+    fi
+  done
+  rm -rf -- "$instance_config_backup"
+}
+trap restore_instance_config EXIT
+for config in access-control.yaml seats.yaml; do
+  if [ -f "data/mappings/$config" ]; then
+    cp "data/mappings/$config" "$instance_config_backup/$config"
+  fi
+done
 git reset --hard "${1:-origin/main}"
+restore_instance_config
+trap - EXIT
 
 # Dependencies and the client bundle are rebuilt every deploy: both are
 # cached and take seconds, and the rebuild keeps dist/client.js newer than

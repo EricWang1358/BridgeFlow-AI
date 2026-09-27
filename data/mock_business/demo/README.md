@@ -2,7 +2,7 @@
 
 All records describe a **fictional concrete supplier**. The department templates and integration declaration come from the business template work; the records and policies are demonstration inputs, not verified company accounts or approved policies.
 
-This directory is the durable input for **Open sample notebook** and the guided task. Keep the XLSX files, `dictionary.yaml` and `manifest.json` in version control together. The manifest fixes the input fingerprints, declaration fingerprint and expected outcomes. Verification and measured results live in [status](../../../docs/00-status.md).
+This directory is the durable input for **Open sample notebook** and the guided task. Keep the XLSX files, `dictionary.yaml` and `manifest.json` in version control together. The manifest fixes the input fingerprints, declaration fingerprint and expected outcomes. Verification and measured results live in [status](../../../docs/architecture.md).
 
 The case connects the existing integration and department-review declarations to the same monthly files. Opening it imports and retains actual sources, computes the real table, creates a native session and saves its notebook bookmark. It does not run department agents. A report requires a separate explicit model action.
 

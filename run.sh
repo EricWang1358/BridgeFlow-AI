@@ -5,7 +5,7 @@
 #   ./run.sh --demo       # use the business-demo dictionary explicitly
 #   ./run.sh --port 3082  # pick the Web port
 #
-# Prerequisites (one-time), see HANDOFF.md:
+# Prerequisites (one-time), see docs/setup.md:
 #   uv venv --python 3.13 ../.venv
 #   uv pip install -e "backend[dsh,dev]" --python ../.venv/bin/python
 #   npm install -g pnpm @deepseek-ai/dsh@0.1.2-rc.1

@@ -7,8 +7,8 @@
 #
 # Required GitHub secrets: SSH_HOST, SSH_USER, SSH_PRIVATE_KEY.
 # Optional production-environment secret: FIELD_DICTIONARY_YAML (see "Sync
-# instance configuration"). access-control.yaml is tracked in the repo instead —
-# it holds no credentials and it is the file that most needs review.
+# instance configuration"). Access policy and seat capacity are instance-local;
+# only redacted examples are tracked.
 # Required GitHub variable: PUBLIC_DOMAIN.
 # DEEPSEEK_API_KEY never enters GitHub — it lives only in env.sh on the
 # instance (see CLAUDE.md: bootstrap variables come from the launching shell).
@@ -34,6 +34,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check public release contents
+        run: python3 scripts/check_public_release.py
 
       - uses: astral-sh/setup-uv@v5
         with:
@@ -114,8 +117,8 @@ jobs:
           script: bash /tmp/bf-deploy/deploy/deploy.sh ${{ github.sha }}
 
       # Only the field dictionary travels this way: it is real business data and
-      # stays out of the repo (docs/22 §5b). access-control.yaml is tracked, so
-      # deploy.sh's own checkout carries it.
+      # stays out of the repo. deploy.sh preserves the instance's access policy
+      # and seat registry when checking out a new source version.
       #
       # This runs AFTER deploy.sh, not before: config-put.sh validates with the
       # product's own loaders, and those must be the loaders of the commit being

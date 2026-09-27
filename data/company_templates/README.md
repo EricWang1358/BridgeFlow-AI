@@ -1,49 +1,13 @@
-# 业务方模板与字典（2026-09-13）
+# Demonstration templates
 
-业务方在 2026-09-13 提供的标准模板、人工字典与跨部门总表模板。这是**真实口径的输入**，不是开发侧编的合成数据；
-其中总表模板里的一行样例（项目A / 客户A）是业务方自己做的示例。
+This directory contains the declared field schemas and template workbooks used by the example workflows. They are business-supplied template structures with anonymous example labels, not customer transaction exports. Workbook author metadata is normalized for distribution.
 
-| 文件 | 内容 |
-| --- | --- |
-| `source/dictionary-v2.xlsx` | 字典 v2：76 个字段，含「来源表字段」与「变更说明」。**系统以它为准** |
-| `source/dictionary-v1.xlsx` | 字典 v1：62 个字段，保留作变更对照 |
-| `source/{production,marketing,procurement,finance}-v2.xlsx` | 四部门 v2 模板（只有表头），新增项目编号、客户代码、产品代码、报表年月等连接键与派生字段 |
-| `source/*-v1.xlsx` | 四部门 v1 模板；物资部 v1 表头上方有一行合并标题 |
-| `source/master-v2.xlsx` | 跨部门业务整合总表模板（76 列）+ 一行样例 |
-| `source/master-v1.xlsx` | 总表 v1 模板 |
-| `integration.yaml` | 字典 v2 的逐行转写：字段来源、连接键、字典写明的公式与跨部门核对。测试逐字段比对字典、模板表头与总表列序 |
-| `tuning/seed-{1,2}/` | 带数据的调优样例：每组 14–18 个项目×月份，含按日填报的生产部多行与故意放进去的错误，`answer.json` 是标准答案 |
-| `example/*.xlsx` | 由 `scripts/make_template_example.py` 把总表样例行拆回四部门模板，用于验证整合结果 |
+- `source/`: versioned dictionaries, department headers and master-table templates.
+- `integration.yaml`: field sources, connection keys, formulas, aggregation and cross-department checks.
+- `labels.en.yaml`: English display labels for the declared fields.
+- `example/`: example department workbooks derived from the anonymous master-table example.
+- `tuning/`: generated fixtures and expected results with deliberately planted data problems.
 
-整合实现在 `backend/src/bridgeflow/integration.py`，工作室「跨部门总表」可查看与下载。
+The implementation reads `integration.yaml`; tests verify the declared schema against workbook headers and expected results. Assumptions are declared in the schema and shown in outputs. Review or replace them before using a template with actual business data.
 
-## 字典没写、按通用做法补上的口径
-
-业务方 2026-09-13 说明这几项「理论上有最佳实践，按最佳实践处理」。每一条都写在 `integration.yaml` 的 `assumptions` 里：
-依赖它的单元格悬停可见这条说明，下载的总表有「口径假设」工作表，给总控 Agent 的摘要也会列出。业务方给出自己的口径后，
-改 `integration.yaml` 即可，代码不用动。
-
-| 事项 | 采用的做法 | 与业务方样例的对照 |
-| --- | --- | --- |
-| 增值税税率 | 13%（一般纳税人销售货物通用税率） | 339÷1.13−260 = 40，与样例「单方不含税毛利」一致 |
-| 市场「缺口」 | 以累计结算为回款目标：缺口 = 累计结算 − 收款计划合计 | 1,200,000 − 1,150,000 = 50,000，一致 |
-| 客户合作状态诊断 | 规则表按顺序取第一条命中：签收率 < 95% → 签收异常；环比 ≤ −20% → 合作萎缩；环比 < −5% → 需求下滑；环比 ≥ 5% → 稳定增长；其余（±5% 内视为正常波动）→ 平稳合作 | 签收率 99.4%、环比 10% → 稳定增长，一致 |
-| 同一项目、客户、月份多行（生产部按日填报） | 生产量、出厂量、实际量求和；厂站、备注去重后用「；」拼接；签收率、环比、合作状态用汇总后的数重新算，不平均各行比率；其余字段（如上月实际量）各行必须一致，否则拒绝。其他三个部门没有声明汇总，多行仍拒绝 | 样例拆成按日两行后，汇总结果与样例逐列一致（测试锁定） |
-
-部门自己填了派生值或诊断时，系统用上面的口径核对：一致打 ✓，不一致两边数字都列出来、单元格留空，不替部门选。
-
-## 调优样例与留出验收（#141）
-
-`scripts/integration_cases.py` 只读 `integration.yaml` 与模板，生成带数据的四部门表和标准答案：数值取业务方样例的量级加扰动，
-每个键先随机选定一个诊断结果再抽数，保证五种诊断都会出现；标准答案用分数精确计算，不调用被测代码。每组都故意放进：
-派生值写错、缺一个部门、名称对不上、跨部门核对不通过、数字列里写文字、未声明汇总的部门重复行、按日多行里本应一致的字段不一致、
-一行没有连接键、表头上方多一行标题。评分要求干净的键完整且逐列精确，每个故意的错误在它所在的键上被报出，且没有误报。
-
-```bash
-python scripts/integration_cases.py tuning             # 重新生成两组调优样例（种子 1、2）并评分
-python scripts/integration_cases.py grade data/company_templates/tuning/seed-1
-python scripts/integration_cases.py holdout --sets 30  # 留出：种子取自系统随机数，不打印不落盘，只输出总分
-```
-
-留出集每次现生成、用完即删，开发没见过具体实例，防止按固定样例调参。它仍是合成数据，**不能代替用真实导出做的留出验收**；
-业务方提供真实月度表后，按同一评分口径加一组即可。
+Generate and score local fixtures with `python scripts/integration_cases.py tuning` or `python scripts/integration_cases.py grade data/company_templates/tuning/seed-1`. Generated fixtures do not replace customer acceptance testing.

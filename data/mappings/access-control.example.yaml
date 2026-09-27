@@ -1,0 +1,48 @@
+# Example only. Copy to access-control.yaml and set your own wiki space IDs.
+spaces:
+  departments:
+    production:  {space_id: "YOUR_PRODUCTION_WIKI_SPACE_ID",  member: production_member,  admin: production_admin}
+    procurement: {space_id: "YOUR_PROCUREMENT_WIKI_SPACE_ID", member: procurement_member, admin: procurement_admin}
+    finance:     {space_id: "YOUR_FINANCE_WIKI_SPACE_ID",     member: finance_member,     admin: finance_admin}
+    marketing:   {space_id: "YOUR_MARKETING_WIKI_SPACE_ID",   member: marketing_member,   admin: marketing_admin}
+  master_office: {space_id: "YOUR_MASTER_OFFICE_WIKI_SPACE_ID", member: master_office_member, admin: master_office_admin}
+
+roles:
+  production_member:
+    departments: [production]
+    operations: [batch_import, review_note]
+  production_admin:
+    departments: [production]
+    operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
+                 workflow_record, workflow_approve_submit, workflow_handoff]
+  procurement_member:
+    departments: [procurement]
+    operations: [batch_import, review_note]
+  procurement_admin:
+    departments: [procurement]
+    operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
+                 workflow_record, workflow_approve_submit, workflow_handoff]
+  finance_member:
+    departments: [finance]
+    operations: [batch_import, review_note]
+  finance_admin:
+    departments: [finance]
+    operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
+                 workflow_record, workflow_approve_submit, workflow_handoff]
+  marketing_member:
+    departments: [marketing]
+    operations: [batch_import, review_note]
+  marketing_admin:
+    departments: [marketing]
+    operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
+                 workflow_record, workflow_approve_submit, workflow_handoff]
+  master_office_member:
+    departments: [production, procurement, finance, marketing]
+    operations: [batch_import, review_note]
+  master_office_admin:
+    departments: [production, procurement, finance, marketing]
+    operations: [console_access, batch_import, review_note, confirm_mapping, confirm_column_match,
+                 convention_decide, risk_disposition, quarantine_decide, quarantine_apply, workflow_record, workflow_approve_submit,
+                 workflow_handoff, workflow_accept_scope, feishu_import, feishu_upload_report, discovery_propose,
+                 discovery_upload, discovery_register, discovery_graph_save, discovery_score_save,
+                 discovery_meeting_save]

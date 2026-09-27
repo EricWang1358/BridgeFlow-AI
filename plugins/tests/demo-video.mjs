@@ -26,7 +26,7 @@ import { chromium } from '@playwright/test'
 // read every option after it as a positional; drop that one separator.
 const argv = process.argv.slice(2)
 const { values: opt } = parseArgs({ args: argv[0] === '--' ? argv.slice(1) : argv, options: {
-  url: { type: 'string', default: 'https://portal.47.130.178.176.sslip.io/' },
+  url: { type: 'string', default: 'http://127.0.0.1:8100/' },
   beats: { type: 'string', default: '0-10' },
   pace: { type: 'string', default: '1' },           // 1 = narration holds; 0 = as fast as the page allows
   out: { type: 'string', default: resolve(homedir(), 'Hackathon2026/demo-video', new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)) },

@@ -11,7 +11,8 @@
 # silently dropped a configuration sync on 2026-09-19.
 #
 # Only the field dictionary travels this way — it is real business data and
-# stays out of the repo. access-control.yaml is tracked and ships with the code.
+# stays out of the repo. Access policy and seat capacity are also instance-local;
+# deploy.sh preserves them across source checkouts.
 #
 # Usage: printf '%s' <base64> | config-put.sh field-dictionary.yaml
 #        (called by .github/workflows/deploy.yml "Sync instance configuration";

@@ -6,3 +6,15 @@
 *.jpg binary
 *.xlsx binary
 *.ico binary
+
+# Defence in depth: keep local working material out of source archives.
+.claude export-ignore
+.codegraph export-ignore
+CLAUDE.md export-ignore
+HANDOFF.md export-ignore
+docs/evidence export-ignore
+docs/images export-ignore
+docs/design export-ignore
+docs/requirements export-ignore
+submission export-ignore
+demo-walkthrough export-ignore

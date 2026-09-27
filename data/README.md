@@ -1,49 +1,15 @@
-# 数据集
+# Sample data
 
-三个行业，开发集与验收集分开。验收集在开发期间不看。
+The tracked datasets support repeatable development and demonstration. They are not customer transaction exports.
 
-## 为什么分开
+| Directory | Purpose |
+| --- | --- |
+| `samples/`, `acceptance/`, `poisoned/` | Generated import and validation cases |
+| `business_demo/` | Small department-review fixtures |
+| `company_templates/` | Declared template schemas and anonymous examples |
+| `mock_business/` | Sample notebooks, monthly cases and quotation examples |
+| `demo_en/` | English demonstration fixtures |
+| `workflow_demo/`, `discovery_demo/` | Filling, handoff and discovery examples |
+| `mappings/` | Public configuration examples |
 
-这个项目见过不分开的后果：#25 实测时发现，模型为了回答一个关于数据的问题，跑去读了
-`test_resolver.py`。在自己见过的数据上全绿，什么都不证明。
-
-| 位置 | 用途 | 规矩 |
-| --- | --- | --- |
-| `samples/` | 开发集，随便看、随便调 | 无 |
-| `acceptance/<industry>/` | 验收集，只在验收时跑 | 开发期间不读、不调、不进任何提示词 |
-| `acceptance/<industry>/expected.yaml` | ground truth | 同上；它是答案，不是输入 |
-| `poisoned/<industry>/` | 注入用例（开发集侧） | 只用于安全测试，绝不混进正常演示数据 |
-
-红线：为了让验收集变绿而回头改代码，必须先在开发集上复现问题。否则就是往测试集上过拟合。
-
-**`acceptance/` 的「留出」已经用掉一次**（#77）：#16 那一轮先看到验收集变红，再回头写检测，流程越线了。
-所以它现在只算「可以偶尔看结果的验收集」，不再能证明泛化。真正的留出集按 #141 交付：
-由业务方提供，评测执行前开发侧不接触、不进仓库；用过一次就换新的一批，而不是反复复用同一批。
-
-## 三个行业，字段名互不相同
-
-这是「方案不能固定于字段」（`CLAUDE.md` 第八条）的压力测试。真实 XLS 字段还在与公司协商，
-所以三套数据用了三种命名风格、两种语言、不同的 join key：
-
-| 行业 | 特有的对齐失败 | 表头语言 |
-| --- | --- | --- |
-| manufacturing 轻制造 | SKU、原料、GL 科目三套编码互不相干；周度采购对日度生产 | EN |
-| food 食品冷链 | 批次号把一个品项拆成多行；损耗率让产出与出货对不上；供应商按重量、销售按箱 | 中文 |
-| electronics 电子分销 | 同一颗料四个料号（原厂 / 内部 / 客户 / 账目）；多币种；退货冲销是负数行 | EN，混合命名 |
-
-如果有哪里把列名写进了 Python，这三套里至少两套会立刻炸。
-
-## 每套都带的质量缺陷
-
-覆盖 [`docs/07`](../docs/07-prd-v0.1.md) FR 02 的六类：列错位、重复行、字段名拼写差异、日期格式混用、
-数字与文本混用（币种前缀）、空值。验收集额外带重复行与列错位，是开发集上没见过的形态。
-
-## 重新生成
-
-```bash
-python scripts/make_datasets.py
-```
-
-数据是生成出来的，不是手写的：缺陷声明一次，ground truth 就不会跟数据漂移。这个仓库出过那种事
-（文档写着 47 处修复、3 行隔离，实际是 48 和 0，现在正确答案记在
-[`docs/00`](../docs/00-status.md)）。
+Uploaded files, generated reports, real dictionaries, access-control mappings, runtime tokens and seat assignments are local installation data and must remain untracked. See [Deployment](../docs/deployment.md).

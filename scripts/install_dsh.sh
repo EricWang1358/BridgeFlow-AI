@@ -20,7 +20,7 @@ if [[ "${1:-}" == "--check" ]]; then
   if command -v dsh >/dev/null; then echo "dsh on PATH: $(command -v dsh) ($(dsh --version 2>/dev/null || echo unknown)) — left as it is"; fi
   exit 0
 fi
-command -v npm >/dev/null || { echo "npm is required (Node.js 22); see docs/14-wsl-setup.md" >&2; exit 1; }
+command -v npm >/dev/null || { echo "npm is required (Node.js 22); see docs/setup.md" >&2; exit 1; }
 if [[ -x "$BIN" && "$("$BIN" --version)" == "$VERSION" ]] && cmp -s scripts/dsh-cli/package-lock.json "$PREFIX/package-lock.json"; then
   echo "dsh $VERSION already installed privately at $BIN"
 else

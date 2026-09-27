@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-command local rehearsal of the six-step CSV demo (demo-walkthrough): rebuild
+# One-command local rehearsal of the CSV sample walkthrough: rebuild
 # the plugin bundle, stop previous instances, regenerate the 2025-11 case, then run
 # the login portal (:8100) plus backend + dsh web (:3082) against the CASE
 # dictionary with a throwaway DSH_HOME. Ctrl-C stops everything. Logs land in
@@ -12,7 +12,7 @@
 # (the concrete-supplier template tour, its own dictionary); this script boots the
 # risk/balanced CSV walkthrough. Do not mix them: importing the walkthrough CSVs
 # under the --demo dictionary imports fine and then gets refused at review time
-# with needs_configuration — the classic pitfall (demo-walkthrough/README.md).
+# with needs_configuration — the classic pitfall (docs/user-guide.en.md).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -78,7 +78,7 @@ done
 
 cat << 'EOF'
 
-==> Ready. The walkthrough in six steps (demo-walkthrough/README.md):
+==> Ready. The walkthrough in six steps (docs/user-guide.en.md):
     1. 亮字典：单位、正数约定、公式、阈值、责任人 —— 映射由人声明，模型不猜。
     2. 部门文件 → 上传 data/business_demo/risk/ 四份 CSV，业务月份 2025-11，记下 batch_id。
     3. 粘贴研判话术（README 六步第 3 步，替换批次号）→ 观察四次原生 Spawn。

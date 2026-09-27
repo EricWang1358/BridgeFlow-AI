@@ -278,13 +278,10 @@ def test_department_grants_union_across_roles(configured):
     assert departments_for("ou_bob") == {"production", "procurement"}
 
 
-def test_the_repository_access_control_file_ships_valid():
-    """The tracked file is what deploy.sh puts on the instance (docs/22 §5b).
-
-    No monkeypatch: this reads the default path deliberately, so an invalid
-    policy edit fails review instead of turning the deployed data plane into
-    503s. Nothing here talks to Feishu — structure() is pure validation.
-    """
+def test_the_repository_access_control_example_ships_valid(monkeypatch):
+    """The public example declares a valid policy without real tenant IDs."""
+    monkeypatch.setattr(settings, "access_control_path",
+                        "data/mappings/access-control.example.yaml")
     assert access_resolver.access_path().is_file()
     declared = access_resolver.structure()
     assert set(declared["spaces"]["departments"]) == access_resolver.KNOWN_DEPARTMENTS

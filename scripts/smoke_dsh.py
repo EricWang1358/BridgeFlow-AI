@@ -28,7 +28,7 @@ def step(label: str) -> None:
 def main() -> int:
     home = os.environ.get("DSH_HOME")
     if not home:
-        print("DSH_HOME is not set. See docs/14-wsl-setup.md step 7.")
+        print("DSH_HOME is not set. See docs/setup.md step 7.")
         return 2
     print(f"DSH_HOME = {home}")
     print(f"DEEPSEEK_API_KEY set: {bool(os.environ.get('DEEPSEEK_API_KEY'))}")
