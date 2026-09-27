@@ -12,7 +12,7 @@
 | 接手开发 | [`../CLAUDE.md`](../CLAUDE.md) 的规矩 → [`../HANDOFF.md`](../HANDOFF.md) 的现状 → [`13`](13-golden-standard.md) 的理由 |
 | 评委或外部读者 | [`17`](17-business-mvp-acceptance.md) 现在能演示什么 → [`00`](00-status.md) 数字 → [`01`](01-problem-and-hmw.md) 问题从哪来 |
 | 要一个数字 | [`00`](00-status.md)。只有这一处有数字，别写的是链接 |
-| 上台演示 | [`04`](04-demo-plan.md) 逐拍能不能真跑 + [一站式 Demo](../demo-walkthrough/README.md) |
+| 上台演示 | [`04`](04-demo-plan.md) 逐拍能不能真跑 + [人工录屏 Runbook](39-manual-video-runbook.md) + [一站式 Demo](../demo-walkthrough/README.md) |
 | 做报价功能 | [`20`](20-quotation-brief.md) 任务书 → [`21`](21-quotation-design.md) 设计边界 |
 
 ## 四份常驻文档的分工
@@ -76,6 +76,7 @@
 | [`36-online-demo.md`](36-online-demo.md) | 权威 | 中 | 负责人、开发、运维 | 线上演示为中心：免登录评委入口、首屏零点击、本机模型闸门与分层防盗刷、访客席位池，待拍板项单列 |
 | [`37-portal-english-and-guest-entry.md`](37-portal-english-and-guest-entry.md) | 权威 | EN | 开发、运维 | 门户全英文、访客控制台默认英文；「访客进入」被席位时期缓存的 301 弹回门户的根因、修复、验证与上线操作 |
 | [`38-review-explanation-language.md`](38-review-explanation-language.md) | 权威 | EN | 开发 | 部门解释的语言改由字典声明、宿主核验；修复英文集上禁用话题检查失效 |
+| [`39-manual-video-runbook.md`](39-manual-video-runbook.md) | 参考 | 中 | 演示人 | 演示视频的人工录屏 runbook：准备清单、逐拍操作与停留时长、口播原文、出错应对与剪辑交片（剧本权威在 `04`） |
 
 两份 README 是同一套图文操作指引的中英版本（顶部可切换）：[`../README.md`](../README.md)（English）
 与 [`../README.zh.md`](../README.zh.md)（简体中文）。截图是 `../docs/images/` 里的稳定副本，

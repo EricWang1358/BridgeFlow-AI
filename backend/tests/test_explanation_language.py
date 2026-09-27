@@ -97,3 +97,13 @@ def test_chinese_set_keeps_its_rules_and_cannot_be_sidestepped_in_english(monkey
     for reason, text in refused.items():
         with pytest.raises(HTTPException, match=reason):
             business.validate_role(finance, answer(finance, text))
+
+
+def test_a_unit_symbol_is_not_a_numeric_claim_but_a_number_still_is(monkeypatch):
+    # Live 2026-09-27: procurement named its own metric ("margin per m³") and was refused as numeric.
+    procurement = roles(monkeypatch, "en")["procurement"]
+    business.validate_role(procurement, answer(procurement, "Weighted gross margin per m³ sits below the attention "
+                                                            "threshold; the procurement manager reviews prices."))
+    for text in ("Margin fell by 12 CNY per m³.", "Margin fell by １２ CNY."):
+        with pytest.raises(HTTPException, match="qualitative language"):
+            business.validate_role(procurement, answer(procurement, text))

@@ -238,8 +238,9 @@ def validate_role(packet: dict, judgement: dict) -> dict:
             refuse(f"Unverified numeric claim or status in {answer.check_id}")
         if answer.action not in fact["actions"][answer.status]:
             refuse(f"Action exceeds declared responsibility in {answer.check_id}")
-        # Numeric assertions belong in validated fields, not free-form prose.
-        if any(char.isdigit() for char in answer.explanation):
+        # Numeric assertions belong in validated fields, not free-form prose. Decimal digits in any
+        # script, not isdigit(): that also matches the ³ of a unit (m³, the English sample's 方).
+        if any(char.isdecimal() for char in answer.explanation):
             refuse("Explanation must use qualitative language; numeric claims belong in validated fields")
         rules = packet["explanation"]
         if len(answer.explanation) > rules["max_characters"]:
