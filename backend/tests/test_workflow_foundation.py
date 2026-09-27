@@ -215,7 +215,7 @@ def test_the_147_story_end_to_end(tmp_path):
     assert "97.5" not in notice.message  # a summary and a version, not the data
 
     summaries = [row.summary for row in board.project(service).rows]
-    assert any("数据已就绪" in s for s in summaries) and any("待市场部处理" in s for s in summaries)
+    assert any("data ready" in s for s in summaries) and any("waiting on 市场部" in s for s in summaries)
 
     [sent] = service.dispatch()
     assert sent.state is NotificationState.SENT
@@ -327,7 +327,7 @@ def test_a_notification_that_keeps_failing_is_abandoned_while_the_data_stays_rea
     states = [service.dispatch()[0].state for _ in range(3)]
     assert states == [NotificationState.FAILED, NotificationState.FAILED, NotificationState.ABANDONED]
     assert service.artifact(artifact_id).view.state is ArtifactState.DATA_READY
-    assert any("通知发送失败" in row.summary for row in board.project(service).rows)
+    assert any("notification failed" in row.summary for row in board.project(service).rows)
 
 
 def test_partial_inputs_are_shown_as_partial_and_nobody_is_told_ready(tmp_path):
@@ -340,7 +340,7 @@ def test_partial_inputs_are_shown_as_partial_and_nobody_is_told_ready(tmp_path):
     ready(service)
     assert service.handoffs() == [] and service.store.notifications() == []
     [partial] = [row for row in board.project(service).rows if row.kind == "partial"]
-    assert partial.awaiting == ["second_input"] and "仍待" in partial.summary
+    assert partial.awaiting == ["second_input"] and "still waiting on" in partial.summary
 
 
 # --- adoption ----------------------------------------------------------------------
@@ -532,7 +532,7 @@ def test_a_stage_that_produces_a_record_cannot_complete_before_that_record_is_re
     [handoff] = service.handoffs()
     handoff = service.act(handoff.id, "start", "", handoff.seq)
     [row] = [r for r in board.project(service).rows if isinstance(r, board.HandoffRow)]
-    assert row.awaiting_outputs == ["settlement_basis"] and "市场部的结算依据入库后才能完成" in row.summary
+    assert row.awaiting_outputs == ["settlement_basis"] and 'can finish once recorded: 市场部 "结算依据"' in row.summary
     with pytest.raises(TransitionError, match="not recorded"):
         service.act(handoff.id, "complete", "市场部负责人确认已处理", handoff.seq)
     record_output(service, project="演示项目B")  # another project's output does not count

@@ -45,6 +45,7 @@ const rules: Rule[] = [
   [/^No batch has been imported for (.+)$/, p => `${p} 还没有导入任何批次`],
   [/^This batch has no saved review$/, () => '这个批次没有保存的研判'],
   [/^Complete the review before building the brief$/, () => '先完成研判，再生成简报'],
+  [/^This report sums the declared columns directly and uses no pending cross-department mapping; a passing judgement does not mean the master table is signed off$/, () => '本报告直接汇总声明列，不消费待确认的跨部门映射；判断通过不代表主表已签发'],
   [/^No acceptance report has been generated; run `(.+)`$/, cmd => `还没有生成验收报告；运行 \`${cmd}\``],
   // Cleaning notes (corrections)
   [/^header snake-cased for stable downstream keys$/, () => '表头统一成下划线小写，方便后续稳定引用'],
@@ -59,6 +60,40 @@ const rules: Rule[] = [
   [/^batch = (\w+); department = (\w+); period = (.+)$/, (b, d, p) => `批次 ${b}；${departments[d!] ?? d}；期间 ${p}`],
   [/^(.+ = (?:sum|average|period_end|disagreed|concat|first))(; .+ = (?:sum|average|period_end|disagreed|concat|first))*$/, () => ''],
 ]
+
+// Workflow board rows (backend workflow/board.py): a sentence, then optional clauses, joined by "; ".
+// Names inside are the catalogue's own; lists come joined by ", ".
+const list = (items: string) => items.split(', ').join('、')
+const quoted = (items: string, render: (department: string, title: string) => string) =>
+  [...items.matchAll(/(.+?) "(.+?)"(?:, |$)/g)].map(m => render(m[1]!, m[2]!)).join('、')
+const boardClauses: Rule[] = [
+  [/^(.+) material received, still missing: (.+)$/, (d, items) => `${d}材料已收到，待补：${list(items!)}`],
+  [/^(.+) standard record ready for review$/, d => `${d}标准记录已形成，待复核`],
+  [/^(.+) standard record reviewed, awaiting submission$/, d => `${d}标准记录已复核，待提交`],
+  [/^(.+) standard record being submitted$/, d => `${d}标准记录提交中`],
+  [/^(.+) standard record failed to submit, data not ready yet, can retry$/, d => `${d}标准记录提交失败，数据尚未就绪，可重试`],
+  [/^(.+) "(.+)" v(\d+) data ready$/, (d, title, v) => `${d}「${title}」v${v} 数据已就绪`],
+  [/^needs attention: (.+)$/, items => `需关注：${list(items!)}`],
+  [/^(.+) standard data ready, waiting on (.+)$/, (up, d) => `${list(up!)}标准数据已就绪，待${d}处理`],
+  [/^(.+) working on it$/, d => `${d}处理中`],
+  [/^(.+) returned it: (.*)$/, (d, reason) => `${d}已退回：${reason}`],
+  [/^can finish once recorded: (.+)$/, items => `${quoted(items!, (d, t) => `${d}的${t}`)}入库后才能完成`],
+  [/^upstream was revised, review against the new version$/, () => '上游已修订，请按新版本复核'],
+  [/^notification failed, will retry$/, () => '通知发送失败，待重试'],
+  [/^notification failed, needs manual follow-up$/, () => '通知发送失败，需人工跟进'],
+  [/^(.+) has part of its inputs, still waiting on: (.+)$/, (d, items) => `${d}已收到部分输入，仍待：${quoted(items!, (dd, t) => `${dd}「${t}」`)}`],
+  [/^(.+) done$/, d => `${d}已完成`],
+]
+/** A board row's summary in Chinese; unchanged unless every clause is a known one. */
+export function translateBoard(text: string): string {
+  const out: string[] = []
+  for (const clause of text.split('; ')) {
+    const rule = boardClauses.find(([pattern]) => pattern.test(clause))
+    if (!rule) return text
+    out.push(rule[1](...rule[0].exec(clause)!.slice(1)))
+  }
+  return out.join('；')
+}
 
 export function translate(text: string): string {
   for (const [pattern, render] of rules) {

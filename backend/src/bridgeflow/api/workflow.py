@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Annotated, Any
 
 import yaml
@@ -303,7 +304,8 @@ async def load_sample(user: BrowserUser) -> board.Board:
     approval. The sample belongs to the demo catalogue; any other catalogue refuses it, and a
     workflow that already holds records is left alone.
     """
-    sample = yaml.safe_load((REPO_ROOT / "data/workflow_demo/sample-submissions.yaml").read_text(encoding="utf-8"))
+    configured = Path(settings.workflow_samples_path)
+    sample = yaml.safe_load((configured if configured.is_absolute() else REPO_ROOT / configured).read_text(encoding="utf-8"))
     workflow = service()
     require_scope(workflow)
     with _domain_errors():

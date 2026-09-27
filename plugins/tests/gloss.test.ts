@@ -30,6 +30,16 @@ test('the Chinese interface reads backend sentences in Chinese, keeping names an
   assert.equal(translate('batch = abc123; department = finance; period = 2024-07'), '批次 abc123；财务部；期间 2024-07')
   assert.equal(translate('上月实际量 = average; 出厂量 = sum; 实际签收率 = disagreed'), '上月实际量 = 取平均; 出厂量 = 求和; 实际签收率 = 各行不一致')
   assert.equal(translate('The brief is built from a saved review'), '月度简报要在保存研判之后生成')
+  // Handoff board rows: English clauses from the backend, the Chinese board reads them as before.
+  const { translateBoard } = await import('../src/client/zh-messages.ts')
+  assert.equal(translateBoard('生产部 material received, still missing: 实际量, 结算量'), '生产部材料已收到，待补：实际量、结算量')
+  assert.equal(translateBoard('生产部 "生产记录" v2 data ready; needs attention: 出厂量与实际量差异'), '生产部「生产记录」v2 数据已就绪；需关注：出厂量与实际量差异')
+  assert.equal(translateBoard('生产部 standard data ready, waiting on 市场部; can finish once recorded: 市场部 "结算依据"; notification failed, will retry'),
+    '生产部标准数据已就绪，待市场部处理；市场部的结算依据入库后才能完成；通知发送失败，待重试')
+  assert.equal(translateBoard('财务部 has part of its inputs, still waiting on: 市场部 "结算依据", 生产部 "生产记录"'), '财务部已收到部分输入，仍待：市场部「结算依据」、生产部「生产记录」')
+  assert.equal(translateBoard('市场部 done'), '市场部已完成')
+  // A clause nobody declared keeps the whole row as written, rather than half-translated.
+  assert.equal(translateBoard('市场部 done; something new'), '市场部 done; something new')
   // Anything without a template is shown exactly as written.
   assert.equal(translate('something new from the backend'), 'something new from the backend')
   applyGlossary({ names: {}, texts: {} })

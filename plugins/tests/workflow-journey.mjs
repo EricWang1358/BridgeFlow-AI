@@ -204,7 +204,7 @@ try {
     await drive('downstream starts', 'Ask the captain to start it', rows => rows.some(r => market(r) && r.state === 'in_progress'), undefined, ['市场部'])
     // Marketing's stage produces the settlement basis; it cannot be completed until that is
     // recorded, so the page offers no "complete" until then (the board says what is owed).
-    assert.equal(await page.locator('article.bf-source-item').filter({ hasText: '入库后才能完成' })
+    assert.equal(await page.locator('article.bf-source-item').filter({ hasText: 'can finish once recorded' })
       .getByRole('button', { name: 'Ask the captain to complete it', exact: true }).count(), 0)
     const settlement = loaded.find(r => r.kind === 'artifact' && r.template === 'settlement_basis').id
     await drive('settlement submitted', 'Ask the captain to submit for approval',

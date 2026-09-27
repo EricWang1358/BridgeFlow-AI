@@ -230,6 +230,7 @@ A conclusion takes the weakest grade among its inputs.
 - 区分事实、推断与假设，推断必须写「可能」「待核实」。 / Mark inference and assumption explicitly.
 - 不作因果断言，除非有声明规则支持；不给出未声明的阈值、评级或预测。 / No causal claims, thresholds, ratings or forecasts without a declaration.
 - 各部门 `unsupported_topics` 中的词，即使在否定句中也不出现。 / Terms in a role's unsupported topics never appear, not even negated.
+- 部门解释使用批次字典声明的语言（`business_review.explanation_language`，缺省为中文），其他语言的解释会被拒收；见 [docs/38](../38-review-explanation-language.md)。 / Department explanations are in the language the batch's dictionary declares, and any other language is refused.
 - 颜色只作辅助：状态同时用文字表达，满足色弱可读。 / Colour is never the only carrier of status.
 
 ### 5.5 图表规则 / Chart rules

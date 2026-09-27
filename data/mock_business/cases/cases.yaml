@@ -4,6 +4,9 @@
 # scripts/make_demo_cases.py (except `tour`, the retained guided-tour sample).
 dictionary: data/mock_business/demo/dictionary.yaml
 period: "2024-07"
+# What each imported sample file is called; {department} is the department label the
+# integration declaration gives, {period} the month.
+file_name: 模拟-{department}-{period}.xlsx
 # Earlier months of the same supplier, nothing planted. "Load the earlier sample months"
 # imports the ones not already present, so trends have more than one point.
 history:

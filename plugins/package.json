@@ -16,6 +16,7 @@
     "smoke:quotation": "node tests/quotation-smoke.mjs",
     "smoke:tour": "node tests/tour-smoke.mjs",
     "smoke:guide": "node tests/guide-journey.mjs",
+    "demo:video": "node tests/demo-video.mjs",
     "docs:guide": "tsx scripts/user-guide-md.ts"
   },
   "devDependencies": {

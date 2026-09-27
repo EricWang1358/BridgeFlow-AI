@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { formatNumber, navigate, openSession, sendHumanNote, useUI, describeError, useGloss } from './ui.ts'
 import { Chip } from './workspace.tsx'
+import { translate as zhMessage } from './zh-messages.ts'
 type Source = { department: string; filename: string; sheet: string; source_row: number | null; original_column: string; column: string }
 type Check = { check_id: string; title: string; value: number; unit: string; expected_status: string; threshold: number; attention_when: string; formula: string; action: string; explanation: string; sources: Source[]; source_count: number; truncated: boolean }
 export type Review = { report_id: string; batch_id: string; parent_session_id: string; period: string; status: string; manager_decision: string; limitations: string[]; terminal_reason?: string;
@@ -48,6 +49,6 @@ export function BusinessReview({ report }: { report: Review }) {
       {Object.entries(report.usage.departments ?? {}).map(([role, u]) => <p className="bf-hint" key={role}>{t(role)}: {u.steps ?? 0}/{report.usage?.step_limit_per_department ?? '—'} {t('steps')} · {u.total_tokens ?? 0} tokens</p>)}
     </details>}
     <div className="bf-actions"><button onClick={() => void session()}>{t('parent')} ↗</button><button onClick={() => navigate({ batch: report.batch_id, view: 'review', report: report.report_id })}>{t('reportId')}: {report.report_id.slice(0, 8)} ↗</button></div>
-    <details><summary>{t('scope')}</summary><ul>{report.limitations.map((item, i) => <li key={i}>{item}</li>)}</ul><p>{t('reportId')}: {report.report_id}</p></details>
+    <details><summary>{t('scope')}</summary><ul>{report.limitations.map((item, i) => <li key={i}>{language === 'zh' ? zhMessage(item) : gloss.text(item)}</li>)}</ul><p>{t('reportId')}: {report.report_id}</p></details>
   </section>
 }

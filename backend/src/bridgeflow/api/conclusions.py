@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -165,8 +165,9 @@ def _recent_periods(period: str, count: int) -> list[str]:
 
 @router.get("/conclusions/batches/{batch_id}/report")
 async def monthly_report(batch_id: str, user: Annotated[UserIdentity | None, Depends(require_user)],
-                         report_id: Annotated[str | None, Query(pattern=r"^[a-f0-9]{32}$")] = None) -> dict:
-    """The monthly report as a Word document (E13-UC04).
+                         report_id: Annotated[str | None, Query(pattern=r"^[a-f0-9]{32}$")] = None,
+                         lang: Literal["zh", "en"] = "zh") -> dict:
+    """The monthly report as a Word document (E13-UC04), worded in the interface's language.
 
     Generated from the brief, so it cannot say anything the page does not, and refused when
     that brief is stale: exporting superseded conclusions makes a document that outlives the
@@ -184,7 +185,7 @@ async def monthly_report(batch_id: str, user: Annotated[UserIdentity | None, Dep
         # Only the conventions the reported figures actually rest on; the rest are not this
         # report's limitations (AC-2).
         conventions=[view.model_dump(mode="json") for view in declared if not used or view.id in used],
-        case=str((batch.dictionary_snapshot or {}).get("business_review", {}).get("case", "")))
+        case=str((batch.dictionary_snapshot or {}).get("business_review", {}).get("case", "")), language=lang)
     import base64
 
     return {"filename": filename, "base64": base64.b64encode(payload).decode(),

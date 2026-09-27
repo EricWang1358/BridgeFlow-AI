@@ -1,4 +1,5 @@
 """Employee-scoped discovery reads. Mutations are not exposed as browser proxies."""
+from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
@@ -73,12 +74,13 @@ def load_sample(user: BrowserUser) -> dict:
     """Explicit sample project: fictional people, from a material to an approved MVP decision.
 
     Like the sample notebook and the sample workflow, it is a click, not a model call. It
-    only runs under the sample's own policies (data/discovery_demo/); any other policy
+    only runs under the sample's own policies (the sample set's discovery policies); any other policy
     refuses it, and a project that already exists is returned as it is.
     """
     from bridgeflow.workflow import discovery_sample
 
-    sample = discovery_sample.load(REPO_ROOT / "data/discovery_demo/sample-project.yaml")
+    configured = Path(settings.discovery_sample_path)
+    sample = discovery_sample.load(configured if configured.is_absolute() else REPO_ROOT / configured)
     try:
         scoring = load_policy(settings.discovery_scoring_policy_path)
         decision = load_decision_policy(settings.discovery_decision_policy_path)

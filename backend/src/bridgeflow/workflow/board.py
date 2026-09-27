@@ -1,8 +1,10 @@
 """The status board: one read model projected from events, never written to directly.
 
 Each row says where a business object is, who it waits on, and what happens next, in
-words built from the declarations (#144): "生产部材料已收到，待补实际量" rather than a
-status code. It keeps the distinctions the lifecycle keeps — received is not ready,
+words built from the declarations (#144): "Production material received, still missing:
+Actual volume" rather than a status code. Like every sentence the backend writes, it is
+English, with a clause per fact joined by "; "; the Chinese interface reads it in Chinese
+(plugins/src/client/zh-messages.ts), and the declared names stay as the catalogue wrote them. It keeps the distinctions the lifecycle keeps — received is not ready,
 ready is not notified, notified is not done — and a partial set of inputs is shown as
 partial, never as "data ready".
 """
@@ -81,19 +83,19 @@ def _artifact_row(snapshot: ArtifactSnapshot) -> ArtifactRow:
     state = snapshot.view.state
     who = spec.department
     if state is ArtifactState.NEEDS_INPUT:
-        summary = f"{spec.department}材料已收到，待补：{'、'.join(blocking)}"
+        summary = f"{spec.department} material received, still missing: {', '.join(blocking)}"
     elif state is ArtifactState.READY_FOR_REVIEW:
-        summary = f"{spec.department}标准记录已形成，待复核"
+        summary = f"{spec.department} standard record ready for review"
     elif state is ArtifactState.REVIEWED:
-        summary = f"{spec.department}标准记录已复核，待提交"
+        summary = f"{spec.department} standard record reviewed, awaiting submission"
     elif state is ArtifactState.SUBMITTING:
-        summary, who = f"{spec.department}标准记录提交中", "system"
+        summary, who = f"{spec.department} standard record being submitted", "system"
     elif state is ArtifactState.SUBMIT_FAILED:
-        summary = f"{spec.department}标准记录提交失败，数据尚未就绪，可重试"
+        summary = f"{spec.department} standard record failed to submit, data not ready yet, can retry"
     else:
-        summary, who = f"{spec.department}「{spec.title}」v{snapshot.view.version} 数据已就绪", ""
+        summary, who = f'{spec.department} "{spec.title}" v{snapshot.view.version} data ready', ""
     if attention:
-        summary += f"；需关注：{'、'.join(attention)}"
+        summary += f"; needs attention: {', '.join(attention)}"
     return ArtifactRow(id=snapshot.id, template=snapshot.template, title=spec.title, department=spec.department,
                        business_key=list(snapshot.key), version=snapshot.view.version, state=str(state),
                        waiting_on=who, summary=summary, blocking=blocking, attention=attention,
@@ -102,25 +104,27 @@ def _artifact_row(snapshot: ArtifactSnapshot) -> ArtifactRow:
 
 def _handoff_row(service: WorkflowService, snapshot: HandoffSnapshot, notices: dict[str, NotificationState]) -> HandoffRow:
     stage = service.catalogue.stages[snapshot.stage]
-    upstream = "、".join(service.catalogue.templates[t].department for t in snapshot.view.inputs)
+    upstream = ", ".join(service.catalogue.templates[t].department for t in snapshot.view.inputs)
     notification = notices.get(f"handoff:{snapshot.id}")
     state = snapshot.view.state
     if state is HandoffState.WAITING:
-        summary = f"{upstream}标准数据已就绪，待{stage.department}处理"
+        summary = f"{upstream} standard data ready, waiting on {stage.department}"
     elif state is HandoffState.IN_PROGRESS:
-        summary = f"{stage.department}处理中"
+        summary = f"{stage.department} working on it"
     elif state is HandoffState.RETURNED:
-        summary = f"{stage.department}已退回：{snapshot.view.reason}"
+        summary = f"{stage.department} returned it: {snapshot.view.reason}"
     else:
-        summary = f"{stage.department}已完成"
+        summary = f"{stage.department} done"
     owed = service.missing_outputs(snapshot.stage, snapshot.key) if state in (HandoffState.WAITING, HandoffState.IN_PROGRESS) else []
     if owed:
-        summary += "；" + "、".join(f"{service.catalogue.templates[t].department}的{service.catalogue.templates[t].title}"
-                                  for t in owed) + "入库后才能完成"
+        templates = service.catalogue.templates
+        summary += "; can finish once recorded: " + ", ".join(f'{templates[t].department} "{templates[t].title}"'
+                                                              for t in owed)
     if snapshot.view.stale:
-        summary += "；上游已修订，请按新版本复核"
+        summary += "; upstream was revised, review against the new version"
     if notification in (NotificationState.FAILED, NotificationState.ABANDONED):
-        summary += "；通知发送失败" + ("，待重试" if notification is NotificationState.FAILED else "，需人工跟进")
+        summary += "; notification failed, " + ("will retry" if notification is NotificationState.FAILED
+                                                else "needs manual follow-up")
     return HandoffRow(id=snapshot.id, stage=snapshot.stage, title=stage.title, department=stage.department,
                       owner_role=stage.owner_role, business_key=list(snapshot.key), inputs=snapshot.view.inputs,
                       state=str(state), stale=snapshot.view.stale,
@@ -165,6 +169,6 @@ def project(service: WorkflowService) -> Board:
             rows.append(PartialRow(
                 stage=name, title=stage.title, department=stage.department, business_key=list(key),
                 received=received, awaiting=awaiting,
-                summary=f"{stage.department}已收到部分输入，仍待："
-                        + "、".join(f"{titles[t].department}「{titles[t].title}」" for t in awaiting)))
+                summary=f"{stage.department} has part of its inputs, still waiting on: "
+                        + ", ".join(f'{titles[t].department} "{titles[t].title}"' for t in awaiting)))
     return Board(rows=rows)

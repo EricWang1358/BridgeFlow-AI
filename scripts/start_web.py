@@ -141,10 +141,13 @@ def guest_environment(env: dict[str, str]) -> Path:
         raise SystemExit(f"guest environment would still carry an operator secret in {leaked}; refusing to start")
     if staff_url:
         env["BRIDGEFLOW_STAFF_URL"] = staff_url
+    samples = guest_sample_set(env)
     # A copy of the sample dictionary: publishing a dictionary rewrites the active file,
     # and a guest must only ever rewrite its own copy.
     dictionary = GUEST_ROOT / "dictionary.yaml"
-    shutil.copy2(ROOT / "data/mock_business/demo/dictionary.yaml", dictionary)
+    shutil.copy2(samples["dictionary"], dictionary)
+    # Set, not defaulted: an operator's own catalogue or policies in env.sh are for staff.
+    env.update({name: str(samples[key]) for key, name in GUEST_SAMPLE_ENV.items()})
     env.update({
         "DSH_HOME": str(home), "BRIDGEFLOW_GUEST_MODE": "1", "BRIDGEFLOW_GUEST_LLM": "1" if allow_llm else "0",
         "BRIDGEFLOW_BACKEND_PORT": str(GUEST_BACKEND_PORT), "FIELD_DICTIONARY_PATH": str(dictionary),
@@ -170,14 +173,51 @@ def guest_environment(env: dict[str, str]) -> Path:
                   f"      name: {str(ROOT / 'plugins/src/guest-model/index.ts')!r}\n")
     path = GUEST_ROOT / "web.yml"
     path.write_text(patch, encoding="utf-8")
+    # A sample set may name absolute paths outside the repository; show those as they are.
+    cases = samples["demo_cases"]
+    cases = cases.relative_to(ROOT) if cases.is_relative_to(ROOT) else cases
     print(f"BridgeFlow guest mode: data under {GUEST_ROOT} (wiped on start), Feishu off, AI model "
-          f"{f'ON via the demo gate ({model})' if allow_llm else 'off'}", flush=True)
+          f"{f'ON via the demo gate ({model})' if allow_llm else 'off'}, samples from "
+          f"{cases.parent.parent}", flush=True)
     return path
 
 
 # Set only on the re-executed guest launcher: the prepared patch path, and proof the environment
 # this process started with is already the stripped one.
 GUEST_PREPARED = "BRIDGEFLOW_GUEST_PATCH"
+
+
+# The guest's samples (docs/37): the English translation by default, so the public demo reads
+# in English; BRIDGEFLOW_GUEST_SAMPLE_SET may name another set, e.g. the Chinese originals.
+GUEST_SAMPLE_SET = "data/demo_en/sample-set.yaml"
+# sample-set.yaml key → the setting it becomes. `dictionary` is copied, not pointed at.
+GUEST_SAMPLE_ENV = {
+    "integration_spec": "INTEGRATION_SPEC_PATH", "demo_cases": "DEMO_CASES_PATH",
+    "workflow_catalogue": "WORKFLOW_CATALOGUE_PATH", "workflow_samples": "WORKFLOW_SAMPLES_PATH",
+    "discovery_sample": "DISCOVERY_SAMPLE_PATH", "discovery_scoring_policy": "DISCOVERY_SCORING_POLICY_PATH",
+    "discovery_decision_policy": "DISCOVERY_DECISION_POLICY_PATH",
+}
+
+
+def guest_sample_set(env: dict[str, str]) -> dict[str, Path]:
+    """Read the declared sample set; every path must exist, or the guest does not start."""
+    declared = Path(env.get("BRIDGEFLOW_GUEST_SAMPLE_SET") or GUEST_SAMPLE_SET)
+    path = declared if declared.is_absolute() else ROOT / declared
+    try:
+        raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        raise SystemExit(f"guest sample set cannot be read ({path}): {exc}") from exc
+    if not isinstance(raw, dict):
+        raise SystemExit(f"guest sample set {path} must be a mapping of sample names to paths, not {type(raw).__name__}")
+    wanted = ["dictionary", *GUEST_SAMPLE_ENV]
+    missing = [key for key in wanted if not raw.get(key)]
+    if missing:
+        raise SystemExit(f"guest sample set {path} does not declare: {', '.join(missing)}")
+    resolved = {key: ROOT / str(raw[key]) for key in wanted}
+    absent = [str(p) for p in resolved.values() if not p.is_file()]
+    if absent:
+        raise SystemExit(f"guest sample set {path} names files that do not exist: {', '.join(absent)}")
+    return resolved
 
 
 def reexec_scrubbed_guest(argv: list[str], environ: dict[str, str], execve=os.execve) -> None:

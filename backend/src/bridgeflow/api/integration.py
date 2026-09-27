@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import json
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import yaml
 from fastapi import APIRouter, Depends, HTTPException
@@ -56,10 +56,13 @@ async def master_for_batch(batch_id: str,
 
 @router.get("/integration/batches/{batch_id}/xlsx")
 async def master_workbook(batch_id: str,
-                          user: Annotated[UserIdentity | None, Depends(require_user)]) -> dict:
+                          user: Annotated[UserIdentity | None, Depends(require_user)],
+                          lang: Literal["zh", "en"] = "zh") -> dict:
+    """The master as a workbook, its sheet names and headers in the interface's language."""
     result = _result(batch_id, user)
-    return {"filename": f"跨部门业务整合总表-{batch_id[:8]}.xlsx",
-            "base64": base64.b64encode(integration.to_xlsx(result)).decode()}
+    words = integration.WORKBOOK_WORDS[lang]
+    return {"filename": words["filename"].format(batch=batch_id[:8]),
+            "base64": base64.b64encode(integration.to_xlsx(result, lang)).decode()}
 
 
 @router.post("/tools/integration-summary")

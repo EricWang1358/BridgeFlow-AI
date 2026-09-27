@@ -60,7 +60,9 @@ class ScriptedModel extends LlmAdapter {
         const args = process.env.BRIDGEFLOW_TEST_FAULT === 'step-limit' && packet.role === 'finance' ? { checks: null } : {
           checks: packet.checks.map((check: any) => ({ check_id: check.check_id, metric: check.metric,
             value: check.value, unit: check.unit, status: check.expected_status,
-            action: check.actions[check.expected_status][0], explanation: '按关注阈值核对，由本部门负责人复核并采取职责内下一步。' })) }
+            action: check.actions[check.expected_status][0], explanation: packet.explanation.code === 'en'
+              ? 'Checked against the attention threshold; the department owner reviews it and takes the next step in scope.'
+              : '按关注阈值核对，由本部门负责人复核并采取职责内下一步。' })) }
         calls = [{ name: 'structured_output', args }]
         await new Promise(resolve => setTimeout(resolve, Number(process.env.BRIDGEFLOW_TEST_REVIEW_DELAY_MS ?? 150)))
       } else if (!texts.some(text => text.startsWith('{') && text.includes('"report_id"'))) {

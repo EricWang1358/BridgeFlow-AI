@@ -10,6 +10,9 @@
 - **门户全英文**（负责人拍板：只要英文）：`pages.py` / `main.py` 全部文案；测试锁死页面无 CJK。
 - **访客控制台默认英文**（负责人拍板：不跟随浏览器）：公网页面不是 loopback，dsh 不给设置存储，#110 的英文默认从未生效。访客模式下插件自己 `setLocale`；访客自选语言记在本浏览器 `localStorage`。本地以非 loopback 主机名 + zh-CN 浏览器验证。员工控制台在公网同样跟随浏览器，未改，待定。
 - **待上线**：合并即 CI 部署，无 env 变更；按 docs/37 §4 跑 preflight 与浏览器核对，通过后再改 README 里「公网访客未开放」的旧说法。
+- **英文样例集**（负责人拍板：并行英文集、仅访客用；后端文案随界面语言）：`data/demo_en/` 由 `scripts/make_english_samples.py` 从中文原件机械生成，数字与埋点问题不变，`test_english_samples.py` 逐案例比对两套结果一致；访客默认加载英文集（`BRIDGEFLOW_GUEST_SAMPLE_SET` 可切回中文）。流转看板句子与研判固定限制改为英文（中文界面经 `zh-messages.ts` 译回），总表 xlsx 与月度报告按 `?lang=` 出语言。上线与回滚见 docs/37 §6。改样例改中文原件再重新生成。
+- **研判解释的语言**（负责人拍板：彻底修，详见 [docs/38](docs/38-review-explanation-language.md)）：四部门解释原先写死中文，英文演示的结论页和报告里出现中文，而且英文集的禁用话题被译成英文、解释却是中文，这项检查在英文集上永远不会命中。现在语言由字典的 `business_review.explanation_language` 声明（没写就是 `zh`），宿主按声明核验语言与长度（中文 120、英文 240 字符），禁用话题不分大小写，两种语言的内置词都查。英文集生成时写入 `en`，重新生成时内容没变的工作簿不再重写。
+- **录屏脚本** `plugins/tests/demo-video.mjs`：按 docs/04 跑第 0–10 拍，在本机英文访客上已彩排第 0–4 拍，第 5–10 拍还没跑通。彩排数字见 [docs/00](docs/00-status.md) 2026-09-27。录制流水线（按 Enter 或信号文件 `--start-when` 开始，窗口 1440×900，QuickRecorder 录窗口，computer use 只管录制器）写在 [docs/04](docs/04-demo-plan.md)「Recording pipeline」。**待办**：合并后在线上快跑一遍整个脚本，同时复测研判用时（本机一次 163 s，研判时限是 180 s）。
 
 ## 2026-09-25 主域名即演示、模型闸门（分支 `feat/online-demo`，设计与状态见 [docs/36](docs/36-online-demo.md)）
 

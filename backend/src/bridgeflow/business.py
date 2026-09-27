@@ -1,6 +1,7 @@
 """Declared business arithmetic and responsibility contracts, without model arithmetic."""
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Mapping
 from decimal import Decimal, InvalidOperation
 from math import isfinite
@@ -13,6 +14,21 @@ from bridgeflow.api.batches import BatchSnapshot
 from bridgeflow.schemas import SourceRef
 
 ROLES = ("production", "procurement", "finance", "marketing")
+
+# The language department explanations are written in, declared per review contract as
+# `business_review.explanation_language` (absent = zh, every dictionary before it). Product wording,
+# not business fields: what the agent is told, and what the host then holds it to (docs/38).
+EXPLANATION_LANGUAGES = {
+    "zh": {"language": "Simplified Chinese", "max_characters": 120, "threshold_term": "关注阈值",
+           "out_of_scope": "不作为该结论的依据", "topics": ("已批准上限", "已批准标准", "现行批准标准")},
+    "en": {"language": "English", "max_characters": 240, "threshold_term": "attention threshold",
+           "out_of_scope": "not a basis for this conclusion",
+           "topics": ("approved limit", "approved standard", "currently approved standard")},
+}
+# Every language's built-in topics apply to every explanation: writing in the other language must
+# not be a way around them.
+BUILT_IN_TOPICS = tuple(t for words in EXPLANATION_LANGUAGES.values() for t in words["topics"])
+CJK = re.compile(r"[\u3400-\u9fff\uf900-\ufaff\u3000-\u303f\uff00-\uffef]")
 
 
 class Value(NamedTuple):
@@ -146,6 +162,11 @@ def context(batch_id: str, batch: BatchSnapshot) -> dict:
     blockers = data_blockers(batch)
     if blockers:
         refuse(blockers[0])
+    code = config.get("explanation_language", "zh")
+    if code not in EXPLANATION_LANGUAGES:
+        refuse(f"Unknown explanation language {code!r}; declare one of {sorted(EXPLANATION_LANGUAGES)}")
+    words = EXPLANATION_LANGUAGES[code]
+    explanation = {"code": code, **{k: v for k, v in words.items() if k != "topics"}}
     definitions = config.get("metrics", {})
     if not 1 <= len(definitions) <= 24:
         refuse("Business metric catalogue must contain 1–24 entries")
@@ -179,7 +200,8 @@ def context(batch_id: str, batch: BatchSnapshot) -> dict:
             refuse(f"{role}: expected 1–6 declared checks")
         packets.append({"role": role, "responsibility": policy["responsibility"],
             "decision_owner": policy["decision_owner"], "constraints": policy["constraints"],
-            "unsupported_topics": ["已批准上限", "已批准标准", "现行批准标准", *policy.get("unsupported_topics", [])], "checks": checks})
+            "explanation": explanation,
+            "unsupported_topics": [*words["topics"], *policy.get("unsupported_topics", [])], "checks": checks})
     return {"batch_id": batch_id, "period": batch.period, "case": config["case"], "facts": facts,
             "roles": packets, "limitations": config.get("limitations", []),
             "manager_decision": config.get("manager_decision", "Review the proposed actions with department owners")}
@@ -193,7 +215,8 @@ class Judgement(BaseModel):
     unit: str
     status: str
     action: str
-    explanation: str = Field(min_length=1, max_length=120)
+    # The outer bound; each language's own limit is checked in validate_role.
+    explanation: str = Field(min_length=1, max_length=max(w["max_characters"] for w in EXPLANATION_LANGUAGES.values()))
 
 
 class RoleJudgement(BaseModel):
@@ -218,7 +241,14 @@ def validate_role(packet: dict, judgement: dict) -> dict:
         # Numeric assertions belong in validated fields, not free-form prose.
         if any(char.isdigit() for char in answer.explanation):
             refuse("Explanation must use qualitative language; numeric claims belong in validated fields")
-        if any(topic in answer.explanation for topic in packet.get("unsupported_topics", [])):
+        rules = packet["explanation"]
+        if len(answer.explanation) > rules["max_characters"]:
+            refuse(f"Explanation in {answer.check_id} exceeds {rules['max_characters']} characters")
+        # Written in the declared language, or the topic check below could be sidestepped.
+        if (rules["code"] == "en") == bool(CJK.search(answer.explanation)):
+            refuse(f"Explanation in {answer.check_id} is not written in {rules['language']}, as this batch declares")
+        said = answer.explanation.casefold()
+        if any(topic.casefold() in said for topic in (*BUILT_IN_TOPICS, *packet.get("unsupported_topics", []))):
             refuse("Explanation discusses a topic outside this department's declared evidence scope")
         verified.append({**fact, "action": answer.action, "explanation": answer.explanation,
             "explanation_status": "model_advice", "owner": packet["role"],
