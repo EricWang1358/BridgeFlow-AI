@@ -123,6 +123,10 @@ const target = id => page.locator(`[data-tour-id="${id}"]:visible`).first()
 const batchId = () => new URLSearchParams(new URL(page.url()).hash.split('?')[1] ?? '').get('batch')
 const api = path => page.evaluate(async p => { const r = await fetch(`/bridgeflow${p}`); return r.ok ? r.json() : { error: r.status } }, path)
 const note = text => { beat.notes.push(text); console.log(`   · ${text}`) }
+// The guest instance is shared and keeps decisions until it restarts; a take on a used one cannot
+// show a first decision again. Said at once, instead of a captain that has nothing left to do.
+const DIRTY = 'restart it (sudo systemctl restart bridgeflow-guest) and retake from beat 0'
+const clean = (ok, what) => { if (!ok) throw new Error(`beat ${beat.n}: this instance already has ${what} from an earlier take; ${DIRTY}`) }
 
 /**
  * Wait out one captain turn. Approval cards and questions are answered by `approve` / `answer`
@@ -158,6 +162,8 @@ async function captain({ approve = () => 'allow', answer, until, nudge, timeout 
         await click(card.getByRole('button', { name: 'Reject', exact: true }), 600)
       }
       note(`approval ${seen()}: ${title.slice(0, 60) || 'card'} → ${decision === 'allow' ? 'Allow once' : 'Reject'}`)
+      // The answered card lingers while it settles; seen again, it would be taken for a second card.
+      for (let i = 0; i < 60 && await allow.count(); i++) await wait(500)
       idleSince = 0; continue
     }
     if (await skip.count()) {
@@ -171,6 +177,7 @@ async function captain({ approve = () => 'allow', answer, until, nudge, timeout 
       if (await submit.isEnabled()) await click(submit, 600)
       else await click(skip.first(), 600)
       note(`answered a question${answer ? '' : ' with its first option'}`)
+      for (let i = 0; i < 60 && await skip.count(); i++) await wait(500)
       idleSince = 0; continue
     }
     if (until && await until()) break
@@ -225,7 +232,8 @@ const BEATS = [
     await click(destination('This month’s tasks'))
     await point(studio().locator('.bf-checklist'), 3000)
     await point(studio().locator('.bf-inbox'), 2500)
-    await click(target('settle-ask-all'), 300)
+    // The tour anchor is the row around the button; its centre is empty space.
+    await click(target('settle-ask-all').getByRole('button', { name: 'Ask the captain how to finish these', exact: true }), 300)
     await captain()
     await hold(3000)
   } },
@@ -249,6 +257,8 @@ const BEATS = [
   { n: 5, title: 'A person decides', seconds: 50, async run() {
     await click(destination('Records'))
     const vat = studio().locator('.bf-records-list li').filter({ hasText: /VAT/ }).first()
+    await vat.waitFor()
+    clean(await vat.locator('.bf-convention').getAttribute('data-state') === 'unconfirmed', 'the VAT convention confirmed')
     await point(vat, 3500)
     // Done when one more convention is decided than before (its id is the dictionary's, not ours to name).
     const decided = async () => ((await api(`/conventions/batches/${batchId()}`)).conventions ?? []).filter(c => c.state !== 'unconfirmed').length
@@ -275,13 +285,17 @@ const BEATS = [
     await point(tasks.getByText('This batch needs data fixes before a review.', { exact: false }).first(), 2000)
     await point(tasks.locator('.bf-demo-guide'), 3500)
     await click(destination('Data'))
-    await point(studio().locator('.bf-data-quality').getByRole('button', { name: /Pending column matches/ }), 2500)
-    const batch = batchId()
-    const before = (await api(`/batches/${batch}`)).column_questions
+    const pending = studio().locator('.bf-data-quality').getByRole('button', { name: /Pending column matches/ })
+    await pending.waitFor()
+    clean(await pending.locator('.bf-badge').innerText() !== '0', "Marketing's renamed column matched")
+    await point(pending, 2500)
+    // An approved match is remembered for the next import; this batch stays as frozen, so its count
+    // does not move. Done is the turn ending after at least one approved match.
+    const allowed = () => run.approvals.some(a => a.beat === 6 && a.decision === 'allow')
     await say('Propose a match for the column Marketing renamed, from the fields the dictionary declares.')
-    await captain({ until: async () => (await api(`/batches/${batchId()}`)).column_questions < before,
-      nudge: 'Please go ahead with the tool call; the approval card is my confirmation.' })
-    note(`column questions ${before} → ${(await api(`/batches/${batchId()}`)).column_questions}`)
+    await captain()
+    if (!allowed()) { await say('Please go ahead with the tool call; the approval card is my confirmation.'); await captain() }
+    if (!allowed()) throw new Error('beat 6: the captain never proposed a column match')
     await hold(2500)
   } },
   { n: 7, title: 'The spreadsheet cannot give orders', seconds: 30, async run() {
@@ -322,6 +336,7 @@ const BEATS = [
     }
     await click(page.getByRole('button', { name: 'Load the sample workflow', exact: true }), 1500)
     const missing = (await board()).find(r => r.kind === 'artifact' && r.state === 'needs_input')
+    clean(!!missing, 'the sample record with the missing quantity filled')
     await click(page.getByRole('button', { name: 'Ask the captain to fill the gaps', exact: true }).first(), 300)
     await captain({ answer: 'The actual quantity is 97 m³, confirmed by delivery note DEMO-0901.',
       nudge: 'Please go ahead with the tool call; the approval card is my confirmation.',
