@@ -22,7 +22,10 @@ import { createInterface } from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 import { chromium } from '@playwright/test'
 
-const { values: opt } = parseArgs({ options: {
+// pnpm 11 forwards the `--` of `pnpm demo:video -- --beats 0-2` to the script, and parseArgs would
+// read every option after it as a positional; drop that one separator.
+const argv = process.argv.slice(2)
+const { values: opt } = parseArgs({ args: argv[0] === '--' ? argv.slice(1) : argv, options: {
   url: { type: 'string', default: 'https://portal.47.130.178.176.sslip.io/' },
   beats: { type: 'string', default: '0-10' },
   pace: { type: 'string', default: '1' },           // 1 = narration holds; 0 = as fast as the page allows
@@ -135,7 +138,10 @@ async function captain({ approve = () => 'allow', answer, until, nudge, timeout 
   await wait(1500)  // the turn has to start before idleness means anything
   while (Date.now() - started < timeout) {
     if (await allow.count()) {
-      const card = allow.first().locator('xpath=ancestor::*[.//button[normalize-space()="Reject"]][1]')
+      // BridgeFlow's decision card (summary, reason, Reject first); else dsh's plain card. The nearest
+      // ancestor holding Reject is only the button row on the former, which has no reason field.
+      const decisionCard = page.locator('section.bf-decision').filter({ visible: true })
+      const card = await decisionCard.count() ? decisionCard.first() : allow.first().locator('xpath=ancestor::*[.//button[normalize-space()="Reject"]][1]')
       const title = (await card.innerText()).split('\n').map(l => l.trim()).find(l => l.length > 12 && !/^(From|Waiting)/.test(l)) ?? ''
       const decision = approve(seen() + 1, title)
       run.approvals.push({ beat: beat.n, title, decision: decision === 'allow' ? 'allow' : 'reject', at_s: (Date.now() - t0) / 1000 })
@@ -143,6 +149,8 @@ async function captain({ approve = () => 'allow', answer, until, nudge, timeout 
       await point(card.locator('.bf-approval-detail').first().or(card).first(), 2500)
       if (decision === 'allow') await click(allow.first(), 600)
       else {
+        // A card without a reason field could only reject silently, and the beat is about the reason.
+        if (!await card.getByRole('textbox').count()) throw new Error(`beat ${beat.n}: the ${title || 'approval'} card has no reason field`)
         await click(card.getByRole('textbox').first(), 100)
         if (pace) await card.getByRole('textbox').first().pressSequentially(decision.reason, { delay: 22 })
         else await card.getByRole('textbox').first().fill(decision.reason)
