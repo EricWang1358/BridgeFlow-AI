@@ -43,6 +43,16 @@ export const outputSchema: ObjectJsonSchema = {
   },
 }
 interface Packet { role: string; responsibility: string; [key: string]: unknown }
+// The schema subset has no maxLength, and the host's refusal at finalize comes too late for the
+// department to retry; structured_output refuses it first so the child shortens it (docs/38 §3.5).
+// Counted in code points, as the host counts.
+export function overLength(packet: Packet | undefined, args: unknown): string[] {
+  const limit = (packet?.explanation as { max_characters?: number } | undefined)?.max_characters
+  if (!limit) return []
+  return (args as { checks: { check_id: string; explanation: string }[] }).checks
+    .filter(c => [...c.explanation].length > limit)
+    .map(c => `checks[${c.check_id}].explanation is ${[...c.explanation].length} characters; the limit is ${limit}. Shorten it and submit again.`)
+}
 interface ReviewContext { batch_id: string; period: string; roles: Packet[]; [key: string]: unknown }
 interface RoleRun { role: string; session_id: string; status: string; judgement: unknown; error: string; started_at: string; ended_at: string }
 interface ReviewState {
@@ -189,6 +199,8 @@ export function mountReview(ctx: Context, backend: BackendConfig, policy: Review
         if (!state.children.has(agent.id)) throw new Error('Department identity has not been verified')
         const violations = validateJsonSchemaValue(outputSchema, args)
         if (violations.length) throw new ToolArgsError(violations)
+        const long = overLength(state.context.roles.find(p => p.role === state.children.get(agent.id)?.role), args)
+        if (long.length) throw new ToolArgsError(long)
         staged.set(exec, args); exec.concludeTurn(); return { recorded: true }
       } })
     agent.ctx.systemPrompt.section({ name: 'bridgeflow:structured-result', order: 999,

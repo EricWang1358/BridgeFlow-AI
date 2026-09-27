@@ -116,7 +116,13 @@ prevents it.
 
 - **Pre-checking in `structured_output`,** so a child could retry. It would duplicate the host's rules
   in TypeScript. The existing digit rule has the same shape and is not pre-checked either. Revisit if
-  the rehearsal measures refusals.
+  the rehearsal measures refusals. **Revisited for length only (2026-09-27):** on the live guest,
+  procurement wrote three English explanations over 240 characters and the whole role was refused at
+  finalize. The dsh schema subset has no `maxLength`, so `structured_output` now refuses an explanation
+  longer than `packet.explanation.max_characters` (`overLength` in `review-batch.ts`, code points as the
+  host counts) and the department shortens and resubmits within its step limit. The limit is read from
+  the packet, not restated; `validate_role` stays the authority. The language, digit and topic rules are
+  still host-only.
 - **Stemming English topics** (Accrue vs accrual). Matching stays literal and case-insensitive: the
   topic list is a declaration, and a looser match would refuse legitimate sentences. The list is shown
   to the model, which is told never to write any of it.
