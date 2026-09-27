@@ -510,6 +510,10 @@ python scripts/feishu_membership_check.py
   日预算字段已就位但**暂不设置**（拍板：先不设预算，后续迭代）。未设 `BRIDGEFLOW_GUEST_LLM` 时对话由固定提示回复，不花钱。
 - **入口**：无会话的浏览器打开 `/` → Caddy 302 到 `/__enter` → 门户 `/guest` 交接页带本次启动令牌跳回。门户对访客只是令牌交接器，
   不签会话、不签身份令牌。令牌缺失（实例正在重启）时返回 503 自动重试页，不会循环。
+  令牌交换（dsh 回 `303 Location: /`）带 `Clear-Site-Data: "cache"` 并改落 `/?entered=1`：清掉席位时期主域名 301 在浏览器里的
+  永久缓存，否则点「访客进入」会被弹回门户（[`37`](37-portal-english-and-guest-entry.md)）。席位形态的主域名跳转因此改为 302。
+- **语言**：门户页面全英文；访客控制台默认英文，不跟随浏览器语言（公网页面拿不到 dsh 的设置存储，#110 的默认在那里不生效）。
+  访客在设置里改的语言记在本浏览器，刷新后保留。
 - **首屏**：新标签页自动打开示例笔记本，并弹出引导欢迎卡。上传入口一律拒绝，只能用内置样例。
 - 访客之间共用一个控制台（席位池见 [`36`](36-online-demo.md) §7，P1）；每个标签页各开自己的示例笔记本，横幅提醒不要输入真实数据。
 
@@ -544,6 +548,8 @@ python scripts/feishu_membership_check.py
 验收：
 - 无痕窗口打开 `https://<domain>/`：不出现任何登录框，几秒内进入示例笔记本并弹出引导；横幅写「访客模式」，并有员工飞书登录链接；
 - `curl -sI -H 'Accept: text/html' https://<domain>/` → `302`、`location: /__enter`；`curl -s -o /dev/null -w '%{http_code}' https://<domain>/` → `401`；
+- 令牌交换：`/?token=<本次令牌>` → `303`、`location: /?entered=1`、`clear-site-data: "cache"`（preflight 已自动核对）；
+- zh-CN 浏览器打开主域名，界面与示例笔记本标题均为英文；
 - 发一句话，有回复；`curl -s 127.0.0.1:8300/status` 的 `requests` 增加；
 - `https://portal.<domain>/` 飞书登录进席位照旧；
 - `preflight.sh` 的 `no guest process holds the operator model key` 为 ok。

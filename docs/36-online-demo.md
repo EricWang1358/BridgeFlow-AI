@@ -74,7 +74,8 @@
 
 域名：**主域名 `<domain>` 即演示**（2026-09-25 拍板）。
 席位部署里主域名原本 301 到门户，现在只有启用访客单元后才改渲染为演示站点；员工入口是 `portal.<domain>`，
-飞书回跳与席位子域名都不受影响。无席位的旧形态里，单一控制台随之挪到 `console.<domain>`（需同步门户 `apps.yaml`）。
+飞书回跳与席位子域名都不受影响。那条 301 被浏览器永久缓存，曾把访客入口弹回门户（2026-09-27，[`37`](37-portal-english-and-guest-entry.md)）；
+席位形态现改为 302，演示站点在令牌交换时清掉残留缓存，见 §4.2 末条。无席位的旧形态里，单一控制台随之挪到 `console.<domain>`（需同步门户 `apps.yaml`）。
 
 ---
 
@@ -127,6 +128,11 @@ demo.__DOMAIN__ {
 - 仅 `GET /` 且 `Accept: text/html` 的 401 转交接；`/api/*`、`/bridgeflow/*`、WebSocket 保持 401。
   否则夜间重置后前端 XHR 会拿到一页 HTML。
 - 每晚重置后旧 cookie 失效：用户刷新 `/` 即自动重新交接，无感。
+- 令牌交换单独一个 handle（2026-09-27，[`37`](37-portal-english-and-guest-entry.md)）：dsh 对 `/?token=` 回
+  `303 Location: /`，而 09-20～09-26 访问过主域名的浏览器缓存着 `/` 的 301 → 门户，不再问服务器，于是点「访客进入」
+  又回到登录页。这一个响应加 `Clear-Site-Data: "cache"`（只清缓存，绝不清 cookie：同一响应正在种 dsh 会话），
+  并把 `Location` 改写为 `/?entered=1`（不认该头的浏览器也落在没有残留缓存的地址）；防循环条件同时排除 `?entered=`。
+  以 `deploy/render_caddy.py` 的 `demo_site` 为准，上面的示意块未含这一段。
 
 替代方案（不推荐）：给 dsh web 加 `--no-auth`。需要 fork dsh，违反「不 fork dsh」。
 

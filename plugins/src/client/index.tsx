@@ -13,6 +13,8 @@ import { DataWorkspace } from './workspace.tsx'
 import { QuotationButton } from './quotation.tsx'
 import { useDemoCase } from './sample-cases.tsx'
 import { mountShell } from './shell.tsx'
+import { guestMode } from './guest.tsx'
+import { applyGuestLocale } from './guest-locale.ts'
 import { mountState } from './state.tsx'
 import { motion } from './motion.ts'
 import { GuideCard } from './guide-card.tsx'
@@ -175,6 +177,16 @@ export function apply(ctx: Context): void {
     stop = scope.subscribe(check)
     check()
     ctx.effect(() => stop, 'bridgeflow: default locale')
+  })
+  // The public demo never gets that settings document (non-loopback), so guest mode sets
+  // English itself (docs/37). Registered before the shell mounts: the same /config promise
+  // resolves this first, so the sample notebook the shell auto-opens is titled in English.
+  let live = true
+  ctx.effect(() => () => { live = false }, 'bridgeflow: guest locale')
+  void guestMode().then(mode => {
+    if (!live || !mode.guest) return
+    applyGuestLocale(ctx.locale, globalThis.localStorage,
+      listener => { ctx.on('locale/change', snapshot => listener(snapshot.active)) })
   })
   ctx.slots.inject('conversation.composer', () => ctx.slots.register({ name: 'conversation.composer', priority: 0,
     select: ({ pendingInteraction }: ComposerChainProps) => pendingInteraction?.kind === 'approval' && APPROVAL_CARD_TOOLS.has(pendingInteraction.toolName) ? pendingInteraction : null,
