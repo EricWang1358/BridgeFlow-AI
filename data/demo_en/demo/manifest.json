@@ -3,17 +3,17 @@
   "classification": "synthetic; fictional concrete supplier; not business approval; English translation of the Chinese sample",
   "period": "2024-07",
   "files": {
-    "data/demo_en/demo/finance.xlsx": "512cd7f80e41e97f291386c882351200b4d234d813dba6170210ce59b827237a",
-    "data/demo_en/demo/marketing.xlsx": "0a13b99bac88a5d9ae2354e85841825ef3c5884264a0b9c562cd1fca7c4690ab",
-    "data/demo_en/demo/procurement.xlsx": "67238746a0a3a1cc8cab14635ef0cfa1c7be4dd442a6d4a0e10989a74803b8d8",
-    "data/demo_en/demo/production.xlsx": "d7f0fdf14bbdde94f13a3b555b866cbf9ca068676212c25a4a7e4e60f9ad472c",
+    "data/demo_en/demo/finance.xlsx": "c167db06dc865f5b1edbc498008804b3a33b2ea5abff795c295861a27d7d5867",
+    "data/demo_en/demo/marketing.xlsx": "31a07b266813c001914dff2b4c2606aba4844f9c005569994f2a632728993059",
+    "data/demo_en/demo/procurement.xlsx": "becaa343e67b75502a725f09ab01ea55d5ecfc8552cf258c3d880cb52d888c84",
+    "data/demo_en/demo/production.xlsx": "9e623aee043a93f23861ebdcf546a25d5d3bc0958e80cba92f33c35f6bbc80a9",
     "data/demo_en/demo/dictionary.yaml": "fa1927496229f7f63c416613270671f256d970a35a86b48ca22327105a3c80de",
     "data/demo_en/company_templates/integration.yaml": "25e6006adeb387323033c3c34bf116d77d19bc56cc84c3c149732378fb332d52",
-    "data/demo_en/company_templates/source/finance-v2.xlsx": "8691945b4e6fed14cb0abfd810f80ac634c15ee758850478100897ee82f3eb79",
-    "data/demo_en/company_templates/source/marketing-v2.xlsx": "452dc2429462b44aca771faeb631d5b3ac3a7a38b501204169dd4bda46c54539",
-    "data/demo_en/company_templates/source/production-v2.xlsx": "32d8fae5a4996b593a5c561315154f2cadedf258a0de4495e26633d34065ba89",
-    "data/demo_en/company_templates/source/procurement-v2.xlsx": "c7b0a8f11d54c3ce516c63748aeaa46f46d9ccfae4febe264230433391619ea6",
-    "data/demo_en/company_templates/source/master-v2.xlsx": "cc54768cb4956a1635bcfc74a9675097c74c9b1c5e602bac74db8d809631a959"
+    "data/demo_en/company_templates/source/finance-v2.xlsx": "ec85cd0d379f77267a8b41c9dd7220a28e0ab48d80db546a67bd0bac2f808189",
+    "data/demo_en/company_templates/source/marketing-v2.xlsx": "877804a1b01745ca4ed9c8a68065ec883172060600b3ef0ac8be3e26fb757114",
+    "data/demo_en/company_templates/source/production-v2.xlsx": "3b05d897678df8dd525d682582143568673775a9495e5de08760765948a4b093",
+    "data/demo_en/company_templates/source/procurement-v2.xlsx": "f51a2db6d65a404f65ce35d770e2c9febc324dd903ad26d6deb171571403c2b5",
+    "data/demo_en/company_templates/source/master-v2.xlsx": "104f9eeb334731b047d1a6ce5a6e0f58b858393a44d1979057472c6a229b217e"
   },
   "expected": {
     "integration_rows": 4,

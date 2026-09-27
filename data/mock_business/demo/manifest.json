@@ -3,18 +3,18 @@
   "classification": "synthetic; fictional concrete supplier; not business approval",
   "period": "2024-07",
   "files": {
-    "data/mock_business/demo/finance.xlsx": "61d187a5c5fb23e78b08316be2a924aec0f493bc07719e1dff968464162e3e88",
-    "data/mock_business/demo/marketing.xlsx": "b38e179c6705aba27c1054f52fe408dbda623e2d8ac4c31c4ff7f3156bf9c312",
-    "data/mock_business/demo/procurement.xlsx": "8fbdd72b13a375f64dc0a6b31813190f2c1ea11922ad58342b86dca419e5f552",
-    "data/mock_business/demo/production.xlsx": "9350376f300bd6fb520f9febb85b8b99b05b66b92b373c7b16afcce0048b4ff5",
+    "data/mock_business/demo/finance.xlsx": "d7e8f4a19e7e03ac30f7fc00781e66aa6f05d190d14f4f015c0a264bfa65f48f",
+    "data/mock_business/demo/marketing.xlsx": "30adb34804930608849407707106aaf9ea031ba57a85911de965f64120aea878",
+    "data/mock_business/demo/procurement.xlsx": "46e5bf2b8b339195523a6ba7705a54cfbe51711ecfbbe201ed2f3e7c251350a8",
+    "data/mock_business/demo/production.xlsx": "19f64a180d5902c094f73426f25ba07f1bb93c864fa6e7adcec1ee20b7a9b5f3",
     "data/mock_business/demo/dictionary.yaml": "bfcddc04dd6b8e4eae65ae94592da57fc7f5f0e5702162c19f6eff0c0e19fd78",
     "data/company_templates/integration.yaml": "692afde47e608b072431c86c591e1040292af1fd63e1b5780998d2d711674043",
-    "data/company_templates/source/dictionary-v2.xlsx": "61c155f1b8652984ee310b829de5ca484d3f8d5c7afa182ad75641408cd2a3b0",
-    "data/company_templates/source/finance-v2.xlsx": "315ea1a4e6f06840873a8bec6e69313953ad1aa159c66fef2aa4c3d42da1073c",
-    "data/company_templates/source/marketing-v2.xlsx": "eff9b93866eb32311eb4d6a43ecb2385a46817093912fb84a7dc6e4c80fb62b4",
-    "data/company_templates/source/master-v2.xlsx": "fdca574fa9cb21e18e947c30f2e49a7b75991a86bbcef5d405c9ffdd43141d66",
-    "data/company_templates/source/procurement-v2.xlsx": "12e125c31744c2ad9089ee51f1a0ff9fdf7993e541e8fa44c5b76df5e03a690f",
-    "data/company_templates/source/production-v2.xlsx": "7e0cc00b4d006fc7e3438a3bcea6891c109e94c291abbbbca99bdf47cec6f8f9"
+    "data/company_templates/source/dictionary-v2.xlsx": "2cf63b3599519f4f2dde8d265fc01b4fb33999e988e43ec44f319fb4ea8d123c",
+    "data/company_templates/source/finance-v2.xlsx": "db3aba0419c0a0de7fe28f368b2f70a72f72c9379a97fb51322c90dadc5d16fc",
+    "data/company_templates/source/marketing-v2.xlsx": "9162bb92fe0b08afb60ac4c2b40fe8a9108639531fd8b1b3d7353d0fdd49cf24",
+    "data/company_templates/source/master-v2.xlsx": "cb84a7737b0ae130fc58a980e2d1ac016ce564e7405786f5a49ed68f221f5427",
+    "data/company_templates/source/procurement-v2.xlsx": "21494e511dfa636c445173adbf5070ed54421f4f376bc861756613f0001e2c32",
+    "data/company_templates/source/production-v2.xlsx": "d2ab2e4351a317ec03b37e1040dd731af619801733ffc26e281f7e2fc9eb4703"
   },
   "expected": {
     "integration_rows": 4,

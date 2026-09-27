@@ -53,7 +53,10 @@ def inspect_file(root: Path, name: str) -> list[str]:
                     if member.startswith("xl/externalLinks/"):
                         issues.append("external workbook link")
                     if member.startswith("docProps/") and member.endswith(".xml"):
-                        for element in ET.fromstring(book.read(member)).iter():
+                        metadata = ET.fromstring(book.read(member))
+                        if member == "docProps/custom.xml" and len(metadata):
+                            issues.append("custom workbook metadata")
+                        for element in metadata.iter():
                             field = element.tag.rsplit("}", 1)[-1]
                             if field in {"creator", "lastModifiedBy"} and element.text not in {
                                 None, "", "BridgeFlow", "openpyxl",
