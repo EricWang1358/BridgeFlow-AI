@@ -9,14 +9,18 @@ import { Icon } from './icons.tsx'
  */
 export type GuestMode = { guest: boolean; llm: boolean; staffUrl: string }
 let cached: Promise<GuestMode> | null = null
+/** The one /config read, shared by React (useGuestMode) and plugin activation (index.tsx). */
+export function guestMode(): Promise<GuestMode> {
+  cached ??= api<{ guestMode?: boolean; guestLlm?: boolean; staffUrl?: string }>('/config')
+    .then(v => ({ guest: !!v.guestMode, llm: !!v.guestLlm, staffUrl: v.staffUrl ?? '' }))
+    .catch(() => ({ guest: false, llm: true, staffUrl: '' }))
+  return cached
+}
 export function useGuestMode(): GuestMode {
   const [mode, setMode] = useState<GuestMode>({ guest: false, llm: true, staffUrl: '' })
   useEffect(() => {
-    cached ??= api<{ guestMode?: boolean; guestLlm?: boolean; staffUrl?: string }>('/config')
-      .then(v => ({ guest: !!v.guestMode, llm: !!v.guestLlm, staffUrl: v.staffUrl ?? '' }))
-      .catch(() => ({ guest: false, llm: true, staffUrl: '' }))
     let live = true
-    void cached.then(value => { if (live) setMode(value) })
+    void guestMode().then(value => { if (live) setMode(value) })
     return () => { live = false }
   }, [])
   return mode

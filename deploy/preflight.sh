@@ -183,6 +183,14 @@ if systemctl is-enabled --quiet bridgeflow-guest 2>/dev/null || bash -c 'source 
     headers=$(curl -s -o /dev/null -D - --max-time 10 -H "Accept: text/html" "https://$DOMAIN/")
     grep -q "^HTTP/[0-9.]* 302" <<<"$headers" && grep -qi "^location: /__enter" <<<"$headers"'
   check "apex demo /__enter hands over this boot's token" bash -c 'curl -fsS --max-time 10 "https://$DOMAIN/__enter" | grep -Fq "https://$DOMAIN/?token="'
+  # Browsers that met the seat-era apex still hold its cached 301 for / (docs/37): dsh's 303
+  # after the token exchange must purge it and land somewhere no stale entry can hold.
+  check "apex demo token exchange purges stale redirects" bash -c '
+    url=$(curl -fsS --max-time 10 "https://$DOMAIN/__enter" | grep -o "https://$DOMAIN/?token=[^\"]*" | head -1)
+    [[ -n "$url" ]] || exit 1
+    headers=$(curl -s -o /dev/null -D - --max-time 10 -H "Accept: text/html" "$url")
+    grep -q "^HTTP/[0-9.]* 303" <<<"$headers" && grep -qi "^location: /?entered=1" <<<"$headers" \
+      && grep -qi "^clear-site-data: \"cache\"" <<<"$headers"'
   check "apex demo keeps anonymous API calls at 401" bash -c 'test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 -H "Accept: application/json" "https://$DOMAIN/")" = 401'
   # Guest AI (docs/36 §6): only through the loopback gate, and no guest process holds the key.
   if bash -c 'source env.sh && [[ "${BRIDGEFLOW_GUEST_LLM:-}" = 1 ]]'; then

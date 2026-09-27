@@ -65,11 +65,30 @@ def demo_site(domain: str, port: int, portal_port: int) -> str:
     handover, served on this host, which carries the token back in. Only a page load of `/`
     without a token is redirected; API, asset and WebSocket 401s stay 401 (a redirect would
     hand an XHR an HTML page), and `/?token=` that still fails stays 401 instead of looping.
+
+    The token exchange (dsh answers `/?token=` with `303 Location: /`) is its own handle because
+    of browsers that met this apex while it was a seat deployment's permanent redirect to the
+    portal (docs/37): they hold a cached 301 for `/` and never ask again, so the 303 took them
+    back to the sign-in page. `Clear-Site-Data: "cache"` on that one response purges the stale
+    entry (never "cookies": the same response sets dsh's session), and the Location rewrite to
+    `/?entered=1` lands on a URL no stale entry can hold, for browsers that ignore the header.
+    `?entered=` joins `?token=` in the loop guard: a browser whose cookie did not stick sees the
+    401 instead of circling through /__enter.
     """
     return f"""{domain} {{
     handle /__enter {{
         rewrite * /guest
         reverse_proxy 127.0.0.1:{portal_port}
+    }}
+    @token_entry {{
+        path /
+        query token=*
+    }}
+    handle @token_entry {{
+        reverse_proxy 127.0.0.1:{port} {{
+            header_down Clear-Site-Data "\\"cache\\""
+            header_down Location "^/$" "/?entered=1"
+        }}
     }}
     handle {{
         reverse_proxy 127.0.0.1:{port} {{
@@ -79,7 +98,7 @@ def demo_site(domain: str, port: int, portal_port: int) -> str:
                     method GET
                     path /
                     header Accept *text/html*
-                    expression `{{http.request.uri.query.token}} == ""`
+                    expression `{{http.request.uri.query.token}} == "" && {{http.request.uri.query.entered}} == ""`
                 }}
                 route {{
                     redir @page /__enter 302
@@ -131,8 +150,9 @@ def main() -> int:
         apex = [
             f"{args.domain} {{",
             "    # Seat deployments: the apex is the front door, the portal; consoles",
-            f"    # live at <seat>.console.{args.domain}.",
-            "    redir https://portal." + args.domain + "{uri} permanent",
+            f"    # live at <seat>.console.{args.domain}. Temporary on purpose: browsers cache",
+            "    # a 301 forever, and the apex becomes the demo once the guest unit is on (docs/37).",
+            "    redir https://portal." + args.domain + "{uri} 302",
             "}",
         ]
     blocks = [

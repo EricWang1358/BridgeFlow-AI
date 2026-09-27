@@ -22,7 +22,7 @@ body { min-height: 100vh; display: grid; place-items: center; padding: 24px;
 .brand { font-size: 22px; font-weight: 700; letter-spacing: .5px; color: #12305e; }
 .brand span { color: #3370ff; }
 .subtitle { margin-top: 6px; font-size: 13px; color: #8f959e; }
-.section { margin: 28px 0 12px; font-size: 12px; color: #8f959e; letter-spacing: 2px; }
+.section { margin: 28px 0 12px; font-size: 12px; color: #8f959e; letter-spacing: 1px; text-transform: uppercase; }
 a.method { display: flex; align-items: center; justify-content: center; gap: 10px;
   width: 100%; padding: 13px 16px; border-radius: 10px; text-decoration: none;
   font-size: 15px; font-weight: 600; background: #3370ff; color: #fff; }
@@ -58,7 +58,7 @@ _FEISHU_LOGO = """<svg width="20" height="20" viewBox="0 0 24 24" fill="none" ar
 
 
 def _layout(title: str, body: str) -> str:
-    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(title)} · {BRAND}</title><style>{_CSS}</style></head>
 <body><main class="card">
@@ -75,17 +75,16 @@ def index(session: dict | None, registry: dict[str, dict], feishu_ready: bool, g
     """
     if session is None:
         if feishu_ready:
-            method = f'<a class="method" href="/login">{_FEISHU_LOGO}飞书登录</a>'
+            method = f'<a class="method" href="/login">{_FEISHU_LOGO}Sign in with Feishu (Lark)</a>'
             note = ""
         else:
             method = ""
-            note = '<p class="method-note">飞书登录未配置，请联系管理员。</p>'
-        visitor = ('<a class="method guest" href="/guest">以访客身份进入 · Continue as guest</a>'
-                   '<p class="method-note">没有飞书账号也能试用：只有示例数据，与正式环境隔离，每晚清空；'
-                   '飞书相关功能不可用。No Feishu account needed: sample data only, separate from the '
-                   'real service, reset nightly; Feishu features are unavailable.</p>') if guest else ""
-        return _layout("统一登录门户", f"""<p class="subtitle">统一登录门户</p>
-<p class="section">选择登录方式</p>
+            note = '<p class="method-note">Feishu sign-in is not configured. Contact your administrator.</p>'
+        visitor = ('<a class="method guest" href="/guest">Continue as guest</a>'
+                   '<p class="method-note">No Feishu account needed: sample data only, separate from the '
+                   'real service, reset nightly. Feishu features are unavailable.</p>') if guest else ""
+        return _layout("Sign in", f"""<p class="subtitle">Sign-in portal</p>
+<p class="section">Choose how to sign in</p>
 {method}{note}{visitor}""")
 
     name = html.escape(str(session.get("name") or session["sub"]))
@@ -95,22 +94,22 @@ def index(session: dict | None, registry: dict[str, dict], feishu_ready: bool, g
               if avatar_url else html.escape(name[:1].upper()))
     entries = "".join(
         f'<a class="enter" href="{html.escape(entry["redirect_uri"], quote=True)}">'
-        f'进入 {html.escape(app_name)}</a>'
+        f'Open {html.escape(app_name)}</a>'
         for app_name, entry in registry.items())
-    return _layout("已登录", f"""<p class="subtitle">统一登录门户</p>
+    return _layout("Signed in", f"""<p class="subtitle">Sign-in portal</p>
 <div class="user"><div class="avatar">{avatar}</div>
 <div><div class="name">{name}</div><div class="mail">{email}</div></div></div>
-<p class="section">应用</p>
+<p class="section">Applications</p>
 {entries}
-<form class="logout" method="post" action="/logout"><button type="submit">退出登录</button></form>""")
+<form class="logout" method="post" action="/logout"><button type="submit">Sign out</button></form>""")
 
 
 def error_page(title: str, detail: str) -> str:
     """Browser-facing failures (bad state, Feishu refusal, not configured)."""
-    return _layout("出错了", f"""<p class="subtitle">统一登录门户</p>
+    return _layout("Something went wrong", f"""<p class="subtitle">Sign-in portal</p>
 <p class="error-title">{html.escape(title)}</p>
 <p class="error-detail">{html.escape(detail)}</p>
-<a class="again" href="/">返回首页重新登录 →</a>""")
+<a class="again" href="/">Back to sign-in →</a>""")
 
 
 def console_blocked(title: str, detail: str, portal_url: str) -> str:
@@ -122,10 +121,10 @@ def console_blocked(title: str, detail: str, portal_url: str) -> str:
     person was refused when the truth is that nobody could check.
     """
     home = html.escape(portal_url.rstrip("/") + "/", quote=True)
-    return _layout(title, f"""<p class="subtitle">统一登录门户</p>
+    return _layout(title, f"""<p class="subtitle">Sign-in portal</p>
 <p class="error-title">{html.escape(title)}</p>
 <p class="error-detail">{html.escape(detail)}</p>
-<a class="again" href="{home}">返回门户首页 →</a>""")
+<a class="again" href="{home}">Back to the portal →</a>""")
 
 
 def login_required(portal_url: str) -> str:
@@ -135,10 +134,10 @@ def login_required(portal_url: str) -> str:
     and the target comes from the portal's own config, never from the request.
     """
     target = html.escape(portal_url.rstrip("/") + "/", quote=True)
-    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta http-equiv="refresh" content="0; url={target}">
-<title>需要登录 · {BRAND}</title></head>
-<body><p>需要先登录，正在跳转到统一登录门户……<a href="{target}">立即跳转</a></p>
+<title>Sign-in required · {BRAND}</title></head>
+<body><p>Sign-in required. Taking you to the portal… <a href="{target}">Go now</a></p>
 </body></html>"""
 
 
@@ -147,8 +146,8 @@ def restarting() -> str:
 
     Reloads itself: the same URL again, which on the demo's own host is /__enter."""
     return _layout("Starting", """<meta http-equiv="refresh" content="15">
-<p class="subtitle">The demo is starting — this page retries in 15 seconds.<br>演示实例正在启动，本页 15 秒后自动重试。</p>
-<a class="again" href="">Retry now · 立即重试 →</a>""")
+<p class="subtitle">The demo is starting. This page retries in 15 seconds.</p>
+<a class="again" href="">Retry now →</a>""")
 
 
 def entering(target: str) -> str:
@@ -166,10 +165,10 @@ def entering(target: str) -> str:
     Never answer /enter with a Location header again — that restores the chain.
     """
     href = html.escape(target, quote=True)
-    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="refresh" content="0; url={href}">
-<title>正在进入 · {BRAND}</title></head>
-<body><p>正在进入 {BRAND}……<a id="go" href="{href}">立即进入</a></p>
+<title>Opening · {BRAND}</title></head>
+<body><p>Opening {BRAND}… <a id="go" href="{href}">Continue</a></p>
 <script>location.replace(document.getElementById("go").href)</script>
 </body></html>"""

@@ -99,7 +99,7 @@ def _site(caddyfile: str, host: str) -> str:
 
 def test_the_apex_becomes_the_public_demo_only_once_the_guest_instance_is_on():
     # docs/36 §3: without the guest instance the apex keeps redirecting to the portal.
-    assert "redir https://portal.example.com{uri} permanent" in _render()
+    assert "redir https://portal.example.com{uri} 302" in _render()
     demo = _render("--guest-port", "3090")
     apex = _site(demo, "example.com")
     assert "forward_auth" not in apex and "reverse_proxy 127.0.0.1:3090" in apex
@@ -110,6 +110,31 @@ def test_the_apex_becomes_the_public_demo_only_once_the_guest_instance_is_on():
     assert "guest.example.com" not in demo
     # Seats and the portal are untouched.
     assert "seat-1.console.example.com {" in demo and "portal.example.com {" in demo
+
+
+def test_no_rendered_shape_issues_a_permanent_redirect(tmp_path):
+    # docs/37: the seat-era apex's 301 stayed in browsers after the apex became the demo, and
+    # sent every guest entry back to the portal. The front door changes with a unit toggle, so
+    # nothing Caddy answers may be cacheable forever.
+    for args in ((), ("--guest-port", "3090"), ("--seats", str(tmp_path / "none.yaml")),
+                 ("--guest-port", "3090", "--seats", str(tmp_path / "none.yaml"))):
+        redirects = [line for line in _render(*args).splitlines() if line.strip().startswith("redir ")]
+        assert not [line for line in redirects if re.search(r"\b(permanent|301|308)\b", line)], args
+
+
+def test_the_demo_token_exchange_purges_a_stale_redirect_and_cannot_loop():
+    apex = _site(_render("--guest-port", "3090"), "example.com")
+    exchange = apex[apex.index("handle @token_entry {"):apex.index("\n    handle {")]
+    assert "path /" in apex and "query token=*" in apex
+    # Cache only: "cookies" would drop the dsh session set by this very response.
+    assert 'header_down Clear-Site-Data "\\"cache\\""' in exchange and "cookies" not in exchange
+    assert 'header_down Location "^/$" "/?entered=1"' in exchange
+    assert "reverse_proxy 127.0.0.1:3090" in exchange
+    # The landing URL joins the loop guard: a 401 there is shown, not redirected to /__enter.
+    assert '{http.request.uri.query.entered} == ""' in apex
+    # The exchange is matched before the catch-all, and only there is the cache cleared.
+    assert apex.index("handle @token_entry {") < apex.index("\n    handle {")
+    assert apex.count("Clear-Site-Data") == 1
 
 
 def test_legacy_single_console_moves_off_the_apex_for_the_demo(tmp_path):

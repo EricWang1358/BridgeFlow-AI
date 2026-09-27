@@ -1,6 +1,7 @@
 """Portal flow, tested against a simulated Feishu — no real tenant, no network."""
 
 import json
+import re
 from pathlib import Path
 
 import httpx
@@ -9,7 +10,7 @@ import pytest
 import yaml
 from fastapi.testclient import TestClient
 
-from portal_app import tokens
+from portal_app import pages, tokens
 from portal_app.config import Settings
 from portal_app.main import SESSION_COOKIE, create_app
 
@@ -113,7 +114,7 @@ def test_a_tampered_state_cannot_complete_login(portal):
     response = portal.get("/callback", params={"code": "code-good", "state": state + "x"})
     assert response.status_code == 403
     assert "text/html" in response.headers["content-type"]
-    assert "重新登录" in response.text
+    assert "Back to sign-in" in response.text
     assert SESSION_COOKIE not in portal.cookies
 
 
@@ -133,7 +134,7 @@ def test_a_token_without_a_session_is_refused(portal):
 
 def test_anonymous_visitors_get_the_login_page(portal):
     response = portal.get("/")
-    assert response.status_code == 200 and "飞书登录" in response.text
+    assert response.status_code == 200 and "Sign in with Feishu" in response.text
 
 
 def test_a_signed_in_user_skips_feishu_on_login(portal):
@@ -453,9 +454,9 @@ def test_a_signed_in_person_without_the_grant_is_told_so_not_sent_to_log_in_agai
         assert client.get("/verify").status_code == 403
         page = client.get("/verify", headers={"accept": "text/html"})
         assert page.status_code == 403
-        assert "没有控制台授权" in page.text
+        assert "No console access" in page.text
         # Signing in again cannot fix a missing grant, so that must not be the offer.
-        assert "重新登录" not in page.text
+        assert "Back to sign-in" not in page.text
 
 
 def test_an_unanswerable_grant_withholds_the_site_and_says_it_is_not_a_refusal(tmp_path):
@@ -465,7 +466,7 @@ def test_an_unanswerable_grant_withholds_the_site_and_says_it_is_not_a_refusal(t
         assert client.get("/verify").status_code == 503
         page = client.get("/verify", headers={"accept": "text/html"})
         assert page.status_code == 503
-        assert "暂时无法确认" in page.text and "这不是拒绝" in page.text
+        assert "cannot be confirmed" in page.text and "This is not a refusal" in page.text
 
 
 def test_an_answer_is_cached_but_a_failure_is_not(tmp_path):
@@ -598,7 +599,7 @@ def test_a_full_fleet_refuses_the_next_person(tmp_path):
         switch_user(client, "code-other")
         response = client.get("/enter")
         assert response.status_code == 403
-        assert "席位已满" in response.text
+        assert "All seats are taken" in response.text
 
 
 def test_verify_admits_the_claimer_on_their_own_subdomain(tmp_path):
@@ -615,7 +616,7 @@ def test_verify_refuses_someone_elses_and_unclaimed_seats(tmp_path):
         assert client.get("/verify", headers={"host": SEAT2_HOST}).status_code == 403
         # The claimer of seat-1 cannot pass as the owner of seat-2 either.
         response = client.get("/verify", headers={"host": SEAT2_HOST})
-        assert "席位" in response.json()["detail"]
+        assert "seat" in response.json()["detail"]
 
 
 def test_an_ops_release_takes_effect_without_a_portal_restart(tmp_path):
@@ -704,7 +705,7 @@ def test_with_the_gate_on_an_unauthorized_person_claims_nothing(tmp_path):
         login(client)
         response = client.get("/enter")
         assert response.status_code == 403
-        assert "没有控制台授权" in response.text
+        assert "No console access" in response.text
     # Nothing was claimed: the denial did not consume capacity.
     assert claims.read_text(encoding="utf-8") == "{}"
 
@@ -740,3 +741,34 @@ def test_guest_entry_without_a_token_waits_instead_of_bouncing(tmp_path):
         waiting = client.get("/guest")
         assert waiting.status_code == 503 and waiting.headers["retry-after"] == "15"
         assert "https://demo.test/" not in waiting.text and 'http-equiv="refresh" content="15"' in waiting.text
+
+
+# CJK punctuation, ideographs and full-width forms: none may appear in page chrome.
+CJK = re.compile(r"[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]")
+
+
+def test_every_portal_page_is_english():
+    # The hackathon judges read English (docs/37). Page chrome must carry no CJK text; only
+    # data may (a Feishu display name), so the signed-in view renders an ASCII name here.
+    registry = {"bridgeflow": {"redirect_uri": "https://example.test/enter"}}
+    rendered = {
+        "anonymous": pages.index(None, registry, feishu_ready=True, guest=True),
+        "unconfigured": pages.index(None, registry, feishu_ready=False, guest=False),
+        "signed-in": pages.index({"sub": "ou_1", "name": "Ada", "email": "ada@example.test"}, registry, True),
+        "error": pages.error_page("Unknown application", "detail"),
+        "blocked": pages.console_blocked("No console access", "detail", "https://portal.example.test"),
+        "login-required": pages.login_required("https://portal.example.test"),
+        "restarting": pages.restarting(),
+        "entering": pages.entering("https://example.test/?token=t"),
+    }
+    for name, page in rendered.items():
+        assert '<html lang="en">' in page, name
+        text = re.sub(r"<style>.*?</style>", "", page, flags=re.DOTALL)  # the font stack names CJK fonts
+        assert not CJK.search(text), name
+
+
+def test_error_pages_from_routes_are_english(portal):
+    for path, params in (("/login", {"app": "nope"}), ("/callback", {}), ("/guest", {})):
+        page = portal.get(path, params=params)
+        assert page.status_code >= 400 and '<html lang="en">' in page.text, path
+        assert not CJK.search(page.text), path

@@ -175,15 +175,15 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
             return cached[1]
         name = resolve_app("")
         if name is None:
-            raise ConsoleUnavailable("门户没有默认应用，无法判断控制台授权（apps.yaml）。")
+            raise ConsoleUnavailable("The portal has no default application, so console access cannot be checked (apps.yaml).")
         if signer is None:
-            raise ConsoleUnavailable("门户签名密钥未配置（PORTAL_KEY_PATH），无法向应用提问。")
+            raise ConsoleUnavailable("The portal signing key is not configured (PORTAL_KEY_PATH), so the application cannot be asked.")
         try:
             async with httpx.AsyncClient(transport=check_transport, timeout=10) as client:
                 response = await client.get(cfg.console_check_url,
                                             headers={"x-bridgeflow-user": signer.sign(user_claims(name, session))})
         except httpx.HTTPError as exc:
-            raise ConsoleUnavailable(f"应用暂时不可达：{exc}") from exc
+            raise ConsoleUnavailable(f"The application is unreachable right now: {exc}.") from exc
         if response.status_code != 200:
             detail = ""
             try:
@@ -191,13 +191,13 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
                 detail = body.get("detail", "") if isinstance(body, dict) else ""
             except ValueError:
                 detail = ""
-            raise ConsoleUnavailable(detail or f"应用返回 HTTP {response.status_code}。")
+            raise ConsoleUnavailable(detail or f"The application answered HTTP {response.status_code}.")
         try:
             allowed = response.json()["allowed"]
         except (ValueError, KeyError, TypeError) as exc:
-            raise ConsoleUnavailable("应用的授权答复无法解析。") from exc
+            raise ConsoleUnavailable("The application's access answer could not be read.") from exc
         if not isinstance(allowed, bool):
-            raise ConsoleUnavailable("应用的授权答复不是布尔值。")
+            raise ConsoleUnavailable("The application's access answer is not a boolean.")
         if len(console_decisions) >= _DECISION_CACHE_MAX:
             console_decisions.clear()
         console_decisions[session["sub"]] = (now + cfg.console_check_ttl_seconds, allowed)
@@ -229,7 +229,7 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
         nothing the real service guards.
         """
         if not cfg.guest_app_uri:
-            return error(404, "访客模式未开启", "这个部署没有提供访客入口，请用飞书登录。")
+            return error(404, "Guest mode is off", "This deployment has no guest entry. Sign in with Feishu.")
         # The public demo sends every browser without a dsh session here (docs/36 §4), so
         # entering without a token would bounce straight back: a loop, not a degraded entry.
         # No token means the instance is (re)starting — say so and let the page retry.
@@ -242,14 +242,14 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
     async def login(request: Request, app: Annotated[str, Query()] = "") -> HTMLResponse | RedirectResponse:
         name = resolve_app(app)
         if name is None:
-            return error(404, "未知应用", f"应用 {app!r} 未在门户注册。")
+            return error(404, "Unknown application", f"Application {app!r} is not registered with the portal.")
         if read_session(request) is not None:
             # Already signed in: skip the Feishu round-trip and go straight to the app.
             return RedirectResponse(registry[name]["redirect_uri"], status_code=302)
         try:
             client = feishu()
         except NotConfigured as exc:
-            return error(503, "登录未配置", str(exc))
+            return error(503, "Sign-in is not configured", str(exc))
         await client.close()  # the URL is pure string work; no call is made here
         state = seal({"app": name, "nonce": secrets.token_hex(8)}, cfg.session_secret, STATE_TTL_SECONDS)
         return RedirectResponse(client.authorize_url(state), status_code=302)
@@ -258,14 +258,15 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
     async def callback(code: str = "", state: str = "") -> HTMLResponse | RedirectResponse:
         proven = unseal(state, cfg.session_secret)
         if proven is None or proven.get("app") not in registry or not code:
-            return error(403, "登录状态无效或已过期", "登录链接只在发起后 10 分钟内有效，请重新发起登录。")
+            return error(403, "Sign-in link invalid or expired",
+                         "A sign-in link is valid for 10 minutes after it starts. Please sign in again.")
         client = feishu()
         try:
             exchanged = await client.exchange_code(code)
         except NotConfigured as exc:
-            return error(503, "登录未配置", str(exc))
+            return error(503, "Sign-in is not configured", str(exc))
         except FeishuError as exc:
-            return error(502, "飞书拒绝了这次登录", str(exc))
+            return error(502, "Feishu refused this sign-in", str(exc))
         finally:
             await client.close()
         user = exchanged["user"]
@@ -335,9 +336,10 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
                 if owner != session["sub"]:
                     logger.warning("seat %s (owner=%s) denied to subject %s",
                                    seat.name, owner or "unclaimed", session["sub"])
-                    return blocked(403, "这是他人的工作区席位",
-                                   "每个席位属于第一个认领它的人，你登录的身份不是这个席位的所有者。"
-                                   "进入你自己的工作区请从门户首页进入；席位已满或需要释放请联系总经办管理员。")
+                    return blocked(403, "This workspace seat belongs to someone else",
+                                   "Each seat belongs to the first person who claims it, and you are signed in "
+                                   "as someone else. Open your own workspace from the portal home page. If all "
+                                   "seats are taken or one needs releasing, contact the General Manager's Office.")
 
         if not cfg.console_check_url:
             return JSONResponse({"ok": True, "sub": session["sub"]})
@@ -346,12 +348,14 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
             allowed = await console_allowed(session)
         except ConsoleUnavailable as exc:
             logger.warning("console access undetermined for %s: %s", session["sub"], exc)
-            return blocked(503, "暂时无法确认你的访问范围",
-                           f"{exc} 这不是拒绝：系统没能确认你的授权，稍后重试或联系管理员。")
+            return blocked(503, "Your access cannot be confirmed right now",
+                           f"{exc} This is not a refusal: the system could not confirm your access. "
+                           "Try again later or contact an administrator.")
         if not allowed:
-            return blocked(403, "没有控制台授权",
-                           "你已登录，但没有被授予进入 AI 控制台的权限。授权由管理员在访问配置的"
-                           "角色上声明，需要时请联系总经办管理员。")
+            return blocked(403, "No console access",
+                           "You are signed in but have not been granted access to the AI console. An "
+                           "administrator grants it on a role in the access configuration. Contact the "
+                           "General Manager's Office if you need it.")
         return JSONResponse({"ok": True, "sub": session["sub"]})
 
     def read_token_file(path: str) -> str:
@@ -410,30 +414,32 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
                     try:
                         allowed = await console_allowed(session)
                     except ConsoleUnavailable as exc:
-                        return error(503, "暂时无法确认你的访问范围",
-                                     f"{exc} 这不是拒绝：系统没能确认你的授权，稍后重试或联系管理员。")
+                        return error(503, "Your access cannot be confirmed right now",
+                                     f"{exc} This is not a refusal: the system could not confirm your "
+                                     "access. Try again later or contact an administrator.")
                     if not allowed:
-                        return error(403, "没有控制台授权",
-                                     "你已登录，但没有被授予进入 AI 控制台的权限。授权由管理员在访问配置的"
-                                     "角色上声明，需要时请联系总经办管理员。")
+                        return error(403, "No console access",
+                                     "You are signed in but have not been granted access to the AI console. "
+                                     "An administrator grants it on a role in the access configuration. "
+                                     "Contact the General Manager's Office if you need it.")
                 seat_name = state.claim(session["sub"], seats.names())
                 if seat_name is None:
-                    return error(403, "席位已满",
-                                 f"当前 {len(seats)} 个席位都已有人认领。请管理员释放空闲席位"
-                                 "（scripts/provision_seat.sh --release <union_id>）后再试。")
+                    return error(403, "All seats are taken",
+                                 f"All {len(seats)} seats are claimed. Ask an administrator to release an "
+                                 "idle seat (scripts/provision_seat.sh --release <union_id>) and try again.")
                 logger.info("seat %s claimed by subject %s", seat_name, session["sub"])
             seat = seats.seat(seat_name)
             if seat is None:
-                return error(503, "席位配置不一致",
-                             f"认领记录指向不存在的席位 {seat_name!r}；请检查 seats.yaml 与"
-                             " seats-assigned.json 是否被手工改动过。")
+                return error(503, "Seat configuration is inconsistent",
+                             f"The claim record points to seat {seat_name!r}, which does not exist. Check "
+                             "whether seats.yaml or seats-assigned.json was edited by hand.")
             return handover(seats.url(seat), str(seat.token_file), f"seat {seat.name} home")
         name = resolve_app(app)
         if name is None:
-            return error(404, "未知应用", f"应用 {app!r} 未在门户注册。")
+            return error(404, "Unknown application", f"Application {app!r} is not registered with the portal.")
         target = registry[name]["app_uri"]
         if not target:
-            return error(503, "应用入口未配置", f"应用 {name!r} 缺少 app_uri（docs/22 §9b）。")
+            return error(503, "Application entry not configured", f"Application {name!r} has no app_uri (docs/22 §9b).")
         return handover(target, cfg.dsh_token_file,
                         cfg.dsh_token_file or "PORTAL_DSH_TOKEN_FILE unset")
 
