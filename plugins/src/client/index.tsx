@@ -105,7 +105,7 @@ function ImageNotice({ input }: InputZone) {
 }
 
 /** Every approval-gated product tool gets the same decision card: summary, reason, reject first. */
-const APPROVAL_CARD_TOOLS = new Set(['confirm_mapping', 'confirm_column_match', 'workflow_record', 'workflow_approve_submit', 'workflow_handoff', 'workflow_accept_scope', 'discovery_propose', 'discovery_register', 'discovery_decision_finalize', 'discovery_decision_propose', 'discovery_decision_resolve', 'discovery_decision_vote', 'discovery_graph_save', 'discovery_score_save', 'discovery_meeting_save', 'quarantine_decide', 'quarantine_apply', 'feishu_import', 'feishu_upload_report'])
+const APPROVAL_CARD_TOOLS = new Set(['confirm_mapping', 'confirm_column_match', 'workflow_record', 'workflow_approve_submit', 'workflow_handoff', 'workflow_accept_scope', 'discovery_propose', 'discovery_register', 'discovery_decision_finalize', 'discovery_decision_propose', 'discovery_decision_resolve', 'discovery_decision_vote', 'discovery_graph_save', 'discovery_score_save', 'discovery_meeting_save', 'quarantine_decide', 'quarantine_apply', 'feishu_import', 'feishu_upload_report', 'convention_decide'])
 
 function Welcome() {
   const { t } = useUI()
