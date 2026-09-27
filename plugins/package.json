@@ -2,7 +2,7 @@
   "name": "bridgeflow-plugins",
   "private": true,
   "packageManager": "pnpm@11.25.0",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "BridgeFlow's dsh plugins — tool shells, guards and UI slots; the bodies live in Python.",
   "type": "module",
   "scripts": {

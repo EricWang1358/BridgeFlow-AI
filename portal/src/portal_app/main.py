@@ -116,7 +116,7 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
         def seat_state() -> Assignments:  # pragma: no cover - unreachable without seats
             raise RuntimeError("seat state requested without a seat fleet")
 
-    app = FastAPI(title="BridgeFlow login portal", version="0.2.0")
+    app = FastAPI(title="BridgeFlow login portal", version="1.0.0")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,

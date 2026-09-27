@@ -2,6 +2,8 @@
 
 # BridgeFlow AI
 
+**Release:** [v1.0.0](https://github.com/EricWang1358/BridgeFlow-AI/releases/tag/v1.0.0) · [Release notes](docs/releases/1.0.0.md)
+
 BridgeFlow reads the monthly spreadsheets that Production, Procurement, Finance and Marketing each
 keep in their own way, and turns them into an immutable batch plus a business review that shows its
 evidence. It runs on the official DeepSeek Harness: native Web UI, sessions, approvals and four
@@ -181,8 +183,7 @@ Source goes in; runtime state does not.
 
 ```bash
 mkdir -p ~/Hackathon2026 && cd ~/Hackathon2026
-gh repo clone EricWang1358/BridgeFlow-AI      # private repo: run `gh auth login -s project` first
-                                                 # (no gh? `git clone https://github.com/EricWang1358/BridgeFlow-AI` with a token)
+git clone --branch v1.0.0 https://github.com/EricWang1358/BridgeFlow-AI.git  # public; no token needed
 cd BridgeFlow-AI
 
 python3.12 -m venv ../.venv && source ../.venv/bin/activate

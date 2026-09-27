@@ -1,6 +1,6 @@
 [project]
 name = "bridgeflow"
-version = "0.1.0"
+version = "1.0.0"
 description = "Multi-agent engine aligning cross-department SME data into one Master Table"
 requires-python = ">=3.11"
 dependencies = [

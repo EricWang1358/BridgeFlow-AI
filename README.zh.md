@@ -2,6 +2,8 @@
 
 # BridgeFlow AI
 
+**正式版本：** [v1.0.0](https://github.com/EricWang1358/BridgeFlow-AI/releases/tag/v1.0.0) · [发布说明](docs/releases/1.0.0.md)
+
 BridgeFlow 读的是生产、采购、财务、市场四个部门各自维护的月度表格，产出的是一个不可变批次，
 加上一份能自证的业务研判报告。它跑在官方 DeepSeek Harness 上：原生 Web、会话、审批、四个并发子代理。
 字典里声明了什么算术，就由 Python 算什么；每个部门只在自己的职责内提建议，主机逐条校验结构化结果，
@@ -161,8 +163,7 @@ Linux 与 WSL2（Ubuntu）都可以。Windows 请用 WSL2，并读
 
 ```bash
 mkdir -p ~/Hackathon2026 && cd ~/Hackathon2026
-gh repo clone EricWang1358/BridgeFlow-AI      # 私有仓库：先执行 `gh auth login -s project`
-                                              # 没装 gh 就用 `git clone https://github.com/EricWang1358/BridgeFlow-AI`，需要 token
+git clone --branch v1.0.0 https://github.com/EricWang1358/BridgeFlow-AI.git  # 公开仓库，无需 token
 cd BridgeFlow-AI
 
 python3.12 -m venv ../.venv && source ../.venv/bin/activate

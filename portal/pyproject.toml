@@ -1,6 +1,6 @@
 [project]
 name = "portal-app"
-version = "0.1.0"
+version = "1.0.0"
 description = "Unified login portal: Feishu proves who you are, signed app tokens carry it"
 requires-python = ">=3.11"
 dependencies = [
