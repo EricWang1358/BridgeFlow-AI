@@ -36,11 +36,14 @@ const { values: opt } = parseArgs({ options: {
 } })
 const pace = Number(opt.pace)
 const [width, height] = opt.window.split('x').map(Number)
+let badRange = false
 const chosen = new Set(opt.beats.split(',').flatMap(part => {
-  const [a, b = a] = part.split('-').map(Number)
+  // Anything but "N" or "N-M" with N ≤ M ("", "x", "1.5", "3-1") is a usage error, not an empty take.
+  const [a, b = a] = /^\d+(-\d+)?$/.test(part.trim()) ? part.trim().split('-').map(Number) : [NaN]
+  if (!Number.isInteger(a) || !Number.isInteger(b) || b < a) { badRange = true; return [] }
   return Array.from({ length: b - a + 1 }, (_, i) => a + i)
 }))
-if (!(pace >= 0) || !width || !height || [...chosen].some(n => !(n >= 0 && n <= 10))) {
+if (!(pace >= 0) || !width || !height || badRange || !chosen.size || [...chosen].some(n => !(n >= 0 && n <= 10))) {
   console.error('usage: demo-video.mjs [--url U] [--beats 0-10|3,5] [--pace 1] [--window 1440x900] [--out DIR] [--headless] [--no-wait] [--video]')
   process.exit(2)
 }

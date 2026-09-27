@@ -173,9 +173,12 @@ def guest_environment(env: dict[str, str]) -> Path:
                   f"      name: {str(ROOT / 'plugins/src/guest-model/index.ts')!r}\n")
     path = GUEST_ROOT / "web.yml"
     path.write_text(patch, encoding="utf-8")
+    # A sample set may name absolute paths outside the repository; show those as they are.
+    cases = samples["demo_cases"]
+    cases = cases.relative_to(ROOT) if cases.is_relative_to(ROOT) else cases
     print(f"BridgeFlow guest mode: data under {GUEST_ROOT} (wiped on start), Feishu off, AI model "
           f"{f'ON via the demo gate ({model})' if allow_llm else 'off'}, samples from "
-          f"{samples['demo_cases'].relative_to(ROOT).parent.parent}", flush=True)
+          f"{cases.parent.parent}", flush=True)
     return path
 
 
@@ -204,6 +207,8 @@ def guest_sample_set(env: dict[str, str]) -> dict[str, Path]:
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     except (OSError, yaml.YAMLError) as exc:
         raise SystemExit(f"guest sample set cannot be read ({path}): {exc}") from exc
+    if not isinstance(raw, dict):
+        raise SystemExit(f"guest sample set {path} must be a mapping of sample names to paths, not {type(raw).__name__}")
     wanted = ["dictionary", *GUEST_SAMPLE_ENV]
     missing = [key for key in wanted if not raw.get(key)]
     if missing:
