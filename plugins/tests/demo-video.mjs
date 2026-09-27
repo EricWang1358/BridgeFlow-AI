@@ -10,9 +10,12 @@
 //   pnpm demo:video                                   public demo, full take, waits for Enter
 //   pnpm demo:video -- --pace 0 --headless --no-wait  fast rehearsal, no recorder
 //   pnpm demo:video -- --beats 0-2                    only the unbilled opening beats
+//   pnpm demo:video -- --start-when /tmp/demo-go      for an agent driving the recorder: the take
+//        starts when that file appears, and the browser closes once it is removed again
 //
 // Output (outside the repository by default): beats.json, one screenshot per beat, run.json.
-import { mkdir, writeFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 import { createInterface } from 'node:readline/promises'
@@ -29,6 +32,7 @@ const { values: opt } = parseArgs({ options: {
   headless: { type: 'boolean', default: false },
   'no-wait': { type: 'boolean', default: false },
   video: { type: 'boolean', default: false },       // Playwright's own recording, a fallback capture
+  'start-when': { type: 'string' },                 // a file: start the take when it appears, close when it goes
 } })
 const pace = Number(opt.pace)
 const [width, height] = opt.window.split('x').map(Number)
@@ -41,6 +45,9 @@ if (!(pace >= 0) || !width || !height || [...chosen].some(n => !(n >= 0 && n <= 
   process.exit(2)
 }
 await mkdir(opt.out, { recursive: true })
+const signal = opt['start-when']
+if (signal) await rm(signal, { force: true })  // a file left from an earlier take must not start this one
+const interactive = !signal && !opt['no-wait'] && !opt.headless && process.stdin.isTTY
 
 // Playwright moves no system cursor, so the recording would show clicks out of nowhere. This dot
 // follows the synthetic mouse and ripples on press. It lives in the top layer (a manual popover)
@@ -339,7 +346,10 @@ try {
   const errors = []
   page.on('pageerror', e => errors.push(e.message))
   await page.goto(opt.url)
-  if (!opt['no-wait'] && !opt.headless && process.stdin.isTTY) {
+  if (signal) {
+    console.log(`READY: browser open. Start the recorder on its window, then create ${signal} to run the take.`)
+    while (!existsSync(signal)) await wait(250)
+  } else if (interactive) {
     const rl = createInterface({ input: process.stdin, output: process.stdout })
     await rl.question('Start QuickRecorder on this browser window, then press Enter to run the take… ')
     rl.close()
@@ -367,6 +377,16 @@ try {
   run.elapsed_s = (Date.now() - began) / 1000
   await writeFile(`${opt.out}/beats.json`, JSON.stringify(run.beats, null, 2))
   await writeFile(`${opt.out}/run.json`, JSON.stringify(run, null, 2))
+  console.log(`${run.status === 'completed' ? 'DONE' : 'FAILED'}: take over. Stop the recorder, then close the browser.`)
+  // Closing the window under a running window capture can cut or lose the recording's end.
+  if (signal) {
+    console.log(`Waiting for ${signal} to be removed before closing the browser…`)
+    while (existsSync(signal)) await wait(250)
+  } else if (interactive) {
+    const rl = createInterface({ input: process.stdin, output: process.stdout })
+    await rl.question('Stop QuickRecorder, then press Enter to close the browser… ')
+    rl.close()
+  }
   await context?.close()
   await browser?.close()
   console.log(`${run.status}${run.error ? ` (${run.error})` : ''} · ${run.elapsed_s.toFixed(0)} s · ${opt.out}`)
