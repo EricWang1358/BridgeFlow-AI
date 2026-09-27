@@ -164,7 +164,8 @@ export function Overview({ batchId }: { batchId: string }) {
             <figcaption><span>{chartName(c)}{c.unit ? ` · ${c.unit}` : ''}</span></figcaption>
             <BarList rows={c.points.map(p => ({ label: p.label, value: p.value ?? 0, note: p.breach ? `▲ ${t('chartBreach')}` : p.period }))} />
           </figure>)}</div>}</>
-          : <p className="bf-hint">{t('chartNeedsPeriods')}</p>) : <Unread value={charts} />}
+          // Nothing drawable yet: a sample month is still offered its earlier months here, not only beside bars.
+          : ok(summary) && summary.demo_case ? <SampleHistory onLoaded={() => setRevision(n => n + 1)} /> : <p className="bf-hint">{t('chartNeedsPeriods')}</p>) : <Unread value={charts} />}
         {tables && trends.length > 0 && <table className="bf-chart-table"><thead><tr><th scope="col">{t('ovMetric')}</th>{trends[0]!.points.map(p => <th key={p.label} scope="col">{p.period}</th>)}</tr></thead>
           <tbody>{trends.map(c => <tr key={c.id}><th scope="row">{c.subject}</th>{c.points.map(p => <td key={p.label} data-numeric="true">{p.value === null ? '—' : formatNumber(p.value, language, { maximumFractionDigits: 2 })}{p.breach ? ' ▲' : ''}</td>)}</tr>)}</tbody></table>}
       </Block>}
