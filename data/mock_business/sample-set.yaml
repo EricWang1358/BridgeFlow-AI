@@ -1,0 +1,12 @@
+# The Chinese sample set: the business's own v2 templates filled with the fictional concrete
+# supplier. A guest instance loads it with BRIDGEFLOW_GUEST_SAMPLE_SET=data/mock_business/sample-set.yaml;
+# the default guest set is the English translation (data/demo_en/sample-set.yaml).
+# Paths are relative to the repository root.
+dictionary: data/mock_business/demo/dictionary.yaml
+integration_spec: data/company_templates/integration.yaml
+demo_cases: data/mock_business/cases/cases.yaml
+workflow_catalogue: data/workflow_demo/catalogue.yaml
+workflow_samples: data/workflow_demo/sample-submissions.yaml
+discovery_sample: data/discovery_demo/sample-project.yaml
+discovery_scoring_policy: data/discovery_demo/scoring-policy.yaml
+discovery_decision_policy: data/discovery_demo/decision-policy.yaml

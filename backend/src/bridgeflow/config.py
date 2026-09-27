@@ -113,6 +113,12 @@ class Settings(BaseSettings):
     integration_spec_path: str = "data/company_templates/integration.yaml"
     # English display names beside the business's Chinese names (display only; see the file).
     display_labels_path: str = "data/company_templates/labels.en.yaml"
+    # The built-in samples behind "Open sample notebook", "Load the sample project" and "Load
+    # the sample workflow". The guest instance points these at the English set (data/demo_en/,
+    # declared in its sample-set.yaml); everything else keeps the business's Chinese originals.
+    demo_cases_path: str = "data/mock_business/cases/cases.yaml"
+    discovery_sample_path: str = "data/discovery_demo/sample-project.yaml"
+    workflow_samples_path: str = "data/workflow_demo/sample-submissions.yaml"
 
     @property
     def cors_origin_list(self) -> list[str]:

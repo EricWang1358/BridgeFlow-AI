@@ -356,13 +356,17 @@ def _read_xlsx(payload: bytes, filename: str, layout: Layout) -> tuple[str, pd.D
     return sheet, frame, header_row
 
 
-DEMO_CASES = REPO_ROOT / "data/mock_business/cases/cases.yaml"
+def _demo_registry() -> dict:
+    """The sample cases (`settings.demo_cases_path`): which folders, which dictionary, which month."""
+    configured = Path(settings.demo_cases_path)
+    path = configured if configured.is_absolute() else REPO_ROOT / configured
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
 @router.get("/demo/cases")
 async def demo_cases() -> dict:
     """The sample cases a person can open, with what each one is meant to show."""
-    registry = yaml.safe_load(DEMO_CASES.read_text(encoding="utf-8"))
+    registry = _demo_registry()
     return {"cases": [{"id": key, "case_id": case["case_id"], "title": case["title"], "summary": case["summary"]}
                       for key, case in registry["cases"].items()]}
 
@@ -373,14 +377,15 @@ async def demo_batch(user: Annotated[UserIdentity | None, Depends(require_user)]
 
     The samples are the fictional concrete supplier, filed on the business side's v2
     department templates. One batch cannot show every state, so there are several cases
-    (`data/mock_business/cases/cases.yaml`); without `case` it is the guided-tour sample.
+    (`settings.demo_cases_path`); without `case` it is the guided-tour sample.
     """
-    registry = yaml.safe_load(DEMO_CASES.read_text(encoding="utf-8"))
+    registry = _demo_registry()
     chosen = registry["cases"].get(case)
     if chosen is None:
         raise HTTPException(404, f"No sample case {case!r}; available: {', '.join(registry['cases'])}")
     return await _import_demo(REPO_ROOT / chosen["folder"], str(registry["period"]),
-                              REPO_ROOT / registry["dictionary"], chosen["case_id"], user)
+                              REPO_ROOT / registry["dictionary"], chosen["case_id"], user,
+                              registry.get("file_name", ""))
 
 
 @router.post("/demo/history")
@@ -391,7 +396,7 @@ async def demo_history(user: Annotated[UserIdentity | None, Depends(require_user
     upload. An already-visible sample history month is left alone on repeat clicks; an
     unrelated uploaded month does not replace this fictional supplier's history.
     """
-    registry = yaml.safe_load(DEMO_CASES.read_text(encoding="utf-8"))
+    registry = _demo_registry()
     def visible(entry: dict) -> bool:
         try:
             _visible(load_batch(entry["batch_id"]), user)
@@ -407,17 +412,23 @@ async def demo_history(user: Annotated[UserIdentity | None, Depends(require_user
             kept.append(period)
             continue
         batch = await _import_demo(REPO_ROOT / month["folder"], period, REPO_ROOT / registry["dictionary"],
-                                   month["case_id"], user)
+                                   month["case_id"], user, registry.get("file_name", ""))
         imported.append({"period": period, "batch_id": batch.batch_id, "status": batch.status})
     return {"imported": imported, "already_present": kept}
 
 
 async def _import_demo(folder: Path, period: str, dictionary: Path, case_id: str,
-                       user: UserIdentity | None) -> BatchSummary:
+                       user: UserIdentity | None, file_name: str = "") -> BatchSummary:
     departments: list[Department] = ["production", "procurement", "finance", "marketing"]
-    labels = {"production": "生产部", "procurement": "物资部", "finance": "财务部", "marketing": "市场部"}
+    # What the sample files are called is the sample set's wording (`file_name` in its case
+    # registry, e.g. "{department}-{period}.xlsx"), with the department as the integration
+    # declaration labels it; neither is written here.
+    spec = _integration_spec()
+    labels = {name: decl.label for name, decl in spec.departments.items()} if spec is not None else {}
+    pattern = file_name or "{department}-{period}.xlsx"
     files = [UploadFile(io.BytesIO((folder / f"{department}.xlsx").read_bytes()),
-                        filename=f"模拟-{labels[department]}-{period}.xlsx") for department in departments]
+                        filename=pattern.format(department=labels.get(department, department), period=period))
+             for department in departments]
     try:
         return await _import_batch(period, departments, files, dictionary, case_id, owner=user.sub if user else "")
     finally:

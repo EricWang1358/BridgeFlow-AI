@@ -10,6 +10,7 @@
 - **门户全英文**（负责人拍板：只要英文）：`pages.py` / `main.py` 全部文案；测试锁死页面无 CJK。
 - **访客控制台默认英文**（负责人拍板：不跟随浏览器）：公网页面不是 loopback，dsh 不给设置存储，#110 的英文默认从未生效。访客模式下插件自己 `setLocale`；访客自选语言记在本浏览器 `localStorage`。本地以非 loopback 主机名 + zh-CN 浏览器验证。员工控制台在公网同样跟随浏览器，未改，待定。
 - **待上线**：合并即 CI 部署，无 env 变更；按 docs/37 §4 跑 preflight 与浏览器核对，通过后再改 README 里「公网访客未开放」的旧说法。
+- **英文样例集**（负责人拍板：并行英文集、仅访客用；后端文案随界面语言）：`data/demo_en/` 由 `scripts/make_english_samples.py` 从中文原件机械生成，数字与埋点问题不变，`test_english_samples.py` 逐案例比对两套结果一致；访客默认加载英文集（`BRIDGEFLOW_GUEST_SAMPLE_SET` 可切回中文）。流转看板句子与研判固定限制改为英文（中文界面经 `zh-messages.ts` 译回），总表 xlsx 与月度报告按 `?lang=` 出语言。上线与回滚见 docs/37 §6。改样例改中文原件再重新生成。
 
 ## 2026-09-25 主域名即演示、模型闸门（分支 `feat/online-demo`，设计与状态见 [docs/36](docs/36-online-demo.md)）
 

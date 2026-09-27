@@ -1,0 +1,12 @@
+# The English sample set: what the public guest instance loads (scripts/start_web.py --guest,
+# BRIDGEFLOW_GUEST_SAMPLE_SET). Generated from the Chinese originals by
+# scripts/make_english_samples.py; data/mock_business/sample-set.yaml is the Chinese one.
+# Paths are relative to the repository root.
+dictionary: data/demo_en/demo/dictionary.yaml
+integration_spec: data/demo_en/company_templates/integration.yaml
+demo_cases: data/demo_en/cases/cases.yaml
+workflow_catalogue: data/demo_en/workflow_demo/catalogue.yaml
+workflow_samples: data/demo_en/workflow_demo/sample-submissions.yaml
+discovery_sample: data/demo_en/discovery_demo/sample-project.yaml
+discovery_scoring_policy: data/demo_en/discovery_demo/scoring-policy.yaml
+discovery_decision_policy: data/demo_en/discovery_demo/decision-policy.yaml

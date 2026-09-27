@@ -50,6 +50,8 @@ data/seats-assigned.json
 # Business-provided templates (headers only) and their synthetic worked example.
 !data/company_templates/**/*.xlsx
 !data/mock_business/**/*.xlsx
+# Their English translation for the public demo (scripts/make_english_samples.py).
+!data/demo_en/**/*.xlsx
 
 # Logs
 *.log

@@ -6,6 +6,7 @@ import { tourEvent } from './tour/state.ts'
 import { WorkflowFlow } from './workflow-flow.tsx'
 import { WorkflowScopeCard, WorkflowTimeline } from './workflow-scope.tsx'
 import { useGuestMode } from './guest.tsx'
+import { translateBoard } from './zh-messages.ts'
 
 /**
  * Template filling and handoff, as people see it (#144, #145).
@@ -38,7 +39,7 @@ type Catalogue = {
 type Finding = { rule: string; category: string; scope: Record<string, string>; facts: string[]; hypothesis: string; route_to: string; decided_by: string }
 
 export function Handoff() {
-  const { t, paren } = useUI(), gloss = useGloss()
+  const { t, paren, language } = useUI(), gloss = useGloss()
   const dataRevision = useDataRevision()
   const guest = useGuestMode()
   const modelOff = guest.guest && !guest.llm
@@ -126,7 +127,7 @@ export function Handoff() {
         {row.kind === 'handoff' && row.stale && <Chip status="upstream_revised"/>}
         {row.kind === 'handoff' && row.overdue_hours != null && <span className="bf-due" data-overdue={row.overdue_hours > 0}>
           {t(row.overdue_hours > 0 ? 'overdueBy' : 'dueIn').replaceAll('{h}', String(Math.abs(Math.round(row.overdue_hours))))}</span>}</div>
-      <p>{row.summary}</p>
+      <p>{language === 'zh' ? translateBoard(row.summary) : gloss.message(row.summary)}</p>
       <span className="bf-hint">{row.business_key.join(' · ')}{row.kind === 'handoff' ? ` · ${row.owner_role}` : ''}</span>
       {(() => { const step = next(row); return step && <button className="bf-primary" disabled={busy || modelOff}
         onClick={() => void run(() => askCaptain(step[1]))}>{t(step[0])}</button> })()}

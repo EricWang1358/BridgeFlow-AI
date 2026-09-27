@@ -514,6 +514,7 @@ python scripts/feishu_membership_check.py
   永久缓存，否则点「访客进入」会被弹回门户（[`37`](37-portal-english-and-guest-entry.md)）。席位形态的主域名跳转因此改为 302。
 - **语言**：门户页面全英文；访客控制台默认英文，不跟随浏览器语言（公网页面拿不到 dsh 的设置存储，#110 的默认在那里不生效）。
   访客在设置里改的语言记在本浏览器，刷新后保留。
+- **样例数据**：访客实例默认加载英文样例集 [`data/demo_en/`](../data/demo_en/README.md)（中文原件的机械译本，数字与埋点问题不变），由 `data/demo_en/sample-set.yaml` 声明全部路径；想用中文原件，在 `env.sh` 加 `export BRIDGEFLOW_GUEST_SAMPLE_SET=data/mock_business/sample-set.yaml` 后重启访客单元。下载的总表与月度报告随界面语言。
 - **首屏**：新标签页自动打开示例笔记本，并弹出引导欢迎卡。上传入口一律拒绝，只能用内置样例。
 - 访客之间共用一个控制台（席位池见 [`36`](36-online-demo.md) §7，P1）；每个标签页各开自己的示例笔记本，横幅提醒不要输入真实数据。
 

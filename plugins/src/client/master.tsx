@@ -47,7 +47,7 @@ export function MasterTable({ batchId }: { batchId: string }) {
   }, [master, batchId])
   async function download() {
     try {
-      const file = await api<{ filename: string; base64: string }>(`/integration/batches/${batchId}/xlsx`)
+      const file = await api<{ filename: string; base64: string }>(`/integration/batches/${batchId}/xlsx?lang=${language}`)
       const bytes = Uint8Array.from(atob(file.base64), c => c.charCodeAt(0))
       const link = document.createElement('a')
       link.href = URL.createObjectURL(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))

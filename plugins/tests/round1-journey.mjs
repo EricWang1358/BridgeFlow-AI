@@ -120,7 +120,7 @@ try {
   const download = page.waitForEvent('download')
   await target('brief-export').click()
   const saved = await download
-  assert.match(saved.suggestedFilename(), /^月度经营结论-2024-07-.*\.docx$/)
+  assert.match(saved.suggestedFilename(), /^Monthly-conclusions-2024-07-.*\.docx$/)  // the English interface downloads it in English
 
   // E13-UC06 in the master view: reached from the Data destination, which owns it now
   await studio('Data').click()

@@ -129,7 +129,8 @@ def _report(request: ReviewSubmission, context: dict, reason: str) -> dict:
         "review_id": request.review_id, "terminal_reason": reason,
         "parent_session_id": request.parent_session_id, "status": "validated" if complete else "partial",
         "case": context["case"], "roles": roles, "limitations": [*context["limitations"],
-            "本报告直接汇总声明列，不消费待确认的跨部门映射；判断通过不代表主表已签发"],
+            ("This report sums the declared columns directly and uses no pending cross-department mapping; "
+             "a passing judgement does not mean the master table is signed off")],
         "manager_decision": context["manager_decision"] if complete else "Review incomplete; do not authorize a business decision",
         "execution_status": "analysis_only_no_business_action_executed",
         "usage": _usage(request.usage),

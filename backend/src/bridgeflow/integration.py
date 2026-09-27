@@ -669,20 +669,33 @@ def _substitute(tree: Any, constants: dict[str, float | None]) -> Any:
     return {**tree, **({"args": [_substitute(a, constants) for a in tree["args"]]} if "args" in tree else {})}
 
 
-def to_xlsx(result: MasterResult) -> bytes:
+#: The workbook's own sheet names and headers per interface language; the columns and values
+#: are the declaration's and the batch's, whatever the language.
+WORKBOOK_WORDS: dict[str, dict[str, Any]] = {
+    "zh": {"master": "总表", "open": "待确认", "open_headers": ["类型", "字段", "键", "部门", "说明"],
+           "assumed": "口径假设", "assumed_headers": ["规则", "说明"],
+           "filename": "跨部门业务整合总表-{batch}.xlsx"},
+    "en": {"master": "Master", "open": "Open items", "open_headers": ["Kind", "Field", "Key", "Departments", "Note"],
+           "assumed": "Conventions", "assumed_headers": ["Rule", "Note"],
+           "filename": "Cross-department-master-{batch}.xlsx"},
+}
+
+
+def to_xlsx(result: MasterResult, language: str = "zh") -> bytes:
     """The master template's columns, one row per key; issues on a second sheet."""
+    words = WORKBOOK_WORDS.get(language, WORKBOOK_WORDS["zh"])
     book = openpyxl.Workbook()
     sheet = book.active
-    sheet.title = "总表"
+    sheet.title = words["master"]
     sheet.append(result.columns)
     for row in result.rows:
         sheet.append([row.values.get(c) for c in result.columns])
-    notes = book.create_sheet("待确认")
-    notes.append(["类型", "字段", "键", "部门", "说明"])
+    notes = book.create_sheet(words["open"])
+    notes.append(words["open_headers"])
     for issue in result.issues:
         notes.append([issue.kind, issue.field, " / ".join(issue.key), ", ".join(issue.departments), issue.message])
-    assumed = book.create_sheet("口径假设")
-    assumed.append(["规则", "说明"])
+    assumed = book.create_sheet(words["assumed"])
+    assumed.append(words["assumed_headers"])
     for name, text in result.assumptions.items():
         assumed.append([name, text])
     # This export contains values, never executable formulas, including labels and notes.

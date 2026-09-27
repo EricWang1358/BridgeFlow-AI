@@ -40,6 +40,8 @@ python scripts/integration_cases.py real data/mock_business/monthly/2024-07-模�
 Web 里「打开示例笔记本」与 `start_web.py --demo` 都用它。预期：主表 4 个项目；研判 10 项检查中材料成本占收入、净利率、收款计划缺口 3 项需关注；
 跨部门总表 1 条客户名称不一致（`backend/tests/test_sample_notebook.py` 锁定）。字典的 `business_review.brief` 声明了「本月结论」的关键指标、严重度顺序与依赖口径（E13-UC01/06）。`data/business_demo/` 的英文 CSV 案例保留为浏览器 smoke 的回归夹具。
 
+公网访客实例用的是本目录（连同 `cases/`、`data/company_templates/`、立项与流转样例）的英文译本 [`data/demo_en/`](../demo_en/README.md)：由 `scripts/make_english_samples.py` 按术语表机械生成，数字、行列与埋点问题一律不变，测试逐案例比对两套结果一致。改样例请改这里的原件再重新生成，不要改译本。
+
 ## quotation
 
 见 [`quotation/README.md`](quotation/README.md)。

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MetricCharts } from './charts.tsx'
 import { api, describeError, navigate, useUI, useGloss, useDataRevision } from './ui.ts'
+import { translate as zhMessage } from './zh-messages.ts'
 import { Chip } from './workspace.tsx'
 import { CountUp } from './count-up.tsx'
 import { Explain } from './explain.tsx'
@@ -56,7 +57,7 @@ const fill = (text: string, values: Record<string, string | number>) =>
   Object.entries(values).reduce((out, [key, value]) => out.replaceAll(`{${key}}`, String(value)), text)
 
 export function MonthlyBrief({ batchId }: { batchId: string }) {
-  const { t, colon, paren, list } = useUI(), gloss = useGloss()
+  const { t, colon, paren, list, language } = useUI(), gloss = useGloss()
   const dataRevision = useDataRevision()
   const [brief, setBrief] = useState<Brief | null>(null), [error, setError] = useState(''), [needsReview, setNeedsReview] = useState(false), [revision, setRevision] = useState(0)
   const [exporting, setExporting] = useState(false), [exportError, setExportError] = useState('')
@@ -86,7 +87,7 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
     // Generated from this same brief, so the document cannot say anything this page does not.
     setExportError(''); setExporting(true)
     try {
-      const file = await api<{ filename: string; base64: string }>(`/conclusions/batches/${batchId}/report`)
+      const file = await api<{ filename: string; base64: string }>(`/conclusions/batches/${batchId}/report?lang=${language}`)
       const bytes = Uint8Array.from(atob(file.base64), c => c.charCodeAt(0))
       const link = document.createElement('a')
       link.href = URL.createObjectURL(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }))
@@ -174,7 +175,7 @@ export function MonthlyBrief({ batchId }: { batchId: string }) {
       <li>{t('pendingColumnQuestions')}{colon}{brief.open_items.column_questions}</li>
     </ul>
     <p className="bf-hint">{t('briefCompleteness')}{colon}{brief.completeness.complete_rows} / {brief.completeness.master_rows} {t('masterCompleteRows')} · {t('integrationAssumptions')} {brief.completeness.assumptions}</p>
-    <details><summary>{t('briefDecisionAndLimits')}</summary><p>{gloss.text(brief.manager_decision)}</p><ul>{brief.limitations.map((l, i) => <li key={i}>{gloss.text(l)}</li>)}</ul></details>
+    <details><summary>{t('briefDecisionAndLimits')}</summary><p>{gloss.text(brief.manager_decision)}</p><ul>{brief.limitations.map((l, i) => <li key={i}>{language === 'zh' ? zhMessage(l) : gloss.text(l)}</li>)}</ul></details>
     <details className="bf-brief-fold"><summary>{t('metricCharts')}</summary>
       <MetricCharts batchId={batchId} />
     </details>

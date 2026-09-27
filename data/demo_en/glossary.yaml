@@ -1,0 +1,203 @@
+# The words of the English sample set that data/company_templates/labels.en.yaml does not
+# already give, and the few places a sample needs a different word from the interface's.
+# scripts/make_english_samples.py reads labels.en.yaml first, then this file on top of it.
+#
+# Everything here is fictional sample data: companies, projects, people and plants do not
+# exist. Translate meaning, keep every number, code and unit exactly as written.
+terms:
+  # Overrides of labels.en.yaml, where one English word would otherwise stand for two things
+  客户: Client                      # an alias beside 客户单位 (Customer)
+  累计回款: Collections to date      # the renamed column in the "different problems" case
+  月: months                        # a unit here; 月份 is the month field
+
+  # Header spellings the templates carry as written
+  "  材料含量": "  Material content"
+
+  # Companies, projects, plants, people (fictional)
+  示例城建集团: Demo Urban Construction Group
+  示例城建集团有限公司: Demo Urban Construction Group Co., Ltd.
+  示例市政工程有限公司: Demo Municipal Engineering Co., Ltd.
+  示例建工第一分公司: Demo Construction Engineering, Branch No. 1
+  示例教育建设有限公司: Demo Education Construction Co., Ltd.
+  滨江安置房二期: Riverside Resettlement Housing Phase II
+  高新区产业园三号厂房: Hi-Tech Park Plant Building No. 3
+  市政道路改造一标段: Municipal Road Upgrade Lot 1
+  第二实验学校扩建: No. 2 Experimental School Extension
+  东区拌站: East Plant
+  西区拌站: West Plant
+  A拌站: Plant A
+  项目A: Project A
+  客户A: Customer A
+  王磊: Wang Lei
+  李娜: Li Na
+  赵敏: Zhao Min
+  张三: Zhang San
+
+  # Materials
+  水泥 P·O42.5: Cement P·O 42.5
+  矿粉 S95: Slag powder S95
+  粉煤灰 F类Ⅱ级: Fly ash Class F Grade II
+  机制砂: Manufactured sand
+  碎石 5-25mm: Crushed stone 5-25mm
+  聚羧酸减水剂: Polycarboxylate superplasticiser
+
+  # Cell values
+  收尾: Winding down
+  待定: TBD
+  生产供应正常: Production supply normal
+  原材料价格稳定: Raw material prices stable
+  水泥价格较上月上涨: Cement price up on last month
+  现场签收偏低，部分车次退料待核: On-site sign-off is low; returned material on some trucks is still to be checked
+  月结30天: Monthly, net 30
+  按月结算按比例付款: Monthly settlement, paid by ratio
+  水泥月结，次月15日前付清: Cement settled monthly, paid by the 15th of the next month
+  水泥月结，次月15日前付清；外加剂季度结算: Cement settled monthly, paid by the 15th of the next month; admixtures settled quarterly
+  水泥月结，次月15日前付清；砂石款到发货: Cement settled monthly, paid by the 15th of the next month; sand and aggregate cash before delivery
+  水泥预付30%，到货后月结: Cement 30% prepaid, the rest monthly after delivery
+  按月结算，次月25日前支付当月结算额的80%，主体封顶后付至90%，竣工结算后付至97%，余3%质保金满一年付清: >-
+    Monthly settlement: 80% of the month's settlement by the 25th of the next month, up to 90% at topping-out,
+    97% at final settlement, the 3% retention after one year
+  按月结算，次月底前支付当月结算额的80%，竣工验收后付至95%，余5%质保金两年内付清: >-
+    Monthly settlement: 80% of the month's settlement by the end of the next month, up to 95% at completion
+    acceptance, the 5% retention within two years
+  按月结算，次月支付当月结算额的80%，竣工后三个月内付至97%: >-
+    Monthly settlement: 80% of the month's settlement the next month, up to 97% within three months of completion
+  按月结算，结算后60日内支付70%，工程决算审计完成后付至95%: >-
+    Monthly settlement: 70% within 60 days of settlement, up to 95% once the final account audit is done
+
+  # Review metric formulas, as the review shows them
+  (sum(生产量) − sum(出厂量)) / sum(生产量) × 100: (sum(Production volume) − sum(Volume dispatched)) / sum(Production volume) × 100
+  sum(实际量) / sum(出厂量) × 100: sum(Actual volume) / sum(Volume dispatched) × 100
+  sum(应收期末余额) / sum(本期借方开票额): sum(Closing receivable) / sum(Period invoiced (debits))
+  sum(当前垫资额) / sum(累计产值) × 100: sum(Current advance funding) / sum(Cumulative output value) × 100
+  sum(当月物资总成本) / sum(本期实现收入) × 100: sum(Monthly material cost) / sum(Period revenue) × 100
+  sum(当月生产量 × 单方不含税毛利) / sum(当月生产量): sum(Monthly production volume × Gross margin per m³ excl. VAT) / sum(Monthly production volume)
+  sum(物资部当月生产量) − sum(生产部生产量): sum(Procurement’s monthly production volume) − sum(Production’s production volume)
+  sum(累计收款) / sum(累计结算) × 100: sum(Cumulative collections) / sum(Cumulative settlement) × 100
+  sum(缺口)，缺口 = 累计结算 − 收款计划合计（口径假设）: sum(Gap), Gap = Cumulative settlement − Collection plan total (assumed convention)
+  sum(项目财务净利润) / sum(本期实现收入) × 100: sum(Project net profit) / sum(Period revenue) × 100
+
+  # Sample cases
+  模拟-{department}-{period}.xlsx: Sample-{department}-{period}.xlsx
+  引导样例：一处跨部门不一致: "Guided sample: one cross-department mismatch"
+  多问题并发：很多问题同时出现: Many problems at once
+  另一类问题：与上一套不重叠: A different set of problems
+  全对：可以直接研判: "All clear: ready to review"
+  引导教程使用的样例。生产部把一个客户写成了简称，其余都对得上。: The sample the guided tour uses. Production shortened one customer's name; everything else ties.
+  客户简称、按计划量而非实际量测算、金额栏填了文字、市场部漏报一个项目——几类待办同时出现。: >-
+    A shortened customer name, a quantity taken from the plan, text in a money field and a project marketing
+    left out — several kinds of open item together.
+  混入一条 6 月的记录、一个负数产量、市场部把「累计收款」写成了「累计回款」、物资部删掉了模板里的必需列。: &renamed >-
+    A June row mixed in, a negative quantity, marketing renamed Cumulative collections to Collections to date,
+    and procurement deleted a required template column.
+  A June row mixed in, a negative quantity, marketing renamed 累计收款 to 累计回款, and procurement deleted a required template column.: *renamed
+  四个部门的数据全部对得上，没有待办，所有指标都在关注阈值以内。: All four departments tie, nothing is open, and every metric is inside its threshold.
+
+  # Filling & handoff (workflow catalogue and its sample submissions)
+  合成示例：生产部一条生产记录标准化后交市场部处理；非客户数据: "Synthetic example: one Production record is standardised and handed to Marketing; not customer data"
+  "%Y年%m月%d日": "%d %b %Y"
+  年: Yr
+  月份: Month
+  站点: Site
+  工程: Job
+  产品: Product
+  产量: Output
+  发出量: Dispatched
+  开单日期: Ticket date
+  确认数量: Confirmed quantity
+  说明: Remarks
+  记录所属报表月份: The report month this record belongs to
+  经确认的实际数量（演示定义，签收口径待业务确认）: The confirmed actual quantity (demo definition; the sign-off basis awaits the business)
+  请提供实际量和确认依据；不能直接用出厂量代填。: Please give the actual volume and its evidence; the dispatched volume cannot stand in for it.
+  出厂量与实际量差异: Dispatched vs actual volume difference
+  生产填报: Production reporting
+  生产部统计员: Production statistician
+  市场部接收生产数据: Marketing receives production data
+  市场部负责人: Marketing lead
+  核对数量差异并准备结算依据: Check quantity differences and prepare the settlement basis
+  财务部结算开票: Finance settlement and invoicing
+  财务部结算员: Finance settlement clerk
+  核对结算依据并开具发票: Check the settlement basis and issue the invoice
+  结算采用哪种数量尚未确认（#143 访谈问题），此边只是候选: Which quantity settlement uses is not confirmed yet (#143 interview question); this edge is only a candidate
+  演示厂站: Demo plant
+  演示客户甲: Demo Client Alpha
+  演示客户乙: Demo Client Beta
+  演示项目A: Demo Project A
+  演示项目B: Demo Project B
+  C30 混凝土: C30 concrete
+  C35 混凝土: C35 concrete
+  100 方: 100 m³
+  120 方: 120 m³
+  116.5 方: 116.5 m³
+  2026年9月: "2026-09"
+  签收单 DEMO-0908: Delivery receipt DEMO-0908
+  生产部-示例-9月第1周.xlsx: Production-sample-Sep-week-1.xlsx
+  生产部-示例-9月第2周.xlsx: Production-sample-Sep-week-2.xlsx
+  市场部-结算依据-9月.xlsx: Marketing-settlement-basis-Sep.xlsx
+
+  # Discovery sample project and its policies
+  示例-总经办: Demo GM office
+  示例-总经理: Demo General manager
+  示例-生产经理: Demo Production manager
+  示例-市场经理: Demo Marketing manager
+  示例-立项负责人: Demo Project sponsor
+  示例-质量负责人: Demo Quality lead
+  示例-生产统计员: Demo Production clerk
+  示例-会议记录人: Demo Minute taker
+  示例-生产经理在启动会上确认: Confirmed by Demo Production manager at the kickoff
+  标准化负责人: Standardisation lead
+  合成示例，仅用于演示 MVP 决策；非业务方批准的规则: Synthetic example for demonstrating MVP decisions only; not rules the business approved
+  合成示例，仅用于演示立项评分；非业务方批准的量表: Synthetic example for demonstrating project scoring only; not a scale the business approved
+  分: pts
+  实施难度: Implementation effort
+  容易落地: Easy to deliver
+  需要较多协调: Needs a lot of coordination
+  业务价值: Business value
+  价值有限: Limited value
+  值得优先做: Worth doing first
+  发货单: Delivery note
+  发货周报: Weekly dispatch report
+  生产统计员: Production clerk
+  每次发货后: After each dispatch
+  一个月试点: One-month pilot
+  收到发货周报: Weekly dispatch report received
+  周报缺实际量: Weekly report lacks actual volume
+  市场部核对数量: Marketing checks quantities
+  电话追问实际量: Phone to chase the actual volume
+  实际量口头确认: Actual volume confirmed by phone
+  能减少每周追问: Would cut the weekly chasing
+  生产填报发货记录: Production files dispatch records
+  不含向客户的对外发送: Excludes sending anything to customers
+  不含财务开票以外的系统对接: Excludes system integration beyond finance invoicing
+  结算量以哪个数量为准？: Which quantity does settlement use?
+  实际量的确认依据尚未统一: The evidence for actual volume is not standardised yet
+  连续四周交接无需电话追问: Four weeks of handoffs in a row without a chasing call
+  市场部结算依据交接财务部: Marketing hands the settlement basis to Finance
+  交接有时限、差异提前标出: Handoffs have deadlines and differences are flagged early
+  实际量缺失时市场部电话追问: When actual volume is missing, Marketing phones to chase it
+  生产 → 市场交接试点启动会: Production → Marketing handoff pilot kickoff
+  先小范围验证，再决定是否推广: Validate at small scale first, then decide whether to roll out
+  生产部-发货周报-示例.csv: Production-weekly-dispatch-report-sample.csv
+  生产数据标准化后自动交给市场部: Standardised production data goes to Marketing automatically
+  发货周报作为文件每周交给市场部: The weekly dispatch report goes to Marketing as a file every week
+  实际量随周报传递，但部分行为空: Actual volume travels with the weekly report, but some rows are blank
+  仅试点生产记录填报与市场部接收: Pilot only production record filing and Marketing's receipt
+  生产统计员与市场部负责人各一人: One production clerk and one Marketing lead
+  批准一个月试点，范围以决策为准: Approve a one-month pilot; the decision sets the scope
+  生产 → 市场的数量交接（现状）: Production → Marketing quantity handoff (as is)
+  同意按候选方案试点，结算口径待确认: Agreed to pilot the candidate; the settlement basis is still to be confirmed
+  试点生产记录填报、审核与交接市场部: Pilot production record filing, review and handoff to Marketing
+  生产部每周手工汇总的发货记录（虚构）: Production's weekly hand-compiled dispatch records (fictional)
+  结算用出厂量还是实际量？需要业务方确认: Is settlement on dispatched or actual volume? The business must confirm
+  每周省去人工追问，差异能在交接前被标出: No more weekly manual chasing; differences are flagged before the handoff
+  启动会同意试点；投票通过后由总经理批准: The kickoff agreed to pilot; the general manager approved after the vote passed
+  只涉及生产部和市场部两张表，模板已有草案: Only Production's and Marketing's two sheets, and the templates are already drafted
+  按模板填报并经审核后自动交接，市场部按时限处理: Filed on the template and reviewed, then handed over automatically; Marketing acts within the deadline
+  追问结果是否回填到生产部的记录，材料里没有依据: Nothing in the material says whether chased answers are written back to Production's records
+  市场部每周要电话追问实际量，出厂量与实际量常对不上: Marketing phones every week to chase actual volume; dispatched and actual volumes often disagree
+  "项目,出厂量,实际量,备注\n演示项目A,98,,市场部每周电话追问实际量\n演示项目B,118,116.5,签收单 DEMO-0908\n": "Project,Volume dispatched,Actual volume,Notes\nDemo Project A,98,,Marketing phones weekly to chase actual volume\nDemo Project B,118,116.5,Delivery receipt DEMO-0908\n"
+
+# English strings that are allowed to stand for more than one original: the case summary
+# exists once in Chinese and once in English with Chinese column names, and both read the same.
+same_english:
+- A June row mixed in, a negative quantity, marketing renamed Cumulative collections to Collections to date, and procurement deleted a required template column.

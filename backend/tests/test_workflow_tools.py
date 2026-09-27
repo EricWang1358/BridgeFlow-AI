@@ -79,7 +79,7 @@ def test_answer_then_approve_submit_makes_data_ready(client):
     assert done.status_code == 200, done.text
     assert done.json()["state"] == "data_ready" and done.json()["receipt"]["record_id"]
     summaries = [r["summary"] for r in client.post("/tools/workflow-board").json()["rows"]]
-    assert any("待市场部处理" in s for s in summaries)
+    assert any("waiting on 市场部" in s for s in summaries)
 
 
 def test_an_unfinished_draft_cannot_be_approved(client):
