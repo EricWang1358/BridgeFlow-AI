@@ -11,6 +11,7 @@ import { ApprovalReceipts, mappingBody } from '../src/approval/receipts.ts'
 import { columnMatchBody } from '../src/tools/confirm-column-match.ts'
 import { approveBody, handoffBody, recordBody } from '../src/tools/workflow.ts'
 import { decideBody } from '../src/tools/quarantine.ts'
+import { overLength } from '../src/tools/review-batch.ts'
 import { summarise } from '../src/approval/detail.ts'
 import { ApprovalNotes, settledNote } from '../src/approval/notes.ts'
 import { PendingDetails } from '../src/approval/detail.ts'
@@ -303,6 +304,18 @@ test('a review whose contract declares no explanation language never opens (docs
     assert.match(JSON.stringify(result.content), /declares no explanation language/)
     assert(!urls.some(url => url.endsWith('/tools/review-open')), 'no review may be opened')
   } finally { await ctx.fiber.dispose() }
+})
+
+test('an over-long department explanation is refused at submission, so the department can shorten it (docs/38)', () => {
+  const packet = { role: 'procurement', responsibility: 'r', explanation: { code: 'en', max_characters: 240 } }
+  const answer = (explanation: string) => ({ checks: [{ check_id: 'c1', explanation }, { check_id: 'c2', explanation: 'Below the attention threshold.' }] })
+  assert.deepEqual(overLength(packet, answer('a'.repeat(240))), [])
+  const refused = overLength(packet, answer('a'.repeat(241)))
+  assert.equal(refused.length, 1)
+  assert.match(refused[0]!, /checks\[c1\].*241 characters; the limit is 240/)
+  // Code points, as the host counts: a character outside the BMP is one, not two UTF-16 units.
+  assert.deepEqual(overLength({ ...packet, explanation: { max_characters: 3 } }, { checks: [{ check_id: 'c1', explanation: '\u{20000}'.repeat(3) }] }), [])
+  assert.deepEqual(overLength({ role: 'r', responsibility: 'r' }, answer('a'.repeat(999))), [], 'no declared limit: the host decides')
 })
 
 async function reviewHarness(t: import('node:test').TestContext, finalize: (attempt: number) => Response | Promise<Response>) {
