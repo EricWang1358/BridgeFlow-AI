@@ -124,6 +124,7 @@ risk_disposition:
     requires_note: true
 business_review:
   case: Simulated concrete supplier, 2024-07 monthly reconciliation (business v2 templates, fictional data)
+  explanation_language: en
   inputs:
     production:
       date_column: date

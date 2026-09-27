@@ -65,6 +65,9 @@ PATHS = [("data/mock_business/demo", "data/demo_en/demo"), ("data/mock_business/
 # the English declaration names the original it was transcribed from.
 KEPT_ORIGINALS = {("company_templates/integration.yaml", "source_dictionary"):
                   "../../company_templates/source/dictionary-v2.xlsx"}
+# Declared for the English set rather than translated: department explanations are written in English,
+# and the host refuses any other language (docs/38). The Chinese original leaves it absent, which is zh.
+EXPLANATION_LANGUAGE = ("demo/dictionary.yaml", "en")
 # The files the retained guided-tour case is pinned to, as in data/mock_business/demo/manifest.json.
 MANIFEST_FILES = ["demo/finance.xlsx", "demo/marketing.xlsx", "demo/procurement.xlsx", "demo/production.xlsx",
                   "demo/dictionary.yaml", "company_templates/integration.yaml",
@@ -193,6 +196,9 @@ def generate(out: Path) -> Translator:
         raw = yaml.safe_load((ROOT / source).read_text(encoding="utf-8"))
         keys = dictionary_keys if target == "demo/dictionary.yaml" else None
         english = translate_yaml(raw, tr, keys, target)
+        if target == EXPLANATION_LANGUAGE[0]:
+            review = english["business_review"]
+            english["business_review"] = {"case": review.pop("case"), "explanation_language": EXPLANATION_LANGUAGE[1], **review}
         (out / target).parent.mkdir(parents=True, exist_ok=True)
         (out / target).write_text(HEADER.format(source=source) + yaml.safe_dump(
             english, allow_unicode=True, sort_keys=False, width=110), encoding="utf-8")
@@ -228,13 +234,45 @@ def snapshot(root: Path) -> dict[str, Any]:
     for path in sorted(root.rglob("*")):
         name = str(path.relative_to(root))
         if path.suffix == ".xlsx":
-            book = openpyxl.load_workbook(path, read_only=True)
-            state[name] = [[sheet.title, [list(r) for r in sheet.iter_rows(values_only=True)]] for sheet in book.worksheets]
+            state[name] = workbook_content(path)
         elif path.name == "manifest.json":
             state[name] = {k: v for k, v in json.loads(path.read_text(encoding="utf-8")).items() if k != "files"}
         elif path.suffix == ".yaml" and path.name not in ("glossary.yaml", "sample-set.yaml"):
             state[name] = yaml.safe_load(path.read_text(encoding="utf-8"))
     return state
+
+
+GENERATED = ("company_templates", "demo", "cases", "discovery_demo", "workflow_demo")
+
+
+def sync(fresh: Path, out: Path) -> None:
+    """Replace the generated folders, keeping a workbook whose content did not change.
+
+    openpyxl stamps the zip with the time of writing, so rewriting every workbook would show all of
+    them as changed on each run; the manifest then hashes the files actually kept.
+    """
+    for name in GENERATED:
+        for path in sorted((out / name).rglob("*")) if (out / name).exists() else []:
+            if path.is_file() and not (fresh / path.relative_to(out)).exists():
+                path.unlink()
+        for path in sorted((fresh / name).rglob("*")):
+            if not path.is_file():
+                continue
+            target = out / path.relative_to(fresh)
+            if target.suffix == ".xlsx" and target.exists() and workbook_content(target) == workbook_content(path):
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, target)
+    manifest_path = out / "demo/manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["files"] = {f"data/demo_en/{name}": hashlib.sha256((out / name).read_bytes()).hexdigest()
+                         for name in MANIFEST_FILES}
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def workbook_content(path: Path) -> list:
+    book = openpyxl.load_workbook(path, read_only=True)
+    return [[sheet.title, [list(r) for r in sheet.iter_rows(values_only=True)]] for sheet in book.worksheets]
 
 
 def main() -> int:
@@ -249,10 +287,12 @@ def main() -> int:
             if not issues and snapshot(fresh) != snapshot(OUT):
                 issues.append("data/demo_en/ differs from its originals: run scripts/make_english_samples.py")
     else:
-        for name in ("company_templates", "demo", "cases", "discovery_demo", "workflow_demo"):
-            shutil.rmtree(OUT / name, ignore_errors=True)
-        tr = generate(OUT)
-        issues = problems(OUT, tr)
+        with tempfile.TemporaryDirectory() as scratch:
+            fresh = Path(scratch)
+            tr = generate(fresh)
+            issues = problems(fresh, tr)
+            if not issues:
+                sync(fresh, OUT)
     for issue in issues:
         print(issue, file=sys.stderr)
     return 1 if issues else 0

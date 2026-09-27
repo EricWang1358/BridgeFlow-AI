@@ -274,7 +274,7 @@ test('a review is registered with its deadline before any department can be disp
     const body = JSON.parse(String(init.body ?? '{}'))
     requests.push({ url: String(url), body })
     if (String(url).endsWith('/tools/review-context')) {
-      return Response.json({ batch_id: body.batch_id, period: '2025-11', roles: ['production', 'procurement', 'finance', 'marketing'].map(role => ({ role, responsibility: 'r' })) })
+      return Response.json({ batch_id: body.batch_id, period: '2025-11', roles: ['production', 'procurement', 'finance', 'marketing'].map(role => ({ role, responsibility: 'r', explanation: { code: 'en', language: 'English' } })) })
     }
     return Response.json({ status: 'open' })
   })
@@ -288,6 +288,23 @@ test('a review is registered with its deadline before any department can be disp
   } finally { await ctx.fiber.dispose() }
 })
 
+test('a review whose contract declares no explanation language never opens (docs/38)', async (t) => {
+  const ctx = await runtime()
+  ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
+  const urls: string[] = []
+  t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+    const body = JSON.parse(String(init.body ?? '{}'))
+    urls.push(String(url))
+    return Response.json({ batch_id: body.batch_id, period: '2025-11', roles: ['production', 'procurement', 'finance', 'marketing'].map(role => ({ role, responsibility: 'r' })) })
+  })
+  try {
+    const result = await ctx.tools.execute({ ...execution('review_context', { batch_id: 'a'.repeat(32) }), agent: captain('请研判') })
+    assert.equal(result.isError, true)
+    assert.match(JSON.stringify(result.content), /declares no explanation language/)
+    assert(!urls.some(url => url.endsWith('/tools/review-open')), 'no review may be opened')
+  } finally { await ctx.fiber.dispose() }
+})
+
 async function reviewHarness(t: import('node:test').TestContext, finalize: (attempt: number) => Response | Promise<Response>) {
   const ctx = await runtime()
   ctx.on('tools/pre-execute', () => ({ kind: 'allow' }))
@@ -295,7 +312,7 @@ async function reviewHarness(t: import('node:test').TestContext, finalize: (atte
   t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
     const body = JSON.parse(String(init.body ?? '{}'))
     if (String(url).endsWith('/tools/review-context')) {
-      return Response.json({ batch_id: body.batch_id, period: '2025-11', roles: ['production', 'procurement', 'finance', 'marketing'].map(role => ({ role, responsibility: 'r' })) })
+      return Response.json({ batch_id: body.batch_id, period: '2025-11', roles: ['production', 'procurement', 'finance', 'marketing'].map(role => ({ role, responsibility: 'r', explanation: { code: 'en', language: 'English' } })) })
     }
     if (String(url).endsWith('/tools/review-finalize')) { finals.push(body); return finalize(finals.length) }
     return Response.json({ status: 'open' })

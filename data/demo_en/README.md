@@ -35,6 +35,9 @@ templates filled with the fictional concrete supplier: see
 - The field dictionary names the sanitizer's snake-cased keys (`Customer name` →
   `customer_name`). The integration declaration names headers exactly as written. The generator
   applies both rules; no field name is written in code.
+- The dictionary declares `business_review.explanation_language: en`. The generator sets it, and it is
+  the only value not translated from the original. The four department agents write their explanations
+  in English, and the host refuses any other language ([docs/38](../../docs/38-review-explanation-language.md)).
 - Case ids stay the same as in the Chinese set (`mock-company-2024-07`, `demo-history-2024-05`, …).
   The guided tour and the history lookup key on them.
 

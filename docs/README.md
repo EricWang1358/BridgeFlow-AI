@@ -75,6 +75,7 @@
 | [`34-web-refactor-plan.md`](34-web-refactor-plan.md) | 权威 | 中 | 开发、运维 | 全 Web 化与单租户部署实施计划：复用面锚点、六步落地、验收对照与文档同步（形态决策见 issue #227） |
 | [`36-online-demo.md`](36-online-demo.md) | 权威 | 中 | 负责人、开发、运维 | 线上演示为中心：免登录评委入口、首屏零点击、本机模型闸门与分层防盗刷、访客席位池，待拍板项单列 |
 | [`37-portal-english-and-guest-entry.md`](37-portal-english-and-guest-entry.md) | 权威 | EN | 开发、运维 | 门户全英文、访客控制台默认英文；「访客进入」被席位时期缓存的 301 弹回门户的根因、修复、验证与上线操作 |
+| [`38-review-explanation-language.md`](38-review-explanation-language.md) | 权威 | EN | 开发 | 部门解释的语言改由字典声明、宿主核验；修复英文集上禁用话题检查失效 |
 
 两份 README 是同一套图文操作指引的中英版本（顶部可切换）：[`../README.md`](../README.md)（English）
 与 [`../README.zh.md`](../README.zh.md)（简体中文）。截图是 `../docs/images/` 里的稳定副本，
