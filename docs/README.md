@@ -41,7 +41,7 @@
 | [`01-problem-and-hmw.md`](01-problem-and-hmw.md) | 权威 | EN | 评委、新人 | HMW、目标客户画像、三个痛点如何变成可测目标 |
 | [`02-architecture.md`](02-architecture.md) | 参考 | EN | 开发 | 四个 Agent 各自的输入输出契约（dsh 的位置看 `13`） |
 | [`03-data-contracts.md`](03-data-contracts.md) | 参考 | EN | 开发 | Pydantic 模型逐个说明，跨 Agent 边界的类型定义 |
-| [`04-demo-plan.md`](04-demo-plan.md) | 权威 | EN | 演示人 | 五分钟脚本：每一拍点哪里、说什么、对应哪几项评分，以及现场出错怎么应对 |
+| [`04-demo-plan.md`](04-demo-plan.md) | 权威 | EN | 演示人 | 公网访客实例上的演示视频脚本（7:30，附 5 分钟裁剪顺序）：覆盖全部主要功能，每一拍点哪里、说什么、对应哪几项评分，出错应对与录制流程 |
 | [`05-roadmap.md`](05-roadmap.md) | 已取代 | 中 | — | 旧 M0–M5 排期，基于已废弃的自建前端与自建编排 |
 | [`06-deepseek-harness.md`](06-deepseek-harness.md) | 参考 | 中 | 开发 | dsh 的版本事实、SDK API、三条必知约束 |
 | [`07-prd-v0.1.md`](07-prd-v0.1.md) | 参考 | 中 | 开发、业务方 | 业务方需求原文。是需求基线，不是交付承诺，正文不改 |
