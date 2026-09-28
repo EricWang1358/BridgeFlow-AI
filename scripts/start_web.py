@@ -376,14 +376,8 @@ def main() -> None:
             patch_path = str(fallback_model_patch(env["DSH_HOME"], *fallback))
     backend_port = env.get("BRIDGEFLOW_BACKEND_PORT", "8000")
 
-    # `--demo` points the service at the walkthrough's own dictionary.
-    #
-    # `data/business_demo/README.md` already said to use it, and nothing made that
-    # happen: the default dictionary declares `gl_account` for finance while the demo
-    # sheets carry `project`, so the import succeeded, the batch came back
-    # `needs_configuration`, and `review_context` refused. Step 1 of the walkthrough
-    # passed and step 2 was impossible. A prerequisite a person has to remember is a
-    # prerequisite that fails on stage.
+    # `--demo` selects the built-in XLSX sample notebook's dictionary. The separate
+    # CSV case in data/business_demo requires its own FIELD_DICTIONARY_PATH.
     if "--demo" in sys.argv:
         sys.argv.remove("--demo")
         # The sample notebook's case: the business side's v2 templates filled with the

@@ -127,14 +127,28 @@ def generate(destination: Path) -> None:
             "check_status": "attention" if stressed else "ok", "roles": list(role_specs),
             "must_not_claim": ["客户 Tier", "坏账认定", "已执行订单或价格变更", "审批即重写旧批次"]}
     (destination / "expected.json").write_text(json.dumps(expected, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (destination / "README.md").write_text("# 业务演示测试组\n\n由 `scripts/make_business_case.py` 生成，属于可见开发/演示数据，不是留出验收集。\n\n"
-        "分别导入 risk 或 balanced 下四份 CSV，月份选 2025-11，字典使用本目录 dictionary.yaml。\n\n"
-        "**字典不是可选项。** 只有本目录这份声明了 finance 的可连接列（project）与 business_review 契约；\n"
-        "默认字典两样都没有，用它导入会得到 needs_configuration，研判起不来（第 1 步过、第 2 步不可能）。\n"
-        "用 `python3 scripts/start_web.py --demo` 启动，或导出 FIELD_DICTIONARY_PATH=data/business_demo/dictionary.yaml\n"
-        "（路径相对仓库根解析，不是相对你所在的目录）。\n\n"
-        "expected.json 是人工复核答案，不得作为模型输入。修改数据后应重新生成并核对。\n"
-        "该组覆盖同批四部门责任；不宣称真实客户科目、库存齐套、授信或报价验收。\n", encoding="utf-8")
+    (destination / "README.md").write_text("""# 业务演示测试组
+
+由 `scripts/make_business_case.py` 生成，属于可见开发/演示数据，不是留出验收集。
+
+分别导入 risk 或 balanced 下四份 CSV，月份选 2025-11，字典使用本目录 dictionary.yaml。
+
+**本案例需要配套字典。** 本目录的 `dictionary.yaml` 声明了这些 CSV 的连接列、度量和研判契约。
+从仓库根目录启动，先载入运行环境，再指定本案例的字典：
+
+```bash
+source ../.venv/bin/activate
+source env.sh
+export FIELD_DICTIONARY_PATH=data/business_demo/dictionary.yaml
+python scripts/start_web.py --port 3082
+```
+
+此处不要加 `--demo`：该参数会改用 `data/mock_business/demo/dictionary.yaml`，对应的是内置示例笔记本的 XLSX 数据。
+字典路径相对仓库根解析。
+
+expected.json 是人工复核答案，不得作为模型输入。修改数据后应重新生成并核对。
+该组覆盖同批四部门责任；不宣称真实客户科目、库存齐套、授信或报价验收。
+""", encoding="utf-8")
 
 
 if __name__ == "__main__":
