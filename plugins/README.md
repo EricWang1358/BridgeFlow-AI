@@ -6,7 +6,7 @@ spreadsheet arithmetic and stores immutable batches; on the default path it is n
 
 ## Build and run
 
-From the repository root, follow [HANDOFF](../docs/architecture.md) for the pinned dependencies, shell
+From the repository root, follow [Setup](../docs/setup.md) for the pinned dependencies, shell
 configuration and `python scripts/start_web.py`. Build the Client module with
 `pnpm --dir plugins run build`. The launcher loads `dsh/enterprise.patch.yml` through the official npm
 Web CLI. There is no separate frontend server and no legacy console on by default.
@@ -36,14 +36,15 @@ structured output inside the configured step and time budget. Python then checks
 the batch's frozen contract. A failed child produces an incomplete report, not a synthetic finding,
 and proposed business actions stay proposals.
 
-The Business state page is an additive `conversation.view` after the native Trajectory tab; department
-files open from a header utility into a small overlay. There is no DSH fork and no replacement of the
-native details panel. Report and batch links use `#bridgeflow?...`; child links resolve through the
-native catalogue. See [implementation and governance](../docs/architecture.md).
+The Business state page is an additive `conversation.view` after the native Trajectory tab.
+The Sources pane lists department files; Studio displays source previews, tables, reports and
+business workspaces. Report and batch links use `#bridgeflow?...`; child links resolve through the
+native catalogue. See [Architecture](../docs/architecture.md).
 
-Evidence export defaults to `--keep 2` complete runs. Real session pruning is a manual
-`pnpm sessions:prune --keep 2 --dry-run` operation and never runs at startup.
-The [one-stop demo](../docs/user-guide.en.md) links to the retained evidence.
+Browser journeys may produce local evidence files; these are ignored and excluded from the public
+release. For manual session retention, stop the runtime and inspect
+`pnpm --dir plugins sessions:prune --keep 2 --dry-run` from the repository root before applying a
+cleanup. See the [user guide](../docs/user-guide.en.md) for the sample walkthrough.
 
 ## Runtime contracts
 
@@ -70,6 +71,6 @@ BRIDGEFLOW_TEST_FAULT=step-limit pnpm run smoke:business
 ```
 
 Browser tests default to an explicitly test-only offline adapter with isolated data. Export model
-credentials and set `BRIDGEFLOW_LIVE=1` to run the real model, which can incur charges. Results,
-measured numbers and remaining limits belong in [status](../docs/architecture.md) rather than here;
-the current demo guide is [docs/17](../docs/architecture.md).
+credentials and set `BRIDGEFLOW_LIVE=1` to run the real model, which can incur charges. Keep raw
+traces and measurements outside the public repository. See [Development](../docs/development.md)
+for verification and [Limitations](../docs/limitations.md) for the supported scope.

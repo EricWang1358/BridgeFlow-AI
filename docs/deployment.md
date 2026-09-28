@@ -4,22 +4,21 @@ The files in `deploy/` are templates for a Linux host using systemd and Caddy. A
 
 ## Private instance configuration
 
-Keep `env.sh`, signing keys, real dictionaries, access policy, seat capacity and runtime data out of source control. The repository supplies placeholder examples:
+Keep `env.sh`, signing keys, real dictionaries, access policy, seat capacity and runtime data out of source control. For a new installation, create the local policy from the placeholder example without replacing an existing policy:
 
 ```bash
-cp data/mappings/access-control.example.yaml data/mappings/access-control.yaml
-cp data/mappings/seats.example.yaml data/mappings/seats.yaml
+cp -n data/mappings/access-control.example.yaml data/mappings/access-control.yaml
 ```
 
 Replace every wiki-space placeholder in the access policy with an ID from your own tenant. Review role grants, including `console_access`, before use. Alternatively set `ACCESS_CONTROL_PATH` to an external configuration file. A missing or invalid access policy fails closed.
 
-For a seat fleet, use `scripts/provision_seat.sh --init N` on the configured host to generate absolute home paths and ports. The registry and person-to-seat assignments are private installation data. Back them up outside the repository. The deploy script preserves access policy and seat capacity across source updates, including the transition from earlier versions that tracked them.
+`seats.example.yaml` illustrates the format; its placeholder paths are not a working seat fleet. On a host with the services and private environment configured, set `BRIDGEFLOW_DOMAIN` to your own apex domain and run `bash scripts/provision_seat.sh --init N` with the desired capacity. This provisions services and generates absolute home paths and ports. The registry and person-to-seat assignments are private installation data. Back them up outside the repository. The deploy script preserves access policy and seat capacity across source updates, including the transition from earlier versions that tracked them.
 
 ## Portal and staff access
 
 Install `portal/` into the service's virtual environment. Configure your own Feishu application's OAuth callback and scopes. The portal requires `PORTAL_FEISHU_APP_ID`, `PORTAL_FEISHU_APP_SECRET`, `PORTAL_KEY_PATH`, `PORTAL_SESSION_SECRET` and `PORTAL_EXTERNAL_BASE_URL` in the launching environment. Generate the signing key outside the repository with `python -m portal_app.keygen /private/path/portal-key.pem`.
 
-Set `PORTAL_APPS_PATH` to your private application registry. `portal/apps.yaml` is a localhost development example. Configure the backend's `PORTAL_BASE_URL` and the portal's console-check route for your deployment. Use HTTPS, secure cookies and the Caddy forward-auth configuration for staff entry. See [portal documentation](../portal/README.md).
+Set `PORTAL_APPS_PATH` to your private application registry. `portal/apps.yaml` is a localhost development example. Configure the backend's `PORTAL_BASE_URL` and set `PORTAL_CONSOLE_CHECK_URL` to the backend's `/identity/console-access` endpoint. Leaving the latter unset disables the role-based console gate. For split backend/Web services, configure one persistent `BRIDGEFLOW_SERVICE_TOKEN` shared by those services, as described in `env.sh.example`. Use HTTPS, secure cookies and the Caddy forward-auth configuration for staff entry. See [portal documentation](../portal/README.md).
 
 ## Services and guest mode
 

@@ -25,7 +25,7 @@ mkdir -p ~/Hackathon2026
 cd ~/Hackathon2026
 git clone --branch v1.0.0 https://github.com/EricWang1358/BridgeFlow-AI.git
 cd BridgeFlow-AI
-python3 -m venv ../.venv
+python3.12 -m venv ../.venv
 source ../.venv/bin/activate
 python -m pip install -U pip
 python -m pip install -e 'backend[dsh,dev]'

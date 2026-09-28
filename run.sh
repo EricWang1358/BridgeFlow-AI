@@ -8,7 +8,8 @@
 # Prerequisites (one-time), see docs/setup.md:
 #   uv venv --python 3.13 ../.venv
 #   uv pip install -e "backend[dsh,dev]" --python ../.venv/bin/python
-#   npm install -g pnpm @deepseek-ai/dsh@0.1.2-rc.1
+#   bash scripts/install_dsh.sh
+#   corepack enable
 #   (cd plugins && pnpm install --frozen-lockfile && pnpm run build)
 #   cp env.sh.example env.sh   # then fill DEEPSEEK_API_KEY
 

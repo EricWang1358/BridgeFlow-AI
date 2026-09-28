@@ -6,18 +6,18 @@ This guide is for your first time with BridgeFlow. You need no technical backgro
 
 ## What it does
 
-Every month, production, procurement, finance and marketing each hand in their own spreadsheet. The same customer or project is spelled differently, columns are named differently, units differ, so someone reconciles them by hand every month. BridgeFlow combines the four into one table that adds up, lists every place they disagree, and has AI agents review it department by department. Every figure traces back to its original row, and nothing is written without you approving it on an approval card.
+Every month, production, procurement, finance and marketing each hand in their own spreadsheet. The same customer or project is spelled differently, columns are named differently, units differ, so someone reconciles them by hand every month. BridgeFlow combines the four into one table that adds up, lists every place they disagree, and has AI agents review it department by department. Table metrics can be traced to their sources, and agent-initiated business writes require your approval on an approval card.
 
 ## Five minutes to your first result
 
-Walk through the built-in sample: no files to prepare and no cost (no AI is called).
+Explore the built-in sample tables and sources without preparing files or calling AI. The final AI review step is optional, requires a configured model and incurs usage charges.
 
 1. In Sources on the left, choose Open sample notebook. Four department files are imported for you.
 2. Choose any file on the left; its original content appears on the right.
 3. In Studio on the right, choose This month’s tasks: it says what this month still needs and who handles it.
 4. Then choose Data → Cross-department master: the four files as one table. Open the open questions to see the one mismatch: production shortened a customer’s name.
 5. Choose any figure in the table; below it you see which file, row and column it came from.
-6. To see the AI review (it calls the model and costs money): go back to This month’s tasks and choose Start the review; about a minute later the report appears under Artifacts.
+6. To see the AI review (it calls the model and costs money): go back to This month’s tasks and choose Start the review; the report appears under Artifacts when it finishes; timing depends on the model and data.
 
 > Prefer to be walked through? Choose Help & guided tours at the top right → First task · combine & verify.
 
@@ -36,7 +36,7 @@ A month has five steps. Whenever you are unsure what comes next, open Business s
 
 1. Add files: Add sources on the left, pick the month, choose one file per department (xlsx or csv) and import. Import cleans and checks everything itself, with no AI. No template? On the Data page, choose Download this month’s template on each department’s row.
 2. Clean up: open This month’s tasks. Each open item says How to settle; Open to settle takes you to its page. Unsure? Ask the captain for a suggestion. If one department’s file is wrong, fix it and choose Replace one department’s file on its row of the Data page; that makes a new batch and leaves the old one as it was.
-3. Review: once the data is ready, Start the review lights up at the top right of This month’s tasks. The captain sends four department agents at once; you can watch them under Trajectory. About a minute later the report appears under Artifacts.
+3. Review: once the data is ready, Start the review lights up at the top right of This month’s tasks. The captain sends four department agents at once; you can watch them under Trajectory. The report appears under Artifacts when it finishes; timing depends on the model and data.
 4. Decide: open Conclusions and start with the flagged findings. Each shows its formula, threshold and source cells. Once you decide, tell the captain in the chat; it records your decision through an approval card.
 5. Close: back in This month’s tasks, check that every close step is done; read or download the monthly brief under Conclusions, and download the table with Download master xlsx under Data → Cross-department master.
 
@@ -46,7 +46,7 @@ The captain is the AI assistant in the chat. It looks things up, computes and su
 
 - Ask it directly: "What is still open this month, and how would you settle each item?", "What is the total production volume?", "Review this batch across the four departments", "Where is the quadrant chart?". When you ask where something is, it lists the clicks and opens the page on the right.
 - The captain knows which notebook you are in: "this batch" and "this month" mean the current notebook’s batch.
-- Anything it writes comes to you as an approval card. Check the values and where they came from; to refuse, write why in Rejection reason and choose Reject, and the captain hears your reason; to accept, choose Allow once. Nothing is written until you decide.
+- Business writes initiated by the captain come to you as approval cards. Check the values and where they came from; to refuse, write why in Rejection reason and choose Reject, and the captain hears your reason; to accept, choose Allow once. Nothing is written until you decide.
 - Its suggestions are marked as model advice. When unsure, ask for its basis; the basis should be something you can find in the table.
 
 ## Other workspaces
@@ -78,7 +78,7 @@ The captain is the AI assistant in the chat. It looks things up, computes and su
 
 **Start the review is greyed out?**
 
-The data is not ready yet. The reason is shown beside it; settle the open items in This month’s tasks and it lights up.
+Read the reason beside the button. If data is not ready, settle the open items in This month’s tasks. If guest AI is disabled, an administrator must enable it before you can run a review.
 
 **The report says Incomplete review?**
 
@@ -94,11 +94,11 @@ Company and project names are the data itself and stay as written, so you can ma
 
 **No Feishu import?**
 
-Feishu features need a Feishu sign-in and are unavailable in guest mode; everything else works without it.
+Feishu features require an administrator-configured integration and Feishu sign-in. Guest mode uses built-in samples, blocks file uploads and has AI disabled by default; availability depends on the deployment.
 
 **Could the AI make numbers up?**
 
-No. Figures are computed by the system from declared formulas, and every finding must cite its source cells; a finding without evidence is rejected.
+Table metrics are computed from declared formulas, and review findings must pass numeric and evidence checks. Model-written answers and recommendations can still be wrong; verify their sources and assumptions before acting.
 
 ## Terms
 
@@ -107,5 +107,5 @@ No. Figures are computed by the system from declared formulas, and every finding
 - **Open items**: Questions a person must decide, such as departments spelling something differently.
 - **Convention**: A common-practice rule used where the dictionary is silent; it counts as declared once the business confirms it.
 - **Evidence grade G1–G4**: G1 read straight from a file, G2 computed by a formula, G3 resting on an unconfirmed convention, G4 model advice.
-- **Approval card**: The card shown before any write; you choose Reject or Allow once.
+- **Approval card**: The card shown before an agent-initiated business write; you choose Reject or Allow once.
 - **Captain / department agents**: The captain is the AI in the chat; for a review it sends four department agents, each reading only its own department’s metrics.

@@ -37,7 +37,7 @@ source env.sh
 python scripts/start_web.py --demo --port 3082
 ```
 
-`--demo` selects the included sample dictionary. Use a business-approved dictionary for your own imports; see [mapping configuration](../data/mappings/README.md). Open the token-bearing URL printed by the launcher, rather than typing a bare URL on first access.
+`--demo` selects `data/mock_business/demo/dictionary.yaml`, overriding `FIELD_DICTIONARY_PATH` for a non-guest process. The CSV fixtures in `data/business_demo/` need their own dictionary and should be started without `--demo`; see their [README](../data/business_demo/README.md). Use a business-approved dictionary for your own imports; see [mapping configuration](../data/mappings/README.md). Open the token-bearing URL printed by the launcher, rather than typing a bare URL on first access.
 
 ## Sample-only guest workspace
 
