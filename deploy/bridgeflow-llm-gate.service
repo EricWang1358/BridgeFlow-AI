@@ -1,4 +1,4 @@
-# The public demo's model gate (docs/36 §6). Opt-in, like the guest instance: deploy.sh installs
+# The public demo's model gate (docs/deployment.md). Opt-in, like the guest instance: deploy.sh installs
 # this file but only restarts the unit once it is enabled:
 #
 #   sudo systemctl enable --now bridgeflow-llm-gate

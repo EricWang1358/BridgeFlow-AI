@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Validate-then-atomically-replace one instance-side config file (docs/22 §5b).
+# Validate-then-atomically-replace one instance-side config file (docs/deployment.md).
 #
 # The file content arrives base64-encoded on stdin, so YAML quoting never
 # crosses a shell: apostrophes in comments, CJK text and multi-line documents

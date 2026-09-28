@@ -1,4 +1,4 @@
-# Nightly reset of the guest instance (docs/22 §9e).
+# Nightly reset of the guest instance (docs/deployment.md).
 [Unit]
 Description=Nightly reset of the BridgeFlow guest instance
 

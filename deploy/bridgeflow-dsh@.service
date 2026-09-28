@@ -1,4 +1,4 @@
-# Seat unit template: one resident dsh web per authorized person (docs/35).
+# Seat unit template: one resident dsh web per authorized person (docs/deployment.md).
 # Install both this file and bridgeflow-dsh.slice as /etc/systemd/system/, then
 # provision with scripts/provision_seat.sh, which creates:
 #

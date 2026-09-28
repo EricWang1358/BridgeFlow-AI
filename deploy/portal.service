@@ -1,5 +1,5 @@
 # systemd unit for the login portal on the Lightsail instance (see
-# docs/22-lightsail-deploy.md §9). Install as
+# docs/deployment.md). Install as
 # /etc/systemd/system/bridgeflow-portal.service, then:
 #
 #   sudo systemctl daemon-reload && sudo systemctl enable --now bridgeflow-portal
@@ -16,7 +16,7 @@
 # installed uvicorn hands ANY request carrying Connection/Upgrade to its
 # WebSocket protocol — which then answers 403 because no ws route matches. That
 # turned Caddy's forward_auth subrequest for a console WebSocket into a denial
-# and took the seats' /api/remote.mux down with it (2026-09-21, docs/22).
+# and took the seats' /api/remote.mux down with it (2026-09-21, docs/deployment.md).
 # Caddy no longer forwards those headers, and this says the same thing from the
 # other side: this process answers HTTP, never an upgrade.
 

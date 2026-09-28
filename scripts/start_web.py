@@ -1,6 +1,6 @@
 """Start the native DSH Web and its private domain service with one host credential.
 
-Three modes (docs/35 §4):
+Three modes (docs/deployment.md):
 
   default          supervise backend (:8000) + dsh web in one process — the dev flow
   --backend-only   the shared backend alone (production bridgeflow.service)
@@ -40,7 +40,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TOKEN_LOG = re.compile(r"dsh web: \S+\?token=(\S+)")
 TOKEN_FILE_NAME = ".web-launch-token"
 
-# Guest mode (docs/22 §9e): an isolated instance for people without a Feishu account.
+# Guest mode (docs/deployment.md): an isolated instance for people without a Feishu account.
 # Everything it writes lives under GUEST_ROOT and is wiped on every start; the operator's
 # data, dictionary and credentials are never reachable from it.
 GUEST_ROOT = ROOT / "data" / "guest"
@@ -48,7 +48,7 @@ GUEST_BACKEND_PORT = 8001
 # Never handed to a guest instance: Feishu, the login portal and the demo model gate's own config.
 GUEST_ALWAYS_STRIPPED = ("FEISHU_", "PORTAL_", "LLM_GATE_")
 # Also never handed over, AI on or off: every way to reach a paid model directly. With
-# BRIDGEFLOW_GUEST_LLM=1 the guest gets the loopback model gate instead (docs/36 §6), whose
+# BRIDGEFLOW_GUEST_LLM=1 the guest gets the loopback model gate instead (docs/deployment.md), whose
 # client token is worthless anywhere else; the operator's key stays in the gate's process.
 GUEST_MODEL_STRIPPED = ("DEEPSEEK_", "ANTHROPIC_", "OPENAI_", "HERMES_", "HYPER_CHARM_", "OPENCODE_", "COMMANDCODE_",
                         "OPENCLAW_", "DSH_PROVIDER", "DSH_MODEL")
@@ -117,7 +117,7 @@ def guest_environment(env: dict[str, str]) -> Path:
     # Checked again after stripping: no operator secret may survive under any other name.
     secrets_held = {v for k, v in env.items()
                     if len(v) >= 8 and (k.endswith(("_API_KEY", "_SECRET")) or k == "LLM_GATE_UPSTREAM_KEY")}
-    # Where staff sign in: the demo sits on the apex, so it links to the portal (docs/36 §4).
+    # Where staff sign in: the demo sits on the apex, so it links to the portal (docs/deployment.md).
     staff_url = env.get("PORTAL_EXTERNAL_BASE_URL", "")
     shutil.rmtree(GUEST_ROOT, ignore_errors=True)
     outputs, home = GUEST_ROOT / "outputs", GUEST_ROOT / "dsh-home"
@@ -162,7 +162,7 @@ def guest_environment(env: dict[str, str]) -> Path:
              .replace("http://127.0.0.1:8000", f"http://127.0.0.1:{GUEST_BACKEND_PORT}"))
     if allow_llm:
         # One model, the one the gate lets through; the operator's own Web routes are not copied.
-        patch += ("\n# Guest mode with the model: through the loopback demo gate only (docs/36 §6).\n"
+        patch += ("\n# Guest mode with the model: through the loopback demo gate only (docs/deployment.md).\n"
                   "- id: agent-default-model\n  name: '@deepseek-ai/dsh-agent-default-model'\n"
                   f"  config:\n    provider: deepseek-official\n    model: {model!r}\n")
     else:
@@ -187,7 +187,7 @@ def guest_environment(env: dict[str, str]) -> Path:
 GUEST_PREPARED = "BRIDGEFLOW_GUEST_PATCH"
 
 
-# The guest's samples (docs/37): the English translation by default, so the public demo reads
+# The guest's samples (docs/deployment.md): the English translation by default, so the public demo reads
 # in English; BRIDGEFLOW_GUEST_SAMPLE_SET may name another set, e.g. the Chinese originals.
 GUEST_SAMPLE_SET = "data/demo_en/sample-set.yaml"
 # sample-set.yaml key → the setting it becomes. `dictionary` is copied, not pointed at.
@@ -227,7 +227,7 @@ def reexec_scrubbed_guest(argv: list[str], environ: dict[str, str], execve=os.ex
     process was started with. Stripping it from the children's copy is not enough: /proc/<pid>/
     environ shows a process's original environment block — deleting from os.environ does not
     change it — and every guest process runs as the same user as this one. execve swaps that
-    block, so nothing in the guest unit ever holds the key (docs/36 §6; preflight checks it).
+    block, so nothing in the guest unit ever holds the key (docs/deployment.md; preflight checks it).
     """
     env = dict(environ)
     env[GUEST_PREPARED] = str(guest_environment(env))
@@ -235,7 +235,7 @@ def reexec_scrubbed_guest(argv: list[str], environ: dict[str, str], execve=os.ex
 
 
 def read_gate_token(env: dict[str, str]) -> str:
-    """The demo gate's client token, which it mints on first start (docs/36 §6)."""
+    """The demo gate's client token, which it mints on first start (docs/deployment.md)."""
     path = Path(llm_gate_state_dir(env)) / GATE_TOKEN_FILE
     token = path.read_text(encoding="utf-8").strip() if path.is_file() else ""
     if not token:

@@ -3,7 +3,7 @@
 # field dictionary in data/mappings/.
 #
 # THIS FILE IS LOCAL DEVELOPMENT ONLY. The instance reads PORTAL_APPS_PATH
-# (~/Hackathon2026/portal-apps.yaml, never committed) — see docs/22 §9b. Both
+# (~/Hackathon2026/portal-apps.yaml, never committed) — see docs/deployment.md. Both
 # must route logins through the portal's /enter, which is what attaches dsh
 # web's launch token and ends the cross-site redirect chain.
 apps:

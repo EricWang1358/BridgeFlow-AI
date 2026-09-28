@@ -42,7 +42,7 @@ data/mappings/seats.yaml.*
 # Runtime homes and seat assignments are also instance-local.
 data/homes/
 data/guest/
-# Demo model gate state: its client token and per-day ledger (docs/36 §6).
+# Demo model gate state: its client token and per-day ledger (docs/deployment.md).
 data/gate/
 data/seats-assigned.json
 *.xlsx

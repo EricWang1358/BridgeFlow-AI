@@ -8,7 +8,7 @@ never see Feishu credentials — decoupling in both directions.
 /verify exists for the reverse proxy's forward_auth: it is how the main site
 asks "does this browser hold a signed-in session?" before serving anything —
 and, once PORTAL_CONSOLE_CHECK_URL is set, "may this person reach the agent
-console?" as well (issue #229, docs/34 §二 第 1 步).
+console?" as well (issue #229, docs/deployment.md).
 
 Run:  uvicorn portal_app.main:app --port 8100   (after sourcing env.sh)
 """
@@ -88,7 +88,7 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
     signer = Signer(cfg.key_path) if cfg.key_path else None
     origins = sorted({o for entry in registry.values() for o in entry["origins"]})
     # Where a login ends up is the single most misconfigured fact of a deploy
-    # (docs/22 §9b) — say it out loud at boot, not after a bug report.
+    # (docs/deployment.md) — say it out loud at boot, not after a bug report.
     logger.info("portal registry: %s",
                 {name: entry["redirect_uri"] for name, entry in registry.items()})
     # Seats share the portal's URL scheme: an https portal fronts https seats.
@@ -209,7 +209,7 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
                 # Whether /verify enforces the console grant, so preflight can see
                 # the gate's state without reading the deploy's environment.
                 "console_gate": bool(cfg.console_check_url),
-                # Seat fleet (docs/35): 0 = single-console behaviour; with a
+                # Seat fleet (docs/deployment.md): 0 = single-console behaviour; with a
                 # fleet, assigned counts the first-come-first-served claims.
                 "seats": len(seats) if seats is not None else 0,
                 "seats_assigned": len(seat_state().as_map()) if seats is not None else 0}
@@ -222,7 +222,7 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
 
     @app.get("/guest", response_model=None)
     async def guest() -> HTMLResponse:
-        """Into the guest console (docs/22 §9e), without signing in.
+        """Into the guest console (docs/deployment.md), without signing in.
 
         Nothing is issued: no session cookie, no app token. The guest instance is a
         separate backend and console with sample data only, so entering it grants
@@ -230,7 +230,7 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
         """
         if not cfg.guest_app_uri:
             return error(404, "Guest mode is off", "This deployment has no guest entry. Sign in with Feishu.")
-        # The public demo sends every browser without a dsh session here (docs/36 §4), so
+        # The public demo sends every browser without a dsh session here (docs/deployment.md), so
         # entering without a token would bounce straight back: a loop, not a degraded entry.
         # No token means the instance is (re)starting — say so and let the page retry.
         if not (cfg.guest_token_file and read_token_file(cfg.guest_token_file)):
@@ -295,7 +295,7 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
 
         Three questions, in order: is this browser signed in (401 if not);
         when PORTAL_SEATS_PATH is set, is the requested host this person's own
-        seat (403 if the subdomain belongs to someone else — docs/35); and —
+        seat (403 if the subdomain belongs to someone else — docs/deployment.md); and —
         while PORTAL_CONSOLE_CHECK_URL is set — may this person reach the
         console (403 if not granted, 503 if the answer could not be obtained).
 
@@ -305,7 +305,7 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
 
         503 withholds the whole site rather than the console alone, and that is
         the intended reading: everything behind forward_auth *is* the app shell
-        (docs/22 §7 routes one site to dsh web), so there is no read-only surface
+        (docs/deployment.md routes one site to dsh web), so there is no read-only surface
         being taken away here that would otherwise survive.
 
         Browsers (Accept: text/html) get a page; API callers get plain JSON.
@@ -384,7 +384,7 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
     async def enter(request: Request, app: Annotated[str, Query()] = "") -> HTMLResponse | RedirectResponse:
         """Hand a signed-in browser over to the app's own session.
 
-        Seat deployments (docs/35) are first come first served: the first
+        Seat deployments (docs/deployment.md) are first come first served: the first
         authorized person to enter claims a free seat and keeps it; later
         entries reuse the claim. Without a seat fleet the single-console
         behaviour is unchanged.
@@ -400,10 +400,10 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
         session = read_session(request)
         if session is None:
             # Absolute, not "/": Caddy may serve this route on the app's own
-            # domain (docs/22 §9b), where "/" is the app, not the portal.
+            # domain (docs/deployment.md), where "/" is the app, not the portal.
             return RedirectResponse(cfg.external_base_url.rstrip("/") + "/", status_code=302)
         if seats is not None:
-            # First come first served (docs/35): an authorized person claims a
+            # First come first served (docs/deployment.md): an authorized person claims a
             # free seat on first entry and keeps it — their sessions live in
             # that seat's home. Release is an ops act (provision_seat.sh
             # --release), never a request the portal serves.
@@ -439,7 +439,7 @@ def create_app(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None,
             return error(404, "Unknown application", f"Application {app!r} is not registered with the portal.")
         target = registry[name]["app_uri"]
         if not target:
-            return error(503, "Application entry not configured", f"Application {name!r} has no app_uri (docs/22 §9b).")
+            return error(503, "Application entry not configured", f"Application {name!r} has no app_uri (docs/deployment.md).")
         return handover(target, cfg.dsh_token_file,
                         cfg.dsh_token_file or "PORTAL_DSH_TOKEN_FILE unset")
 

@@ -33,7 +33,7 @@ echo "==> regenerating the 2025-11 case (deterministic)"
 "$PY" scripts/make_business_case.py
 
 # A throwaway home per run: rehearsal must not write synthetic mappings into your
-# own business memory or leave sessions next to your real work (docs/17 演示准备).
+# own business memory or leave sessions next to your real work (docs/deployment.md).
 # Portal and web share it — /enter reads this home's launch token for handover.
 export DSH_HOME="$(mktemp -d /tmp/bridgeflow-demo-dsh-XXXXXX)"
 export RESULT_STORE_PATH="$DSH_HOME/business-output"

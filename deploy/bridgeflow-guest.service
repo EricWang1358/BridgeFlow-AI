@@ -1,4 +1,4 @@
-# Guest instance (docs/22 §9e): an isolated, sample-only backend + console for people
+# Guest instance (docs/deployment.md): an isolated, sample-only backend + console for people
 # without a Feishu account (evaluators). Opt-in: deploy.sh installs this file but only
 # restarts the unit once it is enabled:
 #
@@ -10,7 +10,7 @@
 # key too, answering chat with a fixed note instead of calling a model. Nothing the real
 # service stores is reachable from here.
 #
-# Public demo (docs/36): with this unit enabled, deploy.sh renders the apex <domain> as this
+# Public demo (docs/deployment.md): with this unit enabled, deploy.sh renders the apex <domain> as this
 # console (no sign-in; browsers without a session go through /__enter for the launch token),
 # and staff use portal.<domain>. With BRIDGEFLOW_GUEST_LLM=1 the model is reached only through
 # bridgeflow-llm-gate on loopback; the launcher refuses to start if the gate never ran.

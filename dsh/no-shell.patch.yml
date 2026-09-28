@@ -9,9 +9,9 @@
 #
 # Sandboxing does not close this. SandboxMode governs filesystem *writes* only —
 # read-only denies writes and says nothing about reads, and network and process
-# visibility are outside its vocabulary (docs/13 §7.2). Permission presets do not
+# visibility are outside its vocabulary. Permission presets do not
 # help either: they bundle sandbox mode and approval policy, and decide nothing
-# about which tools exist (§7.1).
+# about which tools exist.
 #
 # Taking the tools away does close it. Measured on one adjudication:
 #
@@ -28,7 +28,7 @@
 # HOW
 # ---
 # A patch layer is applied after every bundle layer, so this needs no fork of dsh
-# and no rebuilt profile — see CLAUDE.md, "不 fork dsh".
+# and no rebuilt profile — see docs/architecture.md: the official runtime is not forked.
 #
 # A wrong package name is not silently ignored, but it is easy to scroll past: the
 # runtime prints `patch: name mismatch for "<id>" ... skipping` and carries on with

@@ -1,4 +1,4 @@
-# systemd unit for the Lightsail instance (see docs/22-lightsail-deploy.md).
+# systemd unit for the Lightsail instance (see docs/deployment.md).
 # Install as /etc/systemd/system/bridgeflow.service with the real domain
 # substituted for <domain> in --trusted-host, then:
 #
@@ -14,7 +14,7 @@
 # to 127.0.0.1:8000 and no seat port is public; Caddy is the only public
 # listener.
 #
-# --backend-only (docs/35): this unit is now the ONE shared backend; per-user
+# --backend-only (docs/deployment.md): this unit is now the ONE shared backend; per-user
 # consoles live in bridgeflow-dsh@<seat>.service instances. Dev machines keep
 # the default two-child mode of scripts/start_web.py. Split mode requires
 # BRIDGEFLOW_SERVICE_TOKEN in env.sh, the same value in every seat unit (the

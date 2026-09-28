@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the Caddyfile for the apex, the portal and every seat (docs/35).
+"""Render the Caddyfile for the apex, the portal and every seat (docs/deployment.md).
 
 Without a seat registry the output is exactly the legacy shape: the apex site
 IS the single console behind forward_auth. With seats the apex redirects to
@@ -57,7 +57,7 @@ def seat_site(host: str, port: int, portal_port: int) -> str:
 
 
 def demo_site(domain: str, port: int, portal_port: int) -> str:
-    """The public demo on the apex (docs/36 §3–4): the guest console, no sign-in in front.
+    """The public demo on the apex (docs/deployment.md): the guest console, no sign-in in front.
 
     No forward_auth — it is public on purpose and holds sample data only. dsh web still wants
     its per-boot launch token before it mints a session, and that cannot be switched off, so a
@@ -68,7 +68,7 @@ def demo_site(domain: str, port: int, portal_port: int) -> str:
 
     The token exchange (dsh answers `/?token=` with `303 Location: /`) is its own handle because
     of browsers that met this apex while it was a seat deployment's permanent redirect to the
-    portal (docs/37): they hold a cached 301 for `/` and never ask again, so the 303 took them
+    portal (docs/deployment.md): they hold a cached 301 for `/` and never ask again, so the 303 took them
     back to the sign-in page. `Clear-Site-Data: "cache"` on that one response purges the stale
     entry (never "cookies": the same response sets dsh's session), and the Location rewrite to
     `/?entered=1` lands on a URL no stale entry can hold, for browsers that ignore the header.
@@ -119,14 +119,14 @@ def main() -> int:
     parser.add_argument("--web-port", type=int, default=3080,
                         help="only used in the legacy shape")
     parser.add_argument("--guest-port", type=int, default=0,
-                        help="serve the guest instance as the public demo on the apex (docs/36); 0 = none")
+                        help="serve the guest instance as the public demo on the apex (docs/deployment.md); 0 = none")
     args = parser.parse_args()
     demo = demo_site(args.domain, args.guest_port, args.portal_port) if args.guest_port else ""
 
     template = (ROOT / "deploy/Caddyfile.template").read_text(encoding="utf-8")
     if demo:
         # The apex belongs to the demo; the single console moves to console.<domain>
-        # (its portal app entry's app_uri/origins must follow — docs/36 §9).
+        # (its portal app entry's app_uri/origins must follow — docs/deployment.md).
         template = template.replace("\n__DOMAIN__ {", "\nconsole.__DOMAIN__ {", 1)
     seats_path = Path(args.seats)
     if not seats_path.exists():
@@ -151,7 +151,7 @@ def main() -> int:
             f"{args.domain} {{",
             "    # Seat deployments: the apex is the front door, the portal; consoles",
             f"    # live at <seat>.console.{args.domain}. Temporary on purpose: browsers cache",
-            "    # a 301 forever, and the apex becomes the demo once the guest unit is on (docs/37).",
+            "    # a 301 forever, and the apex becomes the demo once the guest unit is on (docs/deployment.md).",
             "    redir https://portal." + args.domain + "{uri} 302",
             "}",
         ]

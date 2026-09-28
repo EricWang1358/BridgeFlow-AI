@@ -28,6 +28,10 @@ Guest mode is optional and isolated from employee files. AI is off unless explic
 
 Render Caddy configuration for your domain with `deploy/render_caddy.py`; pass `--seats` for your registry and `--guest-port` only when the guest service is ready. Check configuration before reloading services. `deploy/preflight.sh` checks the assembled installation.
 
+The supplied service limits and preflight checks assume a small host with 4 GB RAM, no more than seven seats, a shared 2 GB seat memory limit and at least 2 GB swap. Adjust and validate the units and checks together for a different capacity; the provisioning script's upper bound is not a capacity guarantee.
+
+Verify Feishu sign-in, role grants and seat routing manually after setup; the automated liveness checks do not complete an OAuth login.
+
 ## GitHub Actions
 
 The workflow runs tests on pull requests and main-branch pushes. Deployment is opt-in through the `DEPLOY_ENABLED` repository variable. An enabled installation also needs `PUBLIC_DOMAIN` and the `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` secrets. `FIELD_DICTIONARY_YAML` is an optional environment secret for dictionary synchronization.

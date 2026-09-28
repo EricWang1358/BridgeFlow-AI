@@ -3,7 +3,7 @@
 #
 # test -> deploy: merges to main are tested offline (conftest isolates the
 # provider), then deployed to the Lightsail instance over SSH.
-# See docs/22-lightsail-deploy.md for the instance-side runbook.
+# See docs/deployment.md for the instance-side runbook.
 #
 # Required GitHub secrets: SSH_HOST, SSH_USER, SSH_PRIVATE_KEY.
 # Optional production-environment secret: FIELD_DICTIONARY_YAML (see "Sync
@@ -11,7 +11,7 @@
 # only redacted examples are tracked.
 # Required GitHub variable: PUBLIC_DOMAIN.
 # DEEPSEEK_API_KEY never enters GitHub — it lives only in env.sh on the
-# instance (see CLAUDE.md: bootstrap variables come from the launching shell).
+# instance (see docs/setup.md: configuration comes from the launching shell).
 
 name: deploy
 
@@ -164,7 +164,7 @@ jobs:
       # dsh web's session fence (Feishu auth) answers anonymous / with 401 —
       # that proves both the process and the fence are up. Only 000 (no
       # listener) and 5xx (Caddy can't reach upstream) mean bad deploy.
-      # Sign-in itself (Feishu OAuth) is exercised manually per docs/22 §13 —
+      # Sign-in itself (Feishu OAuth) requires manual verification after setup —
       # automating it would put Feishu credentials into GitHub.
       - name: Public liveness check
         run: |

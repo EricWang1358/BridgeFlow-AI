@@ -2,7 +2,7 @@
 #
 # `sdk-minimal` does not load the approval plugin at all, which is why bash ran
 # unchallenged before `no-shell.patch.yml` removed it: there was no gate, not a gate
-# set to allow. `docs/13` §7.3 records what the seam actually promises —
+# set to allow. The approval integration enforces these outcomes —
 #
 #   - outcomes are closed: allowed-once / rejected / cancelled / unavailable
 #   - a missing, non-owning, throwing or non-conforming answerer resolves to

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Provision the seat fleet: a FIXED capacity of generic consoles, claimed
-# first-come-first-served by authorized people (docs/35). No person is named
+# first-come-first-served by authorized people (docs/deployment.md). No person is named
 # anywhere in a config file; who may claim at all is the #229 console_access
 # gate, and who holds which seat lives only in the runtime claims file.
 #
@@ -77,7 +77,7 @@ init_fleet() {
   need_domain
   local count="${1:?usage: provision_seat.sh --init <N>}"
   [[ "$count" =~ ^[1-9][0-9]*$ ]] || die "N must be a positive integer (got: $count)"
-  [[ "$count" -le 16 ]] || die "refusing >16 seats on one box — revisit the capacity plan (docs/35 §3)"
+  [[ "$count" -le 16 ]] || die "refusing >16 seats on one box — revisit the capacity plan (docs/deployment.md)"
   if [[ -f "$CLAIMS" ]] && [[ "$("$VENV_PY" -c "import json;print(len(json.load(open('$CLAIMS'))))")" -gt 0 ]]; then
     local current
     current="$("$VENV_PY" -c "import yaml;print(len(yaml.safe_load(open('$SEATS')).get('seats') or []))" 2>/dev/null || echo 0)"

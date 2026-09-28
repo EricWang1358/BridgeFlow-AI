@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Read-only checks on the instance before enabling CI deploys (docs/22 §13). Changes nothing.
+# Read-only checks on the instance before enabling CI deploys (docs/deployment.md). Changes nothing.
 #
 #   bash deploy/preflight.sh <domain>
 #
@@ -39,7 +39,7 @@ check "portal answers on loopback" curl -fsS --max-time 5 http://127.0.0.1:8100/
 check "portal env is complete (env.sh)" bash -c 'source env.sh && [[ -n "${PORTAL_FEISHU_APP_ID:-}" && -n "${PORTAL_FEISHU_APP_SECRET:-}" && -n "${PORTAL_SESSION_SECRET:-}" && -f "${PORTAL_KEY_PATH:-/nonexistent}" && "${PORTAL_BASE_URL:-}" = "https://portal.'"${DOMAIN}"'" && "${PORTAL_EXTERNAL_BASE_URL:-}" = "$PORTAL_BASE_URL" ]]'
 # The instance registry is a hand-written file deploy.sh never touches, and the
 # one thing it must say is "send logins through /enter with an app_uri" — without
-# that, a login lands on the site with no dsh launch token (docs/22 §9b).
+# that, a login lands on the site with no dsh launch token (docs/deployment.md).
 # shellcheck disable=SC1091
 check "portal registry sends logins through /enter" bash -c 'source env.sh && grep -qE "redirect_uri: *\"?[^\"]*/enter/?\"? *$" "${PORTAL_APPS_PATH:-portal/apps.yaml}"'
 # shellcheck disable=SC1091
@@ -64,7 +64,7 @@ fi
 if bash -c 'source env.sh && [[ -z "${PORTAL_SEATS_PATH:-}" ]]'; then
   check "dsh launch token was captured" bash -c 'source env.sh && test -s "${PORTAL_DSH_TOKEN_FILE:-$DSH_HOME/.web-launch-token}"'
 else
-  # --- seat isolation (docs/35); these hold only when the registry is on ---
+  # --- seat isolation (docs/deployment.md); these hold only when the registry is on ---
   VENV_PY="$HOME/Hackathon2026/.venv/bin/python"
   SEATS_PATH="data/mappings/seats.yaml"
   seat_count=$("$VENV_PY" -c "import yaml;print(len((yaml.safe_load(open('$SEATS_PATH')) or {}).get('seats') or []))" 2>/dev/null || echo 999)
@@ -94,7 +94,7 @@ PY
   claim_count=$("$VENV_PY" -c 'import json;print(len(json.load(open("data/seats-assigned.json"))))' 2>/dev/null || echo none)
   check "portal reports the registry's seat count" test "$(curl -fsS --max-time 5 http://127.0.0.1:8100/health | "$VENV_PY" -c 'import json,sys;print(json.load(sys.stdin)["seats"])' 2>/dev/null || echo none)" = "$seat_count"
   check "portal reports the claims count" test "$(curl -fsS --max-time 5 http://127.0.0.1:8100/health | "$VENV_PY" -c 'import json,sys;print(json.load(sys.stdin)["seats_assigned"])' 2>/dev/null || echo missing)" = "$claim_count"
-  # The capacity plan (docs/35 §3): 7 seats on the 4GB instance. Per-seat
+  # The capacity plan (docs/deployment.md): 7 seats on the 4GB instance. Per-seat
   # MemoryMax is a ceiling, not a reservation — ceilings may sum past the slice.
   check "seat count is within the capacity plan (<=7)" test "$seat_count" -le 7
   check "seat slice memory fence is in force (MemoryMax=2G)" bash -c 'test "$(systemctl show bridgeflow-dsh.slice -p MemoryMax --value)" = 2147483648'
@@ -129,12 +129,12 @@ PY
       "https://$seat.console.$DOMAIN/api/remote.mux")" = 401 || exit 1; done'
   # mkswap keeps one header page, so a 2G file reports 2097148 kB: demand
   # 2G minus a megabyte, not a byte-exact bar that can never be met.
-  check "swap is at least 2G (idle seat pages page out, docs/35 §3)" bash -c 'test "$(awk "/SwapTotal/{print \$2}" /proc/meminfo)" -ge 2096128'
+  check "swap is at least 2G (idle seat pages page out, docs/deployment.md)" bash -c 'test "$(awk "/SwapTotal/{print \$2}" /proc/meminfo)" -ge 2096128'
 fi
 check "portal is configured (feishu credentials + signing key loaded)" bash -c 'curl -fsS --max-time 5 http://127.0.0.1:8100/health | grep -q "\"feishu\": *true" && curl -fsS --max-time 5 http://127.0.0.1:8100/health | grep -q "\"signer\": *true"'
 # The console gate refuses whoever holds no console_access grant, so enabling it
 # before any role declares that operation locks every employee out of the whole
-# site (docs/22 §9d). Asked through the app's own loader, not a grep, so the
+# site (docs/deployment.md). Asked through the app's own loader, not a grep, so the
 # answer cannot drift from what /verify will decide — and so an unparseable ACL
 # fails here too. Silent when the gate is off: that is the supported default.
 # shellcheck disable=SC1091
@@ -153,10 +153,10 @@ sys.exit(0 if any(CONSOLE_OPERATION in (r.get(\"operations\") or []) for r in ro
 # so the host part may carry a %scope). A listener anywhere else that is not
 # ssh/caddy is exposed: [^:]* keeps the match honest to the colon-delimited port.
 check "nothing but ssh and caddy listens publicly" bash -c '! ss -tlnH | awk "{print \$4}" | grep -vE "^(127\.[^:]*|\[::1\]):" | grep -vE ":(22|80|443)$"'
-# The anonymous-answer expectation differs by shape (docs/35 §3): a seat
+# The anonymous-answer expectation differs by shape (docs/deployment.md): a seat
 # deployment redirects the apex to the portal (3xx), the legacy shape answers
 # dsh's own 401 through forward_auth. With the guest instance enabled the apex is
-# the public demo instead (docs/36), checked in the guest block below.
+# the public demo instead (docs/deployment.md), checked in the guest block below.
 if systemctl is-enabled --quiet bridgeflow-guest 2>/dev/null; then
   :
 elif bash -c 'source env.sh && [[ -n "${PORTAL_SEATS_PATH:-}" ]]'; then
@@ -167,7 +167,7 @@ fi
 check "portal health answers on https://portal.$DOMAIN" curl -fsS --max-time 10 "https://portal.$DOMAIN/health"
 # Guest is opt-in, but once either its service or portal entry is configured, a green
 # deploy must prove the whole evaluator path. Checking only service liveness missed the
-# case where Caddy/TLS or the portal link was still absent (docs/22 §9e).
+# case where Caddy/TLS or the portal link was still absent (docs/deployment.md).
 if systemctl is-enabled --quiet bridgeflow-guest 2>/dev/null || bash -c 'source env.sh && [[ -n "${PORTAL_GUEST_APP_URI:-}" ]]'; then
   check "guest unit is enabled and active" bash -c 'systemctl is-enabled --quiet bridgeflow-guest && systemctl is-active --quiet bridgeflow-guest'
   check "guest nightly reset is enabled and active" bash -c 'systemctl is-enabled --quiet bridgeflow-guest-reset.timer && systemctl is-active --quiet bridgeflow-guest-reset.timer'
@@ -177,13 +177,13 @@ if systemctl is-enabled --quiet bridgeflow-guest 2>/dev/null || bash -c 'source 
     source env.sh
     [[ "${PORTAL_GUEST_APP_URI:-}" = "https://$DOMAIN/" && -s "${PORTAL_GUEST_TOKEN_FILE:-/nonexistent}" ]]'
   check "portal hands guests to the current console" bash -c 'curl -fsS --max-time 5 http://127.0.0.1:8100/guest | grep -Fq "https://$DOMAIN/?token="'
-  # The public demo on the apex (docs/36 §4): a page load without a session is sent to
+  # The public demo on the apex (docs/deployment.md): a page load without a session is sent to
   # /__enter, which carries the launch token in; API calls without one stay a plain 401.
   check "apex demo sends a new browser to /__enter" bash -c '
     headers=$(curl -s -o /dev/null -D - --max-time 10 -H "Accept: text/html" "https://$DOMAIN/")
     grep -q "^HTTP/[0-9.]* 302" <<<"$headers" && grep -qi "^location: /__enter" <<<"$headers"'
   check "apex demo /__enter hands over this boot's token" bash -c 'curl -fsS --max-time 10 "https://$DOMAIN/__enter" | grep -Fq "https://$DOMAIN/?token="'
-  # Browsers that met the seat-era apex still hold its cached 301 for / (docs/37): dsh's 303
+  # Browsers that met the seat-era apex still hold its cached 301 for / (docs/deployment.md): dsh's 303
   # after the token exchange must purge it and land somewhere no stale entry can hold.
   check "apex demo token exchange purges stale redirects" bash -c '
     url=$(curl -fsS --max-time 10 "https://$DOMAIN/__enter" | grep -o "https://$DOMAIN/?token=[^\"]*" | head -1)
@@ -192,7 +192,7 @@ if systemctl is-enabled --quiet bridgeflow-guest 2>/dev/null || bash -c 'source 
     grep -q "^HTTP/[0-9.]* 303" <<<"$headers" && grep -qi "^location: /?entered=1" <<<"$headers" \
       && grep -qi "^clear-site-data: \"cache\"" <<<"$headers"'
   check "apex demo keeps anonymous API calls at 401" bash -c 'test "$(curl -s -o /dev/null -w %{http_code} --max-time 10 -H "Accept: application/json" "https://$DOMAIN/")" = 401'
-  # Guest AI (docs/36 §6): only through the loopback gate, and no guest process holds the key.
+  # Guest AI (docs/deployment.md): only through the loopback gate, and no guest process holds the key.
   if bash -c 'source env.sh && [[ "${BRIDGEFLOW_GUEST_LLM:-}" = 1 ]]'; then
     check "model gate is enabled and active" bash -c 'systemctl is-enabled --quiet bridgeflow-llm-gate && systemctl is-active --quiet bridgeflow-llm-gate'
     check "model gate answers on loopback only" bash -c 'curl -fsS --max-time 5 http://127.0.0.1:8300/status >/dev/null && ss -tlnH | grep -q "127.0.0.1:8300 " && ! ss -tlnH | grep -E ":8300 " | grep -vq "127.0.0.1:8300 "'

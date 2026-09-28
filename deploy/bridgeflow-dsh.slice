@@ -1,4 +1,4 @@
-# Resource fence for all seat consoles (docs/35 §3): seats may together use at
+# Resource fence for all seat consoles (docs/deployment.md): seats may together use at
 # most 2.0G so the shared backend, the portal and the OS floor keep their budget
 # on the 4GB instance. One runaway seat dies alone at its own MemoryMax first.
 # Install as /etc/systemd/system/bridgeflow-dsh.slice, then daemon-reload.

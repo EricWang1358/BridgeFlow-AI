@@ -7,7 +7,7 @@
 #
 # Never `git clean` here: env.sh, data/mappings/field-dictionary.yaml,
 # data/uploads/, data/outputs/ and plugins/dist are gitignored instance
-# state that must survive every deploy (see docs/22-lightsail-deploy.md).
+# state that must survive every deploy (see docs/deployment.md).
 set -euo pipefail
 
 export PATH="$HOME/.local/bin:$PATH"  # uv
@@ -64,9 +64,9 @@ if [ -n "$units_domain" ]; then
     printf '%s\n' "$rendered" | sudo tee /etc/systemd/system/bridgeflow.service >/dev/null
     units_changed=1
   fi
-  # The guest instance (docs/22 §9e) is opt-in: its units are always installed, but only an
+  # The guest instance (docs/deployment.md) is opt-in: its units are always installed, but only an
   # operator's `systemctl enable` turns it on, and only then does the apex become the public
-  # demo (docs/36) — until then the apex keeps redirecting to the portal.
+  # demo (docs/deployment.md) — until then the apex keeps redirecting to the portal.
   guest_rendered=$(sed "s#<domain>#$units_domain#g" deploy/bridgeflow-guest.service)
   if [ "$guest_rendered" != "$(sudo cat /etc/systemd/system/bridgeflow-guest.service 2>/dev/null || true)" ]; then
     printf '%s\n' "$guest_rendered" | sudo tee /etc/systemd/system/bridgeflow-guest.service >/dev/null
@@ -87,7 +87,7 @@ if [ -n "$units_domain" ]; then
   # provision_seat.sh ever rendered it, so a proxy change merged later sat in
   # git while the instance kept the old file — which is exactly how the seats
   # ran for a day with a forward_auth that ate every WebSocket upgrade
-  # (2026-09-21, docs/22). Same shape as above: render, diff, reload only on a
+  # (2026-09-21, docs/deployment.md). Same shape as above: render, diff, reload only on a
   # change. Skipped when caddy is absent (a box bootstrap has not reached yet).
   if command -v caddy >/dev/null; then
     guest_args=()
@@ -107,7 +107,7 @@ fi
 sudo systemctl restart bridgeflow bridgeflow-portal
 # The guest instance restarts with each deploy so it serves this deploy's code; restarting
 # is also its reset (data/guest is wiped), which is fine for sample-only data.
-# The demo model gate first: the guest launcher reads its client token (docs/36 §6).
+# The demo model gate first: the guest launcher reads its client token (docs/deployment.md).
 if systemctl is-enabled --quiet bridgeflow-llm-gate 2>/dev/null; then
   sudo systemctl restart bridgeflow-llm-gate
 fi
@@ -116,7 +116,7 @@ if systemctl is-enabled --quiet bridgeflow-guest 2>/dev/null; then
 fi
 # Seat consoles load the host-side plugin and the client bundle at their own
 # boot; without this they keep serving the previous deploy's code until an
-# unlucky per-unit restart (docs/35 §8: backend and portal first, then seats).
+# unlucky per-unit restart (docs/deployment.md: backend and portal first, then seats).
 SEAT_UNITS=()
 while IFS= read -r unit; do
   [ -n "$unit" ] && SEAT_UNITS+=("$unit")
@@ -153,7 +153,7 @@ for _ in $(seq 1 45); do
   # Bounded curl: without --max-time a stalled request could outlast the
   # whole 30×2s retry budget.
   #
-  # Web liveness depends on the deployed shape (docs/35): with --backend-only
+  # Web liveness depends on the deployed shape (docs/deployment.md): with --backend-only
   # in bridgeflow.service the consoles live in bridgeflow-dsh@* units and 3080
   # is legitimately dead. "is-active" only means the wrapper process started —
   # a seat is really serving once its launch token landed AND its loopback port
@@ -165,7 +165,7 @@ for _ in $(seq 1 45); do
   web_ok=""
   if grep -q -- "--backend-only" deploy/bridgeflow.service; then
     if [ "${#SEAT_UNITS[@]}" -eq 0 ]; then
-      echo "seat mode deployed but no seat provisioned yet — web liveness skipped (bootstrap + provision_seat, docs/35 §8)" >&2
+      echo "seat mode deployed but no seat provisioned yet — web liveness skipped (bootstrap + provision_seat, docs/deployment.md)" >&2
       web_ok=1
     else
       web_ok=1
