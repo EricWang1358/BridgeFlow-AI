@@ -18,6 +18,10 @@ OPERATIONS = frozenset({"confirm_mapping", "confirm_column_match", "quarantine_d
                        "quarantine_apply", "convention_decide", "risk_disposition", "workflow_record", "workflow_approve_submit", "workflow_accept_scope",
                        "workflow_handoff", "feishu_import", "feishu_upload_report", "discovery_propose", "discovery_register", "discovery_graph_save", "discovery_score_save", "discovery_meeting_save", "discovery_decision_propose", "discovery_decision_vote",
                        "discovery_decision_resolve", "discovery_decision_finalize", "dictionary_draft", "dictionary_publish"})
+#: The approval gate asks with the native tool name. Where that differs from the operation the
+#: access grants and the route's consume step use, this is the one place the two are joined.
+TOOL_OPERATIONS = {"risk_disposition_record": "risk_disposition",
+                   "dictionary_import": "dictionary_draft", "dictionary_decide": "dictionary_draft"}
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS employee_permits (
  token TEXT PRIMARY KEY, subject TEXT NOT NULL, operation TEXT NOT NULL,
@@ -206,6 +210,7 @@ def issue(user: UserIdentity, operation: str, raw_body: str) -> str:
             raise TypeError("Object required")
     except (ValueError, TypeError) as exc:
         raise HTTPException(422, "Invalid operation body") from exc
+    operation = TOOL_OPERATIONS.get(operation, operation)
     authorize(user, operation, body)
     token = secrets.token_hex(32)
     path = _root() / "approval-receipts.sqlite3"
