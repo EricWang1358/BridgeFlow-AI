@@ -5,13 +5,15 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from bridgeflow import business, column_matches
 from bridgeflow.api.batches import _visible, load_batch
 from bridgeflow.api.reviews import saved_review
-from bridgeflow.conclusions import charts, conventions, report
+from bridgeflow.conclusions import aggregate, charts, conventions, report
 from bridgeflow.conclusions import comparison as comparison_module
 from bridgeflow.conclusions.brief import BriefBuilder, ConclusionBrief, declaration
+from bridgeflow.conclusions.grain import Calendar, Grain, Period, containing, parse
 from bridgeflow.identity import UserIdentity, require_user
 
 router = APIRouter(tags=["conclusions"])
@@ -190,3 +192,112 @@ async def monthly_report(batch_id: str, user: Annotated[UserIdentity | None, Dep
 
     return {"filename": filename, "base64": base64.b64encode(payload).decode(),
             "bound": brief.bound, "stale": False}
+
+
+# --- quarters and years (#301) -------------------------------------------------------------
+
+#: How many periods one side-by-side view may hold.
+MAX_COLUMNS = 12
+
+
+class _Anchor:
+    """One batch's view of its series: its calendar, its declared metrics, and its months.
+
+    The selected batch fixes everything a period view depends on, exactly as a month
+    comparison does: which data series the earlier months come from (sample history never
+    mixes with uploads), which declaration governs, and the month the view is "as of".
+    """
+
+    def __init__(self, batch_id: str, user: UserIdentity | None):
+        self.batch_id = batch_id
+        self.batch = _visible(load_batch(batch_id), user)
+        self.declaration = self.batch.dictionary_snapshot or {}
+        defined = (self.declaration.get("business_review") or {}).get("metrics") or {}
+        if not defined:
+            raise HTTPException(409, "No business review contract is declared for this batch; periods compare declared metrics only")
+        self.defined = list(defined)
+        self.calendar = Calendar.declared(self.declaration)
+        visible = _visibility(user)
+
+        def lookup(month: str):
+            if month == self.batch.period:
+                return batch_id, self.batch
+            entry = comparison_module.periods.latest_for(month, lambda item: visible(item) and
+                                                         comparison_module.periods.same_series(item, self.batch.demo_case, month))
+            return (entry["batch_id"], load_batch(entry["batch_id"])) if entry else None
+
+        self.months = aggregate.Months(lookup)
+
+    def metrics(self, wanted: str | list[str] | None) -> list[str]:
+        """The requested metrics, or the brief's key metrics; an unknown name is refused, not dropped."""
+        names = [n.strip() for n in (wanted.split(",") if isinstance(wanted, str) else wanted or []) if n.strip()]
+        if not names:
+            try:
+                return declaration(self.declaration).key_metrics
+            except HTTPException:
+                return self.defined
+        unknown = [n for n in names if n not in self.defined]
+        if unknown:
+            raise HTTPException(422, f"Unknown metric {', '.join(unknown)}; declared: {', '.join(self.defined)}. "
+                                     "Call again with one of these; do not invent names.")
+        return list(dict.fromkeys(names))
+
+    def current(self, unit: Grain) -> Period:
+        return containing(self.batch.period, unit, self.calendar)
+
+
+Base = Literal["prior", "last_year"]
+
+
+@router.get("/conclusions/batches/{batch_id}/period-comparison", response_model=aggregate.PeriodComparison)
+async def grain_comparison(batch_id: str, user: Annotated[UserIdentity | None, Depends(require_user)],
+                           unit: Annotated[Grain, Query(alias="grain")] = "quarter",
+                           base: Base = "prior", metrics: str | None = None) -> aggregate.PeriodComparison:
+    """The month, quarter or year this batch falls in, against 环比 or 同比, as of this batch's month."""
+    anchor = _Anchor(batch_id, user)
+    return aggregate.compare(anchor.current(unit), as_of=anchor.batch.period, base_kind=base,
+                             metrics=anchor.metrics(metrics), declaration=anchor.declaration, months=anchor.months)
+
+
+@router.get("/conclusions/batches/{batch_id}/periods", response_model=aggregate.PeriodSeries)
+async def period_series(batch_id: str, user: Annotated[UserIdentity | None, Depends(require_user)],
+                        unit: Annotated[Grain, Query(alias="grain")] = "quarter",
+                        periods: str | None = None, count: Annotated[int, Query(ge=2, le=MAX_COLUMNS)] = 4,
+                        metrics: str | None = None) -> aggregate.PeriodSeries:
+    """Periods side by side: the named ones (`periods=2024-Q1,2024-Q3`), or the last `count`.
+
+    Nothing after this batch's month is shown: the view is as of the selected batch, so
+    opening an older batch shows what was known then.
+    """
+    anchor = _Anchor(batch_id, user)
+    current = anchor.current(unit)
+    if periods:
+        chosen = {parse(key.strip(), anchor.calendar) for key in periods.split(",") if key.strip()}
+        if any(p.grain != unit for p in chosen):
+            raise HTTPException(422, f"Every period must be a {unit}")
+        if any(p.first > current.first for p in chosen):
+            raise HTTPException(422, f"Periods after {current.key} are not known as of this batch")
+        if not 2 <= len(chosen) <= MAX_COLUMNS:
+            raise HTTPException(422, f"Choose 2–{MAX_COLUMNS} periods")
+        columns = sorted(chosen, key=lambda p: p.first)
+    else:
+        columns = [current.shift(offset) for offset in range(-(count - 1), 1)]
+    return aggregate.series(columns, as_of=anchor.batch.period, metrics=anchor.metrics(metrics),
+                            declaration=anchor.declaration, months=anchor.months)
+
+
+class ComparePeriodsRequest(BaseModel):
+    batch_id: str
+    grain: Grain = "quarter"
+    base: Base = "prior"
+    metrics: list[str] = Field(default_factory=list, max_length=24)
+
+
+@router.post("/tools/compare-periods", response_model=aggregate.PeriodComparison)
+async def compare_periods_tool(request: ComparePeriodsRequest,
+                               user: Annotated[UserIdentity | None, Depends(require_user)]) -> aggregate.PeriodComparison:
+    """The agent's read of the same comparison the page shows; it computes nothing itself."""
+    anchor = _Anchor(request.batch_id, user)
+    return aggregate.compare(anchor.current(request.grain), as_of=anchor.batch.period, base_kind=request.base,
+                             metrics=anchor.metrics(request.metrics), declaration=anchor.declaration,
+                             months=anchor.months)

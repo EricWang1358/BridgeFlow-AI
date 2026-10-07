@@ -320,6 +320,34 @@ business_review:
         department: marketing
         measures:
         - collection_gap
+  period_aggregation:
+    measures:
+      production:
+        production_volume: flow
+        shipped_volume: flow
+        signed_volume: flow
+      procurement:
+        material_volume: flow
+        material_cost: flow
+        unit_margin: rate
+        unit_material_cost: rate
+      finance:
+        revenue: flow
+        actual_cost: flow
+        interest_cost: flow
+        net_profit: flow
+        closing_balance: period_end
+        period_debit: flow
+      marketing:
+        cumulative_output: period_end
+        cumulative_settlement: period_end
+        cumulative_receipts: period_end
+        advance: period_end
+        collection_gap: period_end
+        contract_price: rate
+    month_only:
+      receivable_months: Receivable months divide the closing balance by one month's billing; a quarter or year
+        needs its own convention, not a rescaled one
   roles:
     production:
       responsibility: Check dispatched against signed-off volume and production leftovers; propose truck checks

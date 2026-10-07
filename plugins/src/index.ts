@@ -17,6 +17,7 @@ import { columnCandidates } from './tools/column-candidates.ts'
 import { confirmColumnMatch } from './tools/confirm-column-match.ts'
 import { feishuImport, feishuUploadReport } from './tools/feishu.ts'
 import { integrationSummary } from './tools/integration.ts'
+import { comparePeriods } from './tools/compare-periods.ts'
 import { checklistTool, inboxTool } from './tools/checklist.ts'
 import { conventionDecide, conventionList, conventionPreview } from './tools/conventions.ts'
 import { appGuide } from './tools/app-guide.ts'
@@ -103,6 +104,7 @@ export function apply(ctx: Context, config: Config): void {
   catalogue.register(ctx, riskDispositions(backend))
   catalogue.register(ctx, memorySearch(backend))
   catalogue.register(ctx, integrationSummary(backend))
+  catalogue.register(ctx, comparePeriods(backend))
   catalogue.register(ctx, workflowCatalogue(backend))
   catalogue.register(ctx, workflowDraft(backend))
   catalogue.register(ctx, workflowBoard(backend))

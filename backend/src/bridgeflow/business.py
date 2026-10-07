@@ -53,8 +53,14 @@ def number(value: Any) -> Decimal:
 
 def expression(node: dict, batch: BatchSnapshot | None, depth: int = 0, *,
                inputs: Mapping[str, Value] | None = None,
-               metric: Callable[[str, int], Value] | None = None) -> Value:
-    """A bounded arithmetic tree; no eval, inferred fields, joins or currencies."""
+               metric: Callable[[str, int], Value] | None = None,
+               leaf: Callable[[dict], Value] | None = None) -> Value:
+    """A bounded arithmetic tree; no eval, inferred fields, joins or currencies.
+
+    `leaf`, when given, evaluates every table leaf (`sum`, `sum_product`) in place of the
+    single batch: a quarter adds each leaf up across its months and only then divides, so a
+    ratio is recomputed from its parts rather than averaged (#301).
+    """
     if depth > 8 or not isinstance(node, dict):
         refuse("Invalid or excessively nested business formula")
     op = node.get("op")
@@ -70,6 +76,8 @@ def expression(node: dict, batch: BatchSnapshot | None, depth: int = 0, *,
     if op == "constant":
         return Value(number(node["value"]), [], 0)
     if op in ("sum", "sum_product"):
+        if leaf is not None:
+            return leaf(node)
         if batch is None:
             refuse("A table expression requires an immutable table batch")
         department = node.get("department")
@@ -104,7 +112,7 @@ def expression(node: dict, batch: BatchSnapshot | None, depth: int = 0, *,
     operands = node.get("args", [])
     if op not in ("add", "subtract", "divide", "multiply") or len(operands) != 2:
         refuse("Unsupported business arithmetic operation")
-    a, b = [expression(child, batch, depth + 1, inputs=inputs, metric=metric) for child in operands]
+    a, b = [expression(child, batch, depth + 1, inputs=inputs, metric=metric, leaf=leaf) for child in operands]
     if op == "divide" and b.number == 0:
         refuse("Zero denominator; no ratio can be reported")
     value = {"add": lambda: a.number + b.number, "subtract": lambda: a.number - b.number,

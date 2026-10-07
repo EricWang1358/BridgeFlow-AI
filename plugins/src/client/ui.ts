@@ -479,7 +479,7 @@ const labels = {
   conventionHelp: ['要确认或替换某条口径，在对话里告诉队长并说明依据。确认后，用到它的数字从 G3 升为 G2；本批次不会重算。', 'To confirm or replace a convention, tell the captain in chat and name your source. Confirming upgrades the figures that use it from G3 to G2; this batch is not recalculated.'],
   integrationHelp: ['按字典把四个部门的模板合成一张表。悬停单元格可看出处；✓ 表示该值与字典公式核对一致。', 'The four department templates combined by the dictionary. Hover a cell to see where it came from; ✓ means it matches the dictionary formula.'],
   integrationNoRows: ['没有可对齐的行。请检查待确认项，通常是模板缺连接键列。', 'No rows could be placed. Check the open items; usually a template lacks a join key column.'],
-  integrationRowState: ['行状态', 'Row'], integration_summary: ['跨部门总表摘要', 'Master table summary'],
+  integrationRowState: ['行状态', 'Row'], integration_summary: ['跨部门总表摘要', 'Master table summary'], compare_periods: ['周期对比', 'Period comparison'],
   issue_missing_department: ['缺部门', 'Missing department'], issue_missing_column: ['模板缺列', 'Template lacks column'], issue_needs_rollup: ['需声明汇总规则', 'Roll-up rule needed'],
   issue_disagreement: ['部门间不一致', 'Departments disagree'], issue_invalid_number: ['不是数字', 'Not a number'], issue_invalid_period: ['期间无法识别', 'Unreadable period'],
   issue_undeclared_constant: ['字典未声明的常量', 'Undeclared constant'], issue_derived_mismatch: ['与字典公式不符', 'Contradicts dictionary formula'],

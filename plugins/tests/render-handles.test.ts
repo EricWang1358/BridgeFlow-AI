@@ -58,6 +58,22 @@ test('integration_summary lists open items and conventions, not only counts', as
   assert.match(out, /Explain who decides\./)
 })
 
+test('compare_periods says which months a figure covers and why a figure is missing', async () => {
+  const { renderComparison } = await import('../src/tools/compare-periods.ts')
+  const refused = text(renderComparison({ grain: 'quarter', period: '2024-Q3', base_kind: 'prior', base_period: '2024-Q2', status: 'no_base',
+    reason: '2024-Q2 lacks 2024-04', current: { coverage: { present: ['2024-07'], missing: [], complete: false },
+      facts: [{ metric: 'net_margin', unit: '%', value: 4.2, state: 'computed' },
+              { metric: 'receivable_months', state: 'month_only', reason: 'needs its own convention' }] },
+    base: { coverage: { present: [], missing: ['2024-04'] } }, changes: [] }))
+  assert.match(refused, /2024-Q3 \(quarter\) against prior 2024-Q2: no_base — 2024-Q2 lacks 2024-04/)
+  assert.match(refused, /months in 2024-Q3: 2024-07 \(incomplete period\)/)
+  assert.match(refused, /- receivable_months: month_only — needs its own convention/)
+  const compared = text(renderComparison({ grain: 'month', period: '2024-07', base_kind: 'prior', base_period: '2024-06', status: 'compared',
+    current: { coverage: { present: ['2024-07'], complete: true } }, base: { coverage: { present: ['2024-06'], complete: true } },
+    changes: [{ metric: 'net_margin', unit: '%', current: 4.2, base: 5, absolute: -0.8, basis: 'percentage_points', state: 'compared' }] }))
+  assert.match(compared, /- net_margin: 4.2 % against 5; change -0.8 pt/)
+})
+
 test('workflow_scope shows the ids and decision_seq that workflow_accept_scope takes, and staleness', async () => {
   const { renderScope } = await import('../src/tools/workflow.ts')
   const waiting = text(renderScope({ accepted: null, current: false, stale_reasons: [], runnable_candidates: ['production_to_marketing_handoff'],

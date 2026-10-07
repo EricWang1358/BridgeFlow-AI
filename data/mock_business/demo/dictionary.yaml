@@ -138,6 +138,17 @@ business_review:
       unit: 元
       formula: sum(缺口)，缺口 = 累计结算 − 收款计划合计（口径假设）
       expression: {op: sum, department: marketing, measures: [collection_gap]}
+  # 季度、年度的指标由月度批次汇总（#301）：每个度量声明跨月怎么加。
+  # flow 跨月相加；period_end 取最近一个月（余额、累计数）；rate 只能和一个 flow 或 period_end 相乘。
+  # 未声明的度量不出季度、年度数字，不猜。
+  period_aggregation:
+    measures:
+      production: {production_volume: flow, shipped_volume: flow, signed_volume: flow}
+      procurement: {material_volume: flow, material_cost: flow, unit_margin: rate, unit_material_cost: rate}
+      finance: {revenue: flow, actual_cost: flow, interest_cost: flow, net_profit: flow, closing_balance: period_end, period_debit: flow}
+      marketing: {cumulative_output: period_end, cumulative_settlement: period_end, cumulative_receipts: period_end, advance: period_end, collection_gap: period_end, contract_price: rate}
+    month_only:
+      receivable_months: 应收月数是期末余额与当月开票之比；季度、年度需另定口径，不按季度开票额折算
   roles:
     production:
       responsibility: 核对出厂量与现场签收量、生产余料，提出车次核对与退料处置；不得认定客户违约或调整结算量。
