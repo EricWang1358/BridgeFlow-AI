@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BridgeFlow AI · A1 booth poster</title>
+<!--
+  A1 portrait booth poster, 594 × 841 mm. Minimal on purpose: readable from 3–4 m, understood in five seconds.
+  Print from Chrome: Save as PDF, Margins "None", Background graphics on, Scale 100.
+  The fuller version with architecture and measured results is bridgeflow-a1-poster-detailed.html.
+-->
+<style>
+  @page { size: 594mm 841mm; margin: 0; }
+  :root {
+    --navy: #0b1b3a;
+    --navy-2: #14295c;
+    --paper: #f5f7fc;
+    --ink: #0b1b3a;
+    --muted: #5a6680;
+    --code: #0e9f9a;
+    --ai: #6d4aff;
+    --person: #e08a00;
+    --mint: #7ef0e6;
+    --gold: #ffd28a;
+    --pad: 34mm;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #c9cfdc; }
+  body {
+    font-family: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .stage { width: 100vw; min-height: 100vh; display: flex; justify-content: center; padding: 24px 0; }
+  .poster {
+    flex: none; width: 594mm; height: 841mm; background: var(--paper); position: relative; overflow: hidden;
+    display: flex; flex-direction: column; transform-origin: top center; box-shadow: 0 30px 80px rgba(11, 27, 58, .35);
+  }
+
+  /* ---------- Dark top: name, promise, picture ---------- */
+  .hero {
+    flex: none; height: 498mm; padding: 28mm var(--pad) 0; color: #fff; position: relative;
+    background:
+      radial-gradient(170mm 170mm at 95% 30%, rgba(109, 74, 255, .5), transparent 70%),
+      radial-gradient(190mm 150mm at 0% 100%, rgba(14, 159, 154, .42), transparent 70%),
+      linear-gradient(165deg, var(--navy) 0%, var(--navy-2) 100%);
+  }
+  .team { font-size: 26pt; letter-spacing: .14em; font-weight: 700; color: #c9d3ff; }
+  .team span { font-weight: 500; letter-spacing: .04em; opacity: .85; }
+  h1 { font-size: 190pt; line-height: .92; font-weight: 800; letter-spacing: -.04em; margin-top: 20mm; }
+  h1 span { color: var(--mint); }
+  .promise { font-size: 58pt; line-height: 1.14; font-weight: 600; letter-spacing: -.015em; margin-top: 12mm; }
+  .promise em { font-style: normal; color: var(--gold); }
+
+  /* The whole product in one picture: department sheets in, one approved review out. */
+  .flow { position: absolute; left: var(--pad); right: var(--pad); bottom: 22mm; height: 186mm; }
+  .flow svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .flow text { font-family: inherit; }
+
+  /* ---------- Light bottom: three ideas, then the QR codes ---------- */
+  main { flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 20mm var(--pad) 0; }
+  .ideas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14mm; }
+  .idea .dot { width: 14mm; height: 14mm; border-radius: 4.5mm; }
+  .idea b { display: block; font-size: 58pt; line-height: 1; font-weight: 800; letter-spacing: -.025em; margin-top: 5mm; }
+  .idea span { display: block; font-size: 32pt; line-height: 1.15; color: var(--muted); margin-top: 3mm; font-weight: 500; }
+
+  /* Secondary: the same engine applied to other cross-department work. */
+  .more { padding: 9mm 0 0; border-top: .8mm solid #dfe4ef; }
+  .more h2 { font-size: 24pt; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+  .more .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9mm; margin-top: 7mm; }
+  .tile { padding: 8mm 8mm 9mm; background: #fff; border: .6mm solid #dfe4ef; border-radius: 7mm; }
+  .tile svg { display: block; width: 20mm; height: 20mm; }
+  .tile b { display: block; font-size: 44pt; line-height: 1.05; font-weight: 800; letter-spacing: -.015em; margin-top: 6mm; }
+  .tile span { display: block; font-size: 27pt; line-height: 1.2; color: var(--muted); margin-top: 2mm; font-weight: 500; }
+  .end { display: flex; align-items: center; justify-content: space-between; gap: 16mm; padding-bottom: 12mm; }
+  .cta b { display: block; font-size: 54pt; line-height: 1.05; font-weight: 800; letter-spacing: -.02em; }
+  .cta span { display: block; font-size: 28pt; color: var(--muted); margin-top: 5mm; }
+  .qrs { display: flex; gap: 10mm; flex: none; }
+  .qr { width: 62mm; text-align: center; }
+  .qr svg { width: 100%; height: auto; display: block; background: #fff; padding: 4mm; border-radius: 4mm; border: .6mm solid #dfe4ef; }
+  .qr span { display: block; font-size: 22pt; font-weight: 700; margin-top: 3mm; }
+
+  footer { flex: none; padding: 0 var(--pad) 12mm; font-size: 20pt; color: var(--muted); }
+
+  @media print {
+    html, body { background: none; }
+    .stage { padding: 0; display: block; }
+    .poster { transform: none !important; box-shadow: none; margin: 0 !important; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+<div class="poster" id="poster">
+
+  <header class="hero">
+    <div class="team">TEAM CONFLUX4 <span>&nbsp;·&nbsp; Show Me Your Agents 2026</span></div>
+    <h1>Bridge<span>Flow</span><br>AI</h1>
+    <p class="promise">Every department's spreadsheet in.<br>One <em>trusted</em> monthly review out.</p>
+
+    <div class="flow">
+      <svg viewBox="0 0 526 205" preserveAspectRatio="xMinYMid meet" fill="none" aria-hidden="true">
+        <defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="332" y1="0" x2="370" y2="0"><stop offset="0" stop-color="#a99bff"/><stop offset="1" stop-color="#ffd28a"/></linearGradient></defs>
+        <!-- Department sheets: examples, not a fixed list -->
+        <g font-size="12.5" font-weight="700" fill="#fff">
+          <rect x="0" y="5"   width="122" height="28" rx="8" fill="#1d3168" stroke="#3d518a" stroke-width=".8"/><text x="14" y="23.5">Production</text>
+          <rect x="0" y="45"  width="122" height="28" rx="8" fill="#1d3168" stroke="#3d518a" stroke-width=".8"/><text x="14" y="63.5">Procurement</text>
+          <rect x="0" y="85"  width="122" height="28" rx="8" fill="#1d3168" stroke="#3d518a" stroke-width=".8"/><text x="14" y="103.5">Finance</text>
+          <rect x="0" y="125" width="122" height="28" rx="8" fill="#1d3168" stroke="#3d518a" stroke-width=".8"/><text x="14" y="143.5">Marketing</text>
+          <rect x="0" y="165" width="122" height="28" rx="8" fill="none" stroke="#7f8fc0" stroke-width=".9" stroke-dasharray="4 3"/><text x="14" y="183.5" fill="#aab6dd">+ more</text>
+        </g>
+        <!-- Streams converging -->
+        <g stroke-width="3.2" stroke-linecap="round">
+          <path d="M122 19  C200 19  210 99 250 99" stroke="#7ef0e6"/>
+          <path d="M122 59  C195 59  215 99 250 99" stroke="#a99bff"/>
+          <path d="M122 99  H250" stroke="#7ef0e6" opacity=".85"/>
+          <path d="M122 139 C195 139 215 99 250 99" stroke="#a99bff" opacity=".8"/>
+          <path d="M122 179 C200 179 210 99 250 99" stroke="#7f8fc0" stroke-dasharray="5 5" opacity=".8"/>
+        </g>
+        <!-- Department agents, one hub -->
+        <circle cx="282" cy="99" r="46" stroke="#a99bff" stroke-width=".8" opacity=".4"/>
+        <circle cx="282" cy="99" r="34" fill="#6d4aff"/>
+        <text x="282" y="98" text-anchor="middle" font-size="17" font-weight="800" fill="#fff">AI</text>
+        <text x="282" y="113" text-anchor="middle" font-size="10.5" font-weight="600" fill="#e3ddff">agents</text>
+        <!-- Out to the review -->
+        <path d="M332 99 H370" stroke="url(#g)" stroke-width="6" stroke-linecap="round"/>
+        <rect x="378" y="52" width="148" height="94" rx="14" fill="#fff"/>
+        <circle cx="403" cy="77" r="11" fill="#e3f6f5"/>
+        <path d="M397.5 77.5l4 4 7.5-8" stroke="#0e9f9a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="392" y="111" font-size="15" font-weight="800" fill="#0b1b3a">Monthly review</text>
+        <text x="392" y="128" font-size="10" font-weight="600" fill="#5a6680">approved by people</text>
+      </svg>
+    </div>
+  </header>
+
+  <main>
+    <section class="ideas">
+      <div class="idea"><div class="dot" style="background:var(--code)"></div><b>Code</b><span>does the maths</span></div>
+      <div class="idea"><div class="dot" style="background:var(--ai)"></div><b>Agents</b><span>review in parallel</span></div>
+      <div class="idea"><div class="dot" style="background:var(--person)"></div><b>People</b><span>approve every change</span></div>
+    </section>
+
+    <section class="more">
+      <h2>Same engine, more workflows</h2>
+      <div class="tiles">
+        <div class="tile"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect width="48" height="48" rx="13" fill="#eef1fb"/><path d="M13 14h11l11 11-10 10-12-12z" stroke="#14295c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18.5" cy="19.5" r="2" fill="#14295c"/></svg><div><b>Quotes</b><span>No evidence, no price</span></div></div>
+        <div class="tile"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect width="48" height="48" rx="13" fill="#eef1fb"/><path d="M24 13a8 8 0 0 0-4.6 14.5V31h9.2v-3.5A8 8 0 0 0 24 13z" stroke="#14295c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.5 35h7" stroke="#14295c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Ideas</b><span>Scored, then decided</span></div></div>
+        <div class="tile"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect width="48" height="48" rx="13" fill="#eef1fb"/><path d="M13 19h18l-5-5" stroke="#14295c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M35 29H17l5 5" stroke="#14295c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Handoffs</b><span>Filled, checked, passed on</span></div></div>
+      </div>
+    </section>
+
+    <section class="end">
+      <div class="cta">
+        <b>Every number<br>traces to its cell.</b>
+        <span>Ask us to show you.</span>
+      </div>
+      <div class="qrs">
+        <div class="qr" id="qr-demo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 33 33" shape-rendering="crispEdges" role="img" aria-label="QR code"><path class="qrline" stroke="#0b1b3a" d="M0 0.5h7m1 0h1m1 0h2m1 0h2m1 0h1m1 0h2m3 0h1m2 0h7m-33 1h1m5 0h1m2 0h2m1 0h2m4 0h1m2 0h1m4 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m3 0h1m2 0h3m2 0h1m2 0h2m1 0h1m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m2 0h4m1 0h2m2 0h1m3 0h1m1 0h1m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h1m1 0h2m1 0h1m1 0h1m1 0h2m4 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m1 0h2m2 0h1m1 0h1m2 0h1m3 0h2m1 0h1m1 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-23 1h1m2 0h4m1 0h1m1 0h2m1 0h1m-23 1h7m4 0h7m1 0h1m2 0h2m2 0h2m3 0h1m-33 1h4m1 0h1m3 0h2m3 0h4m1 0h1m3 0h1m2 0h2m1 0h2m1 0h1m-33 1h3m1 0h1m1 0h1m3 0h3m2 0h1m1 0h1m2 0h1m1 0h1m1 0h1m3 0h1m1 0h1m-31 1h6m3 0h1m1 0h3m3 0h3m1 0h2m2 0h2m1 0h3m-30 1h2m3 0h2m2 0h6m4 0h1m3 0h2m2 0h2m2 0h1m-33 1h1m1 0h1m4 0h1m1 0h2m1 0h1m1 0h2m2 0h3m2 0h4m2 0h1m1 0h2m-33 1h3m1 0h5m3 0h2m1 0h4m1 0h1m1 0h1m1 0h5m2 0h1m-32 1h1m8 0h1m1 0h2m1 0h1m1 0h1m2 0h1m1 0h1m2 0h3m1 0h1m1 0h1m-30 1h1m1 0h1m2 0h4m4 0h4m2 0h1m4 0h1m1 0h3m2 0h1m-30 1h2m5 0h2m1 0h1m1 0h1m2 0h2m2 0h2m1 0h3m1 0h4m-31 1h1m1 0h9m2 0h1m1 0h1m2 0h1m1 0h1m1 0h1m2 0h2m1 0h1m-31 1h1m2 0h1m5 0h1m1 0h1m1 0h1m7 0h12m-33 1h1m1 0h2m1 0h8m1 0h2m1 0h1m2 0h1m1 0h1m2 0h1m1 0h3m1 0h1m-32 1h1m3 0h2m5 0h1m2 0h3m2 0h3m1 0h1m2 0h2m2 0h1m1 0h1m-33 1h1m2 0h5m1 0h1m2 0h3m1 0h2m2 0h3m4 0h5m-32 1h1m1 0h1m1 0h1m3 0h1m2 0h1m5 0h2m1 0h2m2 0h1m5 0h1m-31 1h1m1 0h1m1 0h3m2 0h3m3 0h1m2 0h1m1 0h1m2 0h7m1 0h2m-25 1h1m1 0h2m1 0h3m3 0h1m1 0h4m3 0h1m1 0h3m-33 1h7m1 0h1m1 0h2m2 0h2m2 0h1m3 0h3m1 0h1m1 0h1m1 0h1m-31 1h1m5 0h1m1 0h2m1 0h2m1 0h1m1 0h1m1 0h7m3 0h4m-32 1h1m1 0h3m1 0h1m1 0h1m1 0h3m1 0h6m2 0h1m1 0h6m-30 1h1m1 0h3m1 0h1m1 0h3m2 0h1m3 0h1m1 0h5m1 0h1m2 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h2m1 0h1m1 0h1m1 0h2m3 0h1m1 0h2m2 0h2m1 0h1m-30 1h1m5 0h1m1 0h4m3 0h1m4 0h3m2 0h2m1 0h1m1 0h1m-31 1h7m2 0h1m1 0h1m1 0h1m1 0h3m5 0h2m2 0h1m1 0h1m1 0h1"/></svg><span>Try it</span></div>
+        <div class="qr"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 33 33" shape-rendering="crispEdges" role="img" aria-label="QR code"><path class="qrline" stroke="#0b1b3a" d="M0 0.5h7m1 0h1m1 0h1m1 0h4m2 0h1m2 0h2m3 0h7m-33 1h1m5 0h1m1 0h1m1 0h4m2 0h1m1 0h1m2 0h2m3 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m2 0h1m2 0h2m5 0h1m1 0h2m3 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m3 0h1m1 0h1m2 0h2m1 0h1m1 0h2m2 0h1m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m2 0h5m1 0h4m1 0h2m1 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m2 0h3m1 0h3m2 0h1m1 0h2m2 0h1m1 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-24 1h3m3 0h2m-16 1h1m4 0h5m2 0h1m1 0h1m1 0h1m2 0h1m4 0h1m5 0h2m-33 1h1m1 0h2m1 0h1m1 0h8m1 0h1m1 0h2m2 0h2m4 0h3m-26 1h5m1 0h1m1 0h3m2 0h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h2m-30 1h1m4 0h3m1 0h1m4 0h1m1 0h1m1 0h1m1 0h1m1 0h1m2 0h5m-31 1h3m2 0h2m3 0h2m1 0h1m2 0h5m2 0h3m4 0h2m-30 1h1m1 0h1m2 0h1m3 0h5m1 0h1m1 0h2m1 0h1m2 0h1m2 0h1m1 0h2m-33 1h2m1 0h1m1 0h2m2 0h1m1 0h1m3 0h2m1 0h1m1 0h1m1 0h1m2 0h2m4 0h1m-32 1h1m1 0h1m1 0h1m3 0h4m1 0h2m1 0h1m5 0h1m1 0h2m1 0h4m1 0h1m-31 1h1m1 0h4m3 0h2m2 0h5m2 0h4m1 0h2m3 0h1m-32 1h3m7 0h1m1 0h1m1 0h1m4 0h1m2 0h1m2 0h1m2 0h2m1 0h1m-31 1h1m1 0h3m3 0h2m1 0h1m5 0h1m3 0h2m2 0h1m1 0h2m1 0h1m-32 1h1m11 0h5m1 0h2m4 0h2m1 0h5m-32 1h2m3 0h2m2 0h5m2 0h3m2 0h1m1 0h2m2 0h2m1 0h1m-32 1h1m8 0h1m1 0h3m3 0h1m1 0h2m1 0h2m2 0h1m1 0h3m-31 1h1m3 0h1m1 0h2m5 0h1m2 0h2m2 0h1m3 0h2m2 0h2m1 0h1m-32 1h1m1 0h1m1 0h2m2 0h4m1 0h8m1 0h5m3 0h2m-32 1h2m1 0h1m1 0h2m2 0h1m1 0h1m1 0h2m4 0h2m2 0h6m-21 1h4m3 0h5m1 0h1m1 0h2m3 0h1m1 0h2m-32 1h7m1 0h2m2 0h1m2 0h2m3 0h5m1 0h1m1 0h1m1 0h2m-32 1h1m5 0h1m5 0h4m2 0h1m3 0h3m3 0h4m-32 1h1m1 0h3m1 0h1m3 0h7m1 0h3m1 0h1m1 0h6m-30 1h1m1 0h3m1 0h1m2 0h4m4 0h5m1 0h3m1 0h2m1 0h1m1 0h1m-33 1h1m1 0h3m1 0h1m7 0h1m3 0h2m3 0h1m1 0h1m1 0h2m1 0h3m-33 1h1m5 0h1m1 0h2m1 0h1m1 0h1m1 0h2m2 0h2m1 0h2m3 0h2m1 0h1m-31 1h7m2 0h2m1 0h4m1 0h3m2 0h3m1 0h2m1 0h1m1 0h1"/></svg><span>Code</span></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>Sample data is synthetic, modelled on a real business's templates.</footer>
+</div>
+</div>
+
+<script>
+  // Screen only: fit the real-size poster into the window. Printing ignores the transform.
+  function fit() {
+    const poster = document.getElementById('poster');
+    const s = Math.max(Math.min((window.innerWidth - 48) / poster.offsetWidth, 1), 0.05);
+    poster.style.transform = `scale(${s})`;
+    poster.style.marginBottom = `${-(1 - s) * poster.offsetHeight}px`;
+  }
+  window.addEventListener('resize', fit);
+  fit();
+</script>
+</body>
+</html>
