@@ -28,6 +28,9 @@ shortlist to stage. It is internal preparation material, not product documentati
 | 4 | [Q&A sheet](04-qa-sheet.md) | Answers to the likely questions, owner per topic | 1, 3 | Draft Thu 8 Oct; final after rehearsal |
 | 5 | [Dress rehearsal](05-dress-rehearsal.md) | Two timed run-throughs, packing list, day-of runbook | 1–4 | Run-through Thu evening; **full dress Fri 9 Oct** |
 
+Supporting material: [business scenarios](06-business-scenarios.md), a hands-on walkthrough of every
+feature as user stories, for presenters to learn the system before the run-throughs.
+
 The narrative comes first because the poster, the demo and the Q&A answers are all built against
 it. Changing the story after Thursday means reprinting and re-rehearsing, so treat it as locked once
 the team signs off.
