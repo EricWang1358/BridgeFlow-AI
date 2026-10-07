@@ -77,6 +77,13 @@ export const guide = {
     steps: [[`${studio[0]} → 「记录」`, `${studio[1]} → Records`]],
     view: 'records',
   },
+  long_term_memory: {
+    what: ['长期记忆：对话中保存下来的解决方案，之后的对话能检索并引用', 'Long-term memory: solutions saved from conversations, which later conversations find and cite'],
+    steps: [['在对话里请队长“把这个解决方案存到长期记忆”，在审批卡上批准', 'In the chat, ask the captain to save the solution to long-term memory, then approve the card'],
+      [`查看已保存的：${studio[0]} → 「记录」 → 「长期记忆」`, `To see saved ones: ${studio[1]} → Records → Long-term memory`]],
+    view: 'records',
+    note: ['保存、修订和失效都要审批；失效的记忆不再被检索，但历史保留。', 'Saving, revising and retiring each need approval; a retired memory is no longer found, and its history stays.'],
+  },
   quotation: {
     what: ['报价工作区：报价需要哪些事实、由谁提供、按声明公式算出的价格带', 'Quotation workspace: which facts a quote needs, who owes each one, and the price band computed from declared arithmetic'],
     steps: [[`${studio[0]} → ${other[0]} → 「报价工作区」`, `${studio[1]} → ${other[1]} → Quotation workspace`]],

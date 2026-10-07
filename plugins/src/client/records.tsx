@@ -15,6 +15,47 @@ type Convention = { id: string; text: string; kind: string; state: string; versi
   source: string; note: string; decided_by: string; at: string; declaration_change: string }
 type Disposition = { check_id: string; title?: string; state: string; version: number; note: string; decided_by: string; at: string; closed: boolean }
 type Artifact = { report_id: string; period: string; status: string; created_at: number; kind?: string }
+type Memory = { id: string; title: string; problem: string; solution: string; source: string; departments: string[]
+  tags: string[]; status: 'active' | 'retired'; retired_reason: string; version: number; updated_by: string; updated_at: string }
+
+/**
+ * Long-term memory (#303) — company-wide, so it shows with or without a batch. Read-only like
+ * the rest of this page: saving, revising and retiring go through the captain and approval.
+ */
+function Memories({ language }: { language: string }) {
+  const { t, colon, paren } = useUI()
+  const dataRevision = useDataRevision()
+  const [memories, setMemories] = useState<Memory[] | null>(null), [retired, setRetired] = useState(false)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    const controller = new AbortController(), signal = controller.signal
+    setError('')
+    void api<{ memories: Memory[] }>(`/memories${retired ? '?include_retired=true' : ''}`, { signal })
+      .then(value => setMemories(value.memories ?? []))
+      .catch(e => { if (!signal.aborted) setError(describeError(e, t)) })
+    return () => controller.abort()
+  }, [retired, dataRevision])
+  return <>
+    <h4>{t('memories')}</h4>
+    <p className="bf-hint">{t('memoriesHelp')}</p>
+    <label className="bf-hint"><input type="checkbox" checked={retired} onChange={e => setRetired(e.target.checked)} /> {t('memoriesShowRetired')}</label>
+    {error && <p role="alert" className="bf-error">{error}</p>}
+    {memories && !memories.length && <p className="bf-hint">{t('memoriesEmpty')}</p>}
+    <ul className="bf-records-list">
+      {(memories ?? []).map(item => <li key={item.id} data-state={item.status}>
+        <span><strong>{item.title}</strong>{item.status === 'retired' && <> <span className="bf-convention" data-state="retired">{t('memoryRetired')}</span></>}</span>
+        <span>{item.problem}</span>
+        <span>{item.solution}</span>
+        <span className="bf-hint">{[
+          item.departments.length ? item.departments.map(d => t(d)).join('、') : t('memoryCompanyWide'),
+          `${t('memorySource')}${colon}${item.source}`,
+          ...(item.tags.length ? [item.tags.join(' · ')] : []),
+        ].join(' · ')}{paren(`${item.updated_by} · v${item.version} · ${formatDateTime(Date.parse(item.updated_at), language)}`)}</span>
+        {item.status === 'retired' && item.retired_reason && <span className="bf-hint">{item.retired_reason}</span>}
+      </li>)}
+    </ul>
+  </>
+}
 
 export function RecordsView({ batchId, summary, artifacts, language }: {
   batchId: string
@@ -90,6 +131,8 @@ export function RecordsView({ batchId, summary, artifacts, language }: {
 
     <p className="bf-hint">{t('recordsReadOnly')}</p>
     </> : <p className="bf-callout" role="note">{t('recordsNoBatch')}</p>}
+
+    <Memories language={language} />
 
     <AgentRuns batchId={batchId} />
     <DecisionJournal batchId={batchId} />

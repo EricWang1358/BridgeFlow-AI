@@ -24,6 +24,7 @@ from bridgeflow.api.documents import router as documents_router
 from bridgeflow.api.feishu_tools import router as feishu_tools_router
 from bridgeflow.api.guest import require_user_file_uploads
 from bridgeflow.api.integration import router as integration_router
+from bridgeflow.api.memory import router as memory_router
 from bridgeflow.api.observability import router as observability_router
 from bridgeflow.api.quarantine_tools import router as quarantine_tools_router
 from bridgeflow.api.reviews import router as reviews_router
@@ -138,6 +139,7 @@ app.include_router(conclusions_router, dependencies=[Depends(require_host)])
 app.include_router(conventions_router, dependencies=[Depends(require_host)])
 app.include_router(checklist_router, dependencies=[Depends(require_host)])
 app.include_router(dispositions_router, dependencies=[Depends(require_host)])
+app.include_router(memory_router, dependencies=[Depends(require_host)])
 app.include_router(observability_router, dependencies=[Depends(require_host)])
 
 # The one router with no host dependency, on purpose: the login portal calls it from

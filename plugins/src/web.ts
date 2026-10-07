@@ -260,7 +260,7 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           || /^\/conventions\/batches\/[a-f0-9]{32}(\/preview)?$/.test(path)
           || path === '/monthly/checklist' || path === '/monthly/inbox' || path === '/batches/demo/cases'
           || path === '/journal' || path === '/journal/runs' || path === '/eval/report' || path === '/labels'
-          || /^\/reviews\/[a-f0-9]{32}\/dispositions$/.test(path)
+          || /^\/reviews\/[a-f0-9]{32}\/dispositions$/.test(path) || path === '/memories'
           || /^\/batches\/templates\/(production|procurement|finance|marketing)$/.test(path))
         const upload = req.method === 'POST' && (path === '/batches' || path === '/batches/demo' || path === '/batches/demo/history' || path === '/workflow/sample' || path === '/discovery/sample' || path === '/batches/self-check' || path === '/discovery/uploads'
           // Correcting one department derives a new batch; it is an upload like any other (E14-UC04).

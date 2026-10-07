@@ -17,7 +17,8 @@ from bridgeflow.store import _root
 OPERATIONS = frozenset({"confirm_mapping", "confirm_column_match", "quarantine_decide",
                        "quarantine_apply", "convention_decide", "risk_disposition", "workflow_record", "workflow_approve_submit", "workflow_accept_scope",
                        "workflow_handoff", "feishu_import", "feishu_upload_report", "discovery_propose", "discovery_register", "discovery_graph_save", "discovery_score_save", "discovery_meeting_save", "discovery_decision_propose", "discovery_decision_vote",
-                       "discovery_decision_resolve", "discovery_decision_finalize", "dictionary_draft", "dictionary_publish"})
+                       "discovery_decision_resolve", "discovery_decision_finalize", "dictionary_draft", "dictionary_publish",
+                       "memory_save", "memory_retire"})
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS employee_permits (
  token TEXT PRIMARY KEY, subject TEXT NOT NULL, operation TEXT NOT NULL,
@@ -165,6 +166,19 @@ def authorize(user: UserIdentity, operation: str, body: dict[str, Any]) -> Resol
                     domain.read("material", proposal.project_id, ref.material_id, ref.version)
         except DiscoveryError as exc:
             raise HTTPException(404, "Discovery source or object not found") from exc
+    elif operation in {"memory_save", "memory_retire"}:
+        # A memory filed under a department is that department's knowledge; filing one there
+        # needs that department's scope. Company-wide memories need only the operation grant.
+        # Revising or retiring one is held to the departments it already names, too.
+        from bridgeflow import memory
+
+        named = body.get("departments") if operation == "memory_save" else None
+        departments = {str(item) for item in named} if isinstance(named, list) else set()
+        found = next((m for m in memory.current(include_retired=True) if m.id == body.get("memory_id")), None)
+        if found:
+            departments |= set(found.departments)
+        if not departments <= resolved.departments:
+            raise HTTPException(403, "This memory concerns departments outside this employee's scope")
     elif operation == "confirm_mapping":
         if not KNOWN_DEPARTMENTS <= resolved.departments:
             raise HTTPException(403, "Global mapping decisions require all department scopes")
