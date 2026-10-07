@@ -29,7 +29,9 @@ shortlist to stage. It is internal preparation material, not product documentati
 | 5 | [Dress rehearsal](05-dress-rehearsal.md) | Two timed run-throughs, packing list, day-of runbook | 1–4 | Run-through Thu evening; **full dress Fri 9 Oct** |
 
 Supporting material: [business scenarios](06-business-scenarios.md), a hands-on walkthrough of every
-feature as user stories, for presenters to learn the system before the run-throughs.
+feature as user stories, for presenters to learn the system before the run-throughs;
+[presentation script](07-presentation-script.typ), the spoken script and reference timeline for both
+15-minute rounds (Typst; build with `typst compile finale/07-presentation-script.typ`).
 
 The narrative comes first because the poster, the demo and the Q&A answers are all built against
 it. Changing the story after Thursday means reprinting and re-rehearsing, so treat it as locked once

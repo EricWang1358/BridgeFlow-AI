@@ -47,11 +47,26 @@ If the slot starts late or the judges interrupt early, cut from the demo first (
 
 ## Logline
 
-> **Every month, four departments hand in four spreadsheets that never quite agree. BridgeFlow
-> combines them into one traceable table and has four department AI agents review it, but every
-> number is computed by code and every write waits for a person.**
+> **Every month, each department hands in its own spreadsheet, and they never quite agree.
+> BridgeFlow combines them into one traceable table and sends one AI agent per department to review
+> it, but every number is computed by code and every write waits for a person.**
 
-Short form for the poster and the booth: *Four spreadsheets in, one signed-off monthly review out.*
+Short form for the poster and the booth: *Every department's spreadsheet in. One trusted monthly
+review out.*
+
+## Positioning
+
+- **Multi-department, not "four".** The sample happens to have four departments (production,
+  procurement, finance, marketing), and this release ships with those four built in. Say "every
+  department", "one agent per department" and "department agents"; do not lead with "four
+  departments" or "four agents", which suggests the product fits only one organisation. If asked,
+  answer honestly: four are built in today, and user-defined department structures are next.
+- **The monthly review is the flagship; the engine is broader.** The demo stays on the monthly
+  review. In beat 3, point to the poster's three tiles: the same traceable data, typed tools and
+  approvals already run quotes (no price without evidence), scoring improvement ideas, and handoffs
+  between departments. Show them only when a judge asks.
+- The spoken lines and timings for both rounds are in [doc 7](07-presentation-script.typ), which
+  follows this document.
 
 ## Beat 1 — The business problem (1:15)
 
@@ -74,7 +89,7 @@ that surfaces too late.
 > long project, a requirement that drifts in translation, and handing business data to an outside
 > implementer.
 
-**Proof on screen:** the four department files in **Sources**, then the cross-department master
+**Proof on screen:** the department files in **Sources**, then the cross-department master
 with its one disagreement (demo beats 0–1).
 
 **Things to get right:**
@@ -87,14 +102,14 @@ with its one disagreement (demo beats 0–1).
 
 ## Beat 2 — How the agentic solution works (0:30 + demo)
 
-**Message:** a captain agent runs a fixed, auditable pipeline and dispatches four department agents
+**Message:** a captain agent runs a fixed, auditable pipeline and dispatches one agent per department
 in parallel. Code does the arithmetic. Agents do the judgement. People make the decisions.
 
 **One-sentence architecture (said before the demo, with the poster diagram behind us):**
 
 > Python imports and cleans the files under a field dictionary the business approves, and computes
-> every metric from declared formulas. A captain agent then sends four department agents (production,
-> procurement, finance and marketing) to review the month at the same time. They see computed
+> every metric from declared formulas. A captain agent then sends one AI agent per department to
+> review the month, all at the same time. They see computed
 > metrics and source references, never raw rows. The host checks every finding against the evidence
 > before it reaches the report. Anything that writes business data goes through an approval card.
 
@@ -103,7 +118,7 @@ in doc 3 is written to land these points:
 
 | Point | Where it is shown | Rubric criterion |
 | --- | --- | --- |
-| Four official subagents dispatched in one response, running concurrently | Trajectory during the review | Architecture & Reasoning Loop; Platform & Tooling |
+| One official subagent per department, dispatched in one response, running concurrently | Trajectory during the review | Architecture & Reasoning Loop; Platform & Tooling |
 | Typed domain tools (about 50), chosen by the captain | Trajectory steps; "where is X" navigation | Tool Use & Integration |
 | Every figure traces to file, sheet, row and column | Click a master-table cell | Observability; Goal & Scope |
 | Findings carry formula, threshold, cited cells and evidence grade G1–G4 | Conclusions | Architecture; Observability |
@@ -119,7 +134,7 @@ by a software project.
 
 **Spoken draft:**
 
-> What changes for that finance manager? The four files become one table in the time it takes to
+> What changes for that finance manager? The month's files become one table in the time it takes to
 > upload them, and the cleaning costs nothing because it is rules, not AI. The review you just watched
 > took under a minute and cost a few US cents in model calls. A loss-making order shows up in the
 > month it happens, with the formula, the threshold and the cells behind it.
@@ -129,13 +144,18 @@ by a software project.
 > dictionary the business approves, a new rule is an edit that takes effect at the next import. Old
 > months stay frozen as evidence.
 >
+> The monthly review is our flagship, but it runs on one engine. The same traceable data, typed tools
+> and approvals already power quotes, where there is no price without evidence; scoring improvement
+> ideas; and handoffs between departments.
+>
 > It is deployed on AWS today, with per-employee sign-in and an isolated guest entry. Next we want a
 > pilot on a real company's exports, user-defined department structures, and connectors for Google
 > Workspace next to the Feishu one we have. If you know an SME that closes its month in spreadsheets,
 > we would like to meet them.
 
-**Proof:** the figures in the whitelist below, the Records page from the demo, the poster's "measured
-results" panel.
+**Proof:** the figures in the whitelist below, the Records page from the demo, and the poster's three
+workflow tiles. (The booth poster is deliberately minimal; the measured results are on the detailed
+version, `finale/poster/bridgeflow-a1-poster-detailed.pdf`.)
 
 **Things to get right:**
 
@@ -166,7 +186,7 @@ new value with its new date.
 
 | Figure | Value | Measured | Source | Re-check |
 | --- | --- | --- | --- | --- |
-| Four-department review, risk case | 4/4 departments validated; 53.4 s; 8 model requests; 75,267 tokens | 2026-09-25, `deepseek-v4.1-flash` | Submitted business proposal | Re-run one review on the demo instance; record time and tokens from Records |
+| Department review, risk case | Every department validated (4 of 4 in the sample); 53.4 s; 8 model requests; 75,267 tokens | 2026-09-25, `deepseek-v4.1-flash` | Submitted business proposal | Re-run one review on the demo instance; record time and tokens from Records |
 | Review, balanced case | 4/4 validated; 18.8 s; 106,485 tokens | 2026-09-25 | Business proposal | Optional |
 | Cost per review | "A few US cents" | Derived | Tokens × provider list price | Do the arithmetic with the current price, including the cache-hit rate if quoted |
 | Prompt-injection defence | An instruction planted in a cell reached no model session; 4/4 validated | Real-model run | Business proposal | Show live in the demo instead of quoting |
@@ -187,6 +207,7 @@ count, any revenue projection, "production-ready", "no hallucinations", "replace
 | Use | Avoid |
 | --- | --- |
 | "Department agents", "captain" | "Autonomous AI that runs your finance" |
+| "Every department", "one agent per department" | "Four departments", "four agents" in headlines and taglines |
 | "Computed by code from declared formulas" | "The AI calculates" |
 | "Proposes; a person approves" | "Fully automated" |
 | "Traceable to the source cell" | "100% accurate" |
@@ -197,9 +218,9 @@ count, any revenue projection, "production-ready", "no hallucinations", "replace
 
 For walk-up visitors, other judges and photo moments:
 
-> Four departments, four spreadsheets, a week of reconciliation every month. BridgeFlow turns them
-> into one table where every number traces to its source cell, then sends four AI agents (one per
-> department) to review the month in parallel. Code does the maths, agents do the judgement, and
+> Every department keeps its own spreadsheet, and someone loses about a week a month reconciling
+> them. BridgeFlow turns them into one table where every number traces to its source cell, then sends
+> one AI agent per department to review the month in parallel. Code does the maths, agents do the judgement, and
 > nothing is written without a person approving it. Want to see a number traced back to its cell?
 
 ## Lock checklist
