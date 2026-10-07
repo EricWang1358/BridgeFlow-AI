@@ -14,28 +14,28 @@ roles:
   production_admin:
     departments: [production]
     operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
-                 workflow_record, workflow_approve_submit, workflow_handoff]
+                 workflow_record, workflow_approve_submit, workflow_handoff, memory_save, memory_retire]
   procurement_member:
     departments: [procurement]
     operations: [batch_import, review_note]
   procurement_admin:
     departments: [procurement]
     operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
-                 workflow_record, workflow_approve_submit, workflow_handoff]
+                 workflow_record, workflow_approve_submit, workflow_handoff, memory_save, memory_retire]
   finance_member:
     departments: [finance]
     operations: [batch_import, review_note]
   finance_admin:
     departments: [finance]
     operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
-                 workflow_record, workflow_approve_submit, workflow_handoff]
+                 workflow_record, workflow_approve_submit, workflow_handoff, memory_save, memory_retire]
   marketing_member:
     departments: [marketing]
     operations: [batch_import, review_note]
   marketing_admin:
     departments: [marketing]
     operations: [batch_import, review_note, quarantine_decide, quarantine_apply, risk_disposition,
-                 workflow_record, workflow_approve_submit, workflow_handoff]
+                 workflow_record, workflow_approve_submit, workflow_handoff, memory_save, memory_retire]
   master_office_member:
     departments: [production, procurement, finance, marketing]
     operations: [batch_import, review_note]
@@ -45,4 +45,4 @@ roles:
                  convention_decide, risk_disposition, quarantine_decide, quarantine_apply, workflow_record, workflow_approve_submit,
                  workflow_handoff, workflow_accept_scope, feishu_import, feishu_upload_report, discovery_propose,
                  discovery_upload, discovery_register, discovery_graph_save, discovery_score_save,
-                 discovery_meeting_save]
+                 discovery_meeting_save, memory_save, memory_retire]

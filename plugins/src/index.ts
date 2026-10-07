@@ -21,6 +21,7 @@ import { checklistTool, inboxTool } from './tools/checklist.ts'
 import { conventionDecide, conventionList, conventionPreview } from './tools/conventions.ts'
 import { appGuide } from './tools/app-guide.ts'
 import { riskDispositionRecord, riskDispositions } from './tools/dispositions.ts'
+import { memoryRetire, memorySave, memorySearch } from './tools/memory.ts'
 import { quarantineApply, quarantineDecide, quarantineList } from './tools/quarantine.ts'
 import { workflowAcceptScope, workflowApproveSubmit, workflowBoard, workflowCatalogue, workflowDraft, workflowGuidance, workflowHandoff, workflowRecord, workflowScope } from './tools/workflow.ts'
 import { listMetrics } from './tools/list-metrics.ts'
@@ -100,6 +101,7 @@ export function apply(ctx: Context, config: Config): void {
   catalogue.register(ctx, checklistTool(backend))
   catalogue.register(ctx, inboxTool(backend))
   catalogue.register(ctx, riskDispositions(backend))
+  catalogue.register(ctx, memorySearch(backend))
   catalogue.register(ctx, integrationSummary(backend))
   catalogue.register(ctx, workflowCatalogue(backend))
   catalogue.register(ctx, workflowDraft(backend))
@@ -118,6 +120,8 @@ export function apply(ctx: Context, config: Config): void {
     catalogue.register(ctx, workflowApproveSubmit(backend, receipts))
     catalogue.register(ctx, workflowHandoff(backend, receipts))
     catalogue.register(ctx, workflowAcceptScope(backend, receipts))
+    catalogue.register(ctx, memorySave(backend, receipts))
+    catalogue.register(ctx, memoryRetire(backend, receipts))
     // Guest mode never talks to Feishu: the tools are not offered at all (docs/22 §9e).
     if (process.env.BRIDGEFLOW_GUEST_MODE !== '1') {
       catalogue.register(ctx, feishuImport(backend, receipts))

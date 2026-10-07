@@ -15,7 +15,7 @@ export type Detail = { label: string; value: string }
 const AREAS: [RegExp, string][] = [
   [/^workflow_/, 'areaWorkflow'], [/^discovery_/, 'areaDiscovery'], [/^feishu_/, 'areaFeishu'],
   [/^quarantine_/, 'areaQuarantine'], [/^(confirm_mapping|confirm_column_match|dictionary_)/, 'areaDictionary'],
-  [/^(convention_decide|risk_disposition)/, 'areaReview'],
+  [/^(convention_decide|risk_disposition)/, 'areaReview'], [/^memory_/, 'areaMemory'],
 ]
 export function areaOf(tool: string): string {
   return AREAS.find(([pattern]) => pattern.test(tool))?.[1] ?? 'areaOther'
@@ -24,7 +24,7 @@ export function areaOf(tool: string): string {
 /** Arguments that identify or version something; shown only under technical details. */
 const TECHNICAL = new Set(['artifact_id', 'handoff_id', 'expected_seq', 'digest', 'confirmed_by', 'call_id',
   'decision_seq', 'policy_fingerprint', 'batch_id', 'review_id', 'report_id', 'expected_version', 'meeting_version',
-  'opportunity_version', 'proposal_version'])
+  'opportunity_version', 'proposal_version', 'memory_id'])
 export function isTechnical(label: string): boolean {
   return TECHNICAL.has(label.split(' · ')[0]!)
 }
@@ -66,6 +66,9 @@ export function useApprovalSummary(tool: string, details: Detail[] | null): stri
       const key = `summaryHandoff_${action}`
       return t(key) === key ? '' : t(key).replace('{stage}', stage(arg('handoff_id')))
     }
+    case 'memory_save':
+      return t(arg('memory_id') ? 'summaryMemoryRevise' : 'summaryMemorySave').replace('{title}', arg('title'))
+    case 'memory_retire': return t('summaryMemoryRetire')
     case 'workflow_accept_scope':
       return t('summaryAcceptScope').replace('{project}', arg('project_id')).replace('{decision}', arg('decision_id'))
     default: return ''

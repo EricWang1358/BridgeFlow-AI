@@ -8,6 +8,7 @@ import { renderBoard, renderDraft } from '../src/tools/workflow.ts'
 import { renderChecklist } from '../src/tools/checklist.ts'
 import { renderDraftEntries } from '../src/tools/dictionary.ts'
 import { renderDispositions } from '../src/tools/dispositions.ts'
+import { memorySave, renderMemories, saveBody } from '../src/tools/memory.ts'
 
 const text = (blocks: { text: string }[]) => blocks.map(b => b.text).join('\n')
 
@@ -71,4 +72,21 @@ test('monthly_checklist names the batch a month is bound to, so a month without 
   const out = text(renderChecklist({ period: '2024-07', batch_id: 'b'.repeat(32), ready_to_close: false,
     steps: [{ id: 'review', state: 'open', count: 1, owner_role: '总经办' }] }))
   assert.match(out, /2024-07 \(batch_id=b{32}\)/)
+})
+
+test('memory_search shows the id and version memory_save revises, and the solution itself', () => {
+  const out = text(renderMemories({ memories: [{ id: 'mem-1a2b3c4d', version: 2, title: '运费混入单价', problem: '材料成本虚高',
+    solution: '按备注列识别运费行', source: '采购部例会纪要', departments: ['procurement'] }] }))
+  for (const handle of ['mem-1a2b3c4d v2', '按备注列识别运费行', '材料成本虚高', '采购部例会纪要', 'procurement']) assert.match(out, new RegExp(handle))
+  assert.match(text(renderMemories({ memories: [], next_step: 'No saved memory matches.' })), /No saved memory/)
+})
+
+test('memory_save signs the same body it sends and refuses an incomplete memory before approval', () => {
+  const args = { title: 't', problem: 'p', solution: 's', source: 'src', departments: ['finance'] }
+  assert.equal(JSON.stringify(saveBody(args, 'captain', 'c1')), JSON.stringify(saveBody(args, 'captain', 'c1')))
+  assert.equal(saveBody(args, 'captain', 'c1').memory_id, null)
+  const access = memorySave({ baseUrl: 'http://x', timeoutMs: 1 }, {} as never).access
+  assert.ok(access.kind === 'approval' && access.precheck)
+  assert.equal(access.precheck(args), null)
+  assert.match(String(access.precheck({ ...args, source: ' ' })), /source/)
 })
