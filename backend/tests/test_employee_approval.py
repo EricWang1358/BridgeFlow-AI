@@ -128,3 +128,43 @@ def test_employee_identity_is_saved_as_the_actual_workflow_reviewer(client, monk
     assert result.status_code == 200, result.text
     reviews = [e for e in domain.store.read(f"artifact:{artifact_id}") if e.type == "reviewed"]
     assert reviews[-1].data["by"] == "ou_bob"
+
+
+def test_a_risk_disposition_is_authorized_under_the_tool_name_the_gate_sends(client, monkeypatch):
+    # The approval gate requests a permit with the native tool name; the existing
+    # access grant and the route's consume step both say "risk_disposition".
+    from test_conclusions import finalize
+    from test_dispositions import DEMO
+
+    monkeypatch.setattr(settings, "field_dictionary_path", str(DEMO / "dictionary.yaml"))
+    batch_id = client.post("/batches/demo", headers=auth(make_token())).json()["batch_id"]
+    finalize(client, batch_id)
+    grants("ou_bob", ["risk_disposition"])
+    payload = json.dumps({"batch_id": batch_id, "check_id": "net_margin", "action": "confirm",
+                          "confirmed_by": "captain", "call_id": "disposition-test"},
+                         separators=(",", ":")).encode()
+    issued = permit(client, payload, "risk_disposition_record")
+    assert issued.status_code == 200, issued.text
+    result = client.post("/tools/risk-disposition-record", content=payload,
+                         headers={"content-type": "application/json",
+                                  "x-bridgeflow-approval": native(payload, issued.json()["permit"])})
+    assert result.status_code == 200, result.text
+    with sqlite3.connect(_root() / "approval-receipts.sqlite3") as connection:
+        rows = connection.execute("SELECT subject, operation, call_id FROM employee_authorizations").fetchall()
+    assert rows == [("ou_bob", "risk_disposition", "disposition-test")]
+
+
+@pytest.mark.parametrize("tool", ["dictionary_import", "dictionary_decide"])
+def test_dictionary_tools_are_permitted_under_the_draft_grant_their_routes_consume(client, tool):
+    grants("ou_bob", ["dictionary_draft"])
+    issued = permit(client, b'{"draft_id":"d-1","call_id":"dictionary-test"}', tool)
+    assert issued.status_code == 200, issued.text
+    with sqlite3.connect(_root() / "approval-receipts.sqlite3") as connection:
+        assert connection.execute("SELECT operation FROM employee_permits").fetchall() == [("dictionary_draft",)]
+
+
+def test_every_tool_alias_names_a_real_operation():
+    from bridgeflow.write_authorization import OPERATIONS, TOOL_OPERATIONS
+
+    assert set(TOOL_OPERATIONS.values()) <= OPERATIONS
+    assert not set(TOOL_OPERATIONS) & OPERATIONS
