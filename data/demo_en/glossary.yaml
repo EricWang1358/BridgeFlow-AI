@@ -8,6 +8,8 @@ terms:
   # Overrides of labels.en.yaml, where one English word would otherwise stand for two things
   客户: Client                      # an alias beside 客户单位 (Customer)
   累计回款: Collections to date      # the renamed column in the "different problems" case
+  # Why receivable months have no quarterly figure (period_aggregation.month_only, #301)
+  应收月数是期末余额与当月开票之比；季度、年度需另定口径，不按季度开票额折算: Receivable months divide the closing balance by one month's billing; a quarter or year needs its own convention, not a rescaled one
   月: months                        # a unit here; 月份 is the month field
 
   # Header spellings the templates carry as written
