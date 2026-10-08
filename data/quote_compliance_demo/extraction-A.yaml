@@ -1,0 +1,17 @@
+# Human-checked extraction record (simulated sample A, #302): where each declared quotation input was read.
+# Text originals are located by section heading + verbatim excerpt; loading re-opens the file and checks both.
+# Cost, capacity and collection facts are shared with the other sample (same customer, plant and month);
+# the two quotations are evaluated independently and do not net capacity against each other.
+document_id: BJ-2024-0715
+facts:
+  order_volume: {file: 01-customer-enquiry-A.md, paragraph: 2. Requirements, excerpt: 'Expected total volume: 12000 m³', value: '12000', department: marketing}
+  peak_monthly_volume: {file: 01-customer-enquiry-A.md, paragraph: 2. Requirements, excerpt: monthly peak about 3000 m³, value: '3000', department: marketing}
+  requested_price: {file: 01-customer-enquiry-A.md, paragraph: 3. Customer commercial terms, excerpt: no more than 415 CNY/m³, value: '415', department: marketing}
+  requested_payment_ratio: {file: 01-customer-enquiry-A.md, paragraph: 3. Customer commercial terms, excerpt: "70% of the month's settlement paid by the end of the following month", value: '0.70', department: marketing}
+  requested_first_pour_days: {file: 01-customer-enquiry-A.md, paragraph: 2. Requirements, excerpt: 24 days after the enquiry, value: '24', department: marketing}
+  material_cost: {file: 05-cost-and-capacity-basis.md, paragraph: Mix material cost, excerpt: 'Total material cost excl. VAT: 298.47 CNY/m³', value: '298.47', department: procurement}
+  processing_cost: {file: 05-cost-and-capacity-basis.md, paragraph: 'Transport, pumping and production', excerpt: 'Total: 50 CNY/m³', value: '50', department: procurement}
+  available_capacity: {file: 05-cost-and-capacity-basis.md, paragraph: Plant capacity, excerpt: 'Available capacity: 3200 m³/month', value: '3200', department: production}
+  preparation_days: {file: 05-cost-and-capacity-basis.md, paragraph: Plant capacity, excerpt: 'New project lead time: 7 days', value: '7', department: production}
+  payment_days: {file: 05-cost-and-capacity-basis.md, paragraph: Customer collection record, excerpt: 'Average collection days: 57.8', value: '57.8', department: finance}
+  capital_cost: {file: 05-cost-and-capacity-basis.md, paragraph: Customer collection record, excerpt: 'Financing cost: 8 CNY/m³', value: '8', department: finance}

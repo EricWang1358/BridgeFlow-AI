@@ -2,6 +2,7 @@ import { tourEvent } from './tour/state.ts'
 import { useEffect, useState } from 'react'
 import { api, navigate, route, useUI, describeError, useGloss } from './ui.ts'
 import { Notebook } from './notebook.tsx'
+import { QuoteCasesPanel, type QuoteCases } from './quote-compliance.tsx'
 
 type Contract = {
   title: string; description: string; manager_decision: string;
@@ -14,9 +15,12 @@ type Catalogue = { status: string; contract: Contract | null; source?: { filenam
 export function Quotation() {
   const { t } = useUI(), gloss = useGloss()
   const [catalogue, setCatalogue] = useState<Catalogue | null>(null), [error, setError] = useState(''), [revision, setRevision] = useState(0)
+  const [cases, setCases] = useState<QuoteCases | null>(null)
   useEffect(() => {
-    const controller = new AbortController(); setCatalogue(null); setError('')
+    const controller = new AbortController(); setCatalogue(null); setError(''); setCases(null)
     void api<Catalogue>('/quotation/contract', { signal: controller.signal }).then(value => { setCatalogue(value); tourEvent('quotation', route().batch ?? '') }).catch(e => { if (!controller.signal.aborted) setError(describeError(e, t)) })
+    // The built-in samples are optional: an older backend or a failure leaves the template preview as it was.
+    void api<QuoteCases>('/quotation/cases', { signal: controller.signal }).then(setCases).catch(() => undefined)
     return () => controller.abort()
   }, [revision])
   useEffect(() => {
@@ -38,6 +42,7 @@ export function Quotation() {
         <h4>{t('quotationChecks')}</h4>{contract.checks.map(check => <p className="bf-hint" key={check.id}>{gloss.text(check.title)}</p>)}</>}
       <p className="bf-hint">{t('quotationApprovalHelp')}</p>
     </>}>
+    {catalogue?.contract && cases?.status === 'available' && cases.quotes.length > 0 && <QuoteCasesPanel listing={cases} />}
     <div className="bf-card-head"><h3>{t('declaredTemplate')}</h3><button data-tour-recovery={error ? '' : undefined} onClick={() => setRevision(n => n + 1)}>{t('refresh')}</button></div>
     {error && <p role="alert" className="bf-error">{error}</p>}
     {!catalogue && !error && <p role="status" className="bf-loading">{t('loading')}</p>}

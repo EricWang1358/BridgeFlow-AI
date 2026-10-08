@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     # Drafts dictionary declarations from column statistics (#205). A separate knob so
     # drafting can run on a stronger model than the pipeline agents without touching them.
     llm_provider_dictionary_drafter: str = ""
+    # Reads contract clauses for clause-type legal requirements (#302); run offline by
+    # scripts/freeze_clause_judgements.py, never live in the demo.
+    llm_provider_contract_compliance: str = ""
 
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-5"
@@ -117,6 +120,9 @@ class Settings(BaseSettings):
     # the sample workflow". The guest instance points these at the English set (data/demo_en/,
     # declared in its sample-set.yaml); everything else keeps the business's Chinese originals.
     demo_cases_path: str = "data/mock_business/cases/cases.yaml"
+    # Built-in quotation samples with contract terms checked against legal requirements (#302).
+    # Shown only when the active dictionary's quotation contract has the same arithmetic; empty disables.
+    quotation_cases_path: str = "data/quote_compliance_demo/quotes.yaml"
     discovery_sample_path: str = "data/discovery_demo/sample-project.yaml"
     workflow_samples_path: str = "data/workflow_demo/sample-submissions.yaml"
 

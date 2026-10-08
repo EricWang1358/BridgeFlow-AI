@@ -444,6 +444,21 @@ body[data-ds-dark-theme] .bf-panel::backdrop { background: #04080d9e }
 .bf-quotation-paper dl { margin: 16px 0 }
 .bf-quotation-paper dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--bf-line); padding: 12px 0; font-size: 13px }
 .bf-quotation-paper dd { margin: 0; color: var(--bf-muted); font-size: 12px }
+.bf-quotation-paper dd.bf-quote-value { color: var(--bf-text); font-size: 13px; font-variant-numeric: tabular-nums }
+.bf-quote-cases { margin: 0 0 24px }
+.bf-compliance { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0 }
+.bf-compliance th { text-align: left; font-weight: 600; color: var(--bf-muted); font-size: 12px; padding: 8px; border-bottom: 1px solid var(--bf-line) }
+.bf-compliance td { vertical-align: top; padding: 10px 8px; border-bottom: 1px solid var(--bf-line) }
+.bf-compliance td > * { display: block; margin: 0 0 4px }
+.bf-compliance td .bf-chip { display: inline-block; width: auto }
+.bf-compliance tr[data-status=non_compliant], .bf-compliance tr[data-status=inconsistent] { background: var(--bf-danger-bg) }
+.bf-compliance tr[data-status=non_compliant] td:first-child, .bf-compliance tr[data-status=inconsistent] td:first-child { box-shadow: inset 3px 0 var(--bf-danger) }
+.bf-compliance tr[data-status=undetermined] td:first-child { box-shadow: inset 3px 0 var(--bf-warn) }
+.bf-cite { quotes: '「' '」'; font-size: 12px }
+.bf-cite b { font-weight: 600; margin-right: 4px }
+.bf-chip[data-status=compliant], .bf-chip[data-status=consistent] { color: var(--bf-ok); background: var(--bf-ok-bg) }
+.bf-chip[data-status=non_compliant], .bf-chip[data-status=inconsistent], .bf-chip[data-status=refused] { color: var(--bf-danger); background: var(--bf-danger-bg) }
+.bf-chip[data-status=undetermined] { color: var(--bf-warn); background: var(--bf-warn-bg) }
 .bf-formulas { margin-top: 16px; font-size: 12px }
 .bf-formulas summary { cursor: pointer; color: var(--bf-accent) }
 .bf-formulas code { white-space: normal; overflow-wrap: anywhere }

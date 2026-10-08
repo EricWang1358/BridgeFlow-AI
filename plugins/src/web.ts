@@ -249,7 +249,7 @@ export function mountWeb(ctx: Context, backend: BackendConfig, notes: ApprovalNo
           } catch (error) { res.writeHead(422).end(JSON.stringify({ detail: String(error instanceof Error ? error.message : error) })) }
           return
         }
-        const read = req.method === 'GET' && (path === '/quotation/contract' || /^\/batches\/[a-f0-9]{32}(\/(view|review|artifacts|review-notes\/[a-f0-9]{32}|sources(?:\/(?:production|procurement|finance|marketing))?))?$/.test(path)
+        const read = req.method === 'GET' && (path === '/quotation/contract' || /^\/quotation\/cases(\/[A-Za-z0-9][A-Za-z0-9_-]{0,63})?$/.test(path) || /^\/batches\/[a-f0-9]{32}(\/(view|review|artifacts|review-notes\/[a-f0-9]{32}|sources(?:\/(?:production|procurement|finance|marketing))?))?$/.test(path)
           // Workflow views are read-only here; recording and approving go through the captain and approval.
           || /^\/workflow\/(board|catalogue|adoption|scope|artifacts\/[a-f0-9]{32}|history\/(artifact|handoff)\/[a-zA-Z0-9:_-]{1,80})$/.test(path)
           || /^\/discovery\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\/(material|opportunity|graph|score|meeting|decision)(\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,79})?$/.test(path)
