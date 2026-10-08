@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" class="poster" viewBox="0 0 3508 4967" width="594mm" height="841mm" data-px="3508x4967">
+<title>BridgeFlow AI · When flows converge, value moves.</title>
+
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#E7EFF7"/>
+    <stop offset=".55" stop-color="#F2EEEA"/>
+    <stop offset="1" stop-color="#F7E3CB"/>
+  </linearGradient>
+  <radialGradient id="sun" cx="2950" cy="1640" r="1150" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#FFF4DE"/>
+    <stop offset=".18" stop-color="#FCE6C2" stop-opacity=".85"/>
+    <stop offset="1" stop-color="#F7E3CB" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="sea" x1="0" y1="1640" x2="0" y2="3800" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#C9D9E6"/>
+    <stop offset=".028" stop-color="#93B4CF"/>
+    <stop offset=".074" stop-color="#5684AF"/>
+    <stop offset=".14" stop-color="#2F5F8E"/>
+    <stop offset=".35" stop-color="#1B4370"/>
+    <stop offset=".63" stop-color="#12345A"/>
+    <stop offset="1" stop-color="#0C2643"/>
+  </linearGradient>
+  <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/>
+    <stop offset=".5" stop-color="#FFFFFF" stop-opacity=".55"/>
+    <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+  </linearGradient>
+  <linearGradient id="ivory" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FAF8F3"/>
+    <stop offset="1" stop-color="#F3EFE6"/>
+  </linearGradient>
+  <linearGradient id="goldText" x1="1000" y1="0" x2="2500" y2="0" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#A9823A"/>
+    <stop offset=".42" stop-color="#D4B467"/>
+    <stop offset=".62" stop-color="#C29A4A"/>
+    <stop offset="1" stop-color="#A67E34"/>
+  </linearGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#E2C47A"/>
+    <stop offset="1" stop-color="#B88F3E"/>
+  </linearGradient>
+  <linearGradient id="stream" x1="920" y1="0" x2="1260" y2="0" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#5CCBEF" stop-opacity=".75"/>
+    <stop offset="1" stop-color="#E9FAFF"/>
+  </linearGradient>
+  <linearGradient id="spine" x1="0" y1="1900" x2="0" y2="3560" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#5CCBEF" stop-opacity=".55"/>
+    <stop offset=".75" stop-color="#BFEFFF" stop-opacity=".85"/>
+    <stop offset="1" stop-color="#E6CB86"/>
+  </linearGradient>
+  <linearGradient id="glassDark" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#2B5079" stop-opacity=".62"/>
+    <stop offset="1" stop-color="#0E2747" stop-opacity=".66"/>
+  </linearGradient>
+  <linearGradient id="glassPanel" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#335C88" stop-opacity=".5"/>
+    <stop offset="1" stop-color="#10294A" stop-opacity=".6"/>
+  </linearGradient>
+  <linearGradient id="logoFlow" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#1B6FBA"/>
+    <stop offset="1" stop-color="#36A3DE"/>
+  </linearGradient>
+  <filter id="glow" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="16"/></filter>
+  <filter id="glowWide" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="34"/></filter>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="36"/></filter>
+</defs>
+<rect x="-60" y="-60" width="3628" height="1700" fill="url(#sky)"/>
+<rect x="-60" y="-60" width="3628" height="1700" fill="url(#sun)"/>
+<path d="M-40 1640 C 120 1600, 380 1578, 620 1610 S 900 1632, 1000 1640Z" fill="#BCCBDA" opacity=".75"/>
+<path d="M1380 1640 C 1450 1618, 1560 1614, 1660 1640Z" fill="#C3D1DE" opacity=".7"/>
+<path d="M2080 1640V1595h30V1640z M2128 1640V1615h65V1640z M2204 1640V1606h65V1640z M2220 1606v-23h33V1606z M2278 1640V1591h63V1640z M2293 1591v-24h33V1591z M2350 1640V1576h59V1640z M2416 1640V1568h75V1640z M2810 1640V1538h62V1640z M2825 1538v-25h32V1538z M2890 1640V1567h59V1640z M2904 1567v-23h31V1567z M2965 1640V1536h46V1640z M3019 1640V1520h41V1640z M3070 1640V1550h51V1640z M3135 1640V1576h43V1640z M3199 1640V1532h59V1640z M3269 1640V1562h68V1640z M3286 1562v-26h34V1562z M3351 1640V1525h58V1640z M3428 1640V1560h30V1640z M3469 1640V1552h72V1640z M3546 1640V1548h46V1640z M3557 1548v-23h24V1548z M2470 1640l6 -118h34l6 118z M2580 1640l6 -118h34l6 118z M2690 1640l6 -118h34l6 118z M2440 1516h340q6 0 6 6v4h-352v-4q0 -6 6 -6z" fill="#AFC0D2" opacity=".72"/>
+<g stroke="#AFC0D2" stroke-width="4" fill="none" opacity=".72"><circle cx="2250" cy="1578" r="48"/><path d="M2250 1578l-26 62M2250 1578l26 62"/></g>
+<g transform="translate(520 1636) scale(1.0)" fill="#8EA4BA" opacity=".8"><path d="M0 0h170l-12 16H10z"/><rect x="18" y="-14" width="104" height="14"/><rect x="30" y="-24" width="70" height="10"/><rect x="134" y="-30" width="16" height="30"/></g>
+<g transform="translate(1050 1636) scale(0.8)" fill="#8EA4BA" opacity=".8"><path d="M0 0h170l-12 16H10z"/><rect x="18" y="-14" width="104" height="14"/><rect x="30" y="-24" width="70" height="10"/><rect x="134" y="-30" width="16" height="30"/></g>
+<g transform="translate(1820 1636) scale(0.6)" fill="#8EA4BA" opacity=".8"><path d="M0 0h170l-12 16H10z"/><rect x="18" y="-14" width="104" height="14"/><rect x="30" y="-24" width="70" height="10"/><rect x="134" y="-30" width="16" height="30"/></g>
+<rect x="-60" y="1640" width="3628" height="2400" fill="url(#sea)"/>
+<rect x="-60" y="1600" width="3628" height="80" fill="url(#haze)"/>
+<path d="M-60 1700 C120 1702,299 1700,479 1700 C635 1696,792 1699,948 1700 C1087 1698,1227 1701,1366 1700 C1543 1700,1719 1700,1896 1700 C2052 1703,2209 1697,2365 1700 C2504 1703,2643 1704,2782 1700 C2958 1697,3134 1696,3310 1700 C3449 1701,3588 1703,3727 1700" fill="none" stroke="#FFFFFF" stroke-opacity="0.060" stroke-width="2.5"/>
+<path d="M-60 1728 C125 1722,310 1733,495 1728 C639 1724,783 1736,927 1728 C1075 1723,1222 1725,1370 1728 C1532 1724,1693 1735,1855 1728 C1982 1723,2110 1729,2237 1728 C2405 1732,2572 1722,2740 1728 C2892 1721,3044 1730,3196 1728 C3346 1732,3497 1727,3647 1728" fill="none" stroke="#FFFFFF" stroke-opacity="0.063" stroke-width="2.6"/>
+<path d="M-60 1782 C78 1790,216 1778,354 1782 C533 1784,713 1783,892 1782 C1058 1782,1223 1791,1389 1782 C1550 1791,1711 1773,1872 1782 C2000 1779,2127 1791,2255 1782 C2430 1777,2605 1782,2780 1782 C2960 1784,3141 1781,3321 1782 C3472 1787,3623 1775,3774 1782" fill="none" stroke="#FFFFFF" stroke-opacity="0.066" stroke-width="2.8"/>
+<path d="M-60 1853 C102 1865,263 1841,425 1853 C563 1842,700 1857,838 1853 C980 1846,1121 1860,1263 1853 C1410 1857,1558 1854,1705 1853 C1837 1847,1970 1847,2102 1853 C2235 1850,2369 1846,2502 1853 C2635 1855,2769 1861,2902 1853 C3034 1856,3165 1848,3297 1853 C3452 1853,3607 1859,3762 1853" fill="none" stroke="#FFFFFF" stroke-opacity="0.069" stroke-width="2.9"/>
+<path d="M-60 1939 C92 1932,245 1931,397 1939 C574 1946,750 1937,927 1939 C1104 1943,1282 1953,1459 1939 C1612 1933,1764 1931,1917 1939 C2076 1947,2236 1952,2395 1939 C2555 1951,2716 1952,2876 1939 C3014 1946,3153 1936,3291 1939 C3470 1939,3649 1944,3828 1939" fill="none" stroke="#FFFFFF" stroke-opacity="0.072" stroke-width="3.0"/>
+<path d="M-60 2038 C119 2024,299 2029,478 2038 C617 2040,756 2030,895 2038 C1069 2045,1244 2046,1418 2038 C1589 2025,1759 2025,1930 2038 C2083 2052,2236 2033,2389 2038 C2553 2042,2716 2029,2880 2038 C3058 2043,3236 2044,3414 2038 C3546 2054,3679 2036,3811 2038" fill="none" stroke="#FFFFFF" stroke-opacity="0.076" stroke-width="3.1"/>
+<path d="M-60 2148 C78 2130,216 2140,354 2148 C537 2155,721 2141,904 2148 C1071 2163,1238 2162,1405 2148 C1555 2132,1705 2145,1855 2148 C2001 2161,2147 2153,2293 2148 C2476 2152,2659 2147,2842 2148 C3001 2150,3159 2144,3318 2148 C3480 2132,3642 2160,3804 2148" fill="none" stroke="#FFFFFF" stroke-opacity="0.079" stroke-width="3.2"/>
+<path d="M-60 2269 C75 2264,209 2268,344 2269 C506 2273,669 2250,831 2269 C991 2253,1150 2290,1310 2269 C1485 2269,1661 2283,1836 2269 C2014 2262,2192 2278,2370 2269 C2529 2284,2687 2289,2846 2269 C3000 2279,3153 2259,3307 2269 C3443 2272,3579 2270,3715 2269" fill="none" stroke="#FFFFFF" stroke-opacity="0.082" stroke-width="3.4"/>
+<path d="M-60 2400 C87 2395,235 2378,382 2400 C509 2390,636 2383,763 2400 C932 2400,1102 2421,1271 2400 C1409 2378,1548 2420,1686 2400 C1826 2378,1965 2378,2105 2400 C2254 2417,2404 2381,2553 2400 C2732 2409,2911 2418,3090 2400 C3256 2403,3421 2416,3587 2400" fill="none" stroke="#FFFFFF" stroke-opacity="0.085" stroke-width="3.5"/>
+<path d="M-60 2540 C95 2558,251 2529,406 2540 C549 2553,691 2533,834 2540 C969 2540,1105 2529,1240 2540 C1407 2527,1575 2528,1742 2540 C1881 2554,2021 2558,2160 2540 C2290 2556,2421 2526,2551 2540 C2733 2530,2916 2539,3098 2540 C3275 2557,3452 2548,3629 2540" fill="none" stroke="#FFFFFF" stroke-opacity="0.088" stroke-width="3.6"/>
+<path d="M-60 2689 C111 2700,282 2690,453 2689 C584 2675,714 2702,845 2689 C991 2671,1138 2675,1284 2689 C1470 2698,1656 2690,1842 2689 C1969 2698,2096 2684,2223 2689 C2351 2673,2479 2715,2607 2689 C2778 2676,2950 2715,3121 2689 C3283 2667,3446 2691,3608 2689" fill="none" stroke="#FFFFFF" stroke-opacity="0.091" stroke-width="3.8"/>
+<path d="M-60 2847 C115 2846,291 2829,466 2847 C597 2851,729 2848,860 2847 C1018 2838,1177 2847,1335 2847 C1516 2835,1696 2876,1877 2847 C2038 2840,2199 2842,2360 2847 C2501 2819,2642 2823,2783 2847 C2923 2839,3064 2818,3204 2847 C3381 2856,3558 2831,3735 2847" fill="none" stroke="#FFFFFF" stroke-opacity="0.094" stroke-width="3.9"/>
+<path d="M-60 3012 C91 3011,243 2999,394 3012 C533 2991,673 3039,812 3012 C980 3041,1149 2992,1317 3012 C1481 3007,1646 3018,1810 3012 C1963 3036,2117 3036,2270 3012 C2414 3035,2558 2982,2702 3012 C2859 2984,3017 3040,3174 3012 C3319 3026,3464 3022,3609 3012" fill="none" stroke="#FFFFFF" stroke-opacity="0.098" stroke-width="4.0"/>
+<path d="M-60 3186 C79 3197,218 3169,357 3186 C496 3208,635 3177,774 3186 C956 3199,1139 3162,1321 3186 C1457 3199,1593 3173,1729 3186 C1892 3157,2054 3177,2217 3186 C2351 3204,2486 3158,2620 3186 C2797 3215,2975 3212,3152 3186 C3327 3159,3503 3217,3678 3186" fill="none" stroke="#FFFFFF" stroke-opacity="0.101" stroke-width="4.1"/>
+<path d="M-60 3367 C118 3344,295 3332,473 3367 C611 3332,750 3388,888 3367 C1049 3383,1210 3331,1371 3367 C1538 3373,1706 3374,1873 3367 C2029 3369,2186 3397,2342 3367 C2487 3359,2632 3363,2777 3367 C2924 3342,3070 3337,3217 3367 C3402 3341,3587 3380,3772 3367" fill="none" stroke="#FFFFFF" stroke-opacity="0.104" stroke-width="4.2"/>
+<path d="M-60 3555 C108 3552,276 3518,444 3555 C580 3555,715 3531,851 3555 C1031 3571,1212 3575,1392 3555 C1572 3538,1753 3556,1933 3555 C2074 3557,2216 3533,2357 3555 C2511 3517,2665 3546,2819 3555 C3004 3544,3188 3526,3373 3555 C3517 3561,3660 3550,3804 3555" fill="none" stroke="#FFFFFF" stroke-opacity="0.107" stroke-width="4.4"/>
+<path d="M-60 3750 C93 3762,247 3743,400 3750 C560 3780,721 3721,881 3750 C1040 3721,1199 3738,1358 3750 C1491 3727,1624 3766,1757 3750 C1937 3785,2118 3785,2298 3750 C2429 3739,2559 3746,2690 3750 C2838 3757,2985 3742,3133 3750 C3273 3753,3414 3732,3554 3750 C3690 3736,3827 3726,3963 3750" fill="none" stroke="#FFFFFF" stroke-opacity="0.110" stroke-width="4.5"/>
+<path d="M2811 1648h227" stroke="#FFF0D2" stroke-width="4.5" stroke-linecap="round" opacity="0.60"/>
+<path d="M2875 1652h236" stroke="#FFF0D2" stroke-width="4.3" stroke-linecap="round" opacity="0.56"/>
+<path d="M2846 1658h144" stroke="#FFF0D2" stroke-width="4.2" stroke-linecap="round" opacity="0.51"/>
+<path d="M2853 1664h167" stroke="#FFF0D2" stroke-width="4.0" stroke-linecap="round" opacity="0.47"/>
+<path d="M2920 1672h119" stroke="#FFF0D2" stroke-width="3.9" stroke-linecap="round" opacity="0.43"/>
+<path d="M2922 1680h132" stroke="#FFF0D2" stroke-width="3.8" stroke-linecap="round" opacity="0.39"/>
+<path d="M2822 1690h173" stroke="#FFF0D2" stroke-width="3.6" stroke-linecap="round" opacity="0.34"/>
+<path d="M2882 1700h164" stroke="#FFF0D2" stroke-width="3.5" stroke-linecap="round" opacity="0.30"/>
+<path d="M2898 1712h118" stroke="#FFF0D2" stroke-width="3.3" stroke-linecap="round" opacity="0.26"/>
+<path d="M2879 1724h89" stroke="#FFF0D2" stroke-width="3.2" stroke-linecap="round" opacity="0.21"/>
+<path d="M2926 1738h83" stroke="#FFF0D2" stroke-width="3.0" stroke-linecap="round" opacity="0.17"/>
+<path d="M2903 1752h95" stroke="#FFF0D2" stroke-width="2.9" stroke-linecap="round" opacity="0.13"/>
+<path d="M2890 1768h64" stroke="#FFF0D2" stroke-width="2.7" stroke-linecap="round" opacity="0.09"/>
+<path d="M2913 1784h54" stroke="#FFF0D2" stroke-width="2.5" stroke-linecap="round" opacity="0.04"/>
+<path d="M-60 3726 C 800 3646, 1800 3786, 2600 3711 S 3300 3646, 3568 3691 L3568 5027 L-60 5027Z" fill="#FFFFFF" opacity=".10"/>
+<path d="M-60 3770 C 800 3690, 1800 3830, 2600 3755 S 3300 3690, 3568 3735 L3568 5027 L-60 5027Z" fill="url(#ivory)"/>
+<path d="M-60 3770 C 800 3690, 1800 3830, 2600 3755 S 3300 3690, 3568 3735" fill="none" stroke="#FFFFFF" stroke-width="5" opacity=".7"/>
+<path d="M780 566 C 990 648, 1390 656, 1720 548 C 1400 628, 1000 622, 780 566Z" fill="url(#logoFlow)"/>
+<path d="M850 612 C 1040 680, 1380 688, 1650 610 C 1390 668, 1050 664, 850 612Z" fill="#5CCBEF" opacity=".7"/>
+<text x="1754" y="470" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="290" font-weight="700" fill="#0B1F3A" text-anchor="middle" letter-spacing="-6"><tspan fill="#0B1F3A">Bridge</tspan><tspan fill="url(#logoFlow)">Flow</tspan><tspan fill="#0B1F3A"> AI</tspan></text>
+<path d="M1230 749h130M2140 749h130" stroke="#0B1F3A" stroke-width="3" opacity=".45"/>
+<text x="1763" y="770" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="58" font-weight="500" fill="#0B1F3A" text-anchor="middle" letter-spacing="18" opacity=".8">TEAM CONFLUX<tspan font-size="36" dy="-22">4</tspan></text>
+<text x="1754" y="990" font-family="'Bodoni 72', Didot, 'Bodoni MT', serif" font-size="214" font-weight="700" fill="#0B1F3A" text-anchor="middle" letter-spacing="4">WHEN FLOWS CONVERGE,</text>
+<text x="1754" y="1222" font-family="'Bodoni 72', Didot, 'Bodoni MT', serif" font-size="214" font-weight="700" fill="url(#goldText)" text-anchor="middle" letter-spacing="4">VALUE MOVES.</text>
+<text x="1754" y="1365" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="64" font-weight="500" fill="#33415C" text-anchor="middle">Connect every department’s data. Anticipate risks. Explore options.</text>
+<text x="1754" y="1450" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="64" font-weight="500" fill="#33415C" text-anchor="middle">Turn decisions into action — with people in control.</text>
+<text x="180" y="1830" font-family="'Bodoni 72', Didot, 'Bodoni MT', serif" font-size="54" font-weight="700" fill="#E6CB86">01</text><text x="266" y="1828" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="42" font-weight="600" fill="#FFFFFF" letter-spacing="8" opacity=".92">EVERY DEPARTMENT</text>
+<path d="M920 2038 C1110 2038,1090 2730,1260 2730" fill="none" stroke="#5CCBEF" stroke-width="30" opacity=".42" filter="url(#glow)"/>
+<path d="M920 2038 C1110 2038,1090 2730,1260 2730" fill="none" stroke="url(#stream)" stroke-width="8" stroke-linecap="round" opacity="1"/>
+<rect x="180" y="1900" width="740" height="276" rx="44" fill="url(#glassDark)" stroke="#FFFFFF" stroke-opacity=".3" stroke-width="3"/>
+<circle cx="300" cy="2038" r="62" fill="#FFFFFF" fill-opacity=".1" stroke="#FFFFFF" stroke-opacity=".38" stroke-width="3"/>
+<g transform="translate(268 2006) scale(1.33333)" fill="none" stroke="#FFFFFF" color="#FFFFFF" stroke-width="4.88" stroke-linecap="round" stroke-linejoin="round"><path d="M5 41V23l10 6v-6l10 6v-6l10 6V9h7v32z"/><path d="M14 35h4M24 35h4"/></g>
+<text x="400" y="2004" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="64" font-weight="600" fill="#FFFFFF">Production</text>
+<text x="400" y="2068" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="44" font-weight="500" fill="#D5E3F0">Capacity · Delivery</text>
+<text x="400" y="2124" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="44" font-weight="500" fill="#D5E3F0">Output · Inventory</text>
+<circle cx="920" cy="2038" r="11" fill="#E9FAFF"/>
+<path d="M920 2384 C1110 2384,1090 2730,1260 2730" fill="none" stroke="#5CCBEF" stroke-width="30" opacity=".42" filter="url(#glow)"/>
+<path d="M920 2384 C1110 2384,1090 2730,1260 2730" fill="none" stroke="url(#stream)" stroke-width="8" stroke-linecap="round" opacity="1"/>
+<rect x="180" y="2246" width="740" height="276" rx="44" fill="url(#glassDark)" stroke="#FFFFFF" stroke-opacity=".3" stroke-width="3"/>
+<circle cx="300" cy="2384" r="62" fill="#FFFFFF" fill-opacity=".1" stroke="#FFFFFF" stroke-opacity=".38" stroke-width="3"/>
+<g transform="translate(268 2352) scale(1.33333)" fill="none" stroke="#FFFFFF" color="#FFFFFF" stroke-width="4.88" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="8" width="28" height="34" rx="3"/><path d="M19 8V5h10v3M17 19h14M17 26h14M17 33h8"/></g>
+<text x="400" y="2350" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="64" font-weight="600" fill="#FFFFFF">Procurement</text>
+<text x="400" y="2414" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="44" font-weight="500" fill="#D5E3F0">Cost · Suppliers</text>
+<text x="400" y="2470" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="44" font-weight="500" fill="#D5E3F0">Materials · Contracts</text>
+<circle cx="920" cy="2384" r="11" fill="#E9FAFF"/>
+<path d="M920 2730 C1110 2730,1090 2730,1260 2730" fill="none" stroke="#5CCBEF" stroke-width="30" opacity=".42" filter="url(#glow)"/>
+<path d="M920 2730 C1110 2730,1090 2730,1260 2730" fill="none" stroke="url(#stream)" stroke-width="8" stroke-linecap="round" opacity="1"/>
+<rect x="180" y="2592" width="740" height="276" rx="44" fill="url(#glassDark)" stroke="#FFFFFF" stroke-opacity=".3" stroke-width="3"/>
+<circle cx="300" cy="2730" r="62" fill="#FFFFFF" fill-opacity=".1" stroke="#FFFFFF" stroke-opacity=".38" stroke-width="3"/>
+<g transform="translate(268 2698) scale(1.33333)" fill="none" stroke="#FFFFFF" color="#FFFFFF" stroke-width="4.88" stroke-linecap="round" stroke-linejoin="round"><path d="M6 41h36M12 35v-8M20 35V21M28 35v-9M36 35V13"/></g>
+<text x="400" y="2696" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="64" font-weight="600" fill="#FFFFFF">Finance</text>
+<text x="400" y="2760" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="44" font-weight="500" fill="#D5E3F0">Margin · Cash flow</text>
+<text x="400" y="2816" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="44" font-weight="500" fill="#D5E3F0">Receivables · Budget</text>
+<circle cx="920" cy="2730" r="11" fill="#E9FAFF"/>
+<path d="M920 3076 C1110 3076,1090 2730,1260 2730" fill="none" stroke="#5CCBEF" stroke-width="30" opacity=".42" filter="url(#glow)"/>
+<path d="M920 3076 C1110 3076,1090 2730,1260 2730" fill="none" stroke="url(#stream)" stroke-width="8" stroke-linecap="round" opacity="1"/>
+<rect x="180" y="2938" width="740" height="276" rx="44" fill="url(#glassDark)" stroke="#FFFFFF" stroke-opacity=".3" stroke-width="3"/>
+<circle cx="300" cy="3076" r="62" fill="#FFFFFF" fill-opacity=".1" stroke="#FFFFFF" stroke-opacity=".38" stroke-width="3"/>
+<g transform="translate(268 3044) scale(1.33333)" fill="none" stroke="#FFFFFF" color="#FFFFFF" stroke-width="4.88" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="17" r="6"/><path d="M6 39c0-7 5.5-11 12-11s12 4 12 11"/><circle cx="33" cy="15" r="5"/><path d="M32 25c6 0 10 4 10 10"/></g>
+<text x="400" y="3042" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="64" font-weight="600" fill="#FFFFFF">Marketing</text>
+<text x="400" y="3106" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="44" font-weight="500" fill="#D5E3F0">Demand · Pricing</text>
+<text x="400" y="3162" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="44" font-weight="500" fill="#D5E3F0">Customers · Growth</text>
+<circle cx="920" cy="3076" r="11" fill="#E9FAFF"/>
+<path d="M920 3422 C1110 3422,1090 2730,1260 2730" fill="none" stroke="#5CCBEF" stroke-width="30" opacity=".18" filter="url(#glow)"/>
+<path d="M920 3422 C1110 3422,1090 2730,1260 2730" fill="none" stroke="url(#stream)" stroke-width="6" stroke-linecap="round" opacity=".6" stroke-dasharray="4 22"/>
+<rect x="180" y="3284" width="740" height="276" rx="44" fill="#FFFFFF" fill-opacity=".04" stroke="#FFFFFF" stroke-opacity=".5" stroke-width="3" stroke-dasharray="20 14"/>
+<circle cx="300" cy="3422" r="62" fill="none" stroke="#FFFFFF" stroke-opacity=".45" stroke-width="3" stroke-dasharray="10 9"/>
+<g transform="translate(268 3390) scale(1.33333)" fill="none" stroke="#FFFFFF" color="#FFFFFF" stroke-width="4.88" stroke-linecap="round" stroke-linejoin="round"><path d="M24 12v24M12 24h24"/></g>
+<text x="400" y="3442" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="56" font-weight="600" fill="#FFFFFF" opacity=".85">More departments</text>
+<text x="1260" y="1830" font-family="'Bodoni 72', Didot, 'Bodoni MT', serif" font-size="54" font-weight="700" fill="#E6CB86">02</text><text x="1346" y="1828" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="42" font-weight="600" fill="#FFFFFF" letter-spacing="8" opacity=".92">ONE TRACEABLE FLOW</text>
+<rect x="1260" y="1900" width="940" height="1660" rx="48" fill="url(#glassPanel)" stroke="#FFFFFF" stroke-opacity=".34" stroke-width="3"/>
+<rect x="1282" y="3167" width="896" height="371" rx="34" fill="#E6CB86" fill-opacity=".07" stroke="#E6CB86" stroke-opacity=".7" stroke-width="3"/>
+<path d="M1510 2315H2150" stroke="#FFFFFF" stroke-opacity=".14" stroke-width="3"/>
+<path d="M1510 2730H2150" stroke="#FFFFFF" stroke-opacity=".14" stroke-width="3"/>
+<path d="M1390 2108V3352" stroke="url(#spine)" stroke-width="7"/>
+<path d="M1260 2730H1390" stroke="#E9FAFF" stroke-width="10" stroke-linecap="round"/>
+<circle cx="1260" cy="2730" r="70" fill="#5CCBEF" opacity=".45" filter="url(#glowWide)"/>
+<circle cx="1260" cy="2730" r="24" fill="#FFFFFF"/>
+<circle cx="1390" cy="2108" r="70" fill="#163A62" stroke="#BFEFFF" stroke-opacity=".6" stroke-width="3"/>
+<g transform="translate(1354 2071.5) scale(1.5)" fill="none" stroke="#FFFFFF" color="#FFFFFF" stroke-width="4.33" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="24" cy="12" rx="14" ry="5"/><path d="M10 12v24c0 2.8 6.3 5 14 5s14-2.2 14-5V12"/><path d="M10 24c0 2.8 6.3 5 14 5s14-2.2 14-5"/></g>
+<text x="1510" y="2060.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="58" font-weight="600" fill="#FFFFFF" letter-spacing="7">UNDERSTAND</text>
+<text x="1510" y="2132.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#D5E3F0">Unify every sheet</text>
+<text x="1510" y="2192.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#D5E3F0">into one table.</text>
+<circle cx="1390" cy="2522" r="70" fill="#163A62" stroke="#BFEFFF" stroke-opacity=".6" stroke-width="3"/>
+<g transform="translate(1354 2486.5) scale(1.5)" fill="none" stroke="#FFFFFF" color="#FFFFFF" stroke-width="4.33" stroke-linecap="round" stroke-linejoin="round"><path d="M6 36l10-10 8 6 16-18"/><path d="M31 14h9v9"/><path d="M6 42h36"/></g>
+<text x="1510" y="2475.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="58" font-weight="600" fill="#FFFFFF" letter-spacing="7">ANTICIPATE</text>
+<text x="1510" y="2547.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#D5E3F0">Find risks early,</text>
+<text x="1510" y="2607.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#D5E3F0">cite the cells behind them.</text>
+<circle cx="1390" cy="2938" r="70" fill="#163A62" stroke="#BFEFFF" stroke-opacity=".6" stroke-width="3"/>
+<g transform="translate(1354 2901.5) scale(1.5)" fill="none" stroke="#FFFFFF" color="#FFFFFF" stroke-width="4.33" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="24" r="4"/><path d="M13 24h7m0 0c6 0 8-10 14-10h3M20 24h17M20 24c6 0 8 10 14 10h3"/><circle cx="40" cy="14" r="2.5"/><circle cx="40" cy="24" r="2.5"/><circle cx="40" cy="34" r="2.5"/></g>
+<text x="1510" y="2890.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="58" font-weight="600" fill="#FFFFFF" letter-spacing="7">SIMULATE</text>
+<text x="1510" y="2962.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#D5E3F0">Compare options,</text>
+<text x="1510" y="3022.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#D5E3F0">price on evidence.</text>
+<circle cx="1390" cy="3352" r="70" fill="url(#gold)"/>
+<g transform="translate(1352 3314.5) scale(1.58333)" fill="none" stroke="#0B1F3A" color="#0B1F3A" stroke-width="4.11" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="15" r="7"/><path d="M6 41c0-8 6-13 14-13 3 0 5.5.7 7.5 2"/><path d="M29 36l5 5 9-10"/></g>
+<text x="1510" y="3305.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="58" font-weight="600" fill="#E6CB86" letter-spacing="7">YOU DECIDE</text>
+<text x="1510" y="3377.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#D5E3F0">Approve, or reject with</text>
+<text x="1510" y="3437.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#D5E3F0">a reason the agent hears.</text>
+<text x="2340" y="1830" font-family="'Bodoni 72', Didot, 'Bodoni MT', serif" font-size="54" font-weight="700" fill="#E6CB86">03</text><text x="2426" y="1828" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="42" font-weight="600" fill="#FFFFFF" letter-spacing="8" opacity=".92">ONE DECISION, YOURS</text>
+<path d="M2178 3352H2326" stroke="#E6CB86" stroke-width="26" opacity=".5" filter="url(#glow)"/>
+<path d="M2178 3352H2322" stroke="#E6CB86" stroke-width="8" stroke-linecap="round"/>
+<path d="M2296 3330l24 22-24 22" fill="none" stroke="#E6CB86" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="2370" y="1960" width="928" height="1640" rx="48" fill="#04101F" opacity=".55" filter="url(#shadow)"/>
+<rect x="2340" y="1900" width="988" height="1660" rx="48" fill="#FFFFFF" fill-opacity=".95" stroke="#FFFFFF" stroke-width="3"/>
+<g transform="translate(2404 1990) scale(1.08333)" fill="none" stroke="#1F6FB2" color="#1F6FB2" stroke-width="4.62" stroke-linecap="round" stroke-linejoin="round"><path d="M6 41h36"/><path d="M8 33l9-9 7 5 14-15"/></g>
+<text x="2480" y="2032" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="40" font-weight="600" fill="#1F6FB2" letter-spacing="6">SIMULATE OPTIONS</text>
+<text x="2404" y="2144" font-family="'Bodoni 72', Didot, 'Bodoni MT', serif" font-size="76" font-weight="700" fill="#0B1F3A">What should we charge?</text>
+<text x="2404" y="2212" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="42" font-weight="500" fill="#5E6B82">Customer enquiry · this month’s data</text>
+<path d="M2404 2268H3264" stroke="#E2E7EE" stroke-width="3"/>
+<text x="2426" y="2375" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="54" font-weight="600" fill="#0B1F3A">Floor</text>
+<text x="2426" y="2429" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="40" font-weight="500" fill="#5E6B82">Break-even at today’s material cost</text>
+<rect x="2426" y="2455" width="768" height="16" rx="8" fill="#E8EDF3"/>
+<rect x="2426" y="2455" width="399" height="16" rx="8" fill="#8A97AE"/>
+<rect x="2380" y="2523" width="908" height="210" rx="30" fill="#FBF5E7" stroke="#E7D3A0" stroke-width="3"/>
+<rect x="2884" y="2551" width="358" height="66" rx="33" fill="url(#gold)"/>
+<path d="M2929.0,2565.0 L2933.7,2577.5 L2947.1,2578.1 L2936.6,2586.5 L2940.2,2599.4 L2929.0,2592.0 L2917.8,2599.4 L2921.4,2586.5 L2910.9,2578.1 L2924.3,2577.5Z" fill="#FFFFFF"/>
+<text x="2960" y="2597" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="36" font-weight="600" fill="#FFFFFF">Recommended</text>
+<text x="2426" y="2603" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="54" font-weight="600" fill="#0B1F3A">Target</text>
+<text x="2426" y="2657" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="40" font-weight="500" fill="#5E6B82">Best balance of margin and risk</text>
+<rect x="2426" y="2683" width="768" height="16" rx="8" fill="#E8EDF3"/>
+<rect x="2426" y="2683" width="538" height="16" rx="8" fill="url(#gold)"/>
+<text x="2426" y="2831" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="54" font-weight="600" fill="#0B1F3A">Stretch</text>
+<text x="2426" y="2885" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="40" font-weight="500" fill="#5E6B82">If capacity and payment terms allow</text>
+<rect x="2426" y="2911" width="768" height="16" rx="8" fill="#E8EDF3"/>
+<rect x="2426" y="2911" width="660" height="16" rx="8" fill="#6FA3D2"/>
+<g transform="translate(2404 3038) scale(1.08333)" fill="none" stroke="#0B1F3A" color="#0B1F3A" stroke-width="4.62" stroke-linecap="round" stroke-linejoin="round"><path d="M31 15L18 28a4 4 0 0 0 6 6l13-13a7.5 7.5 0 0 0-10.6-10.6L13 23.8a11 11 0 0 0 15.6 15.6L39 29"/></g>
+<text x="2480" y="3080" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="44" font-weight="600" fill="#0B1F3A">Every figure cites its source rows</text>
+<text x="2480" y="3142" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="40" font-weight="500" fill="#5E6B82">Material cost · Capacity · Receivables</text>
+<path d="M2404 3208H3264" stroke="#E2E7EE" stroke-width="3"/>
+<rect x="2404" y="3292" width="415" height="120" rx="60" fill="#1E9E8A"/>
+<g transform="translate(2466.5 3325.5) scale(1.125)" fill="none" stroke="#FFFFFF" color="#FFFFFF" stroke-width="6.22" stroke-linecap="round" stroke-linejoin="round"><path d="M12 25l8 8 16-17"/></g>
+<text x="2639.5" y="3368.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="600" fill="#FFFFFF" text-anchor="middle">Approve</text>
+<rect x="2849" y="3292" width="415" height="120" rx="60" fill="#FFFFFF" stroke="#C8574D" stroke-width="4"/>
+<g transform="translate(2933.5 3329.5) scale(0.958333)" fill="none" stroke="#C8574D" color="#C8574D" stroke-width="7.30" stroke-linecap="round" stroke-linejoin="round"><path d="M15 15l18 18M33 15L15 33"/></g>
+<text x="3084.5" y="3368.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="600" fill="#C8574D" text-anchor="middle">Reject</text>
+<text x="2834" y="3488.5" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="40" font-weight="500" fill="#5E6B82" text-anchor="middle">Nothing is written until a person approves.</text>
+<circle cx="574" cy="3975" r="82" fill="#FFFFFF" fill-opacity=".6" stroke="#C9A24A" stroke-opacity=".7" stroke-width="3"/>
+<g transform="translate(527.5 3929) scale(1.91667)" fill="none" stroke="#0B1F3A" color="#0B1F3A" stroke-width="2.87" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="17"/><path d="M24 14v10l7 5"/></g>
+<text x="573.5" y="4140" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="70" font-weight="600" fill="#0B1F3A" text-anchor="middle">Faster</text>
+<text x="573.5" y="4212" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#4A5872" text-anchor="middle">Every department reviewed</text>
+<text x="573.5" y="4272" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#4A5872" text-anchor="middle">in <tspan font-weight="700" fill="#0B1F3A">53.4 s</tspan> on a real model</text>
+<path d="M967 3910V4280" stroke="#D8D2C4" stroke-width="3"/>
+<circle cx="1360" cy="3975" r="82" fill="#FFFFFF" fill-opacity=".6" stroke="#C9A24A" stroke-opacity=".7" stroke-width="3"/>
+<g transform="translate(1314.5 3929) scale(1.91667)" fill="none" stroke="#0B1F3A" color="#0B1F3A" stroke-width="2.87" stroke-linecap="round" stroke-linejoin="round"><path d="M24 7L43 40H5z"/><path d="M24 19v10"/><circle cx="24" cy="34.5" r="1.2"/></g>
+<text x="1360.5" y="4140" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="70" font-weight="600" fill="#0B1F3A" text-anchor="middle">Lower Risk</text>
+<text x="1360.5" y="4212" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#4A5872" text-anchor="middle">Loss-making orders flagged</text>
+<text x="1360.5" y="4272" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#4A5872" text-anchor="middle">the month they happen</text>
+<path d="M1754 3910V4280" stroke="#D8D2C4" stroke-width="3"/>
+<circle cx="2148" cy="3975" r="82" fill="#FFFFFF" fill-opacity=".6" stroke="#C9A24A" stroke-opacity=".7" stroke-width="3"/>
+<g transform="translate(2101.5 3929) scale(1.91667)" fill="none" stroke="#0B1F3A" color="#0B1F3A" stroke-width="2.87" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="9" width="36" height="30" rx="3"/><path d="M6 19h36M6 29h36M18 9v30M30 9v30"/><rect x="30" y="29" width="12" height="10" fill="currentColor" stroke="none" opacity=".35"/></g>
+<text x="2147.5" y="4140" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="70" font-weight="600" fill="#0B1F3A" text-anchor="middle">Better Decisions</text>
+<text x="2147.5" y="4212" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#4A5872" text-anchor="middle">Every number traces to</text>
+<text x="2147.5" y="4272" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#4A5872" text-anchor="middle">file · sheet · row · column</text>
+<path d="M2541 3910V4280" stroke="#D8D2C4" stroke-width="3"/>
+<circle cx="2934" cy="3975" r="82" fill="#FFFFFF" fill-opacity=".6" stroke="#C9A24A" stroke-opacity=".7" stroke-width="3"/>
+<g transform="translate(2888.5 3929) scale(1.91667)" fill="none" stroke="#0B1F3A" color="#0B1F3A" stroke-width="2.87" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8h15l18 18-15 15L8 23z"/><circle cx="15.5" cy="15.5" r="2.5"/></g>
+<text x="2934.5" y="4140" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="70" font-weight="600" fill="#0B1F3A" text-anchor="middle">Higher Value</text>
+<text x="2934.5" y="4212" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#4A5872" text-anchor="middle">No evidence, no price:</text>
+<text x="2934.5" y="4272" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#4A5872" text-anchor="middle">quotes backed by your data</text>
+<path d="M180 4395H3328" stroke="#DDD6C7" stroke-width="3"/>
+<text x="180" y="4535" font-family="'Bodoni 72', Didot, 'Bodoni MT', serif" font-size="62" font-weight="400" fill="#0B1F3A">Just as the Strait of Malacca connects <tspan font-style="italic">the world</tspan> and helped Singapore flourish,</text>
+<text x="180" y="4625" font-family="'Bodoni 72', Didot, 'Bodoni MT', serif" font-size="62" font-weight="400" fill="#0B1F3A">we connect your business to <tspan font-style="italic" fill="#A9823A">better decisions</tspan>.</text>
+<text x="180" y="4742" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#5E6B82">Team CONFLUX<tspan font-size="28" dy="-16">4</tspan><tspan dy="16"> · Show Me Your Agents 2026 · Running on AWS</tspan></text>
+<text x="180" y="4808" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="500" fill="#5E6B82">Sample data is synthetic, modelled on a real business’s templates.</text>
+<rect x="2604" y="4440" width="340" height="340" rx="26" fill="#FFFFFF" stroke="#DDD6C7" stroke-width="3"/>
+<svg x="2628" y="4464" width="292" height="292" viewBox="0 0 33 33" shape-rendering="crispEdges"><path stroke="#0B1F3A" d="M0 0.5h7m1 0h1m1 0h2m1 0h2m1 0h1m1 0h2m3 0h1m2 0h7m-33 1h1m5 0h1m2 0h2m1 0h2m4 0h1m2 0h1m4 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m3 0h1m2 0h3m2 0h1m2 0h2m1 0h1m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m2 0h4m1 0h2m2 0h1m3 0h1m1 0h1m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h1m1 0h2m1 0h1m1 0h1m1 0h2m4 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m1 0h2m2 0h1m1 0h1m2 0h1m3 0h2m1 0h1m1 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-23 1h1m2 0h4m1 0h1m1 0h2m1 0h1m-23 1h7m4 0h7m1 0h1m2 0h2m2 0h2m3 0h1m-33 1h4m1 0h1m3 0h2m3 0h4m1 0h1m3 0h1m2 0h2m1 0h2m1 0h1m-33 1h3m1 0h1m1 0h1m3 0h3m2 0h1m1 0h1m2 0h1m1 0h1m1 0h1m3 0h1m1 0h1m-31 1h6m3 0h1m1 0h3m3 0h3m1 0h2m2 0h2m1 0h3m-30 1h2m3 0h2m2 0h6m4 0h1m3 0h2m2 0h2m2 0h1m-33 1h1m1 0h1m4 0h1m1 0h2m1 0h1m1 0h2m2 0h3m2 0h4m2 0h1m1 0h2m-33 1h3m1 0h5m3 0h2m1 0h4m1 0h1m1 0h1m1 0h5m2 0h1m-32 1h1m8 0h1m1 0h2m1 0h1m1 0h1m2 0h1m1 0h1m2 0h3m1 0h1m1 0h1m-30 1h1m1 0h1m2 0h4m4 0h4m2 0h1m4 0h1m1 0h3m2 0h1m-30 1h2m5 0h2m1 0h1m1 0h1m2 0h2m2 0h2m1 0h3m1 0h4m-31 1h1m1 0h9m2 0h1m1 0h1m2 0h1m1 0h1m1 0h1m2 0h2m1 0h1m-31 1h1m2 0h1m5 0h1m1 0h1m1 0h1m7 0h12m-33 1h1m1 0h2m1 0h8m1 0h2m1 0h1m2 0h1m1 0h1m2 0h1m1 0h3m1 0h1m-32 1h1m3 0h2m5 0h1m2 0h3m2 0h3m1 0h1m2 0h2m2 0h1m1 0h1m-33 1h1m2 0h5m1 0h1m2 0h3m1 0h2m2 0h3m4 0h5m-32 1h1m1 0h1m1 0h1m3 0h1m2 0h1m5 0h2m1 0h2m2 0h1m5 0h1m-31 1h1m1 0h1m1 0h3m2 0h3m3 0h1m2 0h1m1 0h1m2 0h7m1 0h2m-25 1h1m1 0h2m1 0h3m3 0h1m1 0h4m3 0h1m1 0h3m-33 1h7m1 0h1m1 0h2m2 0h2m2 0h1m3 0h3m1 0h1m1 0h1m1 0h1m-31 1h1m5 0h1m1 0h2m1 0h2m1 0h1m1 0h1m1 0h7m3 0h4m-32 1h1m1 0h3m1 0h1m1 0h1m1 0h3m1 0h6m2 0h1m1 0h6m-30 1h1m1 0h3m1 0h1m1 0h3m2 0h1m3 0h1m1 0h5m1 0h1m2 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h2m1 0h1m1 0h1m1 0h2m3 0h1m1 0h2m2 0h2m1 0h1m-30 1h1m5 0h1m1 0h4m3 0h1m4 0h3m2 0h2m1 0h1m1 0h1m-31 1h7m2 0h1m1 0h1m1 0h1m1 0h3m5 0h2m2 0h1m1 0h1m1 0h1"/></svg>
+<text x="2774" y="4846" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="600" fill="#0B1F3A" text-anchor="middle">Try it</text>
+<rect x="2988" y="4440" width="340" height="340" rx="26" fill="#FFFFFF" stroke="#DDD6C7" stroke-width="3"/>
+<svg x="3012" y="4464" width="292" height="292" viewBox="0 0 33 33" shape-rendering="crispEdges"><path stroke="#0B1F3A" d="M0 0.5h7m1 0h1m1 0h1m1 0h4m2 0h1m2 0h2m3 0h7m-33 1h1m5 0h1m1 0h1m1 0h4m2 0h1m1 0h1m2 0h2m3 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m2 0h1m2 0h2m5 0h1m1 0h2m3 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m3 0h1m1 0h1m2 0h2m1 0h1m1 0h2m2 0h1m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m2 0h5m1 0h4m1 0h2m1 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m2 0h3m1 0h3m2 0h1m1 0h2m2 0h1m1 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-24 1h3m3 0h2m-16 1h1m4 0h5m2 0h1m1 0h1m1 0h1m2 0h1m4 0h1m5 0h2m-33 1h1m1 0h2m1 0h1m1 0h8m1 0h1m1 0h2m2 0h2m4 0h3m-26 1h5m1 0h1m1 0h3m2 0h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h2m-30 1h1m4 0h3m1 0h1m4 0h1m1 0h1m1 0h1m1 0h1m1 0h1m2 0h5m-31 1h3m2 0h2m3 0h2m1 0h1m2 0h5m2 0h3m4 0h2m-30 1h1m1 0h1m2 0h1m3 0h5m1 0h1m1 0h2m1 0h1m2 0h1m2 0h1m1 0h2m-33 1h2m1 0h1m1 0h2m2 0h1m1 0h1m3 0h2m1 0h1m1 0h1m1 0h1m2 0h2m4 0h1m-32 1h1m1 0h1m1 0h1m3 0h4m1 0h2m1 0h1m5 0h1m1 0h2m1 0h4m1 0h1m-31 1h1m1 0h4m3 0h2m2 0h5m2 0h4m1 0h2m3 0h1m-32 1h3m7 0h1m1 0h1m1 0h1m4 0h1m2 0h1m2 0h1m2 0h2m1 0h1m-31 1h1m1 0h3m3 0h2m1 0h1m5 0h1m3 0h2m2 0h1m1 0h2m1 0h1m-32 1h1m11 0h5m1 0h2m4 0h2m1 0h5m-32 1h2m3 0h2m2 0h5m2 0h3m2 0h1m1 0h2m2 0h2m1 0h1m-32 1h1m8 0h1m1 0h3m3 0h1m1 0h2m1 0h2m2 0h1m1 0h3m-31 1h1m3 0h1m1 0h2m5 0h1m2 0h2m2 0h1m3 0h2m2 0h2m1 0h1m-32 1h1m1 0h1m1 0h2m2 0h4m1 0h8m1 0h5m3 0h2m-32 1h2m1 0h1m1 0h2m2 0h1m1 0h1m1 0h2m4 0h2m2 0h6m-21 1h4m3 0h5m1 0h1m1 0h2m3 0h1m1 0h2m-32 1h7m1 0h2m2 0h1m2 0h2m3 0h5m1 0h1m1 0h1m1 0h2m-32 1h1m5 0h1m5 0h4m2 0h1m3 0h3m3 0h4m-32 1h1m1 0h3m1 0h1m3 0h7m1 0h3m1 0h1m1 0h6m-30 1h1m1 0h3m1 0h1m2 0h4m4 0h5m1 0h3m1 0h2m1 0h1m1 0h1m-33 1h1m1 0h3m1 0h1m7 0h1m3 0h2m3 0h1m1 0h1m1 0h2m1 0h3m-33 1h1m5 0h1m1 0h2m1 0h1m1 0h1m1 0h2m2 0h2m1 0h2m3 0h2m1 0h1m-31 1h7m2 0h2m1 0h4m1 0h3m2 0h3m1 0h2m1 0h1m1 0h1"/></svg>
+<text x="3158" y="4846" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="600" fill="#0B1F3A" text-anchor="middle">Code</text>
+</svg>
