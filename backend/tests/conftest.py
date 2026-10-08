@@ -31,7 +31,7 @@ def approved_post(client, payload):
 @pytest.fixture(autouse=True)
 def isolated_environment(monkeypatch, tmp_path):
     for name in ("llm_provider", "llm_provider_sanitizer", "llm_provider_resolver", "llm_provider_evaluator",
-                 "llm_provider_dictionary_drafter"):
+                 "llm_provider_dictionary_drafter", "llm_provider_contract_compliance"):
         monkeypatch.setattr(settings, name, "mock")
     monkeypatch.setattr(settings, "field_dictionary_path", str(REPO_ROOT / "data/mappings/field-dictionary.example.yaml"))
     monkeypatch.setattr(settings, "integration_spec_path", str(REPO_ROOT / "data/company_templates/integration.yaml"))

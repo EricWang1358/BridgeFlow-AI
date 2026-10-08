@@ -85,6 +85,7 @@ export const userGuide: readonly GuideSection[] = [
     title: ['其他工作区', 'Other workspaces'],
     points: [
       ['「报价工作区」：一张报价需要哪些事实、由谁提供、按声明公式怎么算价格带。缺依据时不会报价。', 'Quotation workspace: which facts a quote needs, who provides each, and how the price band is computed from declared formulas. Without the evidence, no quote is produced.'],
+      ['示例笔记本的报价工作区内置两张报价单样板：每张附本单合同，按公司法务要求逐条给出合规、不合规或无法判断，并引用合同原文；合同没写明的一律是无法判断。结论仅供参考，不替代法务审核。', 'In the sample notebook the quotation workspace carries two sample quotations, each with its own contract, checked line by line against the company legal requirements as compliant, non-compliant or undetermined, quoting the contract text; anything the contract does not state is undetermined. The result is a reference only and does not replace legal review.'],
       ['「立项材料与候选」：部门材料、改进候选、流程图、「评分四象限」、会议和决策。点「载入示例项目」可以看一个完整例子。', 'Discovery materials and opportunities: department materials, improvement ideas, flow graphs, Rating quadrants, meetings and decisions. Choose Load the sample project to see a complete example.'],
       ['「填报与流转」：按已批准的立项范围填部门模板、审核、交给下一个部门。点「载入示例工作流」看示例。', 'Filling & handoff: fill department templates under the approved scope, review them and hand them to the next department. Choose Load the sample workflow to see an example.'],
     ],

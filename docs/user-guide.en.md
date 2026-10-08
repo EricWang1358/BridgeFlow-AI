@@ -52,6 +52,7 @@ The captain is the AI assistant in the chat. It looks things up, computes and su
 ## Other workspaces
 
 - Quotation workspace: which facts a quote needs, who provides each, and how the price band is computed from declared formulas. Without the evidence, no quote is produced.
+- In the sample notebook the quotation workspace carries two sample quotations, each with its own contract, checked line by line against the company legal requirements as compliant, non-compliant or undetermined, quoting the contract text; anything the contract does not state is undetermined. The result is a reference only and does not replace legal review.
 - Discovery materials and opportunities: department materials, improvement ideas, flow graphs, Rating quadrants, meetings and decisions. Choose Load the sample project to see a complete example.
 - Filling & handoff: fill department templates under the approved scope, review them and hand them to the next department. Choose Load the sample workflow to see an example.
 

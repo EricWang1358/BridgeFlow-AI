@@ -1,0 +1,45 @@
+# Company legal requirements (simulated sample, #302). Thresholds are a fictional policy.
+# kind: field_max / field_min compare a structured contract term (bounds are inclusive); field_in restricts its value;
+#       clause_required / clause_forbidden are read by a model from topic + guidance, citing the contract verbatim.
+version: 1
+title: Supply contract legal baseline
+published_by: Head of Legal (simulated)
+published_at: '2024-07-01'
+requirements:
+  - id: payment_days_max
+    title: Payment term no longer than 60 days
+    basis: Contract Management Policy (simulated), section 12
+    kind: field_max
+    field: payment_days
+    threshold: '60'
+    suggestion: State the payment term in days in the payment clause, at most 60 days.
+  - id: penalty_cap_max
+    title: Supplier's liquidated damages capped at 20% of the contract total
+    basis: Contract Management Policy (simulated), section 15
+    kind: field_max
+    field: penalty_cap_ratio
+    threshold: '0.20'
+    suggestion: Lower the aggregate cap on the supplier's liquidated damages to at most 20% of the contract total.
+  - id: no_unlimited_liability
+    title: No unlimited liability
+    basis: Contract Management Policy (simulated), section 16
+    kind: field_in
+    field: liability
+    allowed: [capped]
+    suggestion: Add a liability cap, for example total liability for damages limited to the contract total.
+  - id: ip_clause_required
+    title: An intellectual property ownership clause is required
+    basis: Contract Management Policy (simulated), section 18
+    kind: clause_required
+    topic: intellectual property ownership
+    guidance: The clause must say which party owns the intellectual property in deliverables such as mix designs, test reports or technical documents. Confidentiality alone or a quality standard alone does not count.
+    suggestion: Add an intellectual property clause stating that mix designs and technical documents belong to the supplier.
+  - id: warranty_clause_required
+    title: A warranty period clause is required
+    basis: Contract Management Policy (simulated), section 19
+    kind: clause_required
+    topic: warranty period
+    guidance: The clause must state a warranty period or how it starts. Naming a quality standard or test method without a warranty period does not count.
+    suggestion: Add a warranty clause stating the warranty period and its start date.
+consistency:
+  - {metric: payment_ratio, field: monthly_payment_ratio, title: Next-month payment ratio}

@@ -1,0 +1,37 @@
+# Built-in sample quotations (#302 demo cut): two quotations, each with its extraction record, contract text
+# and the structured contract terms a person read off it. A read-only sample, not quotation storage.
+# Shown only when the active dictionary's quotation contract has the same arithmetic as `dictionary`
+# (same inputs, formulas and checks; titles and units may be in any language).
+#
+# contract.fields: terms read from the contract by a person. `clause` is the clause number ("N.M" under
+# "Article N", or "N" when the article has no numbered clauses); `excerpt` must be copied verbatim from that
+# clause and is checked on load. A term not listed means the contract does not state it: the check is
+# "undetermined", never 0.
+# contract.complete: the contract was entered in full; only then can a missing kind of clause be non-compliant.
+dictionary: ../demo_en/demo/dictionary.yaml
+legal: legal-requirements.yaml
+judgements: clause-judgements.yaml
+quotes:
+  - id: BJ-2024-0715
+    title: Hi-tech Industrial Park Building 4 · C35
+    customer: Example Urban Construction Group Co., Ltd.
+    extraction: extraction-A.yaml
+    contract:
+      file: 02-supply-contract-A.md
+      complete: true
+      # The template only says "by the end of the following month ... the proportion is stated in the quotation":
+      # no payment days, payment ratio, cap on supplier damages or liability cap is stated.
+      fields: {}
+  - id: BJ-2024-0718
+    title: Hi-tech Talent Apartments Phase 2 · C35
+    customer: Example Urban Construction Group Co., Ltd.
+    extraction: extraction-B.yaml
+    contract:
+      file: 04-supply-contract-B.md
+      complete: true
+      fields:
+        payment_days: {value: '45', clause: '3.1', excerpt: within 45 days of signing the settlement statement}
+        monthly_payment_ratio: {value: '0.70', clause: '3.1', excerpt: pays 70% of the month's settlement amount}
+        penalty_cap_ratio: {value: '0.30', clause: '4.1', excerpt: capped in aggregate at 30% of the contract total}
+        liability: {value: capped, clause: '4.2', excerpt: total liability for damages under this contract is limited to the contract total}
+        warranty_months: {value: '24', clause: '5.2', excerpt: The warranty period is 24 months from acceptance of the main structure}

@@ -1,0 +1,37 @@
+# Frozen clause conclusions for the built-in quotation samples (#302 demo cut).
+# Written by scripts/freeze_clause_judgements.py. Re-checked on every load: a citation not in the contract,
+# a compliant answer without a citation, digits in the explanation, or another legal version or contract text
+# shows that line as undetermined. A reference only; it does not replace legal review.
+# First version: answered during development by Claude (claude-opus-5-5) with the same prompt and packet as
+# backend/src/bridgeflow/agents/contract_compliance.py, then checked by hand. Regenerate with the script once a
+# real model is configured.
+generated_by: claude-opus-5-5 (answered during development with the same prompt, checked by hand)
+generated_at: '2026-10-08'
+quotes:
+  BJ-2024-0715:
+    legal_version: 1
+    contract_sha256: de8032b9a3427480ba31dae7c56da2b1929abf446471a9be3e6f4f6d1dc735f0
+    judgements:
+      - requirement_id: ip_clause_required
+        status: non_compliant
+        citations: []
+        explanation: The contract, entered in full, never says who owns the mix designs, test reports or technical documents; Article Six only covers requoting after price swings.
+      - requirement_id: warranty_clause_required
+        status: non_compliant
+        citations:
+          - {clause: '5', excerpt: GB/T 14902 Ready-mixed Concrete applies}
+        explanation: Article Five names the quality standard and the strength test but sets no warranty period or start date.
+  BJ-2024-0718:
+    legal_version: 1
+    contract_sha256: b108dfa73ec3ebc903f23e0e64b2248273ec8142d301fd7ff238ce3fd8c786d1
+    judgements:
+      - requirement_id: ip_clause_required
+        status: compliant
+        citations:
+          - {clause: '6', excerpt: 'Intellectual property in the mix designs, test reports and technical documents provided by the supplier belongs to the supplier'}
+        explanation: Article Six assigns the intellectual property in mix designs, test reports and technical documents to the supplier.
+      - requirement_id: warranty_clause_required
+        status: compliant
+        citations:
+          - {clause: '5.2', excerpt: The warranty period is 24 months from acceptance of the main structure}
+        explanation: The second clause of Article Five sets a warranty period and starts it at acceptance of the main structure.
